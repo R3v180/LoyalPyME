@@ -1,0 +1,212 @@
+// File: backend/prisma/schema.prisma
+// Version: 1.0.0
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelos de la base de datos para LoyalPyME v1.0
+
+model Business {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique // Para URLs personalizadas o identificadores legibles
+  isActive  Boolean  @default(true) // Para activar/desactivar negocios (gestión super admin)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  users   User[]
+  rewards Reward[]
+  // transactions Transaction[] // Se añadirá en v1.1 o posterior, por ahora la logica de puntos es simple
+
+  // Configuración básica (de momento en Business, luego podria ser tabla separada)
+  pointsPerEuro Float   @default(1.0) // Cuántos puntos se dan por euro gastado
+  currency      String  @default("EUR") // Moneda base, útil para expansión
+  brandingColor String? // Placeholder para personalización basica UI (e.g., hex code)
+
+  // Campos para gestión de subscripción (preparación para Super Admin)
+  subscriptionStatus String    @default("trial") // 'trial', 'active', 'inactive'
+  trialEndsAt        DateTime?
+  lastPaymentDate    DateTime?
+
+  @@map("businesses") // Nombre real de la tabla en la BD
+}
+
+// El modelo User servirá para empleados (business_admin) y clientes finales (customer_final)
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String // Hash del password
+  name      String?
+  phone     String?
+  role      UserRole // 'business_admin' o 'customer_final'
+  isActive  Boolean  @default(true) // Para activar/desactivar usuarios
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Multi-tenancy: Relación con Business
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+
+  // Campos específicos para customer_final
+  points Int @default(0) // Saldo de puntos del cliente
+  // loyaltyTier String @default("bronze") // Preparación para Niveles de Fidelidad (v1.1)
+
+  // Campos para preparación futura (RGPD)
+  marketingOptIn Boolean @default(false)
+
+  // Relaciones futuras (v1.1+)
+  // transactions Transaction[]
+  // rewardsRedeemed RewardRedemption[] // Historial de canjes
+
+  @@map("users") // Nombre real de la tabla en la BD
+}
+
+// Roles de usuario (para el campo 'role' en el modelo User)
+enum UserRole {
+  SUPER_ADMIN // Aunque no usemos la interfaz aun, definimos el rol
+  BUSINESS_ADMIN
+  CUSTOMER_FINAL
+}
+
+// Modelo para las recompensas que un negocio ofrece (ej: "Cafe gratis por 100 puntos")
+model Reward {
+  id          String   @id @default(uuid())
+  businessId  String // Multi-tenancy: A qué negocio pertenece esta recompensa
+  business    Business @relation(fields: [businessId], references: [id])
+  name        String
+  description String?
+  pointsCost  Int // Cuántos puntos cuesta canjear esta recompensa
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones futuras (v1.1+)
+  // redemptions RewardRedemption[] // Historial de canjes de esta recompensa
+
+  @@map("rewards") // Nombre real de la tabla en la BD
+}
+
+// Futuro: Modelo para registrar transacciones de puntos (acumulación) - v1.1+
+// model Transaction {
+//     id          String    @id @default(uuid())
+//     businessId  String // Multi-tenancy
+//     business    Business  @relation(fields: [businessId], references: [id])
+//     customerId  String // Cliente final que acumuló puntos
+//     customer    User      @relation(fields: [customerId], references: [id]) // Relacion con el User que es customer_final
+//     employeeId  String? // Empleado que generó la transacción (opcional)
+//     employee    User?     @relation(fields: [employeeId], references: [id]) // Relacion con el User que es business_admin
+//     amount      Float     // Importe total del ticket
+//     pointsEarned Int     // Puntos ganados en esta transacción
+//     ticketNumber String? // Número de ticket de la venta física
+//     qrToken     String? @unique // Token QR usado para esta transacción
+//     createdAt   DateTime  @default(now())
+
+//     // Futuro: Items de la transacción (v1.2+)
+//     // items     TransactionItem[]
+
+//     @@map("transactions")
+// }
+
+// Futuro: Modelo para registrar canjes de recompensas - v1.1+
+// model RewardRedemption {
+//     id          String    @id @default(uuid())
+//     businessId  String // Multi-tenancy
+//     business    Business  @relation(fields: [businessId], references: [id])
+//     customerId  String // Cliente final que canjeó la recompensa
+//     customer    User      @relation(fields: [customerId], references: [id]) // Relacion con el User que es customer_final
+//     rewardId    String // Recompensa canjeada
+//     reward      Reward    @relation(fields: [rewardId], references: [id])
+//     pointsUsed  Int       // Puntos usados en el canje
+//     createdAt   DateTime  @default(now())
+
+//     @@map("reward_redemptions")
+// }
+
+// Futuro: Modelo para productos (si implementamos puntos por producto) - v1.2+
+// model Product {
+//    id          String @id @default(uuid())
+//    businessId  String // Multi-tenancy
+//    business    Business @relation(fields: [businessId], references: [id])
+//    name        String
+//    description String?
+//    pointsValue Int? // Puntos fijos por producto (alternativa/complemento a puntos/€)
+//    // categoryId String? // Futuro: Categorias de productos
+//    // category    ProductCategory? @relation(fields: [categoryId], references: [id])
+
+//    // Relaciones futuras (v1.2+)
+//    // transactionItems TransactionItem[]
+
+//    @@map("products")
+// }
+
+// Futuro: Modelo para ítems específicos dentro de una transacción - v1.2+
+// model TransactionItem {
+//    id            String @id @default(uuid())
+//    transactionId String // A qué transacción pertenece este item
+//    transaction   Transaction @relation(fields: [transactionId], references: [id])
+//    productId     String // Qué producto se compró
+//    product       Product @relation(fields: [productId], references: [id])
+//    quantity      Int
+//    pointsAwarded Int? // Puntos específicos ganados por este item (si aplica)
+
+//    @@map("transaction_items")
+// }
+
+// Futuro: Modelo para niveles de fidelidad - v1.1+
+// model Tier {
+//    id          String @id @default(uuid())
+//    businessId  String // Multi-tenancy
+//    business    Business @relation(fields: [businessId], references: [id])
+//    name        String // Ej: Bronce, Plata, Oro
+//    minPointsRequired Int // Puntos minimos para alcanzar este nivel
+//    // benefits  TierBenefit[] // Futuro: Beneficios asociados a este nivel
+
+//    @@map("tiers")
+// }
+
+// Futuro: Modelo para beneficios de niveles de fidelidad - v1.1+
+// model TierBenefit {
+//    id            String @id @default(uuid())
+//    tierId        String // A qué nivel pertenece este beneficio
+//    tier          Tier @relation(fields: [tierId], references: [id])
+//    description   String
+//    discountPercentage Float? // Ej: 10.5 (para 10.5%)
+//    // applicableProductCategoryId String? // Futuro: Si el beneficio aplica a una categoria especifica
+
+//    @@map("tier_benefits")
+// }
+
+// Futuro: Modelos para feedback y notas internas - v1.1+
+// model CustomerFeedback {
+//    id          String @id @default(uuid())
+//    businessId  String // Multi-tenancy
+//    business    Business @relation(fields: [businessId], references: [id])
+//    customerId  String // Quién dejó el feedback
+//    customer    User @relation(fields: [customerId], references: [id])
+//    rating      Int // Ej: 1-5 estrellas
+//    comment     String?
+//    createdAt   DateTime @default(now())
+
+//    @@map("customer_feedback")
+// }
+
+// model InternalNote {
+//    id          String @id @default(uuid())
+//    businessId  String // Multi-tenancy
+//    business    Business @relation(fields: [businessId], references: [id])
+//    userId      String // A qué usuario (cliente o empleado) se refiere la nota
+//    user        User @relation(fields: [userId], references: [id])
+//    staffUserId String // Qué empleado o super admin escribió la nota
+//    staffUser   User @relation(fields: [staffUserId], references: [id]) // Relacion con un User que es BUSINESS_ADMIN o SUPER_ADMIN
+//    note        String
+//    createdAt   DateTime @default(now())
+
+//    @@map("internal_notes")
+// }
