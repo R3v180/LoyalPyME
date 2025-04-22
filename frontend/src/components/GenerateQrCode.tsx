@@ -1,5 +1,5 @@
 // File: frontend/src/components/GenerateQrCode.tsx
-// Version: 1.0.0
+// Version: 1.0.1 (Make ticketNumber mandatory - Full Code)
 
 import React, { useState } from 'react';
 import axiosInstance from '../services/axiosInstance'; // Para llamar a la API
@@ -12,7 +12,7 @@ interface QrCodeData {
 
 const GenerateQrCode: React.FC = () => {
   // Estados para los campos del formulario
-  const [amount, setAmount] = useState<string>(''); // Usamos string para el input de número
+  const [amount, setAmount] = useState<string>('');
   const [ticketNumber, setTicketNumber] = useState<string>('');
 
   // Estados para el manejo del envío y resultado
@@ -22,40 +22,40 @@ const GenerateQrCode: React.FC = () => {
 
   // Manejador del click en el botón "Generar"
   const handleGenerateClick = async () => {
-    setError(null); // Limpiar errores previos
-    setGeneratedData(null); // Limpiar datos previos
+    setError(null);
+    setGeneratedData(null);
 
-    // Validación simple del importe
+    // Validación actualizada (incluye ticketNumber)
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
       setError('El importe debe ser un número positivo.');
       return;
     }
+    if (!ticketNumber || ticketNumber.trim() === '') {
+        setError('El número de ticket es obligatorio.');
+        return;
+    }
 
-    setIsLoading(true); // Indicar que estamos generando
+    setIsLoading(true);
 
     try {
+      // ticketNumber siempre se envía ahora
       const requestData = {
         amount: numericAmount,
-        // Incluir ticketNumber solo si no está vacío
-        ...(ticketNumber.trim() && { ticketNumber: ticketNumber.trim() })
+        ticketNumber: ticketNumber.trim()
       };
 
-      // Llamar al endpoint POST /points/generate-qr
       const response = await axiosInstance.post<QrCodeData>('/points/generate-qr', requestData);
 
-      // ¡Éxito! Guardar los datos recibidos
       setGeneratedData(response.data);
-      // console.log('QR Data generated:', response.data); // Descomentar para depurar
       setAmount(''); // Limpiar formulario tras éxito
       setTicketNumber('');
 
     } catch (err: any) {
       console.error('Error generating QR code data:', err);
-      // Mostrar mensaje de error al usuario
       setError(`Error al generar QR: ${err.response?.data?.message || err.message || 'Error desconocido'}`);
     } finally {
-      setIsLoading(false); // Habilitar el botón de nuevo
+      setIsLoading(false);
     }
   };
 
@@ -70,23 +70,24 @@ const GenerateQrCode: React.FC = () => {
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="Ej: 15.50"
-          step="0.01" // Permitir decimales para euros
-          min="0.01" // Mínimo importe
+          step="0.01"
+          min="0.01"
           required
           style={{ width: '95%', padding: '8px' }}
           disabled={isLoading}
         />
       </div>
 
-      {/* Campo Número de Ticket (Opcional) */}
+      {/* Campo Número de Ticket (Ahora obligatorio) */}
       <div style={{ marginBottom: '15px' }}>
-        <label htmlFor="qrTicketNumber" style={{ display: 'block', marginBottom: '3px' }}>Número de Ticket (Opcional):</label>
+        <label htmlFor="qrTicketNumber" style={{ display: 'block', marginBottom: '3px' }}>Número de Ticket:</label>
         <input
           type="text"
           id="qrTicketNumber"
           value={ticketNumber}
           onChange={(e) => setTicketNumber(e.target.value)}
           placeholder="Ej: T-12345"
+          required // Hecho obligatorio
           style={{ width: '95%', padding: '8px' }}
           disabled={isLoading}
         />
@@ -97,7 +98,7 @@ const GenerateQrCode: React.FC = () => {
         {isLoading ? 'Generando...' : 'Generar Datos QR'}
       </button>
 
-      {/* Área de Resultados / Errores */}
+      {/* --- Área de Resultados / Errores (COMPLETA) --- */}
       <div style={{ marginTop: '20px', padding: '10px', border: '1px solid #eee', minHeight: '50px' }}>
         {isLoading && <p>Procesando...</p>}
         {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -110,8 +111,12 @@ const GenerateQrCode: React.FC = () => {
             <small>(En un futuro, aquí se mostraría la imagen QR directamente)</small>
           </div>
         )}
-         {!isLoading && !error && !generatedData && <p>Introduce un importe para generar los datos del QR.</p>}
+         {/* Mensaje inicial o si no hay datos/error/carga */}
+         {!isLoading && !error && !generatedData && (
+             <p>Introduce importe y número de ticket para generar los datos del QR.</p>
+         )}
       </div>
+      {/* --- FIN Área de Resultados --- */}
     </div>
   );
 };

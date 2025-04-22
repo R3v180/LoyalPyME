@@ -1,133 +1,128 @@
 // File: backend/prisma/schema.prisma
-// Version: 1.0.1
+// Version: 1.0.1 (Make QrCode.ticketNumber mandatory)
 
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Define el proveedor de base de datos y la URL (desde .env)
 generator client {
   provider = "prisma-client-js"
+  // Añadimos output para evitar warning de deprecación
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") // Carga desde el archivo .env
 }
 
-// Modelos de la base de datos para LoyalPyME v1.0 y soporte QR
+// --- Modelos de Datos ---
 
+// Modelo para los Negocios/Empresas
 model Business {
-  id        String    @id @default(uuid())
-  name      String
-  slug      String    @unique // Para URLs personalizadas o identificadores legibles
-  isActive  Boolean   @default(true) // Para activar/desactivar negocios (gestión super admin)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        String   @id @default(uuid()) // Clave primaria UUID
+  name      String   // Nombre del negocio
+  slug      String   @unique // Identificador único para URLs, etc.
+  isActive  Boolean  @default(true) // Si el negocio está activo
+  createdAt DateTime @default(now()) // Fecha de creación
+  updatedAt DateTime @updatedAt // Fecha de última actualización
 
-  // Relaciones
-  users     User[] // Usuarios (empleados y clientes) de este negocio
-  rewards   Reward[] // Recompensas ofrecidas por este negocio
-  qrCodes   QrCode[] // Códigos QR generados para este negocio
+  // Configuración específica del negocio
+  pointsPerEuro Float   @default(1.0) // Puntos otorgados por cada euro gastado
+  currency      String  @default("EUR") // Moneda usada
+  brandingColor String? // Color de marca opcional para personalizar
 
-  // Configuración básica (de momento en Business, luego podria ser tabla separada)
-  pointsPerEuro Float   @default(1.0) // Cuántos puntos se dan por euro gastado
-  currency      String  @default("EUR") // Moneda base, útil para expansión
-  brandingColor String? // Placeholder para personalización basica UI (e.g., hex code)
-
-  // Campos para gestión de subscripción (preparación para Super Admin)
-  subscriptionStatus String @default("trial") // 'trial', 'active', 'inactive'
+  // Información de suscripción (simplificado)
+  subscriptionStatus String   @default("trial") // Ej: trial, active, cancelled
   trialEndsAt        DateTime?
   lastPaymentDate    DateTime?
 
-  @@map("businesses") // Nombre real de la tabla en la BD
+  // Relaciones
+  users   User[] // Un negocio tiene muchos usuarios (admin, clientes)
+  rewards Reward[] // Un negocio tiene muchas recompensas
+  qrCodes QrCode[] // Un negocio genera muchos códigos QR
+
+  @@map("businesses") // Mapea al nombre de tabla 'businesses'
 }
 
-// El modelo User servirá para empleados (business_admin) y clientes finales (customer_final)
+// Modelo para los Usuarios (incluye Admins y Clientes Finales)
 model User {
-  id          String    @id @default(uuid())
-  email       String    @unique
-  password    String // Hash del password
-  name        String?
-  phone       String?
-  role        UserRole // 'business_admin', 'customer_final', 'super_admin'
-  isActive    Boolean   @default(true) // Para activar/desactivar usuarios
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(uuid())
+  email     String   @unique // Email único para login
+  password  String   // Contraseña hasheada
+  name      String?  // Nombre del usuario (opcional)
+  phone     String?  // Teléfono (opcional)
+  role      UserRole // Rol del usuario (enum abajo)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Multi-tenancy: Relación con Business
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id])
+  // Relación con Negocio: Cada usuario pertenece a UN negocio
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
 
-  // Campos específicos para customer_final
-  points      Int       @default(0) // Saldo de puntos del cliente
+  // Campos específicos para Clientes Finales
+  points          Int     @default(0) // Puntos de fidelidad acumulados
+  marketingOptIn  Boolean @default(false) // Si acepta recibir marketing
 
-  // Campos para preparación futura (RGPD)
-  marketingOptIn Boolean @default(false)
+  // TODO: Añadir relación con QrCode para saber quién redimió? (Opcional)
+  // redeemedQRCodes QrCode[] @relation("RedeemedBy")
 
-  // Relaciones futuras (v1.1+)
-  // transactions Transaction[] // Historial de transacciones de puntos recibidas
-  // rewardsRedeemed RewardRedemption[] // Historial de canjes
-  // qrCodeRedemptions QrCode[] @relation("RedeemedBy") // QRCodes redimidos por este cliente (para historial)
-
-  @@map("users") // Nombre real de la tabla en la BD
+  @@map("users")
 }
 
-// Roles de usuario (para el campo 'role' en el modelo User)
-enum UserRole {
-  SUPER_ADMIN
-  BUSINESS_ADMIN
-  CUSTOMER_FINAL
-}
-
-// Modelo para las recompensas que un negocio ofrece (ej: "Cafe gratis por 100 puntos")
+// Modelo para las Recompensas ofrecidas por un negocio
 model Reward {
-    id          String   @id @default(uuid())
-    businessId  String // Multi-tenancy: A qué negocio pertenece esta recompensa
-    business    Business @relation(fields: [businessId], references: [id])
-    name        String
-    description String?
-    pointsCost  Int // Cuántos puntos cuesta canjear esta recompensa
-    isActive    Boolean  @default(true)
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+  id          String  @id @default(uuid())
+  businessId  String  // A qué negocio pertenece
+  business    Business @relation(fields: [businessId], references: [id])
+  name        String  // Nombre de la recompensa (ej: "Café Gratis")
+  description String? // Descripción opcional
+  pointsCost  Int     // Cuántos puntos cuesta canjearla
+  isActive    Boolean @default(true) // Si la recompensa está activa
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-    // Relaciones futuras (v1.1+)
-    // redemptions RewardRedemption[] // Historial de canjes de esta recompensa
+  // TODO: Añadir relación con transacciones de canje? (Opcional)
 
-    @@map("rewards") // Nombre real de la tabla en la BD
+  @@map("rewards")
 }
 
-// NUEVO MODELO para gestionar los códigos QR de acumulación de puntos (v1.0)
+// Modelo para los Códigos QR generados para asignar puntos
 model QrCode {
-    id           String    @id @default(uuid())
-    token        String    @unique // El token unico que se incluira en el QR
-    businessId   String    // A que negocio pertenece este QR
-    business     Business  @relation(fields: [businessId], references: [id])
-    amount       Float     // Importe total de la venta asociado a este QR
-    ticketNumber String?   // Numero de ticket de la venta (opcional)
-    status       QrCodeStatus @default(PENDING) // Estado del QR: PENDING, COMPLETED, EXPIRED
-    createdAt    DateTime  @default(now()) // Cuando se genero el QR
-    expiresAt    DateTime  // Cuando expira el QR
-    completedAt  DateTime? // Cuando fue redimido (si status es COMPLETED)
+  id           String       @id @default(uuid())
+  token        String       @unique // El UUID único que contiene el QR
+  businessId   String       // Negocio que lo generó
+  business     Business     @relation(fields: [businessId], references: [id])
+  amount       Float        // Importe de la transacción asociada
+  // --- CAMBIO: ticketNumber ahora es obligatorio ---
+  ticketNumber String       // Número de ticket/referencia de la venta (AHORA OBLIGATORIO)
+  // --- FIN CAMBIO ---
+  status       QrCodeStatus @default(PENDING) // Estado del QR (enum abajo)
+  createdAt    DateTime     @default(now()) // Cuándo se generó
+  expiresAt    DateTime     // Cuándo expira
+  completedAt  DateTime?    // Cuándo se completó/validó
 
-    // Relacion al usuario que redimio este QR (opcional, futuro si queremos historial)
-    // redeemedById String?
-    // redeemedBy   User?     @relation("RedeemedBy", fields: [redeemedById], references: [id])
+  // TODO: Relación con el usuario que lo validó?
+  // redeemedById String?
+  // redeemedBy   User?   @relation("RedeemedBy", fields: [redeemedById], references: [id])
 
-
-    @@map("qr_codes") // Nombre real de la tabla en la BD
+  @@map("qr_codes")
 }
 
-// Estados posibles para un QrCode
+
+// --- Enums ---
+
+// Roles de Usuario
+enum UserRole {
+  SUPER_ADMIN     // Administrador de la plataforma LoyalPyME (no usado aún)
+  BUSINESS_ADMIN  // Administrador de un negocio específico
+  CUSTOMER_FINAL  // Cliente final que acumula puntos
+}
+
+// Estados de un Código QR
 enum QrCodeStatus {
-    PENDING
-    COMPLETED
-    EXPIRED
+  PENDING   // Generado, esperando ser validado
+  COMPLETED // Ya validado, puntos asignados
+  EXPIRED   // Expiró antes de ser validado
 }
-
-
-// --- Modelos Futuros (Post-v1.0), dejados como referencia ---
-// model Transaction { ... }
-// model RewardRedemption { ... }
-// model Product { ... }
-// model TransactionItem { ... }
-// model Tier { ... }
-// model TierBenefit { ... }
-// model CustomerFeedback { ... }
-// model InternalNote { ... }
