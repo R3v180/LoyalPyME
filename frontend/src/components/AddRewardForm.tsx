@@ -1,128 +1,139 @@
 // File: frontend/src/components/AddRewardForm.tsx
-// Version: 1.0.0
+// Version: 1.1.0 (Refactored with Mantine Components)
 
-import React, { useState } from 'react';
-import axiosInstance from '../services/axiosInstance'; // Para llamar a la API
+import { useState, FormEvent } from 'react'; // Quitamos React si no se usa
+import axiosInstance from '../services/axiosInstance';
 
-// Definimos las props que este componente espera recibir
+// --- Mantine Imports ---
+import {
+  TextInput,
+  Textarea,    // Para la descripción
+  NumberInput, // Para los puntos
+  Button,
+  Stack,       // Para organizar verticalmente
+  Group,       // Para los botones
+  Alert        // Para errores
+} from '@mantine/core';
+import { IconAlertCircle } from '@tabler/icons-react'; // Para icono de error
+
+// Props del componente (sin cambios)
 interface AddRewardFormProps {
-  onRewardAdded: () => void; // Función a llamar cuando se añade una recompensa
-  onCancel: () => void;      // Función a llamar para cancelar/cerrar el formulario
+  onRewardAdded: () => void;
+  onCancel: () => void;
 }
 
 const AddRewardForm: React.FC<AddRewardFormProps> = ({ onRewardAdded, onCancel }) => {
-  // Estados para los campos del formulario
+  // Estados (ajustamos pointsCost)
   const [name, setName] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  const [pointsCost, setPointsCost] = useState<string>(''); // Usamos string para el input, luego convertimos
+  const [pointsCost, setPointsCost] = useState<number | ''>(''); // number | '' para NumberInput
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Estados para el manejo del envío
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Para deshabilitar el botón mientras se envía
-  const [error, setError] = useState<string | null>(null); // Para mostrar errores al usuario
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
 
-  // Manejador del envío del formulario
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); // Prevenir recarga de la página
-    setError(null); // Limpiar errores previos
-
-    // Validación simple
-    const cost = parseInt(pointsCost, 10);
+    // Validación (pointsCost ya es number o '')
     if (!name.trim()) {
       setError('El nombre de la recompensa es obligatorio.');
       return;
     }
-    if (isNaN(cost) || cost < 0) {
+    // Permitimos 0 puntos ahora con min={0} en NumberInput
+    if (pointsCost === '' || pointsCost < 0) {
       setError('El coste en puntos debe ser un número igual o mayor que cero.');
       return;
     }
 
-    setIsSubmitting(true); // Indicar que estamos enviando
+    setIsSubmitting(true);
 
     try {
-      // Crear el objeto de datos para enviar a la API
       const rewardData = {
         name: name.trim(),
-        description: description.trim() || null, // Enviar null si está vacío
-        pointsCost: cost,
+        description: description.trim() || null,
+        pointsCost: pointsCost, // Ya es número
       };
 
-      // Llamar al endpoint POST /rewards usando nuestra instancia de Axios
-      // El token se añade automáticamente
       await axiosInstance.post('/rewards', rewardData);
 
-      // ¡Éxito!
-      // console.log('Reward added successfully'); // Descomentar para depurar
-      setName(''); // Limpiar formulario
+      // Éxito
+      setName('');
       setDescription('');
       setPointsCost('');
-      onRewardAdded(); // Llamar a la función del padre para que refresque la lista y cierre el form
+      onRewardAdded(); // Llama al padre
 
     } catch (err: any) {
       console.error('Error adding reward:', err);
-      // Mostrar mensaje de error al usuario
       setError(`Error al añadir la recompensa: ${err.response?.data?.message || err.message || 'Error desconocido'}`);
     } finally {
-      setIsSubmitting(false); // Habilitar el botón de nuevo
+      setIsSubmitting(false);
     }
   };
 
   return (
+    // Usamos el <form> de HTML pero los componentes internos son de Mantine
     <form onSubmit={handleSubmit}>
-      {/* Campo Nombre */}
-      <div style={{ marginBottom: '10px' }}>
-        <label htmlFor="rewardName" style={{ display: 'block', marginBottom: '3px' }}>Nombre:</label>
-        <input
-          type="text"
-          id="rewardName"
+      {/* Stack organiza los campos verticalmente */}
+      <Stack gap="md">
+        <TextInput
+          label="Nombre de la Recompensa:"
+          placeholder="Ej: Café Gratis"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => setName(e.currentTarget.value)}
           required
-          style={{ width: '95%', padding: '8px' }} // Ajustado ancho
           disabled={isSubmitting}
+          radius="lg" // Aplicar radio del tema
         />
-      </div>
 
-      {/* Campo Descripción */}
-      <div style={{ marginBottom: '10px' }}>
-        <label htmlFor="rewardDescription" style={{ display: 'block', marginBottom: '3px' }}>Descripción (Opcional):</label>
-        <textarea
-          id="rewardDescription"
+        <Textarea
+          label="Descripción (Opcional):"
+          placeholder="Ej: Un café espresso o americano"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => setDescription(e.currentTarget.value)}
           rows={3}
-          style={{ width: '95%', padding: '8px' }} // Ajustado ancho
           disabled={isSubmitting}
+          radius="lg"
         />
-      </div>
 
-      {/* Campo Coste en Puntos */}
-      <div style={{ marginBottom: '15px' }}>
-        <label htmlFor="rewardPointsCost" style={{ display: 'block', marginBottom: '3px' }}>Coste en Puntos:</label>
-        <input
-          type="number"
-          id="rewardPointsCost"
+        <NumberInput
+          label="Coste en Puntos:"
+          placeholder="Ej: 100"
           value={pointsCost}
-          onChange={(e) => setPointsCost(e.target.value)}
+          // Usamos el mismo handler que corregimos en GenerateQrCode
+          onChange={(value) => setPointsCost(typeof value === 'number' ? value : '')}
+          min={0}       // Permitir 0 puntos
+          step={1}      // Incrementar de 1 en 1
+          allowDecimal={false} // No permitir decimales
           required
-          min="0" // No permitir puntos negativos
-          style={{ width: '95%', padding: '8px' }} // Ajustado ancho
           disabled={isSubmitting}
+          radius="lg"
         />
-      </div>
 
-      {/* Mostrar errores si existen */}
-      {error && <p style={{ color: 'red', marginBottom: '10px' }}>{error}</p>}
+        {/* Mostrar errores con Alert */}
+        {error && (
+          <Alert
+             icon={<IconAlertCircle size={16} />}
+             title="Error"
+             color="red"
+             radius="lg"
+             withCloseButton={false} // Quitamos botón de cerrar para simplicidad
+          >
+            {error}
+          </Alert>
+        )}
 
-      {/* Botones */}
-      <div>
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Añadiendo...' : 'Añadir Recompensa'}
-        </button>
-        {/* Botón Cancelar llama a la prop onCancel */}
-        <button type="button" onClick={onCancel} disabled={isSubmitting} style={{ marginLeft: '10px' }}>
-          Cancelar
-        </button>
-      </div>
+        {/* Grupo para alinear los botones al final */}
+        <Group justify="flex-end" mt="md">
+          {/* Botón Cancelar (variante 'light' o 'outline' para diferenciarlo) */}
+          <Button variant="light" onClick={onCancel} disabled={isSubmitting} radius="lg">
+            Cancelar
+          </Button>
+          {/* Botón Añadir (principal) */}
+          <Button type="submit" loading={isSubmitting} radius="lg">
+            Añadir Recompensa
+          </Button>
+        </Group>
+      </Stack>
     </form>
   );
 };

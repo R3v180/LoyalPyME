@@ -1,56 +1,62 @@
 // File: frontend/src/components/GenerateQrCode.tsx
-// Version: 1.0.1 (Make ticketNumber mandatory - Full Code)
+// Version: 1.1.2 (Correct NumberInput onChange type handling)
 
-import React, { useState } from 'react';
-import axiosInstance from '../services/axiosInstance'; // Para llamar a la API
+import { useState } from 'react';
+import axiosInstance from '../services/axiosInstance';
 
-// Interfaz para la respuesta esperada de la API /generate-qr
+// --- Mantine Imports ---
+import {
+  TextInput,
+  NumberInput,
+  Button,
+  Stack,
+  Alert,
+  Loader,
+  Paper,
+  Text,
+  Code,
+  Box,
+  Group,
+} from '@mantine/core';
+import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
+
+// Interfaz para la respuesta esperada
 interface QrCodeData {
   qrToken: string;
   amount: number;
 }
 
 const GenerateQrCode: React.FC = () => {
-  // Estados para los campos del formulario
-  const [amount, setAmount] = useState<string>('');
+  const [amount, setAmount] = useState<number | ''>('');
   const [ticketNumber, setTicketNumber] = useState<string>('');
-
-  // Estados para el manejo del envío y resultado
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [generatedData, setGeneratedData] = useState<QrCodeData | null>(null); // Para guardar el resultado
+  const [generatedData, setGeneratedData] = useState<QrCodeData | null>(null);
 
-  // Manejador del click en el botón "Generar"
   const handleGenerateClick = async () => {
     setError(null);
     setGeneratedData(null);
 
-    // Validación actualizada (incluye ticketNumber)
-    const numericAmount = parseFloat(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
+    if (amount === '' || amount <= 0) {
       setError('El importe debe ser un número positivo.');
       return;
     }
     if (!ticketNumber || ticketNumber.trim() === '') {
-        setError('El número de ticket es obligatorio.');
-        return;
+      setError('El número de ticket es obligatorio.');
+      return;
     }
 
     setIsLoading(true);
 
     try {
-      // ticketNumber siempre se envía ahora
       const requestData = {
-        amount: numericAmount,
+        amount: amount, // amount ya es number aquí debido a la validación anterior
         ticketNumber: ticketNumber.trim()
       };
-
       const response = await axiosInstance.post<QrCodeData>('/points/generate-qr', requestData);
-
       setGeneratedData(response.data);
-      setAmount(''); // Limpiar formulario tras éxito
+      setAmount('');
       setTicketNumber('');
-
     } catch (err: any) {
       console.error('Error generating QR code data:', err);
       setError(`Error al generar QR: ${err.response?.data?.message || err.message || 'Error desconocido'}`);
@@ -60,64 +66,73 @@ const GenerateQrCode: React.FC = () => {
   };
 
   return (
-    <div> {/* Envolvemos en un div */}
-      {/* Campo Importe */}
-      <div style={{ marginBottom: '10px' }}>
-        <label htmlFor="qrAmount" style={{ display: 'block', marginBottom: '3px' }}>Importe de la Venta (€):</label>
-        <input
-          type="number"
-          id="qrAmount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Ej: 15.50"
-          step="0.01"
-          min="0.01"
-          required
-          style={{ width: '95%', padding: '8px' }}
-          disabled={isLoading}
-        />
-      </div>
+    <Stack gap="md">
+      <NumberInput
+        label="Importe de la Venta (€):"
+        placeholder="Ej: 15.50"
+        value={amount}
+        // --- CORRECCIÓN FINAL AQUÍ ---
+        // Aseguramos pasar number o '' a setAmount
+        onChange={(value) => setAmount(typeof value === 'number' ? value : '')}
+        min={0.01}
+        step={0.01}
+        decimalScale={2}
+        fixedDecimalScale
+        required
+        radius="lg"
+        disabled={isLoading}
+      />
 
-      {/* Campo Número de Ticket (Ahora obligatorio) */}
-      <div style={{ marginBottom: '15px' }}>
-        <label htmlFor="qrTicketNumber" style={{ display: 'block', marginBottom: '3px' }}>Número de Ticket:</label>
-        <input
-          type="text"
-          id="qrTicketNumber"
-          value={ticketNumber}
-          onChange={(e) => setTicketNumber(e.target.value)}
-          placeholder="Ej: T-12345"
-          required // Hecho obligatorio
-          style={{ width: '95%', padding: '8px' }}
-          disabled={isLoading}
-        />
-      </div>
+      <TextInput
+        label="Número de Ticket:"
+        placeholder="Ej: T-12345"
+        value={ticketNumber}
+        onChange={(e) => setTicketNumber(e.currentTarget.value)}
+        required
+        radius="lg"
+        disabled={isLoading}
+      />
 
-      {/* Botón de Generar */}
-      <button onClick={handleGenerateClick} disabled={isLoading}>
-        {isLoading ? 'Generando...' : 'Generar Datos QR'}
-      </button>
+      <Box>
+          <Button onClick={handleGenerateClick} loading={isLoading} radius="lg">
+             Generar Datos QR
+          </Button>
+      </Box>
 
-      {/* --- Área de Resultados / Errores (COMPLETA) --- */}
-      <div style={{ marginTop: '20px', padding: '10px', border: '1px solid #eee', minHeight: '50px' }}>
-        {isLoading && <p>Procesando...</p>}
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        {generatedData && (
-          <div>
-            <h4>¡Datos QR Generados!</h4>
-            <p>Utiliza el siguiente token para generar la imagen del código QR:</p>
-            <p><strong>Token:</strong> <code style={{ background: '#eee', padding: '2px 4px' }}>{generatedData.qrToken}</code></p>
-            <p><strong>Importe asociado:</strong> {generatedData.amount.toFixed(2)} €</p>
-            <small>(En un futuro, aquí se mostraría la imagen QR directamente)</small>
-          </div>
+      {/* --- Área de Resultados / Errores con Mantine --- */}
+      <Box mt="md" style={{ minHeight: '80px' }}>
+        {isLoading && (
+            <Group justify="center"><Loader size="sm" /></Group>
         )}
-         {/* Mensaje inicial o si no hay datos/error/carga */}
-         {!isLoading && !error && !generatedData && (
-             <p>Introduce importe y número de ticket para generar los datos del QR.</p>
-         )}
-      </div>
-      {/* --- FIN Área de Resultados --- */}
-    </div>
+        {error && (
+          <Alert
+            icon={<IconAlertCircle size={16} />}
+            title="Error"
+            color="red"
+            radius="lg"
+            withCloseButton
+            onClose={() => setError(null)}
+          >
+            {error}
+          </Alert>
+        )}
+        {generatedData && (
+          <Paper withBorder p="sm" radius="lg">
+            <Group gap="xs" mb="xs">
+                 <IconCheck size={16} color="var(--mantine-color-green-7)" />
+                 <Text fw={500} size="sm">¡Datos QR Generados!</Text>
+            </Group>
+            <Text size="sm">Utiliza el siguiente token para generar la imagen del código QR:</Text>
+            <Text size="sm" mt={4}><strong>Token:</strong> <Code>{generatedData.qrToken}</Code></Text>
+            <Text size="sm"><strong>Importe asociado:</strong> {generatedData.amount.toFixed(2)} €</Text>
+            <Text size="xs" c="dimmed" mt="xs">(En un futuro, aquí se mostraría la imagen QR directamente)</Text>
+          </Paper>
+        )}
+        {!isLoading && !error && !generatedData && (
+           <Text size="sm" c="dimmed">Introduce importe y número de ticket para generar los datos del QR.</Text>
+        )}
+      </Box>
+    </Stack>
   );
 };
 

@@ -1,11 +1,35 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/* File: frontend/src/index.css */
+/* Version: 1.0.6 (Simplify font-family variable) */
 
+:root {
+  /* --- CAMBIO: Simplificar fuente --- */
+  --font-family-sans: sans-serif;
+  /* --- FIN CAMBIO --- */
+  --font-family-mono: Consolas, 'Courier New', monospace;
+
+  /* Paleta Modo Claro (Predeterminado) */
+  --color-text: #213547;
+  --color-background: #ffffff;
+  --color-primary: #646cff;
+  --color-primary-light: #747bff;
+  --color-secondary: #f9f9f9; /* Un gris muy claro */
+  --color-border: #e0e0e0;
+  --color-error: #d32f2f;
+  --color-success: #388e3c;
+
+  /* Paleta Modo Oscuro */
+  --color-text-dark: rgba(255, 255, 255, 0.87);
+  --color-background-dark: #242424;
+  --color-primary-dark: #747bff;
+  --color-primary-light-dark: #535bf2;
+  --color-secondary-dark: #1a1a1a;
+  --color-border-dark: #444;
+  --color-error-dark: #ef5350;
+  --color-success-dark: #66bb6a;
+
+  line-height: 1.6;
+  font-weight: 400;
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,28 +37,64 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Aplicar variables modo oscuro */
+     --color-text: var(--color-text-dark);
+     --color-background: var(--color-background-dark);
+     --color-primary: var(--color-primary-dark);
+     --color-primary-light: var(--color-primary-light-dark);
+     --color-secondary: var(--color-secondary-dark);
+     --color-border: var(--color-border-dark);
+     --color-error: var(--color-error-dark);
+     --color-success: var(--color-success-dark);
+  }
 }
-a:hover {
-  color: #535bf2;
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
+
+html, body {
+  /* Aplicar fuente base y colores */
+  font-family: var(--font-family-sans); /* Ahora usará 'sans-serif' */
+  color: var(--color-text);
+  background-color: var(--color-background);
+}
+
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Estilos base para elementos comunes */
+h1, h2, h3, h4 {
+  margin-top: 0;
+  font-weight: 700;
+  font-family: inherit; /* Forzar herencia de fuente */
 }
-
+h1 {
+  font-size: 2.5em;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+}
+h2 {
+  font-size: 1.8em;
+  line-height: 1.2;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.25em;
+}
+a {
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: inherit;
+  transition: color 0.2s ease;
+}
+a:hover {
+  color: var(--color-primary-light);
+}
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -42,27 +102,59 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--color-secondary);
+  color: var(--color-text);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background-color 0.2s ease;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: var(--color-primary);
 }
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+  outline-color: var(--color-primary-light);
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+textarea {
+    display: block;
+    width: 100%;
+    padding: 0.6em 0.8em;
+    font-size: 1em;
+    font-family: inherit;
+    line-height: 1.5;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    margin-bottom: 0.75rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+input:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+.text-error {
+  color: var(--color-error);
+  font-size: 0.9em;
+}
+.text-success {
+  color: var(--color-success);
+  font-size: 0.9em;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
+/* End of File: frontend/src/index.css */

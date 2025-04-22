@@ -1,110 +1,87 @@
 // File: frontend/src/pages/LoginPage.tsx
-// Version: 1.0.0
+// Version: 1.1.5 (Fix Login API Endpoint URL)
 
-import React, { useState } from 'react';
-import axios from 'axios'; // Importa axios para hacer peticiones HTTP
-import { useNavigate } from 'react-router-dom'; // Para navegar entre rutas
+import { useState, FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+// Importamos axios base y nuestra instancia configurada
+import axios from 'axios';
+//import axiosInstance from '../services/axiosInstance'; // <-- Lo mantenemos por si se usa en otro lado
+// Importaciones de Mantine y el icono
+import {
+    TextInput, PasswordInput, Button, Paper, Title, Stack, Container,
+    Alert, LoadingOverlay, Anchor, Group,
+} from '@mantine/core';
+import { IconAlertCircle } from '@tabler/icons-react';
+
+// Interfaz UserResponse (sin cambios)
+interface UserResponse { id: string; email: string; name?: string | null; role: 'BUSINESS_ADMIN' | 'CUSTOMER_FINAL'; businessId: string; points?: number; }
+
 
 function LoginPage() {
-  // Estados locales para el email y la contraseña del formulario
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  // Estado para manejar mensajes de error
-  const [error, setError] = useState<string | null>(null);
-  // Hook para navegacion programatica
-  const navigate = useNavigate();
+    const [email, setEmail] = useState<string>('');
+    const [password, setPassword] = useState<string>('');
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
+    const navigate = useNavigate();
 
-  // Manejador del envio del formulario
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    // Prevenir que la pagina se recargue al enviar el formulario
-    e.preventDefault();
-    // Limpiar cualquier error anterior
-    setError(null);
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setLoading(true);
+        setError(null);
 
-    try {
-      // Hacer la peticion POST al endpoint de login del backend
-      const response = await axios.post('http://localhost:3000/auth/login', {
-        email,
-        password,
-      });
+        // --- CORRECCIÓN: Usar axios base con URL completa para ruta pública /auth/login ---
+        const loginUrl = 'http://localhost:3000/auth/login'; // Puerto 3000 correcto
+        console.log('>>> Attempting POST to:', loginUrl); // Log actualizado
+        // --- FIN CORRECCIÓN ---
 
-      // Si el login es exitoso, el backend responde con el usuario y el token
-      const { token, user } = response.data;
+        try {
+            // --- CORRECCIÓN: Usar axios.post, no axiosInstance.post ---
+            const response = await axios.post<{ user: UserResponse; token: string }>(
+                loginUrl, // Usar la URL completa correcta
+                { email, password }
+            );
+            // --- FIN CORRECCIÓN ---
 
-      // GUARDAR el token y la informacion basica del usuario (ID, role, businessId)
-      // Esto es crucial para futuras peticiones autenticadas y para saber que interfaz mostrar
-      // Usamos localStorage por ahora, en produccion podriamos usar cookies seguras
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user)); // Guardar el objeto user como string JSON
+            const { user, token } = response.data;
 
-      console.log('Login successful!', user); // Log en consola del navegador
+            if (user && token) {
+                localStorage.setItem('token', token);
+                localStorage.setItem('user', JSON.stringify(user));
 
-      // Redirigir al usuario segun su rol
-      if (user.role === 'BUSINESS_ADMIN') {
-        // Redirigir al panel de administrador del negocio
-        navigate('/admin/dashboard'); // Esta ruta aun no existe, la definiremos despues
-      } else if (user.role === 'CUSTOMER_FINAL') {
-        // Redirigir al portal del cliente
-        navigate('/customer/dashboard'); // Esta ruta aun no existe, la definiremos despues
-      } else {
-         // Manejar otros roles o un rol inesperado
-         setError('Unknown user role.');
-         // Opcional: Limpiar token y user de localStorage si se guardaron
-         localStorage.removeItem('token');
-         localStorage.removeItem('user');
-      }
+                if (user.role === 'BUSINESS_ADMIN') { navigate('/admin/dashboard'); }
+                else if (user.role === 'CUSTOMER_FINAL') { navigate('/customer/dashboard'); }
+                else { /* ... manejo rol desconocido ... */ }
+            } else { setError('Respuesta inesperada del servidor.'); }
 
+        } catch (err: any) {
+            console.error('Login error:', err);
+            if (err.response && err.response.data && err.response.data.message) { setError(err.response.data.message); }
+            else if (err.request) { setError('No se pudo conectar con el servidor.'); }
+            else { setError('Ocurrió un error durante el inicio de sesión.'); }
+        } finally { setLoading(false); }
+    };
 
-    } catch (err: any) { // Captura errores de la peticion axios
-      // Si la peticion falla (ej: 401 Unauthorized, 400 Bad Request)
-      // axios pone la respuesta de error en err.response
-      if (err.response && err.response.data && err.response.data.message) {
-        // Mostrar el mensaje de error que viene del backend
-        setError(err.response.data.message);
-      } else {
-        // Mostrar un mensaje de error generico si no hay respuesta del backend o es inesperada
-        setError('Login failed. Please try again.');
-        console.error('Login error:', err); // Log del error completo en consola del navegador
-      }
-    }
-  };
-
-  // Renderizado del componente (el HTML del formulario)
-  return (
-    <div>
-      <h2>Login</h2>
-      {/* Mostrar mensaje de error si existe */}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="email">Email:</label>
-          {/* Input para el email. El valor se actualiza en el estado 'email' */}
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required // Campo requerido
-          />
-        </div>
-        <div>
-          <label htmlFor="password">Password:</label>
-          {/* Input para la contraseña. El valor se actualiza en el estado 'password' */}
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required // Campo requerido
-          />
-        </div>
-        {/* Boton de envio del formulario */}
-        <button type="submit">Login</button>
-      </form>
-    </div>
-  );
+    return (
+        // JSX con Mantine (sin cambios funcionales)
+        <Container size="xs" p="md" style={{ minHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Paper shadow="md" p="xl" radius="lg" withBorder style={{ position: 'relative', width: '100%' }}>
+                <LoadingOverlay visible={loading} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
+                <Title order={2} ta="center" mb="xl"> Iniciar Sesión </Title>
+                <form onSubmit={handleSubmit}>
+                  <Stack gap="lg">
+                    <TextInput required label="Email" placeholder="tu@email.com" value={email} onChange={(event) => setEmail(event.currentTarget.value)} error={error && error.toLowerCase().includes('email') ? ' ' : undefined} radius="lg" />
+                    <PasswordInput required label="Contraseña" placeholder="Tu contraseña" value={password} onChange={(event) => setPassword(event.currentTarget.value)} error={error && error.toLowerCase().includes('credential') ? ' ' : undefined} radius="lg" />
+                    {error && ( <Alert icon={<IconAlertCircle size={16} />} title="Error de Autenticación" color="red" radius="lg" withCloseButton={false}> {error} </Alert> )}
+                    <Group justify="space-between" mt="xl">
+                      <Anchor component="button" type="button" c="dimmed" onClick={() => { /* No hace nada por ahora */ }} size="sm"> ¿Has olvidado tu contraseña? </Anchor>
+                      <Button type="submit" loading={loading} radius="lg"> Iniciar Sesión </Button>
+                    </Group>
+                  </Stack>
+                </form>
+            </Paper>
+        </Container>
+    );
 }
-
-export default LoginPage; // Exporta el componente
+export default LoginPage;
 
 // End of File: frontend/src/pages/LoginPage.tsx

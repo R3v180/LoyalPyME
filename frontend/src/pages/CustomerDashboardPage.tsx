@@ -1,40 +1,49 @@
 // File: frontend/src/pages/CustomerDashboardPage.tsx
-// Version: 1.0.5 (Add Logout Logs - REALLY Full Code)
+// Version: 1.1.1 (Fixed missing Box import and unused icons - Truly Complete Code)
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../services/axiosInstance';
 
-// Interfaz para los datos del usuario (completa)
+// Mantine Imports
+import {
+    Container, Stack, Group, Title, Text, Button, Paper, Loader, Alert,
+    TextInput, SimpleGrid, Card, Badge, ThemeIcon,
+    Box // <-- Box importado correctamente
+} from '@mantine/core';
+// --- Icon Imports (Quitamos los no usados) ---
+import { IconAlertCircle, IconCircleCheck, IconCoin } from '@tabler/icons-react';
+
+// --- Interface UserData (EXPANDIDA) ---
 interface UserData {
-  id: string;
-  email: string;
-  name?: string | null; // Nombre puede ser opcional/nulo
-  phone?: string | null; // Teléfono puede ser opcional/nulo
-  role: 'CUSTOMER_FINAL'; // Sabemos que es cliente
-  isActive: boolean;
-  businessId: string; // ID del negocio al que pertenece
-  points: number; // Los puntos del cliente
-  marketingOptIn: boolean;
-  createdAt: string; // Prisma devuelve fechas como strings ISO
-  updatedAt: string;
+    id: string;
+    email: string;
+    name?: string | null;
+    phone?: string | null;
+    role: 'CUSTOMER_FINAL';
+    isActive: boolean;
+    businessId: string;
+    points: number;
+    marketingOptIn: boolean;
+    createdAt: string;
+    updatedAt: string;
 }
 
-// Interfaz para las Recompensas (completa)
+// --- Interface Reward (EXPANDIDA) ---
 interface Reward {
     id: string;
-    businessId: string; // Coincidirá con el del UserData
+    businessId: string;
     name: string;
-    description?: string | null; // Puede ser null
+    description?: string | null;
     pointsCost: number;
-    isActive: boolean; // La filtramos en el frontend si es necesario
+    isActive: boolean;
     createdAt: string;
     updatedAt: string;
 }
 
 const CustomerDashboardPage: React.FC = () => {
     const navigate = useNavigate();
-    // Estado: Inicializar TODO a null o vacío. Se llenará desde la API.
+    // --- Estados ---
     const [userData, setUserData] = useState<UserData | null>(null);
     const [rewards, setRewards] = useState<Reward[]>([]);
     const [qrTokenInput, setQrTokenInput] = useState<string>('');
@@ -44,137 +53,138 @@ const CustomerDashboardPage: React.FC = () => {
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [isSubmittingQr, setIsSubmittingQr] = useState<boolean>(false);
 
-    // fetchInitialData estable (sin cambios)
-     const stableFetchInitialData = useCallback(async () => {
-         setIsLoadingData(true);
-         setFetchError(null);
-         try {
-             console.log('FETCHING (stable): /api/profile and /api/rewards');
-             const [profileResponse, rewardsResponse] = await Promise.all([
-                 axiosInstance.get<UserData>('/profile'),
-                 axiosInstance.get<Reward[]>('/rewards')
-             ]);
-             console.log('FETCH OK (stable): Profile:', profileResponse.data);
-             console.log('FETCH OK (stable): Rewards:', rewardsResponse.data);
-             setUserData(profileResponse.data);
-             setRewards(rewardsResponse.data.filter(reward => reward.isActive));
-         } catch (err: any) {
-             console.error('FETCH ERROR (stable):', err);
-             let errorMessage = 'Error al cargar los datos.';
-             if (err.response) { errorMessage = `Error ${err.response.status}: ${err.response.data?.message || err.message || 'No se pudo obtener datos.'}`; }
-             else if (err.request) { errorMessage = 'No se pudo conectar con el servidor.'; }
-             else { errorMessage = `Error en la petición: ${err.message}`; }
-             setFetchError(errorMessage);
-             // Ya no usamos fallback a localStorage aquí
-         } finally {
-             setIsLoadingData(false);
-         }
-     }, []); // <-- Array vacío es la clave
+    // --- Funciones de Fetch y Manejadores (sin cambios internos) ---
+    const stableFetchInitialData = useCallback(async () => {
+        if (!userData) setIsLoadingData(true);
+        setFetchError(null);
+        try {
+            const [profileResponse, rewardsResponse] = await Promise.all([
+                axiosInstance.get<UserData>('/profile'),
+                axiosInstance.get<Reward[]>('/rewards')
+            ]);
+            setUserData(profileResponse.data);
+            setRewards(rewardsResponse.data.filter(reward => reward.isActive));
+        } catch (err: any) {
+            console.error('FETCH ERROR (stable):', err);
+            let errorMessage = 'Error al cargar los datos.';
+            if (err.response) { errorMessage = `Error ${err.response.status}: ${err.response.data?.message || err.message || 'No se pudo obtener datos.'}`; }
+            else if (err.request) { errorMessage = 'No se pudo conectar con el servidor.'; }
+            else { errorMessage = `Error en la petición: ${err.message}`; }
+            if (!userData) setFetchError(errorMessage);
+            else console.warn("Error refreshing data:", errorMessage);
+        } finally {
+            if (isLoadingData && !userData) setIsLoadingData(false);
+        }
+    }, [userData, isLoadingData]);
 
     useEffect(() => {
         stableFetchInitialData();
     }, [stableFetchInitialData]);
 
-    // handleQrValidationSubmit (sin cambios)
-    const handleQrValidationSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-         event.preventDefault();
-         setValidationResult(null); setValidationResultType(null);
-         if (!qrTokenInput.trim()) { setValidationResult('Por favor, introduce un código QR.'); setValidationResultType('error'); return; }
-         setIsSubmittingQr(true);
-         try {
-             const response = await axiosInstance.post<{ message: string; pointsEarned: number }>('/points/validate-qr', { qrToken: qrTokenInput.trim() });
-             setValidationResult(`${response.data.message} (${response.data.pointsEarned} puntos)`);
-             setValidationResultType('success');
-             setQrTokenInput('');
-             await stableFetchInitialData(); // Refrescar
-         } catch (err: any) {
-             console.error('Error validating QR code:', err);
-             setValidationResult(`Error al validar: ${err.response?.data?.message || err.message || 'Error desconocido'}`);
-             setValidationResultType('error');
-         } finally {
-             setIsSubmittingQr(false);
-         }
-     };
-
-    // handleLogout con logs (sin cambios)
-    const handleLogout = () => {
-        console.log("Botón Cerrar Sesión CLICADO."); // <-- LOG 1
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        console.log("localStorage limpiado, NAVEGANDO a /login..."); // <-- LOG 2
-        navigate('/login'); // Intenta navegar
+    const handleQrValidationSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setValidationResult(null); setValidationResultType(null);
+        if (!qrTokenInput.trim()) { setValidationResult('Por favor, introduce un código QR.'); setValidationResultType('error'); return; }
+        setIsSubmittingQr(true);
+        try {
+            const response = await axiosInstance.post<{ message: string; pointsEarned: number }>('/points/validate-qr', { qrToken: qrTokenInput.trim() });
+            setValidationResult(`${response.data.message} (+${response.data.pointsEarned} puntos)`);
+            setValidationResultType('success');
+            setQrTokenInput('');
+            stableFetchInitialData();
+        } catch (err: any) {
+            console.error('Error validating QR code:', err);
+            setValidationResult(`Error al validar: ${err.response?.data?.message || err.message || 'Error desconocido'}`);
+            setValidationResultType('error');
+        } finally {
+            setIsSubmittingQr(false);
+        }
     };
 
-    // --- Renderizado COMPLETO ---
-    return (
-        <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
-            {/* Header */}
-             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                 <h1>Bienvenido, {userData?.name || userData?.email || JSON.parse(localStorage.getItem('user') || '{}')?.email || 'Cliente'}!</h1>
-                <button onClick={handleLogout}>Cerrar Sesión</button>
-            </header>
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+    };
 
-            {/* Mensaje de Error General */}
-            {fetchError && ( <p style={{ color: 'red', border: '1px solid red', padding: '10px', marginBottom: '15px' }}> Error al cargar datos: {fetchError} </p> )}
+    // --- RENDER (JSX sin cambios internos respecto a v1.1.1) ---
+    return (
+        <Container size="lg" py="lg">
+            {/* Cabecera */}
+            <Group justify="space-between" mb="xl">
+                <Title order={2}>Hola, {userData?.name || userData?.email || 'Cliente'}!</Title>
+                <Button variant="light" onClick={handleLogout} radius="lg">Cerrar Sesión</Button>
+            </Group>
+
+             {/* Error General / Carga Inicial */}
+             {isLoadingData && !userData && (<Group justify='center' p="xl"><Loader /></Group>)}
+              {fetchError && !userData && (
+                 <Alert icon={<IconAlertCircle size={16} />} title="Error al Cargar Datos" color="red" radius="lg" mb="lg">
+                      {fetchError} -- Por favor, intenta recargar la página o contacta con soporte.
+                 </Alert>
+             )}
 
             {/* Contenido Principal */}
-            <main>
-                 {/* Sección de Puntos */}
-                 <section style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', background: '#eef' }}>
-                     <h2>Tus Puntos</h2>
-                     <p style={{ fontSize: '1.5em', fontWeight: 'bold' }}> {isLoadingData && !userData ? 'Cargando...' : (userData?.points ?? 'No disponible')} Puntos </p>
-                 </section>
+             {!fetchError && (
+                <Stack gap="xl">
+                    {/* Sección Puntos */}
+                    <Paper shadow="xs" p="lg" withBorder radius="lg">
+                         <Group>
+                             <ThemeIcon size="xl" radius="lg" variant="light"><IconCoin stroke={1.5} /></ThemeIcon>
+                             <div>
+                                <Text c="dimmed" size="sm">Tus Puntos</Text>
+                                <Text fz="2rem" fw={700}>{userData?.points ?? 0}</Text>
+                             </div>
+                         </Group>
+                    </Paper>
 
-                 {/* Sección Validar QR */}
-                 <section style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', background: '#f9f9f9' }}>
-                      <h2>Validar Código QR</h2>
-                      {/* Formulario QR completo */}
-                      <form onSubmit={handleQrValidationSubmit}>
-                           <label htmlFor="qrToken" style={{ marginRight: '10px' }}>Introduce el código:</label>
-                           <input
-                               type="text"
-                               id="qrToken"
-                               value={qrTokenInput}
-                               onChange={(e) => setQrTokenInput(e.target.value)}
-                               placeholder="Pega el código aquí"
-                               required
-                               disabled={isSubmittingQr}
-                               style={{ padding: '8px', marginRight: '10px', minWidth: '250px' }}
-                            />
-                           <button type="submit" disabled={isSubmittingQr}>
-                               {isSubmittingQr ? 'Validando...' : 'Validar Puntos'}
-                           </button>
-                      </form>
-                      {/* Resultado validación */}
-                      {validationResult && <p style={{ marginTop: '10px', color: validationResultType === 'error' ? 'red' : 'green' }}>{validationResult}</p>}
-                  </section>
+                    {/* Sección Validar QR */}
+                    <Paper shadow="xs" p="lg" withBorder radius="lg">
+                        <Title order={3} mb="md">Validar Código QR</Title>
+                        <form onSubmit={handleQrValidationSubmit}>
+                            <Group align="flex-end">
+                                <TextInput label="Introduce el código:" placeholder="Pega el código aquí" value={qrTokenInput} onChange={(e) => setQrTokenInput(e.currentTarget.value)} required disabled={isSubmittingQr} radius="lg" style={{ flexGrow: 1 }}/>
+                                <Button type="submit" loading={isSubmittingQr} radius="lg">Validar Puntos</Button>
+                            </Group>
+                        </form>
+                        {validationResult && (
+                            <Alert icon={validationResultType === 'success' ? <IconCircleCheck size={16} /> : <IconAlertCircle size={16} />} title={validationResultType === 'success' ? "Éxito" : "Error"} color={validationResultType === 'error' ? 'red' : 'green'} radius="lg" mt="md" withCloseButton={false}>
+                                {validationResult}
+                            </Alert>
+                        )}
+                    </Paper>
 
-                 {/* Sección Recompensas Disponibles */}
-                 <section style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px', background: '#f9f9f9' }}>
-                      <h2>Recompensas Disponibles</h2>
-                      {isLoadingData && rewards.length === 0 && <p>Cargando recompensas...</p>}
-                      {!isLoadingData && rewards.length === 0 && !fetchError && <p>No hay recompensas activas disponibles.</p>}
-                      {rewards.length > 0 && (
-                         <ul style={{ listStyleType: 'disc', paddingLeft: '20px' }}>
-                             {/* Mapeo y renderizado de cada recompensa */}
-                             {rewards.map((reward) => (
-                                 <li key={reward.id} style={{ marginBottom: '5px', opacity: userData && userData.points >= reward.pointsCost ? 1 : 0.5 }}>
-                                     <strong>{reward.name}</strong> - {reward.pointsCost} puntos
-                                     {reward.description && ` (${reward.description})`}
-                                     {/* Botón Canjear (placeholder) */}
-                                      {userData && userData.points >= reward.pointsCost && (
-                                          <button style={{ marginLeft: '10px', fontSize: '0.8em', padding: '2px 5px' }} disabled>Canjear (Próx.)</button>
-                                      )}
-                                 </li>
-                             ))}
-                         </ul>
-                      )}
-                  </section>
-             </main>
+                    {/* Sección Recompensas Disponibles */}
+                    <Paper shadow="xs" p="lg" withBorder radius="lg">
+                        <Title order={3} mb="md">Recompensas Disponibles</Title>
+                        {!isLoadingData && rewards.length === 0 && (<Text c="dimmed">No hay recompensas activas disponibles en este momento.</Text>)}
+                        <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
+                            {rewards.map((reward) => {
+                                const canAfford = userData ? userData.points >= reward.pointsCost : false;
+                                return (
+                                    <Card shadow="sm" padding="lg" radius="lg" withBorder key={reward.id} style={{ opacity: canAfford ? 1 : 0.6 }}>
+                                        <Group justify="space-between" mb="xs">
+                                            <Text fw={500}>{reward.name}</Text>
+                                            <Badge color="blue" variant="light" radius="lg">{reward.pointsCost} Puntos</Badge>
+                                        </Group>
+                                        <Text size="sm" c="dimmed" mb="md">{reward.description || 'Sin descripción adicional.'}</Text>
+                                        <Button variant="light" color="blue" fullWidth mt="md" radius="lg" disabled={!canAfford} onClick={() => console.log("TODO: Canjear", reward.id)}>
+                                            {canAfford ? 'Canjear Recompensa' : 'Puntos insuficientes'}
+                                        </Button>
+                                    </Card>
+                                );
+                            })}
+                        </SimpleGrid>
+                         {isLoadingData && rewards.length === 0 && (<Group justify='center' p="lg"><Loader size="sm" /></Group>)}
+                    </Paper>
+                </Stack>
+             )}
 
             {/* Footer */}
-            <footer style={{ marginTop: '50px', textAlign: 'center', color: '#888' }}>LoyalPyME v1.0 MVP</footer>
-        </div>
+            <Box mt="xl" pt="xl" style={{ textAlign: 'center' }}>
+                <Text c="dimmed" size="sm">LoyalPyME v1.0 MVP</Text>
+            </Box>
+        </Container>
     );
 };
 

@@ -1,22 +1,30 @@
 // File: frontend/src/main.tsx
-// Version: 1.0.0
+// Version: 1.0.3 (Apply Custom Theme + Remove Unused React Import)
 
-import React from 'react';
+// Ya no importamos React aquí
 import ReactDOM from 'react-dom/client';
-import App from './App'; // Importa nuestro componente principal App
-// import './index.css'; // Mantener o eliminar los estilos globales, lo eliminaremos mas tarde si limpiamos index.css
+import App from './App';
+import './index.css'; // Estilos globales de la aplicación
 
-// Importamos BrowserRouter de react-router-dom para envolver nuestra aplicacion
+// Importaciones de Mantine
+import '@mantine/core/styles.css';
+import { MantineProvider } from '@mantine/core';
+
+// Importar el tema personalizado
+import { theme } from './theme';
+
+// Importaciones de React Router
 import { BrowserRouter } from 'react-router-dom';
 
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  // React.StrictMode es util para desarrollo, lo mantenemos por ahora
   // <React.StrictMode>
-     // Envuelve el componente App con BrowserRouter para habilitar el enrutamiento
-     <BrowserRouter>
-       <App /> {/* Nuestro componente principal */}
-     </BrowserRouter>
+  // Aplicamos el tema personalizado al MantineProvider
+  <MantineProvider theme={theme}>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </MantineProvider>
   // </React.StrictMode>,
 );
 
