@@ -1,58 +1,49 @@
 // File: frontend/src/routes/index.tsx
-// Version: 1.0.0
+// Version: 1.0.3
 
-import React from 'react';
-// Importa los componentes de rutas de react-router-dom
+// CORRECCIÓN: No es necesario importar React explícitamente aquí
+// import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-// Importa las paginas (componentes de pagina completa)
-import LoginPage from '../pages/LoginPage'; // Importa la pagina de Login
+import PrivateRoute from '../components/PrivateRoute';
+import LoginPage from '../pages/LoginPage';
+import AdminDashboardPage from '../pages/AdminDashboardPage';
 
-// TODO: Importar otras paginas cuando las creemos (AdminDashboardPage, CustomerPortalPage, etc.)
-// import AdminDashboardPage from '../pages/AdminDashboardPage';
-// import CustomerPortalPage from '../pages/pages/CustomerPortalPage';
+// import CustomerPortalPage from '../pages/CustomerPortalPage';
 
 
 function AppRoutes() {
-  // Componente que define todas las rutas de la aplicacion
   return (
     <Routes>
-      {/* Ruta para la pagina de Login */}
+      {/* Ruta PUBLICA */}
       <Route path="/login" element={<LoginPage />} />
-
-      {/* Ruta de redireccion: si alguien va a la raiz '/', lo redirigimos al login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* TODO: Añadir rutas protegidas para el Panel Admin y el Portal Cliente en el futuro */}
-      {/* Ejemplo de ruta protegida (Admin): */}
-      {/* <Route
-            path="/admin/dashboard"
-            element={
-              // Aqui pondriamos un componente que verifica si el usuario es admin y autenticado
-              // <PrivateRoute roles={['BUSINESS_ADMIN']}>
-                 <AdminDashboardPage />
-              // </PrivateRoute>
-            }
-          /> */}
+      {/* --- Rutas PROTEGIDAS --- */}
+      <Route
+        path="/admin/dashboard"
+        element={
+          <PrivateRoute roles={['BUSINESS_ADMIN']}>
+            <AdminDashboardPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/customer/dashboard"
+        element={
+          <PrivateRoute roles={['CUSTOMER_FINAL']}>
+            <p>Customer Portal - Esta ruta está protegida y requiere rol CUSTOMER_FINAL</p>
+            {/* <CustomerPortalPage /> */}
+          </PrivateRoute>
+        }
+      />
 
-      {/* Ejemplo de ruta protegida (Cliente): */}
-      {/* <Route
-            path="/customer/dashboard"
-            element={
-              // Aqui pondriamos un componente que verifica si el usuario es cliente y autenticado
-              // <PrivateRoute roles={['CUSTOMER_FINAL']}>
-                 <CustomerPortalPage />
-              // </PrivateRoute>
-            }
-          /> */}
-
-      {/* TODO: Añadir una pagina 404 Not Found */}
+      {/* TODO: Añadir pagina 404 */}
       {/* <Route path="*" element={<NotFoundPage />} /> */}
-
     </Routes>
   );
 }
 
-export default AppRoutes; // Exporta el componente que define las rutas
+export default AppRoutes;
 
 // End of File: frontend/src/routes/index.tsx
