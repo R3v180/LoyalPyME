@@ -1,9 +1,9 @@
 // File: backend/src/routes/points.routes.ts
-// Version: 1.0.0
+// Version: 1.1.0 (Add redeem reward route)
 
 import { Router } from 'express';
-// Importa las funciones del controlador de puntos (generateQrHandler, validateQrHandler)
-import { generateQrHandler, validateQrHandler } from '../points/points.controller';
+// Importa las funciones del controlador de puntos
+import { generateQrHandler, validateQrHandler, redeemRewardHandler } from '../points/points.controller';
 
 const router = Router(); // Crea una nueva instancia de Express Router
 
@@ -23,12 +23,13 @@ router.post('/generate-qr', generateQrHandler);
 // Requiere autenticacion JWT. Requiere CUSTOMER_FINAL role (pendiente middleware de rol).
 router.post('/validate-qr', validateQrHandler);
 
+// Ruta para canjear una recompensa (para CUSTOMER_FINAL)
+// POST /api/points/redeem-reward/:rewardId
+// Requiere autenticacion JWT. Requiere CUSTOMER_FINAL role (pendiente middleware de rol).
+router.post('/redeem-reward/:rewardId', redeemRewardHandler);
 
-// Puedes añadir mas rutas relacionadas con puntos aqui en el futuro, por ejemplo:
-// router.get('/me', getCustomerPointsHandler); // GET /api/points/me - Obtener puntos del cliente autenticado
-// router.post('/redeem-reward', redeemRewardHandler); // POST /api/points/redeem-reward - Canjear una recompensa
 
-// Exporta este router para que pueda ser usado en el archivo principal de la aplicacion (index.ts)
-export default router;
+// Exporta este router para ser usado en el archivo principal de la aplicacion (index.ts)
+export default router; // <-- Asegúrate que esta línea está presente y es la última instrucción ejecutable.
 
 // End of File: backend/src/routes/points.routes.ts
