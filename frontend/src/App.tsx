@@ -1,35 +1,25 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// File: frontend/src/App.tsx
+// Version: 1.0.1
+
+import React from 'react';
+// Importa nuestro componente que define las rutas
+import AppRoutes from './routes/index';
+
+// Opcional: Importar estilos globales si los tenemos (por ahora index.css esta comentado en main.tsx)
+// import './index.css';
+
 
 function App() {
-  const [count, setCount] = useState(0)
-
+  // El componente App ahora solo renderiza el componente AppRoutes,
+  // que se encargara de mostrar la pagina correcta segun la URL.
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    // Puedes envolver AppRoutes con otros componentes de layout aqui (ej: Header, Footer)
+    <div className="App"> {/* Puedes añadir clases CSS globales aqui */}
+      <AppRoutes /> {/* Renderiza las rutas de la aplicacion */}
+    </div>
+  );
 }
 
-export default App
+export default App; // Exporta el componente principal App
+
+// End of File: frontend/src/App.tsx
