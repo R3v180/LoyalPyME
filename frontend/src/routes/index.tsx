@@ -1,15 +1,12 @@
 // File: frontend/src/routes/index.tsx
-// Version: 1.0.3
+// Version: 1.0.5 (Re-integrating Customer Page)
 
-// CORRECCIÓN: No es necesario importar React explícitamente aquí
-// import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import PrivateRoute from '../components/PrivateRoute';
 import LoginPage from '../pages/LoginPage';
 import AdminDashboardPage from '../pages/AdminDashboardPage';
-
-// import CustomerPortalPage from '../pages/CustomerPortalPage';
+import CustomerDashboardPage from '../pages/CustomerDashboardPage'; // Importamos la página del cliente
 
 
 function AppRoutes() {
@@ -32,8 +29,8 @@ function AppRoutes() {
         path="/customer/dashboard"
         element={
           <PrivateRoute roles={['CUSTOMER_FINAL']}>
-            <p>Customer Portal - Esta ruta está protegida y requiere rol CUSTOMER_FINAL</p>
-            {/* <CustomerPortalPage /> */}
+            {/* Ahora renderiza el componente CustomerDashboardPage real */}
+            <CustomerDashboardPage />
           </PrivateRoute>
         }
       />
