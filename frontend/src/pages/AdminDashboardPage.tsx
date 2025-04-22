@@ -1,7 +1,7 @@
 // File: frontend/src/pages/AdminDashboardPage.tsx
-// Version: 1.1.8 (Use useMediaQuery - Truly 100% Complete Code FINAL)
+// Version: 1.1.9 (Fix icon size prop, cleanup table JSX whitespace - TRULY 100% COMPLETE)
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Dejamos React por si acaso
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../services/axiosInstance'; // Ignorar warning de no usado si aparece
 
@@ -12,7 +12,7 @@ import GenerateQrCode from '../components/GenerateQrCode';
 import {
     AppShell, Burger, Group, Button, Title, Text, Box, Loader, Alert, Paper, Stack,
     Table, Badge, ActionIcon, Tooltip, NavLink,
-    useMantineTheme // <-- Añadimos hook para theme
+    useMantineTheme
 } from '@mantine/core';
 // --- Importamos useMediaQuery ---
 import { useDisclosure, useMediaQuery } from '@mantine/hooks';
@@ -37,7 +37,7 @@ interface Reward {
 const AdminDashboardPage: React.FC = () => {
     // --- Estados y hooks ---
     const navigate = useNavigate(); // Ignorar warning de no usado si aparece
-    const [userName, setUserName] = useState<string | null>(null); // Ahora sí se usa
+    const [userName, setUserName] = useState<string | null>(null);
     const [rewards, setRewards] = useState<Reward[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -95,77 +95,73 @@ const AdminDashboardPage: React.FC = () => {
         fetchRewards();
     };
 
-    // --- Función para renderizar la tabla (CON ACCIONES RESPONSIVAS USANDO isMobile) ---
+    // --- Función para renderizar la tabla (ICON SIZE CORREGIDO, WHITESPACE AJUSTADO) ---
     const renderRewardsTable = () => {
       const rows = rewards.map((reward) => {
-          // Creamos los iconos una vez para reutilizar
+          const iconSize = 14; // Definimos tamaño numérico para iconos
           const actionIcons = (
               <>
                 <Tooltip label="Editar Recompensa" withArrow position={isMobile ? 'bottom' : 'left'}>
                   <ActionIcon variant="subtle" color="blue" onClick={() => console.log('TODO: Editar', reward.id)}>
-                    <IconPencil size="xs" stroke={1.5} />
+                    {/* --- CORRECCIÓN: size={iconSize} --- */}
+                    <IconPencil size={iconSize} stroke={1.5} />
                   </ActionIcon>
                 </Tooltip>
                 <Tooltip label={reward.isActive ? "Desactivar" : "Activar"} withArrow position="top">
                   <ActionIcon variant="subtle" color={reward.isActive ? 'orange' : 'teal'} onClick={() => console.log('TODO: Toggle Activo', reward.id)}>
-                    {reward.isActive ? <IconToggleLeft size="xs" stroke={1.5} /> : <IconToggleRight size="xs" stroke={1.5} />}
+                    {/* --- CORRECCIÓN: size={iconSize} --- */}
+                    {reward.isActive ? <IconToggleLeft size={iconSize} stroke={1.5} /> : <IconToggleRight size={iconSize} stroke={1.5} />}
                   </ActionIcon>
                 </Tooltip>
                 <Tooltip label="Eliminar Recompensa" withArrow position={isMobile ? 'bottom' : 'right'}>
                    <ActionIcon variant="subtle" color="red" onClick={() => console.log('TODO: Eliminar', reward.id)}>
-                     <IconTrash size="xs" stroke={1.5} />
+                     {/* --- CORRECCIÓN: size={iconSize} --- */}
+                     <IconTrash size={iconSize} stroke={1.5} />
                    </ActionIcon>
                  </Tooltip>
               </>
           );
 
+          // --- CORRECCIÓN: Sin espacios extra entre <tr> y <td> ---
           return (
             <Table.Tr key={reward.id}>
-              <Table.Td fz={{ base: 'xs', sm: 'sm' }}>{reward.name}</Table.Td>
-              <Table.Td fz={{ base: 'xs', sm: 'sm' }}>{reward.pointsCost}</Table.Td>
-              <Table.Td>
+              <Table.Td fz={{ base: 'xs', sm: 'sm' }}>{reward.name}</Table.Td><Table.Td fz={{ base: 'xs', sm: 'sm' }}>{reward.pointsCost}</Table.Td><Table.Td>
                  <Badge color={reward.isActive ? 'green' : 'gray'} variant="light" radius="lg" fz={{ base: 'xs', sm: 'sm' }}>
                    {reward.isActive ? 'Activa' : 'Inactiva'}
                  </Badge>
-              </Table.Td>
-              <Table.Td>
+              </Table.Td><Table.Td>
                  {/* Renderizado condicional usando isMobile */}
                  {isMobile ? (
-                     <Stack gap={2} align="flex-end">
-                         {actionIcons}
-                     </Stack>
+                     <Stack gap={2} align="flex-end">{actionIcons}</Stack>
                  ) : (
-                     <Group gap="xs" justify="flex-end" wrap="nowrap">
-                         {actionIcons}
-                     </Group>
+                     <Group gap="xs" justify="flex-end" wrap="nowrap">{actionIcons}</Group>
                  )}
               </Table.Td>
             </Table.Tr>
           );
       }); // Fin de rows.map
 
-      // Retorno de la tabla
+      // --- Retorno de renderRewardsTable ---
       return (
         <Table striped highlightOnHover withTableBorder withColumnBorders verticalSpacing="sm">
           <Table.Thead>
+            {/* --- CORRECCIÓN: Sin espacios extra entre <tr> y <th> --- */}
             <Table.Tr>
-              <Table.Th fz={{ base: 'xs', sm: 'sm' }}>Nombre</Table.Th>
-              <Table.Th fz={{ base: 'xs', sm: 'sm' }}>Coste</Table.Th> {/* Header corto */}
-              <Table.Th fz={{ base: 'xs', sm: 'sm' }}>Estado</Table.Th>
-              <Table.Th style={{ textAlign: 'right' }} fz={{ base: 'xs', sm: 'sm' }}>Acciones</Table.Th>
+              <Table.Th fz={{ base: 'xs', sm: 'sm' }}>Nombre</Table.Th><Table.Th fz={{ base: 'xs', sm: 'sm' }}>Coste</Table.Th><Table.Th fz={{ base: 'xs', sm: 'sm' }}>Estado</Table.Th><Table.Th style={{ textAlign: 'right' }} fz={{ base: 'xs', sm: 'sm' }}>Acciones</Table.Th>
             </Table.Tr>
           </Table.Thead>
+          {/* --- CORRECCIÓN: Sin espacios extra entre <tbody> y {rows} --- */}
           <Table.Tbody>{rows}</Table.Tbody>
         </Table>
       );
     }; // Fin de renderRewardsTable
 
-    // --- Función renderRewardsSectionContent (Sin Box con scroll) ---
+    // --- Función renderRewardsSectionContent (sin Box con scroll) ---
     const renderRewardsSectionContent = () => {
          if (loading && rewards.length === 0) return <Group justify="center" p="lg"><Loader /></Group>;
          if (error && rewards.length === 0) return (<Alert icon={<IconAlertCircle size={16} />} title="Error al cargar" color="red" radius="lg">{error}</Alert>);
          if (rewards.length === 0) return <Text c="dimmed" ta="center" p="lg">Aún no has creado ninguna recompensa.</Text>;
-         // Quitamos el Box con scroll
+         // Quitamos el Box con scroll, confiando en que apilar acciones es suficiente
          return renderRewardsTable();
     }; // Fin de renderRewardsSectionContent
 
@@ -237,7 +233,7 @@ const AdminDashboardPage: React.FC = () => {
 }; // Fin del componente AdminDashboardPage
 
 
-// --- Interface Reward (Expandida de nuevo por si acaso) ---
+// --- Interface Reward (Expandida) ---
 interface Reward {
     id: string; name: string; description?: string | null; pointsCost: number;
     isActive: boolean; businessId: string; createdAt: string; updatedAt: string;
