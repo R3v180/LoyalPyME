@@ -1,187 +1,102 @@
-// File: frontend/src/pages/CustomerDashboardPage.tsx
-// Version: 1.3.1 (Integrate Notifications - Fully Expanded JSX)
+// File: frontend/src/pages/AdminDashboardPage.tsx
+// Version: 1.5.3 (Cleanup unused imports/code for Layout component)
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-// Mantine Imports
-import { Container, Text, Paper, Title, Stack, SimpleGrid, Card, Button, Group, TextInput, Loader, Alert } from '@mantine/core';
-// Notifications Imports
-import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconCheck, IconX } from '@tabler/icons-react';
-import axiosInstance from '../services/axiosInstance';
+// Solo importamos lo necesario para React y el Routing/Layout básico
+import React, { useState, useEffect } from 'react'; // Mantenemos useState/useEffect para userName
+import { useNavigate, Outlet, Link, useLocation } from 'react-router-dom';
 
-// Interfaces (sin cambios)
-interface UserProfile { id: string; email: string; name?: string | null; role: string; points: number; businessId: string; }
-interface Reward { id: string; name: string; description?: string | null; pointsCost: number; isActive: boolean; businessId: string; }
+// Solo importamos componentes de Mantine usados en el Layout (AppShell, Header, Navbar, Main, Footer)
+import {
+    AppShell, Burger, Group, Button, Title, Text, Box, NavLink
+} from '@mantine/core';
+// Solo importamos hooks de Mantine usados aquí
+import { useDisclosure } from '@mantine/hooks';
+// Solo importamos iconos usados en el Layout (Navbar, Header)
+import {
+    IconGauge, IconGift, IconQrcode, IconUsers
+} from '@tabler/icons-react';
 
-function CustomerDashboardPage() {
-    // Estados (Quitamos los de resultado/error para alertas locales)
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [rewards, setRewards] = useState<Reward[]>([]);
-    const [loadingProfile, setLoadingProfile] = useState<boolean>(true);
-    const [loadingRewards, setLoadingRewards] = useState<boolean>(true);
-    const [errorProfile, setErrorProfile] = useState<string | null>(null); // Mantenemos error de carga perfil
-    const [errorRewards, setErrorRewards] = useState<string | null>(null); // Mantenemos error de carga recompensas
-    const [qrToken, setQrToken] = useState<string>('');
-    const [validatingQr, setValidatingQr] = useState<boolean>(false);
-    const [isRedeeming, setIsRedeeming] = useState<string | null>(null);
+// Ya no necesitamos axiosInstance, RewardForm, GenerateQrCode, ni la mayoría de los otros
+// componentes/iconos/hooks de Mantine aquí. Se usarán en los componentes hijos.
+// Tampoco necesitamos la interfaz Reward ni el tipo ActionLoading aquí.
+
+
+const AdminDashboardPage: React.FC = () => {
+    // Estados y hooks solo para el Layout
     const navigate = useNavigate();
+    const [userName, setUserName] = useState<string | null>(null);
+    const [navbarOpened, { toggle: toggleNavbar }] = useDisclosure();
+    const location = useLocation();
 
-    // Funciones (handleLogout, fetchUserProfile, fetchRewards, useEffect) (sin cambios lógicos)
-    const handleLogout = () => { console.log('Logging out...'); localStorage.removeItem('token'); navigate('/login'); };
-    const fetchUserProfile = async () => { setLoadingProfile(true); setErrorProfile(null); try { const response = await axiosInstance.get<UserProfile>('/profile'); setUserProfile(response.data); console.log('User profile fetched:', response.data); } catch (error: any) { console.error('Error fetching user profile:', error); if (error.response?.status === 401 || error.response?.status === 403) { handleLogout(); } else { setErrorProfile(error.response?.data?.message || error.message || 'Failed to fetch profile.'); } } finally { setLoadingProfile(false); } };
-    const fetchRewards = async () => { setLoadingRewards(true); setErrorRewards(null); try { const response = await axiosInstance.get<Reward[]>('/rewards'); setRewards(response.data.filter(reward => reward.isActive)); console.log('Active rewards fetched:', response.data.filter(reward => reward.isActive)); } catch (error: any) { console.error('Error fetching rewards:', error); setErrorRewards(error.response?.data?.message || error.message || 'Failed to fetch rewards.'); } finally { setLoadingRewards(false); } };
-    useEffect(() => { fetchUserProfile(); fetchRewards(); }, []); // Quitamos fetchRewards de dependencias, ya no se necesita
+    // useEffect para obtener nombre de usuario (se mantiene)
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        // Simplificado: asumimos que 'user' en localStorage tiene al menos 'email'
+        if (storedUser) { try { const parsedUser = JSON.parse(storedUser); setUserName(parsedUser.name || parsedUser.email || 'Admin'); } catch (e) { console.error("Error parsing user data", e); setUserName('Admin'); } } else { setUserName('Admin'); }
+    }, []);
 
+    // handleLogout (se mantiene)
+    const handleLogout = () => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login'); };
 
-    // handleValidateQr (Usa notificaciones)
-    const handleValidateQr = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!qrToken) return;
-        setValidatingQr(true);
-        try {
-            const response = await axiosInstance.post<{ message: string; pointsEarned: number }>('/points/validate-qr', { qrToken });
-            notifications.show({ title: '¡Puntos Añadidos!', message: `${response.data.message} (+${response.data.pointsEarned} puntos)`, color: 'green', icon: <IconCheck size={18} />, autoClose: 5000 });
-            setQrToken('');
-            fetchUserProfile();
-        } catch (error: any) {
-            console.error('Error validating QR code:', error);
-            const errorMessage = error.response?.data?.message || 'Fallo al validar el código QR.';
-            notifications.show({ title: 'Error de Validación', message: errorMessage, color: 'red', icon: <IconX size={18} />, autoClose: 6000 });
-        } finally {
-            setValidatingQr(false);
-        }
-    };
-
-    // handleRedeemReward (Usa notificaciones)
-    const handleRedeemReward = async (rewardId: string) => {
-        if (isRedeeming) return;
-        setIsRedeeming(rewardId);
-        console.log(`Attempting to redeem reward ID: ${rewardId}`);
-        try {
-            const response = await axiosInstance.post<{ message: string; newPointsBalance: number }>(`/points/redeem-reward/${rewardId}`);
-            console.log('Redemption successful:', response.data);
-            notifications.show({ title: '¡Canje Exitoso!', message: response.data.message || 'Recompensa canjeada con éxito.', color: 'green', icon: <IconCheck size={18} />, autoClose: 4000 });
-            fetchUserProfile();
-        } catch (error: any) {
-            console.error('Error redeeming reward:', error);
-            const errorMessage = error.response?.data?.message || 'Fallo al canjear la recompensa.';
-            notifications.show({ title: 'Error al Canjear', message: errorMessage, color: 'red', icon: <IconX size={18} />, autoClose: 6000 });
-        } finally {
-            setIsRedeeming(null);
-        }
-    };
-
-    // --- JSX Renderizado Principal (COMPLETO) ---
-    if (loadingProfile) {
-        // Mostrar Loader mientras carga el perfil inicial
-        return (
-            <Container size="xs" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <Loader />
-            </Container>
-        );
-    }
-
-    if (errorProfile) {
-        // Mostrar error si falla la carga del perfil
-        return (
-            <Container size="xs" mt="xl">
-                <Alert icon={<IconAlertCircle size={16} />} title="Error" color="red">
-                    {errorProfile}
-                </Alert>
-            </Container>
-        );
-    }
-
-    if (!userProfile) {
-        // Mostrar mensaje si no hay datos de perfil (raro si no hubo error)
-        return (
-            <Container size="xs" mt="xl">
-                <Text>No user profile data available.</Text>
-            </Container>
-        );
-    }
-
-    // Si todo está bien, mostrar el dashboard
+    // RENDER PRINCIPAL - Layout Limpio
     return (
-        <Container size="lg" my="xl">
-            <Stack gap="xl">
-                {/* Saludo y Puntos */}
-                <Paper shadow="sm" p="lg" withBorder>
-                    <Group justify="space-between" align="flex-start">
-                        <div>
-                            <Title order={2} mb="sm">¡Hola, {userProfile.name || userProfile.email}!</Title>
-                            <Text size="xl">Tienes <Text span fw={700}>{userProfile.points}</Text> puntos.</Text>
-                        </div>
-                         <Button onClick={handleLogout}>Cerrar Sesión</Button>
-                    </Group>
-                </Paper>
+        <AppShell
+            header={{ height: 60 }}
+            navbar={{ width: 250, breakpoint: 'sm', collapsed: { mobile: !navbarOpened } }}
+            padding="md"
+        >
+             <AppShell.Header>
+                  <Group h="100%" px="md" justify="space-between">
+                      <Burger opened={navbarOpened} onClick={toggleNavbar} hiddenFrom="sm" size="sm" />
+                      <Title order={3} hiddenFrom="sm">LoyalPyME Admin</Title>
+                      <Title order={4} visibleFrom="sm">LoyalPyME Admin</Title>
+                      <Group gap="xs">
+                          <Text size="sm" visibleFrom="xs">Bienvenido, {userName || 'Admin'}!</Text>
+                          <Button onClick={handleLogout}>Cerrar Sesión</Button>
+                      </Group>
+                  </Group>
+             </AppShell.Header>
 
-                {/* Validar QR */}
-                <Paper shadow="sm" p="lg" withBorder>
-                     <Title order={3} mb="md">Validar Código QR</Title>
-                     <form onSubmit={handleValidateQr}>
-                         <Stack>
-                             <TextInput label="Introduce el código:" placeholder="Pega el código aquí" value={qrToken} onChange={(event) => setQrToken(event.currentTarget.value)} required disabled={validatingQr} />
-                             <Button type="submit" loading={validatingQr} disabled={!qrToken}>Validar Puntos</Button>
-                             {/* Las alertas de resultado se quitaron, ahora son notificaciones */}
-                         </Stack>
-                     </form>
-                </Paper>
+              <AppShell.Navbar p="md">
+                  <NavLink
+                      label="Dashboard"
+                      leftSection={<IconGauge size="1rem" stroke={1.5} />}
+                      component={Link}
+                      to="/admin/dashboard"
+                      active={location.pathname === '/admin/dashboard'}
+                  />
+                   <NavLink
+                      label="Recompensas"
+                      leftSection={<IconGift size="1rem" stroke={1.5} />}
+                      component={Link}
+                      to="/admin/dashboard/rewards"
+                      active={location.pathname === '/admin/dashboard/rewards'}
+                   />
+                  <NavLink
+                      label="Generar QR"
+                      leftSection={<IconQrcode size="1rem" stroke={1.5} />}
+                      component={Link}
+                      to="/admin/dashboard/generate-qr"
+                      active={location.pathname === '/admin/dashboard/generate-qr'}
+                  />
+                  <NavLink
+                      label="Clientes (próx.)"
+                      leftSection={<IconUsers size="1rem" stroke={1.5} />}
+                      disabled
+                  />
+             </AppShell.Navbar>
 
-                {/* Recompensas Disponibles */}
-                <Paper shadow="sm" p="lg" withBorder>
-                    <Title order={3} mb="md">Recompensas Disponibles</Title>
-                    {/* Las alertas de resultado de canje se quitaron, ahora son notificaciones */}
+             <AppShell.Main>
+                 <Outlet /> {/* Aquí se renderizarán los componentes hijos */}
+                 <Box mt="xl" pt="xl" style={{ textAlign: 'center' }}>
+                     <Text c="dimmed" size="sm">LoyalPyME v1.0 MVP</Text>
+                 </Box>
+             </AppShell.Main>
 
-                    {/* Lógica de renderizado de recompensas COMPLETA */}
-                    {loadingRewards ? (
-                        <Group justify="center">
-                            <Loader />
-                        </Group>
-                    ) : errorRewards ? (
-                        <Alert icon={<IconAlertCircle size={16} />} title="Error Cargando Recompensas" color="red">
-                            {errorRewards}
-                        </Alert>
-                    ) : rewards.length === 0 ? (
-                        <Text c="dimmed" ta="center">No hay recompensas disponibles en este momento.</Text>
-                    ) : (
-                        <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
-                            {rewards.map((reward) => {
-                                const canAfford = userProfile.points >= reward.pointsCost;
-                                const isCurrentlyRedeemingThis = isRedeeming === reward.id;
-                                return (
-                                    <Card shadow="sm" padding="lg" radius="md" withBorder key={reward.id}>
-                                        <Stack justify="space-between" style={{ height: '100%' }}>
-                                            <div>
-                                                <Text fw={500}>{reward.name}</Text>
-                                                <Text size="sm" c="dimmed" mt="xs">{reward.description || 'Sin descripción.'}</Text>
-                                            </div>
-                                            <Group justify="space-between" mt="md">
-                                                 <Text fw={700}>{reward.pointsCost} Puntos</Text>
-                                                <Button
-                                                    variant="light"
-                                                    color="blue"
-                                                    size="sm"
-                                                    disabled={!canAfford || !!isRedeeming}
-                                                    loading={isCurrentlyRedeemingThis}
-                                                    onClick={() => handleRedeemReward(reward.id)}
-                                                >
-                                                    {canAfford ? 'Canjear' : 'Puntos insuf.'}
-                                                </Button>
-                                            </Group>
-                                        </Stack>
-                                    </Card>
-                                );
-                            })}
-                        </SimpleGrid>
-                    )}
-                </Paper>
-            </Stack>
-        </Container>
+        </AppShell>
     );
-}
+};
 
-export default CustomerDashboardPage;
+export default AdminDashboardPage;
 
-// End of File: frontend/src/pages/CustomerDashboardPage.tsx
+// End of File: frontend/src/pages/AdminDashboardPage.tsx
