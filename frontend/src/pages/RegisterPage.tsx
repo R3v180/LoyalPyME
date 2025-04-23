@@ -1,88 +1,102 @@
 // File: frontend/src/pages/RegisterPage.tsx
-// Version: 1.1.0 (Implement API call and notifications)
+// Version: 1.2.1 (Remove unused imports)
 
-import React, { useState, FormEvent } from 'react';
+// MODIFICADO: Quitado FormEvent de la importación
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-// --- CAMBIO: Importar axios ---
 import axios from 'axios';
-// --- FIN CAMBIO ---
 import {
     Container, Paper, Title, Text, Stack, TextInput, PasswordInput,
     Button, Select, Anchor
-    // --- CAMBIO: Quitar Alert ---
-    // Alert
-    // --- FIN CAMBIO ---
 } from '@mantine/core';
-// --- CAMBIO: Importar notifications e iconos ---
+import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconCheck, IconX } from '@tabler/icons-react';
-// --- FIN CAMBIO ---
-
+// MODIFICADO: Quitado IconAlertCircle de la importación
+import { IconCheck, IconX } from '@tabler/icons-react';
 
 // Enums (sin cambios)
 enum DocumentType { DNI = 'DNI', NIE = 'NIE', PASSPORT = 'PASSPORT', OTHER = 'OTHER' }
 enum UserRole { BUSINESS_ADMIN = 'BUSINESS_ADMIN', CUSTOMER_FINAL = 'CUSTOMER_FINAL' }
 
+// Interface (sin cambios)
+interface RegisterFormValues {
+    email: string;
+    password: string;
+    confirmPassword: string;
+    name: string;
+    phone: string;
+    documentType: DocumentType | null;
+    documentId: string;
+    businessId: string;
+}
 
 const RegisterPage: React.FC = () => {
     const navigate = useNavigate();
-
-    // Estados del formulario (sin cambios)
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [documentId, setDocumentId] = useState('');
-    const [documentType, setDocumentType] = useState<DocumentType | null>(null);
-    const [businessId, setBusinessId] = useState('');
     const role: UserRole = UserRole.CUSTOMER_FINAL;
     const [isLoading, setIsLoading] = useState(false);
-    // --- CAMBIO: Quitar estado de error local ---
-    // const [error, setError] = useState<string | null>(null);
-    // --- FIN CAMBIO ---
-
-    // Opciones Select (sin cambios)
     const documentTypeOptions = Object.values(DocumentType).map(value => ({ value, label: value }));
 
-    // handleSubmit (Implementar API call y notificaciones)
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        //setError(null); // Ya no existe
+    // useForm (sin cambios)
+    const form = useForm<RegisterFormValues>({
+        initialValues: {
+            email: '',
+            password: '',
+            confirmPassword: '',
+            name: '',
+            phone: '',
+            documentType: null,
+            documentId: '',
+            businessId: '',
+        },
+        validate: {
+            email: (value) => {
+                if (!value) return 'El email es obligatorio.';
+                if (!/^\S+@\S+\.\S+$/.test(value)) return 'Formato de email inválido.';
+                return null;
+            },
+            password: (value) => {
+                if (!value) return 'La contraseña es obligatoria.';
+                if (value.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
+                return null;
+            },
+            confirmPassword: (value, values) => {
+                if (!value) return 'Confirma la contraseña.';
+                if (value !== values.password) return 'Las contraseñas no coinciden.';
+                return null;
+            },
+            phone: (value) => {
+                if (!value) return 'El teléfono es obligatorio.';
+                if (!/^\+\d{9,15}$/.test(value)) return 'Formato inválido (ej: +34666...).';
+                return null;
+            },
+            documentType: (value) => (value ? null : 'Selecciona un tipo de documento.'),
+            documentId: (value, values) => {
+                 if (!value) return 'El número de documento es obligatorio.';
+                 if (values.documentType === DocumentType.DNI && !/^\d{8}[A-Z]$/i.test(value)) return 'Formato DNI inválido (8 números y 1 letra).';
+                 if (values.documentType === DocumentType.NIE && !/^[XYZ]\d{7}[A-Z]$/i.test(value)) return 'Formato NIE inválido (letra, 7 números, letra).';
+                 return null;
+            },
+            businessId: (value) => (value ? null : 'El ID del negocio es obligatorio.'),
+        },
+    });
 
-        // Validación básica de contraseña
-        if (password !== confirmPassword) {
-            notifications.show({ title: 'Error', message: 'Las contraseñas no coinciden.', color: 'orange', icon: <IconAlertCircle size={18} /> });
-            return;
-        }
-        // Validación básica de campos obligatorios
-        if (!email || !password || !phone || !documentId || !documentType || !businessId) {
-             notifications.show({ title: 'Campos Incompletos', message: 'Por favor, completa todos los campos obligatorios.', color: 'orange', icon: <IconAlertCircle size={18} /> });
-             return;
-        }
-
+    // handleSubmit (sin cambios)
+    const handleSubmit = async (values: RegisterFormValues) => {
         setIsLoading(true);
-
         const registrationData = {
-            email: email.trim(), // Limpiar espacios
-            password, // Enviar contraseña plana, el backend la hashea
-            name: name.trim() || undefined, // Enviar undefined si está vacío para que BD use NULL
-            phone: phone.trim(),
-            documentId: documentId.trim().toUpperCase(), // Guardar en mayúsculas por consistencia?
-            documentType,
-            businessId: businessId.trim(),
+            email: values.email.trim(),
+            password: values.password,
+            name: values.name.trim() || undefined,
+            phone: values.phone.trim(),
+            documentId: values.documentId.trim().toUpperCase(),
+            documentType: values.documentType,
+            businessId: values.businessId.trim(),
             role,
         };
-
-        console.log('Intentando registrar:', registrationData);
-
-        // --- CAMBIO: Implementar API Call con Axios y Notificaciones ---
+        console.log('Intentando registrar (con useForm):', registrationData);
         try {
-            // Usamos axios base con la URL completa
             const response = await axios.post('http://localhost:3000/auth/register', registrationData);
             console.log('Registration successful:', response.data);
-
-            // Notificación de éxito
             notifications.show({
                 title: '¡Registro Exitoso!',
                 message: 'Tu cuenta ha sido creada. Serás redirigido a la página de inicio de sesión.',
@@ -90,61 +104,46 @@ const RegisterPage: React.FC = () => {
                 icon: <IconCheck size={18} />,
                 autoClose: 4000,
             });
-
-            // Redirigir a login después de mostrar la notificación (con un pequeño delay opcional)
             setTimeout(() => {
-                 navigate('/login', { state: { registrationSuccess: true } }); // Pasar estado opcional
-            }, 1500); // Esperar 1.5s antes de redirigir
-
-
+                navigate('/login', { state: { registrationSuccess: true } });
+            }, 1500);
         } catch (err: any) {
             console.error('Error during registration:', err);
             const message = err.response?.data?.message || err.message || 'Error desconocido durante el registro.';
-
-            // Notificación de error
-             notifications.show({
+            notifications.show({
                 title: 'Error de Registro',
-                message: message, // Mostramos el error específico de la API
+                message: message,
                 color: 'red',
                 icon: <IconX size={18} />,
                 autoClose: 6000,
             });
-            // setError(message); // Ya no se usa
-
         } finally {
             setIsLoading(false);
         }
-        // --- FIN CAMBIO ---
     };
 
-    // JSX
+    // JSX (sin cambios)
     return (
         <Container size={480} my={40}>
-            <Title ta="center" style={{ fontWeight: 900 }}> ¡Bienvenido a LoyalPyME! </Title>
-            <Text c="dimmed" size="sm" ta="center" mt={5}> ¿Ya tienes cuenta?{' '} <Anchor size="sm" component={Link} to="/login"> Inicia sesión </Anchor> </Text>
-            <Paper withBorder shadow="md" p={30} mt={30} radius="lg">
-                <Title order={2} ta="center" mb="lg">Crea tu Cuenta</Title>
-                <form onSubmit={handleSubmit}>
-                    <Stack>
-                        {/* Campos del formulario (sin cambios estructurales) */}
-                        <TextInput label="Email" placeholder="tu@email.com" value={email} onChange={(event) => setEmail(event.currentTarget.value)} required disabled={isLoading} />
-                        <PasswordInput label="Contraseña" placeholder="Tu contraseña" value={password} onChange={(event) => setPassword(event.currentTarget.value)} required disabled={isLoading} />
-                        <PasswordInput label="Confirmar Contraseña" placeholder="Repite tu contraseña" value={confirmPassword} onChange={(event) => setConfirmPassword(event.currentTarget.value)} required disabled={isLoading} />
-                        <TextInput label="Nombre (Opcional)" placeholder="Tu nombre" value={name} onChange={(event) => setName(event.currentTarget.value)} disabled={isLoading} />
-                        <TextInput label="Teléfono (formato internacional)" placeholder="+346..." value={phone} onChange={(event) => setPhone(event.currentTarget.value)} required disabled={isLoading} />
-                        <Select label="Tipo de Documento" placeholder="Selecciona uno" data={documentTypeOptions} value={documentType} onChange={(value) => setDocumentType(value as DocumentType | null)} required disabled={isLoading} clearable={false} />
-                        <TextInput label="Número de Documento" placeholder="DNI, NIE, Pasaporte..." value={documentId} onChange={(event) => setDocumentId(event.currentTarget.value)} required disabled={isLoading} />
-                        <TextInput label="ID del Negocio (Temporal)" placeholder="Pega el ID del negocio aquí" value={businessId} onChange={(event) => setBusinessId(event.currentTarget.value)} required disabled={isLoading} description="Necesario para asociar tu cuenta (ej: cafe-el-sol)" />
-
-                        {/* --- CAMBIO: Eliminar Alert de error --- */}
-                        {/* {error && ( <Alert ...>{error}</Alert> )} */}
-                        {/* --- FIN CAMBIO --- */}
-
-                        <Button type="submit" loading={isLoading} fullWidth mt="xl" radius="lg"> Registrarse </Button>
-                    </Stack>
-                </form>
-            </Paper>
-        </Container>
+             <Title ta="center" style={{ fontWeight: 900 }}> ¡Bienvenido a LoyalPyME! </Title>
+             <Text c="dimmed" size="sm" ta="center" mt={5}> ¿Ya tienes cuenta?{' '} <Anchor size="sm" component={Link} to="/login"> Inicia sesión </Anchor> </Text>
+             <Paper withBorder shadow="md" p={30} mt={30} radius="lg">
+                 <Title order={2} ta="center" mb="lg">Crea tu Cuenta</Title>
+                 <form onSubmit={form.onSubmit(handleSubmit)}>
+                     <Stack>
+                         <TextInput label="Email" placeholder="tu@email.com" required disabled={isLoading} {...form.getInputProps('email')} />
+                         <PasswordInput label="Contraseña" placeholder="Tu contraseña" required disabled={isLoading} {...form.getInputProps('password')} />
+                         <PasswordInput label="Confirmar Contraseña" placeholder="Repite tu contraseña" required disabled={isLoading} {...form.getInputProps('confirmPassword')} />
+                         <TextInput label="Nombre (Opcional)" placeholder="Tu nombre" disabled={isLoading} {...form.getInputProps('name')} />
+                         <TextInput label="Teléfono (formato internacional)" placeholder="+346..." required disabled={isLoading} {...form.getInputProps('phone')} />
+                         <Select label="Tipo de Documento" placeholder="Selecciona uno" data={documentTypeOptions} required disabled={isLoading} clearable={false} {...form.getInputProps('documentType')} />
+                         <TextInput label="Número de Documento" placeholder="DNI, NIE, Pasaporte..." required disabled={isLoading} {...form.getInputProps('documentId')} />
+                         <TextInput label="ID del Negocio (Temporal)" placeholder="Pega el ID del negocio aquí" required disabled={isLoading} description="Necesario para asociar tu cuenta (ej: cafe-el-sol)" {...form.getInputProps('businessId')} />
+                         <Button type="submit" loading={isLoading} fullWidth mt="xl" radius="lg"> Registrarse </Button>
+                     </Stack>
+                 </form>
+             </Paper>
+         </Container>
     );
 };
 
