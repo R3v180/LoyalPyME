@@ -1,5 +1,5 @@
 // File: frontend/src/routes/index.tsx
-// Version: 1.2.0 (Use real components for nested admin routes)
+// Version: 1.3.0 (Add route for RegisterPage)
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 
@@ -8,27 +8,29 @@ import LoginPage from '../pages/LoginPage';
 import AdminDashboardPage from '../pages/AdminDashboardPage'; // Layout Admin
 import CustomerDashboardPage from '../pages/CustomerDashboardPage';
 
-// --- CAMBIO: Importar componentes hijos reales ---
+// Importar componentes hijos del admin
 import AdminOverview from '../pages/admin/AdminOverview';
 import AdminRewardsManagement from '../pages/admin/AdminRewardsManagement';
 import AdminGenerateQr from '../pages/admin/AdminGenerateQr';
-// --- FIN CAMBIO ---
 
-// --- CAMBIO: Eliminar componentes Placeholder ---
-// const AdminOverviewPlaceholder: React.FC = () => ...; // ELIMINADO
-// const AdminRewardsPlaceholder: React.FC = () => ...; // ELIMINADO
-// const AdminGenerateQrPlaceholder: React.FC = () => ...; // ELIMINADO
+// --- CAMBIO: Importar RegisterPage ---
+import RegisterPage from '../pages/RegisterPage';
 // --- FIN CAMBIO ---
 
 
 function AppRoutes() {
   return (
     <Routes>
-      {/* Ruta PUBLICA */}
+      {/* --- Rutas PUBLICAS --- */}
       <Route path="/login" element={<LoginPage />} />
+      {/* --- CAMBIO: Añadir ruta de registro --- */}
+      <Route path="/register" element={<RegisterPage />} />
+      {/* --- FIN CAMBIO --- */}
+      {/* Ruta raíz redirige a login si no está autenticado, o podría redirigir a dashboards */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* --- Ruta Admin Principal (Layout con rutas anidadas) --- */}
+      {/* --- Rutas PROTEGIDAS --- */}
+      {/* Ruta Admin Principal (Layout con rutas anidadas) */}
       <Route
         path="/admin/dashboard"
         element={
@@ -37,16 +39,12 @@ function AppRoutes() {
           </PrivateRoute>
         }
       >
-        {/* --- CAMBIO: Usar componentes hijos reales --- */}
-        <Route index element={<AdminOverview />} /> {/* Ruta '/admin/dashboard' */}
-        <Route path="rewards" element={<AdminRewardsManagement />} /> {/* Ruta '/admin/dashboard/rewards' */}
-        <Route path="generate-qr" element={<AdminGenerateQr />} /> {/* Ruta '/admin/dashboard/generate-qr' */}
-        {/* --- FIN CAMBIO --- */}
+        <Route index element={<AdminOverview />} />
+        <Route path="rewards" element={<AdminRewardsManagement />} />
+        <Route path="generate-qr" element={<AdminGenerateQr />} />
       </Route>
-      {/* --- Fin Ruta Admin --- */}
 
-
-       {/* Ruta Cliente (sin cambios) */}
+       {/* Ruta Cliente */}
        <Route
         path="/customer/dashboard"
         element={
