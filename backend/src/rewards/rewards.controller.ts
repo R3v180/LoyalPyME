@@ -1,245 +1,204 @@
 // File: backend/src/rewards/rewards.controller.ts
-// Version: 1.0.0
+// Version: 1.1.0 (Allow isActive in UpdateRewardDto)
 
 import { Request, Response } from 'express';
-import { Prisma } from '@prisma/client'; // Importa Prisma para manejo de errores
+import { Prisma } from '@prisma/client';
 import {
     createReward,
     findRewardsByBusiness,
     findRewardById,
     updateReward,
     deleteReward,
-} from './rewards.service'; // Importa funciones del servicio de recompensas
+} from './rewards.service';
 
-// Define DTOs para la estructura de los datos esperados en las peticiones
-
-// DTO para crear una recompensa (POST /rewards)
+// DTO para crear una recompensa (POST /rewards) - Sin cambios
 export interface CreateRewardDto {
     name: string;
     description?: string;
     pointsCost: number;
-    // businessId no se incluye aqui porque lo obtendremos de req.user
 }
 
+// --- CAMBIO: Añadir isActive al DTO de actualización ---
 // DTO para actualizar una recompensa (PUT/PATCH /rewards/:id)
 export interface UpdateRewardDto {
-    name?: string; // Campos opcionales para actualizacion parcial
+    name?: string;
     description?: string;
     pointsCost?: number;
-    isActive?: boolean;
+    isActive?: boolean; // <-- Añadido campo opcional
 }
+// --- FIN CAMBIO ---
 
 /**
- * Handles creation of a new reward for the authenticated business.
- * POST /api/rewards
- * Requires Authentication (via authenticateToken middleware)
- * Requires role BUSINESS_ADMIN (implementacion de rol en futuro middleware)
- * Expected body: CreateRewardDto
+ * Handles creation of a new reward. POST /api/rewards
+ * (No cambios aquí)
  */
 export const createRewardHandler = async (req: Request, res: Response) => {
-    // Obtenemos businessId del usuario autenticado (adjunto por authenticateToken middleware)
     const businessId = req.user?.businessId;
-    const role = req.user?.role; // Obtenemos el rol para futura validacion si es BUSINESS_ADMIN
+    const role = req.user?.role; // TODO: Add role check (BUSINESS_ADMIN)
 
-    // Validacion basica: Asegurar que el usuario esta autenticado y tiene businessId
     if (!req.user || !businessId) {
-        // Esto no deberia pasar si authenticateToken funciono, pero es un fallback
-        return res.status(401).json({ message: 'User not authenticated or business not associated.' });
+        return res.status(401).json({ message: 'Usuario no autenticado o negocio no asociado.' }); // Traducido
     }
+    // TODO: Implementar middleware o chequeo de rol 'BUSINESS_ADMIN' aquí
 
-    // Futuro: Validar que el role sea BUSINESS_ADMIN
-
-    // Extrae los datos del cuerpo de la petición
     const { name, description, pointsCost }: CreateRewardDto = req.body;
 
-    // Validacion de los datos de entrada
     if (!name || pointsCost === undefined || pointsCost < 0) {
-         return res.status(400).json({ message: 'Name and valid pointsCost are required.' });
+         return res.status(400).json({ message: 'Se requieren nombre y un coste en puntos válido.' }); // Traducido
     }
 
     try {
-        // Llama a la funcion de servicio para crear la recompensa
-        const newReward = await createReward({
-            name,
-            description,
-            pointsCost,
-            businessId: businessId, // Asigna la recompensa al negocio del usuario autenticado
-        });
-
-        // Responde con la recompensa creada
-        res.status(201).json(newReward); // 201 Created
-
+        const newReward = await createReward({ name, description, pointsCost, businessId });
+        res.status(201).json(newReward);
     } catch (error) {
-         // Manejo de errores de base de datos
          if (error instanceof Prisma.PrismaClientKnownRequestError) {
-             // Puedes añadir manejo especifico si es necesario
              console.error('Prisma error creating reward:', error);
-             return res.status(500).json({ message: 'Database error creating reward.' });
+             return res.status(500).json({ message: 'Error de base de datos al crear la recompensa.' }); // Traducido
          }
         console.error('Error creating reward:', error);
-        res.status(500).json({ message: 'Server error creating reward.' });
+        res.status(500).json({ message: 'Error del servidor al crear la recompensa.' }); // Traducido
     }
 };
 
 /**
- * Handles fetching all rewards for the authenticated business.
- * GET /api/rewards
- * Requires Authentication
+ * Handles fetching all rewards for the authenticated business. GET /api/rewards
+ * (No cambios aquí)
  */
 export const getRewardsHandler = async (req: Request, res: Response) => {
     const businessId = req.user?.businessId;
 
     if (!req.user || !businessId) {
-         return res.status(401).json({ message: 'User not authenticated or business not associated.' });
+         return res.status(401).json({ message: 'Usuario no autenticado o negocio no asociado.' }); // Traducido
     }
 
     try {
-        // Llama a la funcion de servicio para encontrar todas las recompensas del negocio
         const rewards = await findRewardsByBusiness(businessId);
-
-        // Responde con la lista de recompensas
-        res.status(200).json(rewards); // 200 OK
-
+        res.status(200).json(rewards);
     } catch (error) {
          if (error instanceof Prisma.PrismaClientKnownRequestError) {
              console.error('Prisma error fetching rewards:', error);
-             return res.status(500).json({ message: 'Database error fetching rewards.' });
+             return res.status(500).json({ message: 'Error de base de datos al obtener recompensas.' }); // Traducido
          }
         console.error('Error fetching rewards:', error);
-        res.status(500).json({ message: 'Server error fetching rewards.' });
+        res.status(500).json({ message: 'Error del servidor al obtener recompensas.' }); // Traducido
     }
 };
 
 /**
- * Handles fetching a single reward by ID for the authenticated business.
- * GET /api/rewards/:id
- * Requires Authentication
+ * Handles fetching a single reward by ID. GET /api/rewards/:id
+ * (No cambios aquí)
  */
 export const getRewardByIdHandler = async (req: Request, res: Response) => {
     const businessId = req.user?.businessId;
-    const rewardId = req.params.id; // Obtiene el ID de la recompensa de los parametros de la URL
+    const rewardId = req.params.id;
 
     if (!req.user || !businessId) {
-         return res.status(401).json({ message: 'User not authenticated or business not associated.' });
+         return res.status(401).json({ message: 'Usuario no autenticado o negocio no asociado.' }); // Traducido
     }
-
-    // Validacion basica del ID
     if (!rewardId) {
-        return res.status(400).json({ message: 'Reward ID is required in the URL.' });
+        return res.status(400).json({ message: 'Se requiere el ID de la recompensa en la URL.' }); // Traducido
     }
 
     try {
-        // Llama a la funcion de servicio para encontrar la recompensa por ID y businessId
         const reward = await findRewardById(rewardId, businessId);
-
-        // Si la recompensa no se encuentra (o no pertenece al negocio), responde con 404 Not Found
         if (!reward) {
-            return res.status(404).json({ message: 'Reward not found or does not belong to your business.' });
+            return res.status(404).json({ message: 'Recompensa no encontrada o no pertenece a tu negocio.' }); // Traducido
         }
-
-        // Responde con la recompensa encontrada
-        res.status(200).json(reward); // 200 OK
-
+        res.status(200).json(reward);
     } catch (error) {
          if (error instanceof Prisma.PrismaClientKnownRequestError) {
              console.error('Prisma error fetching reward by ID:', error);
-             return res.status(500).json({ message: 'Database error fetching reward by ID.' });
+             return res.status(500).json({ message: 'Error de base de datos al obtener la recompensa por ID.' }); // Traducido
          }
         console.error('Error fetching reward by ID:', error);
-        res.status(500).json({ message: 'Server error fetching reward by ID.' });
+        res.status(500).json({ message: 'Error del servidor al obtener la recompensa por ID.' }); // Traducido
     }
 };
 
 
 /**
- * Handles updating an existing reward for the authenticated business.
+ * Handles updating an existing reward (handles PUT and PATCH).
  * PUT/PATCH /api/rewards/:id
- * Requires Authentication
- * Expected body: UpdateRewardDto
  */
 export const updateRewardHandler = async (req: Request, res: Response) => {
     const businessId = req.user?.businessId;
-    const rewardId = req.params.id; // ID de la recompensa de la URL
-    const updateData: UpdateRewardDto = req.body; // Datos a actualizar del cuerpo de la peticion
+    const rewardId = req.params.id;
+    const updateData: UpdateRewardDto = req.body; // Ahora incluye isActive opcional
+    const role = req.user?.role; // TODO: Add role check (BUSINESS_ADMIN)
 
+
+    // Validaciones básicas
     if (!req.user || !businessId) {
-         return res.status(401).json({ message: 'User not authenticated or business not associated.' });
+         return res.status(401).json({ message: 'Usuario no autenticado o negocio no asociado.' }); // Traducido
     }
-
+     // TODO: Implementar middleware o chequeo de rol 'BUSINESS_ADMIN' aquí
      if (!rewardId) {
-        return res.status(400).json({ message: 'Reward ID is required in the URL.' });
+        return res.status(400).json({ message: 'Se requiere el ID de la recompensa en la URL.' }); // Traducido
+    }
+    if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: 'Se requieren datos de actualización en el cuerpo de la petición.' }); // Traducido
     }
 
-    // Validacion basica de que updateData no este vacio (aunque el servicio lo validaria al no encontrar que actualizar)
-    if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ message: 'Update data is required in the request body.' });
+    // --- CAMBIO: Validación opcional específica para isActive si se recibe ---
+    if (updateData.isActive !== undefined && typeof updateData.isActive !== 'boolean') {
+        return res.status(400).json({ message: 'El campo isActive debe ser un valor booleano (true o false).' }); // Traducido
     }
+     // Podríamos añadir validaciones similares para name, pointsCost si quisiéramos ser más estrictos aquí
+    // --- FIN CAMBIO ---
 
 
     try {
-        // Llama a la funcion de servicio para actualizar la recompensa
-        // La funcion de servicio internamente verifica que pertenezca al negocio
+        // Llamamos al servicio de actualización, pasándole todos los datos recibidos
+        // El servicio se encargará de aplicarlos y de verificar pertenencia al negocio
         const updatedReward = await updateReward(rewardId, businessId, updateData);
-
-        // Responde con la recompensa actualizada
-        res.status(200).json(updatedReward); // 200 OK
-
+        res.status(200).json(updatedReward);
     } catch (error) {
-         // Manejo de errores del servicio (ej: recompensa no encontrada o no pertenece al negocio)
-         if (error instanceof Error && error.message.includes('Reward with ID')) {
-             return res.status(404).json({ message: error.message }); // 404 Not Found
+         if (error instanceof Error && error.message.includes('Reward with ID')) { // Error del servicio si no encuentra/no pertenece
+             return res.status(404).json({ message: error.message });
          }
          if (error instanceof Prisma.PrismaClientKnownRequestError) {
              console.error('Prisma error updating reward:', error);
-             return res.status(500).json({ message: 'Database error updating reward.' });
+             return res.status(500).json({ message: 'Error de base de datos al actualizar la recompensa.' }); // Traducido
          }
         console.error('Error updating reward:', error);
-        res.status(500).json({ message: 'Server error updating reward.' });
+        res.status(500).json({ message: 'Error del servidor al actualizar la recompensa.' }); // Traducido
     }
 };
 
 /**
- * Handles deletion of an existing reward for the authenticated business.
- * DELETE /api/rewards/:id
- * Requires Authentication
+ * Handles deletion of an existing reward. DELETE /api/rewards/:id
+ * (No cambios aquí)
  */
 export const deleteRewardHandler = async (req: Request, res: Response) => {
     const businessId = req.user?.businessId;
-    const rewardId = req.params.id; // ID de la recompensa de la URL
+    const rewardId = req.params.id;
+    const role = req.user?.role; // TODO: Add role check (BUSINESS_ADMIN)
+
 
     if (!req.user || !businessId) {
-         return res.status(401).json({ message: 'User not authenticated or business not associated.' });
+         return res.status(401).json({ message: 'Usuario no autenticado o negocio no asociado.' }); // Traducido
     }
-
+     // TODO: Implementar middleware o chequeo de rol 'BUSINESS_ADMIN' aquí
      if (!rewardId) {
-        return res.status(400).json({ message: 'Reward ID is required in the URL.' });
+        return res.status(400).json({ message: 'Se requiere el ID de la recompensa en la URL.' }); // Traducido
     }
 
     try {
-        // Llama a la funcion de servicio para eliminar la recompensa
-        // La funcion de servicio internamente verifica que pertenezca al negocio
         const deletedReward = await deleteReward(rewardId, businessId);
-
-        // Responde con un mensaje de éxito o la recompensa eliminada
-        res.status(200).json({ message: 'Reward deleted successfully.', deletedReward }); // 200 OK
-
+        // Respondemos con un mensaje genérico o con el objeto eliminado
+        res.status(200).json({ message: 'Recompensa eliminada con éxito.', deletedReward }); // Traducido
     } catch (error) {
-         // Manejo de errores del servicio (ej: recompensa no encontrada o no pertenece al negocio)
-         if (error instanceof Error && error.message.includes('Reward with ID')) {
-             return res.status(404).json({ message: error.message }); // 404 Not Found
+        if (error instanceof Error && error.message.includes('Reward with ID')) { // Error del servicio si no encuentra/no pertenece
+             return res.status(404).json({ message: error.message });
          }
          if (error instanceof Prisma.PrismaClientKnownRequestError) {
              console.error('Prisma error deleting reward:', error);
-             return res.status(500).json({ message: 'Database error deleting reward.' });
+             // Podríamos querer manejar errores de FK si intentamos borrar una recompensa en uso
+             return res.status(500).json({ message: 'Error de base de datos al eliminar la recompensa.' }); // Traducido
          }
         console.error('Error deleting reward:', error);
-        res.status(500).json({ message: 'Server error deleting reward.' });
+        res.status(500).json({ message: 'Error del servidor al eliminar la recompensa.' }); // Traducido
     }
 };
-
-
-// Puedes añadir mas funciones de controlador de recompensas aqui en el futuro
-// Por ejemplo: getActiveRewardsHandler, etc.
-
 
 // End of File: backend/src/rewards/rewards.controller.ts
