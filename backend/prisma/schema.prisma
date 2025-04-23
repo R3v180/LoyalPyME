@@ -1,5 +1,5 @@
 // File: backend/prisma/schema.prisma
-// Version: 1.1.0 (Add unique phone, documentId, documentType to User)
+// Version: 1.2.0 (Add password reset fields to User)
 
 generator client {
   provider = "prisma-client-js"
@@ -32,18 +32,14 @@ model Business {
   @@map("businesses")
 }
 
-// --- CAMBIOS EN MODELO USER ---
 model User {
   id           String        @id @default(uuid())
   email        String        @unique
   password     String
   name         String?
-  // phone ahora es único, pero sigue siendo opcional en la BD
-  // La obligatoriedad la forzaremos en la lógica de registro.
-  phone        String?       @unique // <-- Añadido @unique
-  // Nuevos campos para documento
-  documentId   String?       @unique // <-- Añadido @unique, opcional en BD por ahora
-  documentType DocumentType? // <-- Añadido tipo Enum, opcional en BD por ahora
+  phone        String?       @unique
+  documentId   String?       @unique
+  documentType DocumentType?
 
   role      UserRole
   isActive  Boolean  @default(true)
@@ -56,10 +52,13 @@ model User {
   points         Int     @default(0)
   marketingOptIn Boolean @default(false)
 
+  // --- NUEVO: Campos para Reseteo de Contraseña ---
+  resetPasswordToken   String?   @unique // Token único para el reseteo
+  resetPasswordExpires DateTime? // Fecha de expiración del token
+  // --- FIN NUEVO ---
+
   @@map("users")
 }
-
-// --- FIN CAMBIOS EN MODELO USER ---
 
 // Modelo Reward (sin cambios)
 model Reward {
@@ -83,7 +82,7 @@ model QrCode {
   businessId   String
   business     Business     @relation(fields: [businessId], references: [id])
   amount       Float
-  ticketNumber String // Ya era obligatorio
+  ticketNumber String
   status       QrCodeStatus @default(PENDING)
   createdAt    DateTime     @default(now())
   expiresAt    DateTime
@@ -92,28 +91,24 @@ model QrCode {
   @@map("qr_codes")
 }
 
-// Enum UserRole (sin cambios)
+// Enums (sin cambios)
 enum UserRole {
   SUPER_ADMIN
   BUSINESS_ADMIN
   CUSTOMER_FINAL
 }
 
-// Enum QrCodeStatus (sin cambios)
 enum QrCodeStatus {
   PENDING
   COMPLETED
   EXPIRED
 }
 
-// --- NUEVO ENUM: DocumentType ---
 enum DocumentType {
-  DNI // Documento Nacional de Identidad (España)
-  NIE // Número de Identificación de Extranjero (España)
-  PASSPORT // Pasaporte
-  OTHER // Otros tipos
+  DNI
+  NIE
+  PASSPORT
+  OTHER
 }
-
-// --- FIN NUEVO ENUM ---
 
 // End of File: backend/prisma/schema.prisma

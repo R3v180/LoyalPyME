@@ -1,19 +1,31 @@
 // File: backend/src/auth/auth.dto.ts
-// Version: 1.0.0 (Define RegisterUserDto independently)
+// Version: 1.1.0 (Add DTOs for Forgot/Reset Password)
 
-// Importar Enums necesarios desde Prisma Client
 import { UserRole, DocumentType } from '@prisma/client';
 
-// Definir y exportar la interfaz DTO para registro
+// DTO para Registro (sin cambios)
 export interface RegisterUserDto {
   email: string;
-  password: string; // La contraseña aquí será la hasheada al usarla en createUser
+  password: string;
   name?: string;
   phone: string;
   documentId: string;
-  documentType: DocumentType; // Usa el Enum importado
+  documentType: DocumentType;
   businessId: string;
-  role: UserRole; // Usa el Enum importado
+  role: UserRole;
 }
+
+// --- NUEVO: DTO para solicitar reseteo ---
+export interface ForgotPasswordDto {
+    email: string;
+}
+// --- FIN NUEVO ---
+
+// --- NUEVO: DTO para realizar el reseteo ---
+export interface ResetPasswordDto {
+    password: string; // La nueva contraseña
+    // El token vendrá por la URL (req.params)
+}
+// --- FIN NUEVO ---
 
 // End of File: backend/src/auth/auth.dto.ts

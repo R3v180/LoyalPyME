@@ -1,10 +1,16 @@
 // File: backend/src/auth/auth.controller.ts
-// Version: 1.4.2 (Add debug logs for format validation)
+// Version: 1.5.1 (Correct Register logic + Add Forgot/Reset Handlers - COMPLETE)
 
 import { Request, Response } from 'express';
 import { Prisma, DocumentType } from '@prisma/client';
-import { hashPassword, comparePassword, generateToken, findUserByEmail, createUser } from './auth.service';
-import { RegisterUserDto } from './auth.dto';
+// Importar service functions (incluyendo las futuras handleForgotPassword/handleResetPassword)
+import {
+    hashPassword, comparePassword, generateToken, findUserByEmail, createUser,
+    handleForgotPassword, handleResetPassword
+} from './auth.service';
+// Importar DTOs
+import { RegisterUserDto, ForgotPasswordDto, ResetPasswordDto } from './auth.dto';
+
 
 // Funciones auxiliares (isValidDni, isValidNie) - Sin cambios
 function isValidDni(dni: string): boolean { if (!/^\d{8}[A-Z]$/i.test(dni)) { return false; } const numero = parseInt(dni.substring(0, 8), 10); const letra = dni.substring(8, 9).toUpperCase(); const letrasControl = "TRWAGMYFPDXBNJZSQVHLCKE"; const letraCalculada = letrasControl.charAt(numero % 23); return letra === letraCalculada; }
@@ -14,6 +20,7 @@ function isValidNie(nie: string): boolean { if (!/^[XYZ]\d{7}[A-Z]$/i.test(nie))
 /**
  * Handles user registration.
  * POST /auth/register
+ * (Versión con orden de validación corregido)
  */
 export const register = async (req: Request, res: Response) => {
   const { email, password, name, phone, documentId, documentType, businessId, role }: RegisterUserDto = req.body;
@@ -34,26 +41,19 @@ export const register = async (req: Request, res: Response) => {
       return res.status(409).json({ message: 'El email ya está registrado.' });
     }
 
-    // 3. Validación de Formato
+    // 3. Validación de Formato (ahora después de comprobar email)
     console.log(`[AUTH CTRL DIAG] Email is unique. Validating formats...`);
     const phoneRegex = /^\+[0-9]{9,15}$/;
     if (!phoneRegex.test(phone)) {
         console.log(`[AUTH CTRL DIAG] Registration failed: Invalid phone format: ${phone}`);
         return res.status(400).json({ message: 'Formato de teléfono inválido. Debe empezar con + seguido de números (ej: +34666...).' });
     }
-
-    // --- DEBUG LOGS AÑADIDOS ---
-    console.log(`[AUTH CTRL DEBUG] Validating Document - Type Received: ${documentType}, ID Received: ${documentId}`);
-    // --- FIN DEBUG LOGS ---
-
     let isDocumentValid = false;
     switch (documentType) {
         case DocumentType.DNI:
-            // --- DEBUG LOGS AÑADIDOS ---
             console.log(`[AUTH CTRL DEBUG] Entering DNI validation case for ID: ${documentId}`);
             isDocumentValid = isValidDni(documentId);
             console.log(`[AUTH CTRL DEBUG] isValidDni result: ${isDocumentValid}`);
-            // --- FIN DEBUG LOGS ---
             if (!isDocumentValid) console.log(`[AUTH CTRL DIAG] Registration failed: Invalid DNI format: ${documentId}`);
             break;
         case DocumentType.NIE:
@@ -83,12 +83,12 @@ export const register = async (req: Request, res: Response) => {
     }
     console.log(`[AUTH CTRL DIAG] Format validation passed for ${email}.`);
 
-    // 4. Hashear Contraseña y Llamar al Servicio
+    // 4. Hashear Contraseña y Llamar al Servicio (que hace check de phone/docId)
     console.log(`[AUTH CTRL DIAG] Hashing password...`);
     const hashedPassword = await hashPassword(password);
     console.log(`[AUTH CTRL DIAG] Password hashed. Calling createUser service...`);
     const userDataWithHashedPassword: RegisterUserDto = { email, password: hashedPassword, name, phone, documentId, documentType, businessId, role };
-    const newUser = await createUser(userDataWithHashedPassword);
+    const newUser = await createUser(userDataWithHashedPassword); // El servicio ahora valida unicidad de phone/docId
 
     // 5. Éxito: Generar Token y Responder
     console.log(`[AUTH CTRL DIAG] User created: ${newUser.id}. Generating token...`);
@@ -107,25 +107,107 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-// login (Función completa incluida)
+/**
+ * Handles user login.
+ * POST /auth/login
+ * (Función completa sin omisiones)
+ */
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
   console.log(`[AUTH CTRL DIAG] Attempting login for email: ${email}`);
-  if (!email || !password) { console.log('[AUTH CTRL DIAG] Login failed: Email or password missing.'); return res.status(400).json({ message: 'Se requieren email y contraseña.' }); }
+
+  if (!email || !password) {
+    console.log('[AUTH CTRL DIAG] Login failed: Email or password missing.');
+    return res.status(400).json({ message: 'Se requieren email y contraseña.' });
+  }
+
   try {
     console.log(`[AUTH CTRL DIAG] Finding user by email: ${email}`);
     const user = await findUserByEmail(email);
-    if (!user) { console.log(`[AUTH CTRL DIAG] User not found for email: ${email}. Sending 401.`); return res.status(401).json({ message: 'Credenciales inválidas.' }); }
+
+    if (!user) {
+      console.log(`[AUTH CTRL DIAG] User not found for email: ${email}. Sending 401.`);
+      return res.status(401).json({ message: 'Credenciales inválidas.' });
+    }
+
     console.log(`[AUTH CTRL DIAG] User found: ${user.id}. Comparing password...`);
     const passwordMatch = await comparePassword(password, user.password);
     console.log(`[AUTH CTRL DIAG] Password comparison result for user ${user.id}: ${passwordMatch}`);
-    if (!passwordMatch) { console.log(`[AUTH CTRL DIAG] Password mismatch for user ${user.id}. Sending 401.`); return res.status(401).json({ message: 'Credenciales inválidas.' }); }
+
+    if (!passwordMatch) {
+       console.log(`[AUTH CTRL DIAG] Password mismatch for user ${user.id}. Sending 401.`);
+       return res.status(401).json({ message: 'Credenciales inválidas.' });
+    }
+
     console.log(`[AUTH CTRL DIAG] Password matches for user ${user.id}. Generating token...`);
     const token = generateToken(user);
-    const { password: _, documentId: __, ...userWithoutSensitiveData } = user;
+
+     // Excluimos campos sensibles antes de devolver el usuario
+     const { password: _, documentId: __, ...userWithoutSensitiveData } = user; // Excluir docId también aquí
+
     console.log(`[AUTH CTRL DIAG] Login successful for user ${user.id}. Sending 200.`);
-    res.status(200).json({ user: userWithoutSensitiveData, token });
-  } catch (error) { console.error('[AUTH CTRL DIAG] Error during login:', error); res.status(500).json({ message: 'Error del servidor durante el inicio de sesión.' }); }
+    res.status(200).json({ user: userWithoutSensitiveData, token }); // Devolver usuario sin contraseña ni documento
+
+  } catch (error) {
+    console.error('[AUTH CTRL DIAG] Error during login:', error);
+    res.status(500).json({ message: 'Error del servidor durante el inicio de sesión.' });
+  }
+};
+
+/**
+ * Handles forgot password request.
+ * POST /auth/forgot-password
+ */
+export const forgotPasswordHandler = async (req: Request, res: Response) => {
+    const { email }: ForgotPasswordDto = req.body;
+    console.log(`[AUTH CTRL] Forgot password request for email: ${email}`);
+
+    if (!email) {
+        return res.status(400).json({ message: 'Se requiere el email.' });
+    }
+
+    try {
+        // Llama a la función del servicio (que crearemos después)
+        await handleForgotPassword(email);
+
+        // Respuesta genérica por seguridad
+        res.status(200).json({ message: 'Si existe una cuenta con ese email, se ha enviado un enlace para restablecer la contraseña.' });
+
+    } catch (error: any) {
+        console.error('[AUTH CTRL] Error in forgotPasswordHandler:', error.message);
+        // Devolver respuesta genérica también en caso de error interno
+        res.status(200).json({ message: 'Si existe una cuenta con ese email, se ha enviado un enlace para restablecer la contraseña.' });
+    }
+};
+
+
+/**
+ * Handles password reset using a token.
+ * POST /auth/reset-password/:token
+ */
+export const resetPasswordHandler = async (req: Request, res: Response) => {
+    const { token } = req.params;
+    const { password: newPassword }: ResetPasswordDto = req.body;
+
+    console.log(`[AUTH CTRL] Reset password attempt with token: ${token ? token.substring(0,5)+'...' : 'undefined'}`);
+
+    if (!token) { return res.status(400).json({ message: 'Falta el token de reseteo.' }); }
+    if (!newPassword) { return res.status(400).json({ message: 'Se requiere la nueva contraseña.' }); }
+    if (newPassword.length < 6) { return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres.' }); }
+
+    try {
+        // Hashear la nueva contraseña
+        const hashedNewPassword = await hashPassword(newPassword);
+
+        // Llamar a la función del servicio (que crearemos después)
+        await handleResetPassword(token, hashedNewPassword);
+
+        res.status(200).json({ message: 'Contraseña restablecida con éxito.' });
+
+    } catch (error: any) {
+        console.error(`[AUTH CTRL] Error in resetPasswordHandler for token ${token ? token.substring(0,5)+'...' : 'undefined'}:`, error.message);
+        res.status(400).json({ message: error.message || 'No se pudo restablecer la contraseña.' });
+    }
 };
 
 // End of File: backend/src/auth/auth.controller.ts
