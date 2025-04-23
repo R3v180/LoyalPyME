@@ -31,6 +31,19 @@ interface TierConfigData {
 // --- Fin Tipos/Enums ---
 
 
+const basisLabels: Record<TierCalculationBasis, string> = {
+    [TierCalculationBasis.SPEND]: 'Gasto Acumulado (€)',
+    [TierCalculationBasis.VISITS]: 'Número de Visitas',
+    [TierCalculationBasis.POINTS_EARNED]: 'Puntos Históricos Ganados'
+};
+
+const policyLabels: Record<TierDowngradePolicy, string> = {
+    [TierDowngradePolicy.NEVER]: 'Nunca Bajar',
+    [TierDowngradePolicy.PERIODIC_REVIEW]: 'Revisión Periódica',
+    [TierDowngradePolicy.AFTER_INACTIVITY]: 'Tras Inactividad'
+};
+// --- Fin de las constantes a añadir ---
+
 const TierSettingsPage: React.FC = () => {
     const [config, setConfig] = useState<TierConfigData | null>(null);
     const [initialConfig, setInitialConfig] = useState<TierConfigData | null>(null); // Para detectar cambios
@@ -39,9 +52,16 @@ const TierSettingsPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     // Opciones para los Selects
-    const basisOptions = Object.values(TierCalculationBasis).map(value => ({ value, label: value }));
-    const policyOptions = Object.values(TierDowngradePolicy).map(value => ({ value, label: value }));
-
+    // --- Reemplaza las líneas anteriores por estas ---
+    const basisOptions = Object.values(TierCalculationBasis).map(value => ({
+        value: value, // El valor interno sigue siendo el Enum en inglés
+        label: basisLabels[value] // La etiqueta visible es la traducción
+    }));
+    const policyOptions = Object.values(TierDowngradePolicy).map(value => ({
+        value: value,
+        label: policyLabels[value]
+    }));
+    // --- Fin del reemplazo ---
     // Cargar configuración inicial
     const fetchConfig = useCallback(async () => {
         setIsLoading(true);

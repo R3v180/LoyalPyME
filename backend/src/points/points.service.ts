@@ -1,5 +1,7 @@
+// filename: backend/src/points/points.service.ts
+// --- INICIO DEL CÓDIGO COMPLETO ---
 // File: backend/src/points/points.service.ts
-// Version: 1.3.1 (Restore status/expiration checks, keep metric/tier updates - COMPLETE CODE)
+// Version: 1.4.0 (Save pointsEarned in validateQrCode transaction - COMPLETE CODE)
 
 import { PrismaClient, User, Reward, QrCode, Business, QrCodeStatus, UserRole, Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -35,7 +37,7 @@ export const generateQrCodeData = async (businessId: string, amount: number, tic
 
 /**
  * Validates a QR token and assigns points to a customer.
- * Incluye validaciones completas y actualización de métricas/tier.
+ * Incluye validaciones completas, actualización de métricas/tier y guardado de pointsEarned.
  */
 export const validateQrCode = async (qrToken: string, customerUserId: string): Promise<number> => {
     const now = new Date();
@@ -132,14 +134,16 @@ export const validateQrCode = async (qrToken: string, customerUserId: string): P
                 data: {
                     status: QrCodeStatus.COMPLETED,
                     completedAt: now,
-                    userId: customerUserId // Guardar quién lo validó
+                    userId: customerUserId, // Guardar quién lo validó
+                    // *** LÍNEA AÑADIDA AQUÍ ***
+                    pointsEarned: calculatedPointsEarned // Guardar los puntos específicos de este QR
                 },
-                select: { id: true, status: true, completedAt: true, userId: true }
+                select: { id: true, status: true, completedAt: true, userId: true, pointsEarned: true } // Incluir pointsEarned en select si se quiere devolver/loggear
             })
         ]);
         // --- Fin Transacción ---
 
-        console.log(`QR token ${qrToken} validated by user ${updatedQrCodeRecord.userId}. Assigned ${calculatedPointsEarned} points. User now has ${updatedUser.points} points.`);
+        console.log(`QR token ${qrToken} validated by user ${updatedQrCodeRecord.userId}. Assigned ${calculatedPointsEarned} points (recorded as ${updatedQrCodeRecord.pointsEarned}). User now has ${updatedUser.points} points.`);
 
         // Disparar actualización de Tier (asíncrona)
         if (qrCode.business.tierSystemEnabled) {
@@ -170,7 +174,7 @@ export const validateQrCode = async (qrToken: string, customerUserId: string): P
     }
 };
 
-// redeemReward (Función original - Asumimos que está completa donde se necesite)
+// redeemReward (Función original - Sin cambios aquí)
 export const redeemReward = async (customerUserId: string, rewardId: string): Promise<RedeemResult> => {
     console.log(`[REDEEM SVC] Service function called for user ${customerUserId} and reward ${rewardId}`);
     try {
@@ -186,6 +190,7 @@ export const redeemReward = async (customerUserId: string, rewardId: string): Pr
         const updatedUser = await prisma.$transaction(async (tx) => {
             const resultUser = await tx.user.update({ where: { id: customerUserId }, data: { points: { decrement: reward.pointsCost } }, select: { id: true, points: true } });
             console.log(`[REDEEM SVC - TX SUCCESS] User ${resultUser.id} redeemed reward '${reward.name}' (${reward.id}) for ${reward.pointsCost} points. New balance: ${resultUser.points}.`);
+            // Aquí podríamos añadir lógica adicional en la transacción si fuera necesario, como registrar el canje
             return resultUser;
         });
         return { message: `¡Recompensa '${reward.name}' canjeada con éxito!`, newPointsBalance: updatedUser.points };
@@ -198,3 +203,4 @@ export const redeemReward = async (customerUserId: string, rewardId: string): Pr
 };
 
 // End of File: backend/src/points/points.service.ts
+// --- FIN DEL CÓDIGO COMPLETO ---

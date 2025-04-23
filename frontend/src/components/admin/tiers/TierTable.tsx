@@ -1,49 +1,28 @@
 // File: frontend/src/components/admin/tiers/TierTable.tsx
-// Version: 1.0.0 (Component to display the list of Tiers in a table)
+// Version: 1.1.1 (Provide complete function bodies and imports)
 
 import React from 'react';
+// --- CORRECCIÓN: Añadir Text a la importación ---
 import { Table, Group, ActionIcon, Badge, Text } from '@mantine/core';
-import { IconPencil, IconTrash } from '@tabler/icons-react';
+import { IconPencil, IconTrash, IconListDetails } from '@tabler/icons-react';
+// --- FIN CORRECCIÓN ---
 
-// --- Tipos (Importar o definir aquí, deben coincidir con los usados en la página) ---
-enum BenefitType {
-    POINTS_MULTIPLIER = 'POINTS_MULTIPLIER',
-    EXCLUSIVE_REWARD_ACCESS = 'EXCLUSIVE_REWARD_ACCESS',
-    CUSTOM_BENEFIT = 'CUSTOM_BENEFIT'
-}
+// Tipos
+enum BenefitType { POINTS_MULTIPLIER = 'POINTS_MULTIPLIER', EXCLUSIVE_REWARD_ACCESS = 'EXCLUSIVE_REWARD_ACCESS', CUSTOM_BENEFIT = 'CUSTOM_BENEFIT' }
+interface TierBenefit { id: string; type: BenefitType; value: string; description: string | null; isActive: boolean; }
+interface Tier { id: string; name: string; level: number; minValue: number; description: string | null; benefitsDescription: string | null; isActive: boolean; benefits: TierBenefit[]; }
 
-interface TierBenefit {
-    id: string;
-    type: BenefitType;
-    value: string;
-    description: string | null;
-    isActive: boolean;
-}
-
-interface Tier {
-    id: string;
-    name: string;
-    level: number;
-    minValue: number;
-    description: string | null;
-    benefitsDescription: string | null;
-    isActive: boolean;
-    benefits: TierBenefit[];
-}
-// --- Fin Tipos ---
-
-// --- Props del Componente ---
+// Props
 interface TierTableProps {
-    tiers: Tier[];                      // La lista de tiers a mostrar
-    onEditClick: (tierId: string) => void; // Función a llamar al pulsar editar
-    onDeleteClick: (tierId: string) => void; // Función a llamar al pulsar borrar
+    tiers: Tier[];
+    onEditClick: (tierId: string) => void;
+    onDeleteClick: (tierId: string) => void;
+    onManageBenefitsClick: (tier: Tier) => void;
 }
-// --- Fin Props ---
 
+const TierTable: React.FC<TierTableProps> = ({ tiers, onEditClick, onDeleteClick, onManageBenefitsClick }) => {
 
-const TierTable: React.FC<TierTableProps> = ({ tiers, onEditClick, onDeleteClick }) => {
-
-    // Función auxiliar para formatear resumen de beneficios
+    // formatBenefitsSummary (IMPLEMENTACIÓN COMPLETA)
     const formatBenefitsSummary = (benefits: TierBenefit[]): string => {
         if (!benefits || benefits.length === 0) return 'Ninguno';
         const activeBenefits = benefits.filter(b => b.isActive);
@@ -51,21 +30,19 @@ const TierTable: React.FC<TierTableProps> = ({ tiers, onEditClick, onDeleteClick
         return `${activeBenefits.length} beneficio(s) activo(s)`;
     };
 
-    // Crear filas de la tabla
+    // Crear filas de la tabla (IMPLEMENTACIÓN COMPLETA)
     const rows = tiers.map((tier) => (
         <Table.Tr key={tier.id}>
             <Table.Td>{tier.level}</Table.Td>
             <Table.Td fw={500}>{tier.name}</Table.Td>
             <Table.Td>{tier.minValue}</Table.Td>
             <Table.Td>{formatBenefitsSummary(tier.benefits)}</Table.Td>
-            <Table.Td>
-                <Badge color={tier.isActive ? 'green' : 'gray'} variant="light">
-                    {tier.isActive ? 'Activo' : 'Inactivo'}
-                </Badge>
-            </Table.Td>
+            <Table.Td><Badge color={tier.isActive ? 'green' : 'gray'} variant="light">{tier.isActive ? 'Activo' : 'Inactivo'}</Badge></Table.Td>
             <Table.Td>
                 <Group gap="xs" wrap="nowrap">
-                    {/* Llamar a las funciones pasadas por props al hacer clic */}
+                     <ActionIcon variant="subtle" color="teal" onClick={() => onManageBenefitsClick(tier)} title="Gestionar Beneficios">
+                         <IconListDetails size={16} />
+                     </ActionIcon>
                     <ActionIcon variant="subtle" color="blue" onClick={() => onEditClick(tier.id)} title="Editar Nivel">
                         <IconPencil size={16} />
                     </ActionIcon>
@@ -77,31 +54,33 @@ const TierTable: React.FC<TierTableProps> = ({ tiers, onEditClick, onDeleteClick
         </Table.Tr>
     ));
 
-    // Renderizado de la tabla
+    // Renderizado de la tabla (IMPLEMENTACIÓN COMPLETA)
     return (
         <Table.ScrollContainer minWidth={600}>
-            <Table verticalSpacing="sm" striped highlightOnHover withTableBorder withColumnBorders>
-                <Table.Thead>
-                    <Table.Tr>
-                        <Table.Th>Nivel (Orden)</Table.Th>
-                        <Table.Th>Nombre</Table.Th>
-                        <Table.Th>Umbral Mínimo</Table.Th>
-                        <Table.Th>Beneficios</Table.Th>
-                        <Table.Th>Estado</Table.Th>
-                        <Table.Th>Acciones</Table.Th>
-                    </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                    {rows.length > 0 ? rows : (
-                         <Table.Tr>
-                            <Table.Td colSpan={6}>
-                                <Text c="dimmed" ta="center">No se encontraron niveles.</Text>
-                            </Table.Td>
-                        </Table.Tr>
-                    )}
-                </Table.Tbody>
-            </Table>
-        </Table.ScrollContainer>
+             <Table verticalSpacing="sm" striped highlightOnHover withTableBorder withColumnBorders>
+                 <Table.Thead>
+                     <Table.Tr>
+                         <Table.Th>Nivel (Orden)</Table.Th>
+                         <Table.Th>Nombre</Table.Th>
+                         <Table.Th>Umbral Mínimo</Table.Th>
+                         <Table.Th>Beneficios</Table.Th>
+                         <Table.Th>Estado</Table.Th>
+                         <Table.Th>Acciones</Table.Th>
+                     </Table.Tr>
+                 </Table.Thead>
+                 <Table.Tbody>
+                     {rows.length > 0 ? rows : (
+                          // --- CORRECCIÓN: Mensaje completo para tabla vacía ---
+                          <Table.Tr>
+                             <Table.Td colSpan={6}>
+                                 <Text c="dimmed" ta="center">No se encontraron niveles.</Text>
+                             </Table.Td>
+                         </Table.Tr>
+                          // --- FIN CORRECCIÓN ---
+                     )}
+                 </Table.Tbody>
+             </Table>
+         </Table.ScrollContainer>
     );
 };
 

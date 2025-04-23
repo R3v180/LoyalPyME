@@ -1,242 +1,342 @@
+// filename: frontend/src/pages/CustomerDashboardPage.tsx
+// --- INICIO DEL CÓDIGO COMPLETO ---
 // File: frontend/src/pages/CustomerDashboardPage.tsx
-// Version: 1.5.2 (Fix Mantine v7 responsive style syntax - COMPLETE CODE)
+// Version: 1.1.2 (Fix QrReader props: remove onError, handle error in onResult)
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-// Mantine Imports
-import { Container, Text, Paper, Title, Stack, SimpleGrid, Card, Button, Group, TextInput, Alert, Skeleton, Modal, MantineTheme } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-// QR Reader Import
-import { QrReader } from 'react-qr-reader';
-// Notifications Import
+import { useState, useEffect } from 'react';
+import {
+    Container,
+    Title,
+    Text,
+    SimpleGrid,
+    Card,
+    Button,
+    Skeleton,
+    Alert,
+    Group,
+    TextInput,
+    Modal,
+    Stack,
+    Paper,
+    Badge
+} from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-// Icons Import
-import { IconAlertCircle, IconCheck, IconX, IconGift, IconKey, IconScan } from '@tabler/icons-react';
-// Axios Instance Import
+import { IconAlertCircle, IconCircleCheck, IconGift, IconScan, IconTicket, IconUserCircle, IconX } from '@tabler/icons-react';
 import axiosInstance from '../services/axiosInstance';
+import { QrReader } from 'react-qr-reader';
+import { useDisclosure } from '@mantine/hooks';
+import { AxiosError } from 'axios';
 
-// Interfaces
-interface UserProfile { id: string; email: string; name?: string | null; role: string; points: number; businessId: string; }
-interface Reward { id: string; name: string; description?: string | null; pointsCost: number; isActive: boolean; businessId: string; }
+// Interfaz para las recompensas
+interface Reward {
+    id: string;
+    name: string;
+    description?: string;
+    pointsCost: number;
+    isActive: boolean;
+}
+
+// Interfaz UserData (incluye currentTier)
+interface UserData {
+    id: string;
+    email: string;
+    name?: string | null;
+    points: number;
+    role: string;
+    currentTier?: {
+        id: string;
+        name: string;
+    } | null;
+}
+
 
 function CustomerDashboardPage() {
-    // Estados
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [userData, setUserData] = useState<UserData | null>(null);
     const [rewards, setRewards] = useState<Reward[]>([]);
-    const [loadingProfile, setLoadingProfile] = useState<boolean>(true);
-    const [loadingRewards, setLoadingRewards] = useState<boolean>(true);
-    const [errorProfile, setErrorProfile] = useState<string | null>(null);
-    const [errorRewards, setErrorRewards] = useState<string | null>(null);
-    const [qrTokenInput, setQrTokenInput] = useState<string>('');
-    const [validatingQr, setValidatingQr] = useState<boolean>(false);
-    const [isRedeeming, setIsRedeeming] = useState<string | null>(null);
-    const navigate = useNavigate();
+    const [loadingUser, setLoadingUser] = useState(true);
+    const [loadingRewards, setLoadingRewards] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [qrTokenInput, setQrTokenInput] = useState('');
+    const [validatingQr, setValidatingQr] = useState(false);
+    const [redeemingRewardId, setRedeemingRewardId] = useState<string | null>(null);
+
+    // Modal para escaner QR
     const [scannerOpened, { open: openScanner, close: closeScanner }] = useDisclosure(false);
+    const [scannerError, setScannerError] = useState<string | null>(null);
 
-    // --- Funciones ---
-    const handleLogout = () => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login'); };
-    const fetchUserProfile = async () => { setLoadingProfile(true); setErrorProfile(null); try { const response = await axiosInstance.get<UserProfile>('/profile'); setUserProfile(response.data); } catch (error: any) { console.error('Error fetching user profile:', error); if (error.response?.status === 401 || error.response?.status === 403) { handleLogout(); } else { setErrorProfile(error.response?.data?.message || error.message || 'Failed to fetch profile.'); } } finally { setLoadingProfile(false); } };
-    const fetchRewards = async () => { setLoadingRewards(true); setErrorRewards(null); try { const response = await axiosInstance.get<Reward[]>('/customer/rewards'); setRewards(response.data); } catch (error: any) { console.error('Error fetching rewards:', error); const message = error.response?.data?.message || 'No se pudieron cargar las recompensas.'; setErrorRewards(message); } finally { setLoadingRewards(false); } };
-    useEffect(() => { fetchUserProfile(); fetchRewards(); }, []);
-    const validateToken = async (token: string) => { if (!token || validatingQr) return; setValidatingQr(true); try { const response = await axiosInstance.post<{ message: string; pointsEarned: number }>('/points/validate-qr', { qrToken: token }); notifications.show({ title: '¡Puntos Añadidos!', message: `${response.data.message} (+${response.data.pointsEarned} puntos)`, color: 'green', icon: <IconCheck size={18} />, autoClose: 5000 }); setQrTokenInput(''); fetchUserProfile(); } catch (error: any) { console.error('Error validating QR code:', error); const errorMessage = error.response?.data?.message || 'Fallo al validar el código QR.'; notifications.show({ title: 'Error de Validación', message: errorMessage, color: 'red', icon: <IconX size={18} />, autoClose: 6000 }); } finally { setValidatingQr(false); } };
-    const handleValidateQrManual = async (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); validateToken(qrTokenInput); };
-    const handleRedeemReward = async (rewardId: string, rewardName: string) => { if (isRedeeming) return; setIsRedeeming(rewardId); try { const response = await axiosInstance.post<{ message: string; newPointsBalance: number }>(`/points/redeem-reward/${rewardId}`); notifications.show({ title: '¡Canje Exitoso!', message: response.data.message || `Recompensa "${rewardName}" canjeada.`, color: 'green', icon: <IconGift size={18} />, autoClose: 4000 }); fetchUserProfile(); } catch (error: any) { console.error('Error redeeming reward:', error); const errorMessage = error.response?.data?.message || 'Fallo al canjear la recompensa.'; notifications.show({ title: 'Error al Canjear', message: errorMessage, color: 'red', icon: <IconX size={18} />, autoClose: 6000 }); } finally { setIsRedeeming(null); } };
 
-    // --- Renderizado Condicional Inicial: Bloque if (loadingProfile) ---
-    if (loadingProfile) {
-        return (
-            <Container size="lg" my="xl">
-                <Stack gap="xl">
-                    {/* Skeleton para la sección del perfil */}
-                    <Paper shadow="sm" p="lg" withBorder radius="lg">
-                        <Group justify="space-between" align="flex-start">
-                            <div> <Skeleton height={30} width="60%" mb="md" /> <Skeleton height={20} width="40%" /> </div>
-                             <Skeleton height={36} width={120} radius="md" />
-                        </Group>
-                    </Paper>
-                    {/* Skeleton para la sección de validar QR */}
-                     <Paper shadow="sm" p="lg" withBorder radius="lg">
-                         <Skeleton height={25} width="40%" mb="md" /> <Skeleton height={36} mb="sm"/> <Skeleton height={36} />
-                     </Paper>
-                    {/* Skeleton para la sección de recompensas */}
-                    <Paper shadow="sm" p="lg" withBorder radius="lg">
-                        <Skeleton height={25} width="50%" mb="lg" />
-                        <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
-                            {[1, 2, 3].map((i) => (
-                                <Card shadow="sm" padding="lg" radius="md" withBorder key={i}>
-                                    <Stack justify="space-between" style={{ height: '100%' }}>
-                                        <div> <Skeleton height={20} width="80%" mb="sm" /> <Skeleton height={14} mb="xs" /> <Skeleton height={14} width="70%" mb="md" /> </div>
-                                        <Group justify="space-between"> <Skeleton height={20} width="30%" /> <Skeleton height={30} width="40%" radius="sm" /> </Group>
-                                    </Stack>
-                                </Card>
-                            ))}
-                        </SimpleGrid>
-                    </Paper>
-                </Stack>
-            </Container>
-        );
-    }
+    // Función para cargar datos del usuario y recompensas
+    const fetchData = async () => {
+        setLoadingUser(true);
+        setLoadingRewards(true);
+        setError(null);
+        try {
+            const [userResponse, rewardsResponse] = await Promise.all([
+                axiosInstance.get<UserData>('/profile'),
+                axiosInstance.get<Reward[]>('/customer/rewards')
+            ]);
 
-    // --- Renderizado Condicional Inicial: Bloque if (errorProfile) ---
-    if (errorProfile) {
-        return (
-            <Container pt="xl">
-                <Alert icon={<IconAlertCircle size={16} />} title="Error de Perfil" color="red">
-                    {errorProfile}
-                </Alert>
-            </Container>
-        );
-    }
+            if (userResponse.data) {
+                 setUserData(userResponse.data);
+                 console.log("User data received:", userResponse.data);
+            } else {
+                throw new Error("No se recibieron datos del usuario.");
+            }
 
-    // --- Renderizado Condicional Inicial: Bloque if (!userProfile) ---
-    if (!userProfile) {
-        return (
-            <Container pt="xl">
-                <Text>No se pudieron cargar los datos del perfil.</Text>
-            </Container>
-        );
-     }
+            setRewards(rewardsResponse.data.filter(reward => reward.isActive));
 
-    // --- Renderizado Principal ---
+        } catch (err) {
+            console.error("Error fetching data:", err);
+            const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
+            setError(`Error al cargar datos: ${errorMsg}`);
+            notifications.show({
+                title: 'Error de Carga',
+                message: `No se pudieron cargar los datos del dashboard. ${errorMsg}`,
+                color: 'red',
+                icon: <IconAlertCircle />,
+            });
+        } finally {
+            setLoadingUser(false);
+            setLoadingRewards(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+
+    // --- Handler para Validar QR (por Input o Escáner) ---
+    const handleValidateQr = async (token: string | null | undefined) => {
+        if (!token) {
+            notifications.show({ title: 'Error', message: 'Token QR inválido.', color: 'red', icon: <IconX/> });
+            return;
+        }
+        setValidatingQr(true);
+        setScannerError(null);
+        try {
+            const response = await axiosInstance.post<{ message: string; pointsEarned: number }>('/points/validate-qr', { qrToken: token });
+            notifications.show({
+                title: 'Éxito',
+                message: `${response.data.message} Has ganado ${response.data.pointsEarned} puntos.`,
+                color: 'green',
+                icon: <IconCircleCheck />,
+            });
+            setQrTokenInput('');
+            closeScanner();
+            // Volver a cargar los datos del usuario para actualizar puntos y potencialmente el tier
+            await fetchData();
+
+        } catch (err) {
+            console.error("Error validating QR:", err);
+             const errorMsg = (err instanceof AxiosError && err.response?.data?.message)
+                             ? err.response.data.message
+                             : (err instanceof Error ? err.message : 'Error desconocido al validar QR.');
+            notifications.show({
+                title: 'Error de Validación',
+                message: errorMsg,
+                color: 'red',
+                icon: <IconAlertCircle />,
+            });
+            if (scannerOpened) {
+                 setScannerError(errorMsg);
+            }
+        } finally {
+            setValidatingQr(false);
+        }
+    };
+
+    // --- Handler para Canjear Recompensa ---
+     const handleRedeemReward = async (rewardId: string) => {
+         setRedeemingRewardId(rewardId);
+         try {
+             const response = await axiosInstance.post<{ message: string; newPointsBalance: number }>(`/points/redeem-reward/${rewardId}`);
+             notifications.show({
+                 title: '¡Recompensa Canjeada!',
+                 message: response.data.message,
+                 color: 'teal',
+                 icon: <IconGift />,
+             });
+             if (userData) {
+                 setUserData({ ...userData, points: response.data.newPointsBalance });
+             } else {
+                  await fetchData();
+             }
+         } catch (err) {
+             console.error(`Error redeeming reward ${rewardId}:`, err);
+              const errorMsg = (err instanceof AxiosError && err.response?.data?.message)
+                              ? err.response.data.message
+                              : (err instanceof Error ? err.message : 'Error desconocido al canjear.');
+             notifications.show({
+                 title: 'Error al Canjear',
+                 message: errorMsg,
+                 color: 'red',
+                 icon: <IconAlertCircle />,
+             });
+         } finally {
+            setRedeemingRewardId(null);
+         }
+     };
+
+    // --- Renderizado ---
+
     return (
-        <> {/* Fragmento necesario para el Modal */}
-            <Container size="lg" my="xl">
-                <Stack gap="xl">
-                    {/* Sección Perfil */}
-                    <Paper shadow="sm" p="lg" withBorder radius="lg">
-                        <Group
-                            justify="space-between"
-                            gap="md"
-                            align="flex-start"
-                            style={(theme: MantineTheme) => ({
-                                flexDirection: 'row',
-                                [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                                    flexDirection: 'column',
-                                    alignItems: 'stretch',
-                                    gap: theme.spacing.sm,
-                                },
-                           })}
-                        >
-                            <div>
-                                <Title order={2} mb="sm">¡Hola, {userProfile.name || userProfile.email}!</Title>
-                                <Text size="xl">Tienes <Text span fw={700}>{userProfile.points}</Text> puntos.</Text>
-                            </div>
-                            <Button
-                                leftSection={<IconKey size={16} />}
-                                onClick={handleLogout}
-                                fullWidth={true}
-                                style={(theme: MantineTheme) => ({
-                                     [`@media (min-width: ${theme.breakpoints.sm})`]: {
-                                        maxWidth: '160px',
-                                        alignSelf: 'flex-start',
-                                        flexShrink: 0,
-                                        width: 'auto',
-                                    }
-                                 })}
-                             >
-                                Cerrar Sesión
+        <Container size="lg" py="xl">
+            <Title order={2} ta="center" mb="lg">Panel de Cliente</Title>
+
+            {/* Sección de Datos del Usuario */}
+            <Paper shadow="sm" p="lg" mb="xl" withBorder>
+                <Group justify="space-between" align="flex-start">
+                    {loadingUser ? (
+                        <Stack w="100%">
+                            <Skeleton height={30} width="60%" />
+                            <Skeleton height={50} width="40%" />
+                            <Skeleton height={25} width="30%" mt="sm" />
+                        </Stack>
+                    ) : userData ? (
+                         <Stack gap="xs">
+                            <Title order={3} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                 <IconUserCircle size={28} />
+                                 {userData.name || userData.email}
+                            </Title>
+                            <Text size="xl" fw={700} c="blue">
+                                {userData.points} Puntos
+                            </Text>
+                            <Group mt="sm">
+                                <Text fw={500}>Nivel Actual:</Text>
+                                {userData.currentTier ? (
+                                    <Badge color="teal" size="lg" variant="light">
+                                        {userData.currentTier.name}
+                                    </Badge>
+                                ) : (
+                                    <Badge color="gray" size="lg" variant="light">
+                                        Básico
+                                    </Badge>
+                                )}
+                            </Group>
+                         </Stack>
+                    ) : (
+                        <Alert icon={<IconAlertCircle size="1rem" />} title="Error" color="red">
+                             {error || 'No se pudieron cargar los datos del usuario.'}
+                         </Alert>
+                    )}
+                </Group>
+            </Paper>
+
+
+             {/* Sección para Validar QR */}
+             <Paper shadow="sm" p="lg" mb="xl" withBorder>
+                  <Title order={4} mb="md">Validar Código QR</Title>
+                  <Group align="flex-end">
+                     <TextInput
+                         label="Introduce el código del ticket/QR"
+                         placeholder="Pega el código aquí..."
+                         value={qrTokenInput}
+                         onChange={(event) => setQrTokenInput(event.currentTarget.value)}
+                         style={{ flexGrow: 1 }}
+                         disabled={validatingQr}
+                     />
+                     <Button
+                         onClick={() => handleValidateQr(qrTokenInput)}
+                         leftSection={<IconTicket size={18}/>}
+                         loading={validatingQr && !scannerOpened}
+                         disabled={!qrTokenInput.trim() || validatingQr}
+                         variant='outline'
+                     >
+                         Validar Código
+                     </Button>
+                     <Button
+                         onClick={openScanner}
+                         leftSection={<IconScan size={18}/>}
+                         disabled={validatingQr}
+                         variant='gradient'
+                         gradient={{ from: 'blue', to: 'cyan', deg: 90 }}
+                      >
+                         Escanear QR
+                     </Button>
+                 </Group>
+             </Paper>
+
+             {/* Modal del Escáner QR */}
+             <Modal opened={scannerOpened} onClose={closeScanner} title="Escanear Código QR" size="md">
+                 <Stack>
+                     <QrReader
+                         scanDelay={300}
+                         // *** SECCIÓN MODIFICADA AQUÍ ***
+                         // Se elimina onError y se modifica onResult
+                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                         onResult={(result: any, error: any) => {
+                             // Primero, comprobar si hay error
+                             if (error) {
+                                 console.error("Scanner Result Error:", error);
+                                 // Podríamos intentar mostrar un mensaje más específico si el objeto error tiene info
+                                 // Por ahora, un mensaje genérico dentro del modal
+                                 setScannerError("Error al escanear el código. Inténtalo de nuevo.");
+                             }
+                             // Si no hay error, comprobar si hay resultado
+                             else if (result) {
+                                 console.log("QR Scanned:", result?.text);
+                                 // Validar el token obtenido
+                                 handleValidateQr(result?.text);
+                             }
+                             // Si no hay ni error ni resultado, no hacer nada (esperar siguiente intento)
+                         }}
+                         // *** FIN SECCIÓN MODIFICADA ***
+                         constraints={{ facingMode: 'environment' }}
+                         containerStyle={{ width: '100%' }}
+                         videoContainerStyle={{ width: '100%', paddingTop: '75%' }}
+                         videoStyle={{ width: '100%', height: 'auto' }}
+                     />
+                     {scannerError && (
+                         <Alert icon={<IconAlertCircle size="1rem" />} title="Error de Escaneo" color="red" withCloseButton onClose={() => setScannerError(null)}>
+                             {scannerError}
+                         </Alert>
+                     )}
+                      <Text ta="center" c="dimmed" mt="sm">Apunta la cámara al código QR</Text>
+                  </Stack>
+             </Modal>
+
+
+            {/* Sección de Recompensas */}
+            <Title order={4} mb="md">Recompensas Disponibles</Title>
+            {loadingRewards ? (
+                <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
+                    {[1, 2, 3].map((i) => <Skeleton key={i} height={150} />)}
+                </SimpleGrid>
+            ) : error && !rewards.length ? (
+                <Alert icon={<IconAlertCircle size="1rem" />} title="Error" color="red" mt="lg">
+                    No se pudieron cargar las recompensas disponibles. {error}
+                </Alert>
+            ) : !rewards.length ? (
+                 <Text>No hay recompensas disponibles en este momento.</Text>
+            ) : (
+                 <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
+                     {rewards.map((reward) => (
+                         <Card shadow="sm" padding="lg" radius="md" withBorder key={reward.id}>
+                             <Title order={5}>{reward.name}</Title>
+                             {reward.description && <Text size="sm" c="dimmed" mt="xs">{reward.description}</Text>}
+                             <Text fw={500} mt="md">{reward.pointsCost} Puntos</Text>
+                             <Button
+                                 variant="light"
+                                 color="blue"
+                                 fullWidth
+                                 mt="md"
+                                 radius="md"
+                                 onClick={() => handleRedeemReward(reward.id)}
+                                 disabled={!userData || userData.points < reward.pointsCost || redeemingRewardId === reward.id || !!redeemingRewardId}
+                                 loading={redeemingRewardId === reward.id}
+                                 leftSection={<IconGift size={16}/>}
+                              >
+                                 {userData && userData.points >= reward.pointsCost ? 'Canjear Recompensa' : 'Puntos insuficientes'}
                              </Button>
-                        </Group>
-                    </Paper>
+                         </Card>
+                     ))}
+                 </SimpleGrid>
+            )}
 
-                    {/* Sección Validar QR con 2 Opciones */}
-                    <Paper shadow="sm" p="lg" withBorder radius="lg">
-                        <Title order={3} mb="md">Validar Puntos</Title>
-                        <form onSubmit={handleValidateQrManual}>
-                            <Stack>
-                                <TextInput
-                                    label="Opción 1: Introduce el código manualmente:"
-                                    placeholder="Pega el código aquí"
-                                    value={qrTokenInput}
-                                    onChange={(event) => setQrTokenInput(event.currentTarget.value)}
-                                    required
-                                    disabled={validatingQr}
-                                />
-                                <Button type="submit" loading={validatingQr} disabled={!qrTokenInput}>
-                                    Validar Código
-                                </Button>
-                            </Stack>
-                        </form>
-                        <Button
-                            mt="md"
-                            leftSection={<IconScan size={18} />}
-                            variant="outline"
-                            onClick={openScanner}
-                            disabled={validatingQr}
-                        >
-                            Opción 2: Escanear Código QR
-                        </Button>
-                    </Paper>
-
-                    {/* Sección Recompensas */}
-                     <Paper shadow="sm" p="lg" withBorder radius="lg">
-                        <Title order={3} mb="md">Recompensas Disponibles</Title>
-                        {loadingRewards ? (
-                             <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
-                                {[1, 2, 3].map((i) => (
-                                    <Card shadow="sm" padding="lg" radius="md" withBorder key={i}>
-                                        <Stack justify="space-between" style={{ height: '100%' }}>
-                                            <div> <Skeleton height={20} width="80%" mb="sm" /> <Skeleton height={14} mb="xs" /> <Skeleton height={14} width="70%" mb="md" /> </div>
-                                            <Group justify="space-between"> <Skeleton height={20} width="30%" /> <Skeleton height={30} width="40%" radius="sm" /> </Group>
-                                        </Stack>
-                                    </Card>
-                                ))}
-                            </SimpleGrid>
-                        ) : errorRewards ? (
-                            <Alert icon={<IconAlertCircle size={16} />} title="Error Cargando Recompensas" color="red">{errorRewards}</Alert>
-                        ) : rewards.length === 0 ? (
-                            <Text c="dimmed" ta="center">No hay recompensas disponibles en este momento.</Text>
-                        ) : (
-                            <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
-                                {rewards.map((reward) => {
-                                    const canAfford = userProfile.points >= reward.pointsCost;
-                                    const isCurrentlyRedeemingThis = isRedeeming === reward.id;
-                                    return (
-                                        <Card shadow="sm" padding="lg" radius="md" withBorder key={reward.id}>
-                                            <Stack justify="space-between" style={{ height: '100%' }}>
-                                                <div>
-                                                     <Text fw={500}>{reward.name}</Text>
-                                                     <Text size="sm" c="dimmed" mt="xs">{reward.description || 'Sin descripción.'}</Text>
-                                                </div>
-                                                <Group justify="space-between" mt="md">
-                                                     <Text fw={700}>{reward.pointsCost} Puntos</Text>
-                                                     <Button variant="light" color="blue" size="sm" disabled={!canAfford || !!isRedeeming} loading={isCurrentlyRedeemingThis} onClick={() => handleRedeemReward(reward.id, reward.name)} > {canAfford ? 'Canjear' : 'Puntos insuf.'} </Button>
-                                                </Group>
-                                            </Stack>
-                                        </Card>
-                                    );
-                                })}
-                            </SimpleGrid>
-                        )}
-                    </Paper>
-                </Stack>
-            </Container>
-
-            {/* Modal para el Escáner QR */}
-            <Modal opened={scannerOpened} onClose={closeScanner} title="Escanear Código QR" centered size="md">
-                <QrReader
-                    constraints={{ facingMode: 'environment' }}
-                    scanDelay={500}
-                    onResult={(result, error) => {
-                        if (!!result) {
-                            const scannedToken = result?.getText();
-                            if (scannedToken) {
-                                console.log("QR Scanned:", scannedToken);
-                                closeScanner();
-                                validateToken(scannedToken);
-                            }
-                        }
-                        if (!!error) {
-                            // console.info(error); // Descomentar para depurar errores de escaneo
-                        }
-                    }}
-                    videoContainerStyle={{paddingTop: '0'}}
-                    videoStyle={{objectFit: 'cover', width: '100%'}}
-                />
-                 <Text ta="center" mt="sm" c="dimmed">Apunta la cámara al código QR</Text>
-            </Modal>
-        </>
+        </Container>
     );
 }
 
 export default CustomerDashboardPage;
+// --- FIN DEL CÓDIGO COMPLETO ---

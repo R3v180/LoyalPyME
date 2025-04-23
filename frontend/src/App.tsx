@@ -1,7 +1,6 @@
 // File: frontend/src/App.tsx
 // Version: 1.0.1
 
-import React from 'react';
 // Importa nuestro componente que define las rutas
 import AppRoutes from './routes/index';
 
