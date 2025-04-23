@@ -1,20 +1,23 @@
 // File: frontend/src/routes/index.tsx
-// Version: 1.3.0 (Add route for RegisterPage)
+// Version: 1.4.0 (Add route for ResetPasswordPage)
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import PrivateRoute from '../components/PrivateRoute';
 import LoginPage from '../pages/LoginPage';
-import AdminDashboardPage from '../pages/AdminDashboardPage'; // Layout Admin
+import AdminDashboardPage from '../pages/AdminDashboardPage';
 import CustomerDashboardPage from '../pages/CustomerDashboardPage';
 
-// Importar componentes hijos del admin
+// Admin child components
 import AdminOverview from '../pages/admin/AdminOverview';
 import AdminRewardsManagement from '../pages/admin/AdminRewardsManagement';
 import AdminGenerateQr from '../pages/admin/AdminGenerateQr';
 
-// --- CAMBIO: Importar RegisterPage ---
+// Auth page components
 import RegisterPage from '../pages/RegisterPage';
+import ForgotPasswordPage from '../pages/ForgotPasswordPage'; // Importamos la página que creamos
+// --- CAMBIO: Importar ResetPasswordPage ---
+import ResetPasswordPage from '../pages/ResetPasswordPage';
 // --- FIN CAMBIO ---
 
 
@@ -23,10 +26,11 @@ function AppRoutes() {
     <Routes>
       {/* --- Rutas PUBLICAS --- */}
       <Route path="/login" element={<LoginPage />} />
-      {/* --- CAMBIO: Añadir ruta de registro --- */}
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} /> {/* Ruta añadida antes */}
+      {/* --- CAMBIO: Añadir ruta de reseteo con token --- */}
+      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       {/* --- FIN CAMBIO --- */}
-      {/* Ruta raíz redirige a login si no está autenticado, o podría redirigir a dashboards */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       {/* --- Rutas PROTEGIDAS --- */}
