@@ -1,44 +1,56 @@
 // File: backend/src/routes/rewards.routes.ts
-// Version: 1.1.0 (Add PATCH route for partial updates)
+// Version: 1.2.0 (Apply Role Middleware for BUSINESS_ADMIN)
 
 import { Router } from 'express';
-// Importa las funciones del controlador de recompensas (sin cambios en importaciones)
+// --- CAMBIO: Importar checkRole y UserRole ---
+import { checkRole } from '../middleware/role.middleware';
+import { UserRole } from '@prisma/client';
+// --- FIN CAMBIO ---
 import {
     createRewardHandler,
     getRewardsHandler,
     getRewardByIdHandler,
-    updateRewardHandler, // Usaremos este mismo handler para PUT y PATCH por ahora
+    updateRewardHandler,
     deleteRewardHandler,
 } from '../rewards/rewards.controller';
 
-const router = Router(); // Crea una nueva instancia de Express Router
-
-// NOTA: El middleware authenticateToken se aplicará a ESTE router
-// en el archivo index.ts cuando lo montemos bajo /api
+const router = Router();
 
 // --- Rutas para la gestion de recompensas ---
+// TODAS estas rutas ahora requieren el rol BUSINESS_ADMIN
 
 // POST /api/rewards - Crear nueva recompensa
-router.post('/', createRewardHandler);
+// --- CAMBIO: Añadir middleware checkRole ---
+router.post('/', checkRole([UserRole.BUSINESS_ADMIN]), createRewardHandler);
+// --- FIN CAMBIO ---
 
 // GET /api/rewards - Obtener todas las recompensas del negocio
-router.get('/', getRewardsHandler);
+// --- CAMBIO: Añadir middleware checkRole ---
+// Aunque obtener podría ser para clientes también, lo restringimos a admin por ahora
+// Más adelante podríamos tener una ruta pública o para clientes si fuera necesario
+router.get('/', checkRole([UserRole.BUSINESS_ADMIN]), getRewardsHandler);
+// --- FIN CAMBIO ---
 
 // GET /api/rewards/:id - Obtener una recompensa especifica por ID
-router.get('/:id', getRewardByIdHandler);
+// --- CAMBIO: Añadir middleware checkRole ---
+router.get('/:id', checkRole([UserRole.BUSINESS_ADMIN]), getRewardByIdHandler);
+// --- FIN CAMBIO ---
 
 // PUT /api/rewards/:id - Actualizar una recompensa completa (reemplazo)
-router.put('/:id', updateRewardHandler);
+// --- CAMBIO: Añadir middleware checkRole ---
+router.put('/:id', checkRole([UserRole.BUSINESS_ADMIN]), updateRewardHandler);
+// --- FIN CAMBIO ---
 
-// --- CAMBIO: Añadir ruta PATCH para actualizaciones parciales ---
-// PATCH /api/rewards/:id - Actualizar parcialmente una recompensa (ej: activar/desactivar, editar nombre)
-router.patch('/:id', updateRewardHandler);
+// PATCH /api/rewards/:id - Actualizar parcialmente una recompensa
+// --- CAMBIO: Añadir middleware checkRole ---
+router.patch('/:id', checkRole([UserRole.BUSINESS_ADMIN]), updateRewardHandler);
 // --- FIN CAMBIO ---
 
 // DELETE /api/rewards/:id - Eliminar una recompensa
-router.delete('/:id', deleteRewardHandler);
+// --- CAMBIO: Añadir middleware checkRole ---
+router.delete('/:id', checkRole([UserRole.BUSINESS_ADMIN]), deleteRewardHandler);
+// --- FIN CAMBIO ---
 
-// Exporta el router para ser usado en el archivo principal de la aplicacion (index.ts)
 export default router;
 
 // End of File: backend/src/routes/rewards.routes.ts
