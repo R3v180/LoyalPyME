@@ -1,59 +1,88 @@
 // File: backend/src/index.ts
-// Version: 1.0.20 (Mount customer routes - Clean Code)
+// Version: 1.1.0 (Mount Tier routes and schedule Tier update job)
 
-import express, { Router, Request, Response } from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
 
-// Importa los routers
-import authRoutes from './routes/auth.routes';
-import protectedRoutes from './routes/protected.routes';
-import rewardsRoutes from './routes/rewards.routes';
-import pointsRoutes from './routes/points.routes';
-import customerRoutes from './routes/customer.routes'; // <-- Importa el nuevo
+// Middleware
+import { authenticateToken } from './middleware/auth.middleware'; // Middleware global de autenticación para /api
 
-// Importa el middleware de autenticacion
-import { authenticateToken } from './middleware/auth.middleware';
+// Routers
+import authRouter from './routes/auth.routes';
+import protectedRouter from './routes/protected.routes';
+import rewardsRouter from './routes/rewards.routes'; // Asumo que existe
+import pointsRouter from './routes/points.routes';   // Asumo que existe
+import customerRouter from './routes/customer.routes'; // Asumo que existe
+// NUEVO: Importar tierRouter
+import tierRouter from './routes/tiers.routes';
 
-dotenv.config();
+// NUEVO: Importar cron y función del job
+import cron from 'node-cron';
+import { processTierUpdatesAndDowngrades } from './tiers/tier-logic.service'; // Asegúrate que la ruta sea correcta
 
-if (!process.env.JWT_SECRET) { console.error('FATAL ERROR: JWT_SECRET is not defined.'); process.exit(1); }
+dotenv.config(); // Cargar variables de entorno de .env
 
-const app = express();
-const port = process.env.PORT || 3000; // Puerto 3000
+const app: Express = express();
+const port = process.env.PORT || 3000;
 
-let prisma: PrismaClient;
-try {
-    console.log('[INIT] Initializing PrismaClient...');
-    prisma = new PrismaClient();
-    console.log('[INIT] PrismaClient initialized.');
-} catch (error) { console.error('[FATAL INIT ERROR] Error initializing PrismaClient:', error); process.exit(1); }
+// Middlewares globales
+app.use(cors()); // Habilitar CORS para todas las rutas
+app.use(express.json()); // Parsear bodies JSON
 
-// Middlewares Globales
-app.use(express.json());
-app.use( cors({ origin: 'http://localhost:5173', methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }) );
+// Rutas Públicas (Autenticación)
+app.use('/auth', authRouter);
 
-// Rutas PUBLICAS
-app.use('/auth', authRoutes);
-app.get('/', (req, res) => { res.send(`LoyalPyME Backend is running on port ${port}!`); });
-app.get('/businesses', async (req, res) => { try { if (!prisma) throw new Error("Prisma client not initialized"); const businesses = await prisma.business.findMany(); res.json(businesses); } catch (error) { console.error('Error fetching businesses:', error); res.status(500).json({ error: 'Server error' }); } });
+// --- Rutas Protegidas ---
+// Aplicar middleware authenticateToken a todas las rutas bajo /api
+app.use('/api', authenticateToken);
 
-// Rutas PROTEGIDAS (/api)
-const apiRouter = Router();
-apiRouter.use(authenticateToken); // Auth global para /api
-apiRouter.use('/profile', protectedRoutes);
-apiRouter.use('/rewards', rewardsRoutes); // Solo Admin (protegido por role middleware dentro)
-apiRouter.use('/points', pointsRoutes); // Roles mixtos (protegido por role middleware dentro)
-apiRouter.use('/customer', customerRoutes); // <-- NUEVO: Montar customerRoutes en /api/customer
-app.use('/api', apiRouter);
+// Montar los routers específicos bajo /api
+app.use('/api/profile', protectedRouter); // Ejemplo ruta protegida simple
+app.use('/api/rewards', rewardsRouter);   // Rutas para gestión de recompensas (Admin)
+app.use('/api/points', pointsRouter);     // Rutas para puntos y QR (Admin/Customer)
+app.use('/api/customer', customerRouter); // Rutas específicas del cliente
 
-// Inicio del Servidor
-app.listen(port, () => { console.log(`Server is running on http://localhost:${port}`); });
+// NUEVO: Montar las rutas de Tiers bajo /api/tiers
+// Las rutas definidas en tiers.routes.ts serán relativas a esto
+// Ej: GET /api/tiers/config, POST /api/tiers/tiers, GET /api/tiers/customer/tiers
+app.use('/api/tiers', tierRouter);
 
-// Manejo de eventos del proceso
-process.on('beforeExit', async () => { console.log('Shutting down server and disconnecting Prisma Client...'); if (prisma) { await prisma.$disconnect(); console.log('Prisma Client disconnected.'); } });
-process.on('unhandledRejection', (reason, promise) => { console.error('Unhandled Rejection at:', promise, 'reason:', reason); });
-process.on('uncaughtException', (error) => { console.error('Uncaught Exception:', error); /* process.exit(1); */ });
+// --- Fin Rutas Protegidas ---
 
-// End of File: backend/src/index.ts
+// Ruta raíz de bienvenida (opcional)
+app.get('/', (req: Request, res: Response) => {
+  res.send('Welcome to LoyalPyME API!');
+});
+
+// Manejador de errores global simple (opcional, mejorar si es necesario)
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Internal Server Error', error: err.message });
+});
+
+// --- NUEVO: Programar Tarea de Actualización/Descenso de Tiers ---
+// Se ejecuta todos los días a las 3:00 AM (zona horaria del servidor)
+// Formato cron: minuto hora día-mes mes día-semana
+cron.schedule('0 3 * * *', () => {
+    const jobStartTime = new Date();
+    console.log(`[CRON ${jobStartTime.toISOString()}] Running scheduled tier update/downgrade job...`);
+    processTierUpdatesAndDowngrades()
+      .then(() => {
+        console.log(`[CRON ${jobStartTime.toISOString()}] Scheduled tier job finished successfully.`);
+      })
+      .catch(err => {
+        console.error(`[CRON ${jobStartTime.toISOString()}] Scheduled tier job failed:`, err);
+      });
+}, {
+    scheduled: true,
+    // timezone: "Europe/Madrid" // Descomentar y ajustar si tu servidor está en otra zona horaria
+});
+console.log('Scheduled Tier update/downgrade job registered to run daily at 3:00 AM.');
+// --- FIN NUEVO ---
+
+
+// Iniciar servidor
+app.listen(port, () => {
+  console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
+});
