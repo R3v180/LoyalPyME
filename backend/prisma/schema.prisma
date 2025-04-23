@@ -1,128 +1,119 @@
 // File: backend/prisma/schema.prisma
-// Version: 1.0.1 (Make QrCode.ticketNumber mandatory)
+// Version: 1.1.0 (Add unique phone, documentId, documentType to User)
 
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Define el proveedor de base de datos y la URL (desde .env)
 generator client {
   provider = "prisma-client-js"
-  // Añadimos output para evitar warning de deprecación
   output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") // Carga desde el archivo .env
+  url      = env("DATABASE_URL")
 }
 
-// --- Modelos de Datos ---
-
-// Modelo para los Negocios/Empresas
+// Modelo Business (sin cambios)
 model Business {
-  id        String   @id @default(uuid()) // Clave primaria UUID
-  name      String   // Nombre del negocio
-  slug      String   @unique // Identificador único para URLs, etc.
-  isActive  Boolean  @default(true) // Si el negocio está activo
-  createdAt DateTime @default(now()) // Fecha de creación
-  updatedAt DateTime @updatedAt // Fecha de última actualización
-
-  // Configuración específica del negocio
-  pointsPerEuro Float   @default(1.0) // Puntos otorgados por cada euro gastado
-  currency      String  @default("EUR") // Moneda usada
-  brandingColor String? // Color de marca opcional para personalizar
-
-  // Información de suscripción (simplificado)
-  subscriptionStatus String   @default("trial") // Ej: trial, active, cancelled
+  id                 String    @id @default(uuid())
+  name               String
+  slug               String    @unique
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  pointsPerEuro      Float     @default(1.0)
+  currency           String    @default("EUR")
+  brandingColor      String?
+  subscriptionStatus String    @default("trial")
   trialEndsAt        DateTime?
   lastPaymentDate    DateTime?
+  users              User[]
+  rewards            Reward[]
+  qrCodes            QrCode[]
 
-  // Relaciones
-  users   User[] // Un negocio tiene muchos usuarios (admin, clientes)
-  rewards Reward[] // Un negocio tiene muchas recompensas
-  qrCodes QrCode[] // Un negocio genera muchos códigos QR
-
-  @@map("businesses") // Mapea al nombre de tabla 'businesses'
+  @@map("businesses")
 }
 
-// Modelo para los Usuarios (incluye Admins y Clientes Finales)
+// --- CAMBIOS EN MODELO USER ---
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique // Email único para login
-  password  String   // Contraseña hasheada
-  name      String?  // Nombre del usuario (opcional)
-  phone     String?  // Teléfono (opcional)
-  role      UserRole // Rol del usuario (enum abajo)
+  id           String        @id @default(uuid())
+  email        String        @unique
+  password     String
+  name         String?
+  // phone ahora es único, pero sigue siendo opcional en la BD
+  // La obligatoriedad la forzaremos en la lógica de registro.
+  phone        String?       @unique // <-- Añadido @unique
+  // Nuevos campos para documento
+  documentId   String?       @unique // <-- Añadido @unique, opcional en BD por ahora
+  documentType DocumentType? // <-- Añadido tipo Enum, opcional en BD por ahora
+
+  role      UserRole
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relación con Negocio: Cada usuario pertenece a UN negocio
   businessId String
   business   Business @relation(fields: [businessId], references: [id])
 
-  // Campos específicos para Clientes Finales
-  points          Int     @default(0) // Puntos de fidelidad acumulados
-  marketingOptIn  Boolean @default(false) // Si acepta recibir marketing
-
-  // TODO: Añadir relación con QrCode para saber quién redimió? (Opcional)
-  // redeemedQRCodes QrCode[] @relation("RedeemedBy")
+  points         Int     @default(0)
+  marketingOptIn Boolean @default(false)
 
   @@map("users")
 }
 
-// Modelo para las Recompensas ofrecidas por un negocio
+// --- FIN CAMBIOS EN MODELO USER ---
+
+// Modelo Reward (sin cambios)
 model Reward {
-  id          String  @id @default(uuid())
-  businessId  String  // A qué negocio pertenece
+  id          String   @id @default(uuid())
+  businessId  String
   business    Business @relation(fields: [businessId], references: [id])
-  name        String  // Nombre de la recompensa (ej: "Café Gratis")
-  description String? // Descripción opcional
-  pointsCost  Int     // Cuántos puntos cuesta canjearla
-  isActive    Boolean @default(true) // Si la recompensa está activa
+  name        String
+  description String?
+  pointsCost  Int
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  // TODO: Añadir relación con transacciones de canje? (Opcional)
 
   @@map("rewards")
 }
 
-// Modelo para los Códigos QR generados para asignar puntos
+// Modelo QrCode (sin cambios)
 model QrCode {
   id           String       @id @default(uuid())
-  token        String       @unique // El UUID único que contiene el QR
-  businessId   String       // Negocio que lo generó
+  token        String       @unique
+  businessId   String
   business     Business     @relation(fields: [businessId], references: [id])
-  amount       Float        // Importe de la transacción asociada
-  // --- CAMBIO: ticketNumber ahora es obligatorio ---
-  ticketNumber String       // Número de ticket/referencia de la venta (AHORA OBLIGATORIO)
-  // --- FIN CAMBIO ---
-  status       QrCodeStatus @default(PENDING) // Estado del QR (enum abajo)
-  createdAt    DateTime     @default(now()) // Cuándo se generó
-  expiresAt    DateTime     // Cuándo expira
-  completedAt  DateTime?    // Cuándo se completó/validó
-
-  // TODO: Relación con el usuario que lo validó?
-  // redeemedById String?
-  // redeemedBy   User?   @relation("RedeemedBy", fields: [redeemedById], references: [id])
+  amount       Float
+  ticketNumber String // Ya era obligatorio
+  status       QrCodeStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  expiresAt    DateTime
+  completedAt  DateTime?
 
   @@map("qr_codes")
 }
 
-
-// --- Enums ---
-
-// Roles de Usuario
+// Enum UserRole (sin cambios)
 enum UserRole {
-  SUPER_ADMIN     // Administrador de la plataforma LoyalPyME (no usado aún)
-  BUSINESS_ADMIN  // Administrador de un negocio específico
-  CUSTOMER_FINAL  // Cliente final que acumula puntos
+  SUPER_ADMIN
+  BUSINESS_ADMIN
+  CUSTOMER_FINAL
 }
 
-// Estados de un Código QR
+// Enum QrCodeStatus (sin cambios)
 enum QrCodeStatus {
-  PENDING   // Generado, esperando ser validado
-  COMPLETED // Ya validado, puntos asignados
-  EXPIRED   // Expiró antes de ser validado
+  PENDING
+  COMPLETED
+  EXPIRED
 }
+
+// --- NUEVO ENUM: DocumentType ---
+enum DocumentType {
+  DNI // Documento Nacional de Identidad (España)
+  NIE // Número de Identificación de Extranjero (España)
+  PASSPORT // Pasaporte
+  OTHER // Otros tipos
+}
+
+// --- FIN NUEVO ENUM ---
+
+// End of File: backend/prisma/schema.prisma
