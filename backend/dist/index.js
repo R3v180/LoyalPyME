@@ -1,6 +1,6 @@
 "use strict";
 // File: backend/src/index.ts
-// Version: 1.0.19 (Reverted Port to 3000)
+// Version: 1.0.20 (Mount customer routes - Clean Code)
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -42,22 +42,21 @@ const express_1 = __importStar(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const client_1 = require("@prisma/client");
 const cors_1 = __importDefault(require("cors"));
-// Importa los routers de rutas
+// Importa los routers
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
-const protected_routes_1 = __importDefault(require("./routes/protected.routes")); // Asegúrate que es v1.0.2
+const protected_routes_1 = __importDefault(require("./routes/protected.routes"));
 const rewards_routes_1 = __importDefault(require("./routes/rewards.routes"));
 const points_routes_1 = __importDefault(require("./routes/points.routes"));
+const customer_routes_1 = __importDefault(require("./routes/customer.routes")); // <-- Importa el nuevo
 // Importa el middleware de autenticacion
-const auth_middleware_1 = require("./middleware/auth.middleware"); // v1.0.0
+const auth_middleware_1 = require("./middleware/auth.middleware");
 dotenv_1.default.config();
 if (!process.env.JWT_SECRET) {
     console.error('FATAL ERROR: JWT_SECRET is not defined.');
     process.exit(1);
 }
 const app = (0, express_1.default)();
-// --- CAMBIO: Puerto por defecto vuelve a ser 3000 ---
-const port = process.env.PORT || 3000;
-// --- FIN CAMBIO ---
+const port = process.env.PORT || 3000; // Puerto 3000
 let prisma;
 try {
     console.log('[INIT] Initializing PrismaClient...');
@@ -70,43 +69,35 @@ catch (error) {
 }
 // Middlewares Globales
 app.use(express_1.default.json());
-app.use((0, cors_1.default)({
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use((0, cors_1.default)({ origin: 'http://localhost:5173', methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 // Rutas PUBLICAS
 app.use('/auth', auth_routes_1.default);
 app.get('/', (req, res) => { res.send(`LoyalPyME Backend is running on port ${port}!`); });
-app.get('/businesses', async (req, res) => {
-    try {
-        if (!prisma)
-            throw new Error("Prisma client not initialized");
-        const businesses = await prisma.business.findMany();
-        res.json(businesses);
-    }
-    catch (error) {
-        console.error('Error fetching businesses:', error);
-        res.status(500).json({ error: '...' });
-    }
-});
+app.get('/businesses', async (req, res) => { try {
+    if (!prisma)
+        throw new Error("Prisma client not initialized");
+    const businesses = await prisma.business.findMany();
+    res.json(businesses);
+}
+catch (error) {
+    console.error('Error fetching businesses:', error);
+    res.status(500).json({ error: 'Server error' });
+} });
 // Rutas PROTEGIDAS (/api)
 const apiRouter = (0, express_1.Router)();
 apiRouter.use(auth_middleware_1.authenticateToken); // Auth global para /api
-apiRouter.use('/profile', protected_routes_1.default); // Usando archivo de rutas externo v1.0.2
-apiRouter.use('/rewards', rewards_routes_1.default);
-apiRouter.use('/points', points_routes_1.default);
+apiRouter.use('/profile', protected_routes_1.default);
+apiRouter.use('/rewards', rewards_routes_1.default); // Solo Admin (protegido por role middleware dentro)
+apiRouter.use('/points', points_routes_1.default); // Roles mixtos (protegido por role middleware dentro)
+apiRouter.use('/customer', customer_routes_1.default); // <-- NUEVO: Montar customerRoutes en /api/customer
 app.use('/api', apiRouter);
 // Inicio del Servidor
-app.listen(port, () => { console.log(`Server is running on http://localhost:${port}`); }); // Usará 3000
+app.listen(port, () => { console.log(`Server is running on http://localhost:${port}`); });
 // Manejo de eventos del proceso
-process.on('beforeExit', async () => {
-    console.log('Shutting down server and disconnecting Prisma Client...');
-    if (prisma) {
-        await prisma.$disconnect();
-        console.log('Prisma Client disconnected.');
-    }
-});
+process.on('beforeExit', async () => { console.log('Shutting down server and disconnecting Prisma Client...'); if (prisma) {
+    await prisma.$disconnect();
+    console.log('Prisma Client disconnected.');
+} });
 process.on('unhandledRejection', (reason, promise) => { console.error('Unhandled Rejection at:', promise, 'reason:', reason); });
 process.on('uncaughtException', (error) => { console.error('Uncaught Exception:', error); /* process.exit(1); */ });
 // End of File: backend/src/index.ts
