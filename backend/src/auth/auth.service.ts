@@ -1,73 +1,103 @@
+// filename: backend/src/auth/auth.service.ts
+// --- INICIO DEL CÓDIGO COMPLETO ---
 // File: backend/src/auth/auth.service.ts
-// Version: 1.3.0 (Implement Forgot/Reset Password Logic)
+// Version: 1.4.1 (Fix syntax errors and createUser data structure)
 
-import { PrismaClient, User, UserRole, DocumentType } from '@prisma/client';
+import { PrismaClient, User, UserRole, DocumentType, Prisma, Business } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-// --- NUEVO: Importar crypto para generar token seguro ---
 import crypto from 'crypto';
-// --- FIN NUEVO ---
-import { RegisterUserDto } from './auth.dto'; // Import DTO desde archivo separado
+import { RegisterUserDto, ForgotPasswordDto, ResetPasswordDto, RegisterBusinessDto } from './auth.dto';
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET as string;
 if (!JWT_SECRET) { console.error('FATAL ERROR: JWT_SECRET is not defined.'); /* process.exit(1); */ }
 
-// Constante para la expiración del token de reseteo (ej: 1 hora en milisegundos)
 const RESET_TOKEN_EXPIRATION_MS = 60 * 60 * 1000; // 1 hour
 
-// hashPassword (sin cambios)
-export const hashPassword = async (password: string): Promise<string> => { const salt = await bcrypt.genSalt(10); return bcrypt.hash(password, salt); };
+// --- Funciones de Utilidad ---
 
-// comparePassword (sin cambios)
-export const comparePassword = async (plainPassword: string, hashedPassword: string): Promise<boolean> => { return bcrypt.compare(plainPassword, hashedPassword); };
-
-// generateToken (sin cambios)
-export const generateToken = (user: User): string => { const payload = { userId: user.id, role: user.role, businessId: user.businessId }; const token = jwt.sign( payload, JWT_SECRET, { expiresIn: '7d' } ); return token; };
-
-// findUserByEmail (sin cambios)
-export const findUserByEmail = async (email: string): Promise<User | null> => { return prisma.user.findUnique({ where: { email }, }); };
-
-// createUser (sin cambios funcionales, ya incluye nuevos campos y checks)
-export const createUser = async (userData: RegisterUserDto): Promise<User> => {
-   const businessExists = await prisma.business.findUnique({ where: { id: userData.businessId } });
-   if (!businessExists) { throw new Error(`Business with ID ${userData.businessId} not found.`); }
-   if (userData.phone) { const existingPhone = await prisma.user.findUnique({ where: { phone: userData.phone }, select: { id: true } }); if (existingPhone) throw new Error('El teléfono ya está registrado.'); } else { throw new Error('El teléfono es un campo obligatorio.'); }
-   if (userData.documentId) { const existingDocument = await prisma.user.findUnique({ where: { documentId: userData.documentId }, select: { id: true } }); if (existingDocument) throw new Error('El documento de identidad ya está registrado.'); } else { throw new Error('El documento de identidad es un campo obligatorio.'); }
-   console.log(`[AUTH SVC] Uniqueness checks passed for ${userData.email}. Creating user...`);
-   return prisma.user.create({ data: { email: userData.email, password: userData.password, name: userData.name, phone: userData.phone, documentId: userData.documentId, documentType: userData.documentType, role: userData.role, businessId: userData.businessId, }, });
+export const hashPassword = async (password: string): Promise<string> => {
+    const salt = await bcrypt.genSalt(10);
+    return bcrypt.hash(password, salt);
 };
 
+export const comparePassword = async (plainPassword: string, hashedPassword: string): Promise<boolean> => {
+    return bcrypt.compare(plainPassword, hashedPassword);
+};
 
-// --- NUEVO: Lógica para solicitar reseteo de contraseña ---
-/**
- * Genera y guarda un token de reseteo hasheado para un usuario dado su email.
- * Loguea el token original (sin hashear) para simular el envío de email.
- * @param email Email del usuario.
- * @returns Promise<void>
- */
+export const generateToken = (user: User): string => {
+    const payload = { userId: user.id, role: user.role, businessId: user.businessId };
+    const token = jwt.sign( payload, JWT_SECRET, { expiresIn: '7d' } );
+    return token;
+};
+
+export const findUserByEmail = async (email: string): Promise<User | null> => {
+    return prisma.user.findUnique({ where: { email } });
+};
+
+// --- Función para crear USUARIO CLIENTE ---
+export const createUser = async (userData: RegisterUserDto): Promise<User> => {
+   const businessExists = await prisma.business.findUnique({ where: { id: userData.businessId } });
+   if (!businessExists) {
+       throw new Error(`Business with ID ${userData.businessId} not found.`);
+   }
+   // Validaciones de unicidad de teléfono/documento (mantenerlas aquí para registro de cliente)
+   if (userData.phone) {
+       const existingPhone = await prisma.user.findUnique({ where: { phone: userData.phone }, select: { id: true } });
+       if (existingPhone) throw new Error('El teléfono ya está registrado.');
+   } else {
+       // Considerar si el teléfono debe ser obligatorio siempre o solo para clientes
+       throw new Error('El teléfono es un campo obligatorio para clientes.');
+   }
+   if (userData.documentId) {
+       const existingDocument = await prisma.user.findUnique({ where: { documentId: userData.documentId }, select: { id: true } });
+       if (existingDocument) throw new Error('El documento de identidad ya está registrado.');
+   } else {
+        // Considerar si el documento debe ser obligatorio siempre o solo para clientes
+       throw new Error('El documento de identidad es un campo obligatorio para clientes.');
+   }
+   console.log(`[AUTH SVC] Uniqueness checks passed for ${userData.email}. Creating user...`);
+
+   // Hashear contraseña (asegurarse que se hace aquí si el controller no lo hizo)
+   const hashedPassword = await hashPassword(userData.password);
+
+   // *** CORRECCIÓN AQUÍ: Usar 'connect' para la relación 'business' ***
+   return prisma.user.create({
+       data: {
+           email: userData.email,
+           password: hashedPassword,
+           name: userData.name,
+           phone: userData.phone,
+           documentId: userData.documentId,
+           documentType: userData.documentType,
+           role: UserRole.CUSTOMER_FINAL, // Forzar rol cliente aquí
+           // businessId: userData.businessId, // <- Forma incorrecta
+           business: { // <- Forma correcta usando connect
+               connect: { id: userData.businessId }
+           }
+       },
+   });
+   // *** FIN CORRECCIÓN ***
+};
+
+// --- Funciones para Reseteo de Contraseña ---
+
 export const handleForgotPassword = async (email: string): Promise<void> => {
     console.log(`[AUTH SVC] Handling forgot password for: ${email}`);
     const user = await findUserByEmail(email);
-
-    // No dar error si el usuario no existe (seguridad)
     if (!user) {
         console.log(`[AUTH SVC] User not found for forgot password: ${email}. Responding generically.`);
         return; // Salir silenciosamente
     }
-
-    // Generar un token aleatorio seguro (32 bytes -> 64 caracteres hexadecimales)
+    // Generar token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    console.log(`[AUTH SVC] Generated PLAIN reset token for ${email}: ${resetToken}`); // <-- ESTE ES EL QUE USARÍAMOS EN EL ENLACE DEL EMAIL (Y PARA PRUEBAS)
-
-    // Hashear el token antes de guardarlo en la BD
+    console.log(`[AUTH SVC] Generated PLAIN reset token for ${email}: ${resetToken}`); // Log para pruebas
     const hashedResetToken = await hashPassword(resetToken);
-
-    // Calcular fecha de expiración
     const expires = new Date(Date.now() + RESET_TOKEN_EXPIRATION_MS);
 
+    // Guardar token hasheado y expiración
     try {
-        // Actualizar el usuario con el token hasheado y la expiración
         await prisma.user.update({
             where: { email: email },
             data: {
@@ -77,32 +107,18 @@ export const handleForgotPassword = async (email: string): Promise<void> => {
         });
         console.log(`[AUTH SVC] Hashed reset token stored successfully for user ${user.id}`);
         // Aquí iría la lógica real de envío de email con el 'resetToken' (el original)
-
     } catch (error) {
         console.error(`[AUTH SVC] Failed to store reset token for user ${user.id}:`, error);
-        // No relanzar el error para mantener la respuesta genérica en el controller
     }
 };
-// --- FIN NUEVO ---
 
-
-// --- NUEVO: Lógica para realizar el reseteo de contraseña ---
-/**
- * Valida un token de reseteo (comparando con el hash guardado) y actualiza la contraseña.
- * @param token El token original (sin hashear) recibido por el usuario.
- * @param hashedNewPassword La nueva contraseña ya hasheada.
- * @returns Promise<void>
- * @throws Error si el token es inválido, ha expirado o falla la actualización.
- */
 export const handleResetPassword = async (token: string, hashedNewPassword: string): Promise<void> => {
     console.log(`[AUTH SVC] Handling reset password with token starting: ${token.substring(0, 5)}...`);
-
-    // 1. Buscar usuarios que tengan un token de reseteo VÁLIDO (no expirado y no nulo)
-    //    No podemos buscar directamente por el token hasheado eficientemente.
+    // Buscar usuarios con token activo y no expirado
     const potentialUsers = await prisma.user.findMany({
         where: {
-            resetPasswordToken: { not: null },      // Que tengan un token guardado
-            resetPasswordExpires: { gt: new Date() } // Y que no haya expirado
+            resetPasswordToken: { not: null },
+            resetPasswordExpires: { gt: new Date() }
         }
     });
 
@@ -110,46 +126,144 @@ export const handleResetPassword = async (token: string, hashedNewPassword: stri
          console.log('[AUTH SVC] No users found with potentially valid reset tokens.');
          throw new Error('Token inválido o expirado.'); // Error genérico
     }
-
     console.log(`[AUTH SVC] Found ${potentialUsers.length} users with active tokens. Verifying provided token...`);
-    let userToUpdate: User | null = null;
 
-    // 2. Comparar el token proporcionado (plano) con el hash guardado de cada candidato
+    // Comparar token plano con hashes guardados
+    let userToUpdate: User | null = null;
     for (const user of potentialUsers) {
         if (user.resetPasswordToken) {
              const isTokenMatch = await comparePassword(token, user.resetPasswordToken);
              if (isTokenMatch) {
-                 // ¡Coincidencia encontrada!
                  console.log(`[AUTH SVC] Token match found for user ID: ${user.id}`);
                  userToUpdate = user;
-                 break; // Salir del bucle
+                 break;
              }
         }
     }
 
-    // 3. Si no se encontró coincidencia después de revisar todos los candidatos
     if (!userToUpdate) {
          console.log(`[AUTH SVC] No user matched the provided token.`);
          throw new Error('Token inválido o expirado.'); // Mismo error genérico
     }
 
-    // 4. Si todo es válido, actualizar la contraseña y limpiar los campos de reseteo
+    // Actualizar contraseña y limpiar campos de reseteo
     try {
         await prisma.user.update({
             where: { id: userToUpdate.id },
             data: {
                 password: hashedNewPassword,
-                resetPasswordToken: null, // Limpiar token
-                resetPasswordExpires: null, // Limpiar expiración
+                resetPasswordToken: null,
+                resetPasswordExpires: null,
             },
         });
         console.log(`[AUTH SVC] Password reset successful for user ${userToUpdate.id}`);
     } catch (error) {
         console.error(`[AUTH SVC] Failed to update password for user ${userToUpdate.id}:`, error);
-        throw new Error('Error al actualizar la contraseña.'); // Traducido
+        throw new Error('Error al actualizar la contraseña.');
     }
 };
-// --- FIN NUEVO ---
+
+
+// --- Funciones para Registro de Negocio ---
+
+/**
+ * Genera un slug simple a partir de un nombre.
+ * @param name - El nombre a convertir.
+ * @returns Un string slugificado.
+ */
+const generateSlug = (name: string): string => {
+    return name
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '') // Eliminar caracteres no alfanuméricos excepto espacios y guiones
+        .replace(/[\s_-]+/g, '-') // Reemplazar espacios y guiones bajos por guion simple
+        .replace(/^-+|-+$/g, ''); // Eliminar guiones al principio/final
+};
+
+/**
+ * Crea un nuevo negocio y su usuario administrador inicial.
+ * @param data - Datos del DTO RegisterBusinessDto.
+ * @returns El objeto User del administrador creado (sin la contraseña).
+ * @throws Error si el email o el slug ya existen, o si ocurre un error en la transacción.
+ */
+export const createBusinessAndAdmin = async (
+    data: RegisterBusinessDto
+): Promise<Omit<User, 'password'>> => {
+    console.log('[AUTH SVC] Attempting to create business and admin:', data.businessName, data.adminEmail);
+
+    // 1. Validar si el email del admin ya existe
+    const existingUser = await findUserByEmail(data.adminEmail);
+    if (existingUser) {
+        console.warn(`[AUTH SVC] Admin email ${data.adminEmail} already exists.`);
+        throw new Error('El email proporcionado ya está registrado.');
+    }
+
+    // 2. Generar y validar slug del negocio
+    const slug = generateSlug(data.businessName);
+    if (!slug) {
+        // Añadir un valor por defecto o lanzar error si el nombre no genera slug
+        console.error(`[AUTH SVC] Could not generate slug from business name: ${data.businessName}`);
+        throw new Error('El nombre del negocio proporcionado no es válido.');
+    }
+    const existingBusiness = await prisma.business.findUnique({
+        where: { slug: slug },
+        select: { id: true }
+    });
+    if (existingBusiness) {
+        console.warn(`[AUTH SVC] Business slug ${slug} already exists.`);
+        throw new Error(`Ya existe un negocio con un nombre similar ('${slug}'). Por favor, elige otro nombre.`);
+    }
+
+    // 3. Hashear la contraseña del admin
+    const hashedPassword = await hashPassword(data.adminPassword);
+
+    // 4. Crear Business y User Admin en una transacción
+    try {
+        console.log(`[AUTH SVC] Starting transaction to create business '${data.businessName}' (slug: ${slug}) and admin '${data.adminEmail}'`);
+        const newUser = await prisma.$transaction(async (tx) => {
+            // Crear el negocio
+            const newBusiness = await tx.business.create({
+                data: {
+                    name: data.businessName,
+                    slug: slug,
+                },
+                select: { id: true } // Necesitamos el ID para el usuario
+            });
+            console.log(`[AUTH SVC - TX] Business created with ID: ${newBusiness.id}`);
+
+            // Crear el usuario administrador asociado al negocio
+            const adminUser = await tx.user.create({
+                data: {
+                    email: data.adminEmail,
+                    password: hashedPassword,
+                    name: data.adminName, // Puede ser undefined
+                    role: UserRole.BUSINESS_ADMIN, // Rol específico
+                    businessId: newBusiness.id, // Asociar al negocio recién creado
+                }
+            });
+            console.log(`[AUTH SVC - TX] Admin user created with ID: ${adminUser.id} for business ${newBusiness.id}`);
+            return adminUser; // Devolver el usuario creado
+        });
+
+        // 5. Quitar la contraseña antes de devolver
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { password, ...userWithoutPassword } = newUser;
+        console.log(`[AUTH SVC] Business and admin creation successful for ${data.adminEmail}.`);
+        return userWithoutPassword;
+
+    } catch (error) {
+        console.error('[AUTH SVC] Error during business/admin creation transaction:', error);
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+             const target = (error.meta?.target as string[])?.join(', ');
+             console.error(`[AUTH SVC] Unique constraint failed on: ${target}`);
+             // Podríamos personalizar más el mensaje según el target
+             throw new Error(`Error de base de datos: Conflicto de unicidad en ${target}.`);
+        }
+        // Relanzar como error genérico
+        throw new Error('No se pudo completar el registro del negocio. Error interno del servidor.');
+    }
+};
 
 
 // End of File: backend/src/auth/auth.service.ts
+// --- FIN DEL CÓDIGO COMPLETO ---

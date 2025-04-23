@@ -1,27 +1,37 @@
+// filename: backend/src/routes/auth.routes.ts
+// --- INICIO DEL CÓDIGO COMPLETO ---
 // File: backend/src/routes/auth.routes.ts
-// Version: 1.1.0 (Add forgot/reset password routes)
+// Version: 1.2.0 (Add register-business route)
 
 import { Router } from 'express';
-// --- CAMBIO: Importar nuevos handlers (a crear en controller) ---
-import { register, login, forgotPasswordHandler, resetPasswordHandler } from '../auth/auth.controller';
-// --- FIN CAMBIO ---
+// *** CAMBIO: Importar el nuevo handler ***
+import {
+    register,
+    login,
+    forgotPasswordHandler,
+    resetPasswordHandler,
+    registerBusinessHandler // <-- Añadido
+} from '../auth/auth.controller';
 
 const router = Router();
 
-// Rutas de autenticación existentes
-router.post('/register', register);
-router.post('/login', login);
+// --- Rutas de autenticación ---
 
-// --- CAMBIO: Añadir nuevas rutas ---
-// Ruta para solicitar el reseteo de contraseña
-router.post('/forgot-password', forgotPasswordHandler);
+// Registro de Cliente (existente)
+router.post('/register', register); // POST /auth/register
 
-// Ruta para establecer la nueva contraseña usando el token
-// El token vendrá como parámetro en la URL
-router.post('/reset-password/:token', resetPasswordHandler);
-// --- FIN CAMBIO ---
+// Inicio de sesión (existente)
+router.post('/login', login);       // POST /auth/login
+
+// *** NUEVO: Ruta para Registro de Negocio ***
+router.post('/register-business', registerBusinessHandler); // POST /auth/register-business
+
+// Reseteo de contraseña (existentes)
+router.post('/forgot-password', forgotPasswordHandler);         // POST /auth/forgot-password
+router.post('/reset-password/:token', resetPasswordHandler); // POST /auth/reset-password/:token
 
 
 export default router;
 
 // End of File: backend/src/routes/auth.routes.ts
+// --- FIN DEL CÓDIGO COMPLETO ---

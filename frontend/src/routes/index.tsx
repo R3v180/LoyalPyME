@@ -1,25 +1,26 @@
 // filename: frontend/src/routes/index.tsx
 // --- INICIO DEL CÓDIGO COMPLETO ---
 // File: frontend/src/routes/index.tsx
-// Version: 1.6.0 (Implement MainLayout for protected routes)
+// Version: 1.6.1 (Add route for RegisterBusinessPage)
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Layout y Protección
 import PrivateRoute from '../components/PrivateRoute';
-import MainLayout from '../components/layout/MainLayout'; // <-- NUEVO: Importar MainLayout
+import MainLayout from '../components/layout/MainLayout';
 
-// Páginas Públicas (Autenticación)
+// Páginas Públicas (Autenticación y Registro)
 import LoginPage from '../pages/LoginPage';
-import RegisterPage from '../pages/RegisterPage';
+import RegisterPage from '../pages/RegisterPage'; // Registro de Cliente
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/ResetPasswordPage';
+// *** NUEVO: Importar la página de registro de negocio ***
+import RegisterBusinessPage from '../pages/RegisterBusinessPage';
 
 // Página de Cliente
 import CustomerDashboardPage from '../pages/CustomerDashboardPage';
 
 // Páginas específicas de Admin (Contenido)
-// Ya no necesitamos AdminDashboardPage como layout aquí
 import AdminOverview from '../pages/admin/AdminOverview';
 import AdminRewardsManagement from '../pages/admin/AdminRewardsManagement';
 import AdminGenerateQr from '../pages/admin/AdminGenerateQr';
@@ -32,7 +33,9 @@ function AppRoutes() {
     <Routes>
       {/* --- Rutas PUBLICAS --- */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/register" element={<RegisterPage />} /> {/* Registro Cliente */}
+      {/* *** NUEVO: Ruta para Registro de Negocio *** */}
+      <Route path="/register-business" element={<RegisterBusinessPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       {/* Redirigir la raíz a login por defecto */}
@@ -42,9 +45,6 @@ function AppRoutes() {
       {/* --- Rutas PROTEGIDAS (Usan MainLayout) --- */}
       <Route
         element={
-          // 1. PrivateRoute verifica si el usuario está logueado (cualquier rol permitido aquí)
-          // 2. Si está logueado, renderiza MainLayout
-          // 3. MainLayout contiene el <Outlet> donde se renderizarán las rutas hijas
           <PrivateRoute roles={['BUSINESS_ADMIN', 'CUSTOMER_FINAL']}>
             <MainLayout />
           </PrivateRoute>
@@ -53,11 +53,9 @@ function AppRoutes() {
         {/* Las siguientes rutas son hijas de MainLayout y se renderizarán en su <Outlet /> */}
 
         {/* --- Sección Admin --- */}
-        {/* Ruta padre para agrupar, ya no necesita elemento porque MainLayout hace de layout */}
         <Route path="/admin/dashboard">
-            {/* Cada ruta hija DEBE verificar el rol específico */}
             <Route
-                index // Ruta por defecto /admin/dashboard
+                index
                 element={
                     <PrivateRoute roles={['BUSINESS_ADMIN']}>
                         <AdminOverview />
@@ -65,7 +63,7 @@ function AppRoutes() {
                 }
             />
             <Route
-                path="rewards" // -> /admin/dashboard/rewards
+                path="rewards"
                 element={
                     <PrivateRoute roles={['BUSINESS_ADMIN']}>
                         <AdminRewardsManagement />
@@ -73,7 +71,7 @@ function AppRoutes() {
                 }
             />
             <Route
-                path="generate-qr" // -> /admin/dashboard/generate-qr
+                path="generate-qr"
                 element={
                     <PrivateRoute roles={['BUSINESS_ADMIN']}>
                         <AdminGenerateQr />
@@ -81,7 +79,7 @@ function AppRoutes() {
                 }
             />
             <Route
-                 path="tiers/settings" // -> /admin/dashboard/tiers/settings
+                 path="tiers/settings"
                  element={
                      <PrivateRoute roles={['BUSINESS_ADMIN']}>
                          <TierSettingsPage />
@@ -89,14 +87,13 @@ function AppRoutes() {
                  }
              />
              <Route
-                 path="tiers/manage" // -> /admin/dashboard/tiers/manage
+                 path="tiers/manage"
                  element={
                      <PrivateRoute roles={['BUSINESS_ADMIN']}>
                          <TierManagementPage />
                      </PrivateRoute>
                  }
              />
-             {/* Añadir más rutas de admin aquí si es necesario */}
         </Route> {/* Fin Sección Admin */}
 
 
@@ -104,14 +101,11 @@ function AppRoutes() {
         <Route
           path="/customer/dashboard"
           element={
-            // Verificar rol específico de cliente
             <PrivateRoute roles={['CUSTOMER_FINAL']}>
               <CustomerDashboardPage />
             </PrivateRoute>
           }
         />
-        {/* Añadir más rutas de cliente aquí si es necesario */}
-
 
       </Route> {/* Fin Rutas Protegidas con MainLayout */}
 
