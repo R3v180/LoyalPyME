@@ -1,69 +1,74 @@
 // File: backend/src/index.ts
-// Version: 1.1.0 (Mount Tier routes and schedule Tier update job)
+// Version: 1.1.2 (Add Global Request Logger Middleware)
 
 import express, { Express, Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
 // Middleware
-import { authenticateToken } from './middleware/auth.middleware'; // Middleware global de autenticación para /api
+import { authenticateToken } from './middleware/auth.middleware';
 
 // Routers
 import authRouter from './routes/auth.routes';
 import protectedRouter from './routes/protected.routes';
-import rewardsRouter from './routes/rewards.routes'; // Asumo que existe
-import pointsRouter from './routes/points.routes';   // Asumo que existe
-import customerRouter from './routes/customer.routes'; // Asumo que existe
-// NUEVO: Importar tierRouter
+import rewardsRouter from './routes/rewards.routes';
+import pointsRouter from './routes/points.routes';
+import customerRouter from './routes/customer.routes';
 import tierRouter from './routes/tiers.routes';
+import adminRouter from './routes/admin.routes'; // Importar adminRouter
 
-// NUEVO: Importar cron y función del job
+// Cron Job
 import cron from 'node-cron';
-import { processTierUpdatesAndDowngrades } from './tiers/tier-logic.service'; // Asegúrate que la ruta sea correcta
+import { processTierUpdatesAndDowngrades } from './tiers/tier-logic.service';
 
-dotenv.config(); // Cargar variables de entorno de .env
+dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT || 3000;
 
 // Middlewares globales
-app.use(cors()); // Habilitar CORS para todas las rutas
-app.use(express.json()); // Parsear bodies JSON
+app.use(cors());
+app.use(express.json());
 
-// Rutas Públicas (Autenticación)
+// --- NUEVO: Logger Global de Peticiones ---
+// Registrar CADA petición que llega al servidor ANTES de que llegue a las rutas
+app.use((req, res, next) => {
+  // Mostramos método y URL original
+  console.log(`[REQ LOG] Received: ${req.method} ${req.originalUrl}`);
+  // Pasamos al siguiente middleware/ruta
+  next();
+});
+// --- FIN Logger Global ---
+
+
+// Rutas Públicas
 app.use('/auth', authRouter);
 
 // --- Rutas Protegidas ---
-// Aplicar middleware authenticateToken a todas las rutas bajo /api
+// Aplicar auth a TODO /api/* (se ejecutará DESPUÉS del logger global)
 app.use('/api', authenticateToken);
 
 // Montar los routers específicos bajo /api
-app.use('/api/profile', protectedRouter); // Ejemplo ruta protegida simple
-app.use('/api/rewards', rewardsRouter);   // Rutas para gestión de recompensas (Admin)
-app.use('/api/points', pointsRouter);     // Rutas para puntos y QR (Admin/Customer)
-app.use('/api/customer', customerRouter); // Rutas específicas del cliente
-
-// NUEVO: Montar las rutas de Tiers bajo /api/tiers
-// Las rutas definidas en tiers.routes.ts serán relativas a esto
-// Ej: GET /api/tiers/config, POST /api/tiers/tiers, GET /api/tiers/customer/tiers
+app.use('/api/profile', protectedRouter);
+app.use('/api/rewards', rewardsRouter);
+app.use('/api/points', pointsRouter);
+app.use('/api/customer', customerRouter);
 app.use('/api/tiers', tierRouter);
+app.use('/api/admin', adminRouter); // Montar adminRouter en /api/admin
 
 // --- Fin Rutas Protegidas ---
 
-// Ruta raíz de bienvenida (opcional)
 app.get('/', (req: Request, res: Response) => {
   res.send('Welcome to LoyalPyME API!');
 });
 
-// Manejador de errores global simple (opcional, mejorar si es necesario)
+// Manejador de errores global
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
+  console.error('[GLOBAL ERROR HANDLER]', err.stack); // Loguear el stack completo
   res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
-// --- NUEVO: Programar Tarea de Actualización/Descenso de Tiers ---
-// Se ejecuta todos los días a las 3:00 AM (zona horaria del servidor)
-// Formato cron: minuto hora día-mes mes día-semana
+// Cron Job (sin cambios)
 cron.schedule('0 3 * * *', () => {
     const jobStartTime = new Date();
     console.log(`[CRON ${jobStartTime.toISOString()}] Running scheduled tier update/downgrade job...`);
@@ -76,13 +81,13 @@ cron.schedule('0 3 * * *', () => {
       });
 }, {
     scheduled: true,
-    // timezone: "Europe/Madrid" // Descomentar y ajustar si tu servidor está en otra zona horaria
+    // timezone: "Europe/Madrid"
 });
 console.log('Scheduled Tier update/downgrade job registered to run daily at 3:00 AM.');
-// --- FIN NUEVO ---
 
 
-// Iniciar servidor
 app.listen(port, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
 });
+
+// End of file

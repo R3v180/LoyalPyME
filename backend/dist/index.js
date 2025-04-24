@@ -1,6 +1,6 @@
 "use strict";
 // File: backend/src/index.ts
-// Version: 1.1.0 (Mount Tier routes and schedule Tier update job)
+// Version: 1.1.2 (Add Global Request Logger Middleware)
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -9,51 +9,55 @@ const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const cors_1 = __importDefault(require("cors"));
 // Middleware
-const auth_middleware_1 = require("./middleware/auth.middleware"); // Middleware global de autenticación para /api
+const auth_middleware_1 = require("./middleware/auth.middleware");
 // Routers
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const protected_routes_1 = __importDefault(require("./routes/protected.routes"));
-const rewards_routes_1 = __importDefault(require("./routes/rewards.routes")); // Asumo que existe
-const points_routes_1 = __importDefault(require("./routes/points.routes")); // Asumo que existe
-const customer_routes_1 = __importDefault(require("./routes/customer.routes")); // Asumo que existe
-// NUEVO: Importar tierRouter
+const rewards_routes_1 = __importDefault(require("./routes/rewards.routes"));
+const points_routes_1 = __importDefault(require("./routes/points.routes"));
+const customer_routes_1 = __importDefault(require("./routes/customer.routes"));
 const tiers_routes_1 = __importDefault(require("./routes/tiers.routes"));
-// NUEVO: Importar cron y función del job
+const admin_routes_1 = __importDefault(require("./routes/admin.routes")); // Importar adminRouter
+// Cron Job
 const node_cron_1 = __importDefault(require("node-cron"));
-const tier_logic_service_1 = require("./tiers/tier-logic.service"); // Asegúrate que la ruta sea correcta
-dotenv_1.default.config(); // Cargar variables de entorno de .env
+const tier_logic_service_1 = require("./tiers/tier-logic.service");
+dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
 // Middlewares globales
-app.use((0, cors_1.default)()); // Habilitar CORS para todas las rutas
-app.use(express_1.default.json()); // Parsear bodies JSON
-// Rutas Públicas (Autenticación)
+app.use((0, cors_1.default)());
+app.use(express_1.default.json());
+// --- NUEVO: Logger Global de Peticiones ---
+// Registrar CADA petición que llega al servidor ANTES de que llegue a las rutas
+app.use((req, res, next) => {
+    // Mostramos método y URL original
+    console.log(`[REQ LOG] Received: ${req.method} ${req.originalUrl}`);
+    // Pasamos al siguiente middleware/ruta
+    next();
+});
+// --- FIN Logger Global ---
+// Rutas Públicas
 app.use('/auth', auth_routes_1.default);
 // --- Rutas Protegidas ---
-// Aplicar middleware authenticateToken a todas las rutas bajo /api
+// Aplicar auth a TODO /api/* (se ejecutará DESPUÉS del logger global)
 app.use('/api', auth_middleware_1.authenticateToken);
 // Montar los routers específicos bajo /api
-app.use('/api/profile', protected_routes_1.default); // Ejemplo ruta protegida simple
-app.use('/api/rewards', rewards_routes_1.default); // Rutas para gestión de recompensas (Admin)
-app.use('/api/points', points_routes_1.default); // Rutas para puntos y QR (Admin/Customer)
-app.use('/api/customer', customer_routes_1.default); // Rutas específicas del cliente
-// NUEVO: Montar las rutas de Tiers bajo /api/tiers
-// Las rutas definidas en tiers.routes.ts serán relativas a esto
-// Ej: GET /api/tiers/config, POST /api/tiers/tiers, GET /api/tiers/customer/tiers
+app.use('/api/profile', protected_routes_1.default);
+app.use('/api/rewards', rewards_routes_1.default);
+app.use('/api/points', points_routes_1.default);
+app.use('/api/customer', customer_routes_1.default);
 app.use('/api/tiers', tiers_routes_1.default);
+app.use('/api/admin', admin_routes_1.default); // Montar adminRouter en /api/admin
 // --- Fin Rutas Protegidas ---
-// Ruta raíz de bienvenida (opcional)
 app.get('/', (req, res) => {
     res.send('Welcome to LoyalPyME API!');
 });
-// Manejador de errores global simple (opcional, mejorar si es necesario)
+// Manejador de errores global
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error('[GLOBAL ERROR HANDLER]', err.stack); // Loguear el stack completo
     res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
-// --- NUEVO: Programar Tarea de Actualización/Descenso de Tiers ---
-// Se ejecuta todos los días a las 3:00 AM (zona horaria del servidor)
-// Formato cron: minuto hora día-mes mes día-semana
+// Cron Job (sin cambios)
 node_cron_1.default.schedule('0 3 * * *', () => {
     const jobStartTime = new Date();
     console.log(`[CRON ${jobStartTime.toISOString()}] Running scheduled tier update/downgrade job...`);
@@ -66,11 +70,10 @@ node_cron_1.default.schedule('0 3 * * *', () => {
     });
 }, {
     scheduled: true,
-    // timezone: "Europe/Madrid" // Descomentar y ajustar si tu servidor está en otra zona horaria
+    // timezone: "Europe/Madrid"
 });
 console.log('Scheduled Tier update/downgrade job registered to run daily at 3:00 AM.');
-// --- FIN NUEVO ---
-// Iniciar servidor
 app.listen(port, () => {
     console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
 });
+// End of file

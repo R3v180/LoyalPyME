@@ -59,66 +59,69 @@ enum BenefitType {
 // --- MODELS ---
 
 model Business {
-  id            String    @id @default(uuid())
-  name          String
-  slug          String    @unique
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   pointsPerEuro Float     @default(1.0)
-  currency      String    @default("EUR")
+  currency    String    @default("EUR")
   brandingColor String?
   subscriptionStatus String @default("trial")
   trialEndsAt   DateTime?
   lastPaymentDate DateTime?
 
   // Relationships
-  users         User[]    // One-to-Many with User
-  rewards       Reward[]  // One-to-Many with Reward
-  qrCodes       QrCode[]  // One-to-Many with QrCode
+  users       User[]    // One-to-Many with User
+  rewards     Reward[]  // One-to-Many with Reward
+  qrCodes     QrCode[]  // One-to-Many with QrCode
 
   // Tier System Fields
-  tierSystemEnabled           Boolean?             @default(false)
-  tierCalculationBasis        TierCalculationBasis?
+  tierSystemEnabled         Boolean?             @default(false)
+  tierCalculationBasis      TierCalculationBasis?
   tierCalculationPeriodMonths Int?                 // Null = lifetime
-  tierDowngradePolicy         TierDowngradePolicy? @default(NEVER)
-  inactivityPeriodMonths      Int?                 // Used if policy is AFTER_INACTIVITY
-  tiers                       Tier[]               // One-to-Many with Tier
+  tierDowngradePolicy       TierDowngradePolicy? @default(NEVER)
+  inactivityPeriodMonths    Int?                 // Used if policy is AFTER_INACTIVITY
+  tiers                     Tier[]               // One-to-Many with Tier
 
   @@map("businesses")
 }
 
 model User {
-  id                   String        @id @default(uuid())
-  email                String        @unique
-  password             String
-  name                 String?
-  phone                String?       @unique // Made unique
-  role                 UserRole
-  isActive             Boolean       @default(true)
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
-  businessId           String        // Foreign Key to Business
-  points               Int           @default(0)
-  marketingOptIn       Boolean       @default(false)
-  documentId           String?       @unique // Made unique
-  documentType         DocumentType?
-  resetPasswordToken   String?       @unique
-  resetPasswordExpires DateTime?
+  id                    String      @id @default(uuid())
+  email                 String      @unique
+  password              String
+  name                  String?
+  phone                 String?     @unique // Made unique
+  role                  UserRole
+  isActive              Boolean     @default(true)
+  // --- LÍNEA AÑADIDA ---
+  isFavorite            Boolean     @default(false) // Campo para marcar favoritos por el admin
+  // ---------------------
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  businessId            String      // Foreign Key to Business
+  points                Int         @default(0)
+  marketingOptIn        Boolean     @default(false)
+  documentId            String?     @unique // Made unique
+  documentType          DocumentType?
+  resetPasswordToken    String?     @unique
+  resetPasswordExpires  DateTime?
 
   // Tier System Fields
-  currentTierId     String?       // Foreign Key to Tier (nullable)
-  tierAchievedAt    DateTime?     // When the current tier was achieved
-  lastActivityAt    DateTime?     // Last time QR was validated
-  totalSpend        Float?        @default(0)
-  totalVisits       Int?          @default(0)
-  totalPointsEarned Int?          @default(0)
+  currentTierId       String?     // Foreign Key to Tier (nullable)
+  tierAchievedAt      DateTime?   // When the current tier was achieved
+  lastActivityAt      DateTime?   // Last time QR was validated
+  totalSpend          Float?      @default(0)
+  totalVisits         Int?        @default(0)
+  totalPointsEarned   Int?        @default(0)
 
 
   // Relationships
-  business      Business @relation(fields: [businessId], references: [id])
-  qrCodes       QrCode[] // Relation to QrCodes validated by this user
-  currentTier   Tier?    @relation(fields: [currentTierId], references: [id], onDelete: SetNull) // Explicit relation to Tier
+  business    Business @relation(fields: [businessId], references: [id])
+  qrCodes     QrCode[] // Relation to QrCodes validated by this user
+  currentTier Tier?    @relation(fields: [currentTierId], references: [id], onDelete: SetNull) // Explicit relation to Tier
 
 
   @@map("users")
@@ -151,8 +154,6 @@ model QrCode {
   expiresAt     DateTime
   completedAt   DateTime?
   userId        String?      // Foreign Key to User (nullable, who completed it)
-
-  // *** NUEVO CAMPO AÑADIDO AQUÍ ***
   pointsEarned  Int?         // How many points were awarded for this specific QR scan
 
   // Relationships
@@ -166,20 +167,20 @@ model QrCode {
 // --- TIER SYSTEM MODELS ---
 
 model Tier {
-  id                  String  @id @default(uuid())
-  businessId          String  // Foreign Key to Business
-  name                String  // e.g., "Bronze", "Silver", "Gold"
-  level               Int     // e.g., 1, 2, 3 (lower is better/higher requirement)
-  minValue            Float   // Minimum value (spend, visits, points) to reach this tier
-  description         String? // User-facing description of the tier
-  benefitsDescription String? // Summary of benefits for display
-  isActive            Boolean @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                  String    @id @default(uuid())
+  businessId          String    // Foreign Key to Business
+  name                String    // e.g., "Bronze", "Silver", "Gold"
+  level               Int       // e.g., 1, 2, 3 (lower is better/higher requirement)
+  minValue            Float     // Minimum value (spend, visits, points) to reach this tier
+  description         String?   // User-facing description of the tier
+  benefitsDescription String?   // Summary of benefits for display
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   // Relationships
   business Business @relation(fields: [businessId], references: [id])
-  users    User[]   // Users currently in this tier
+  users    User[]     // Users currently in this tier
   benefits TierBenefit[] // Benefits associated with this tier
 
   @@unique([businessId, level]) // Ensure unique level per business

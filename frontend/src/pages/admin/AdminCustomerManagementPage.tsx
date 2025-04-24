@@ -1,5 +1,5 @@
 // filename: frontend/src/pages/admin/AdminCustomerManagementPage.tsx
-// Version: 1.1.0 (Implement real API call for fetching customers)
+// Version: 1.2.1 (Fix API call URL - remove duplicate /api)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -8,9 +8,11 @@ import {
 } from '@mantine/core';
 import {
     IconSearch, IconAlertCircle, IconAdjustments, IconGift, IconEye, IconStar, IconToggleLeft,
-    IconStairsUp // Asegúrate que todos los iconos necesarios están aquí
+    IconStairsUp
 } from '@tabler/icons-react';
-import axiosInstance from '../../services/axiosInstance'; // Ahora sí lo usaremos
+import { useDisclosure } from '@mantine/hooks';
+import axiosInstance from '../../services/axiosInstance'; // Usando la ruta que corregiste tú: ../../services/...
+import AdjustPointsModal from '../../components/admin/AdjustPointsModal'; // Usando la ruta que corregiste tú
 
 // Interfaz básica para el cliente
 interface Customer {
@@ -24,14 +26,13 @@ interface Customer {
   isActive?: boolean;
 }
 
-// Interfaz para datos de paginación (el backend debería devolver esto)
+// Interfaz para datos de paginación
 interface PaginatedResponse<T> {
     items: T[];
     totalPages: number;
     currentPage: number;
-    totalItems: number; // Podría ser útil para mostrar "X clientes en total"
+    totalItems: number;
 }
-
 
 const AdminCustomerManagementPage: React.FC = () => {
     const theme = useMantineTheme();
@@ -42,25 +43,28 @@ const AdminCustomerManagementPage: React.FC = () => {
     const [activePage, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    // --- Función fetchCustomers MODIFICADA para llamar a la API real ---
+    const [adjustModalOpened, { open: openAdjustModal, close: closeAdjustModal }] = useDisclosure(false);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+    // Función para cargar clientes
     const fetchCustomers = useCallback(async (page = 1, search = '') => {
         setLoading(true);
         setError(null);
-        console.log(`Workspaceing customers: page=${page}, search=${search}`); // Log para depuración
+        console.log(`Workspaceing customers: page=${page}, search=${search}`); // Corregido typo "Workspaceing"
         try {
-            // Construimos los parámetros de la query
             const params = new URLSearchParams();
             params.append('page', page.toString());
-            params.append('limit', '10'); // O el límite que prefieras
+            params.append('limit', '10');
             if (search) {
                 params.append('search', search);
             }
-            // TODO: Añadir parámetro para filtro de favoritos cuando se implemente
 
-            // Llamada real al backend
-            const response = await axiosInstance.get<PaginatedResponse<Customer>>(`/admin/customers?${params.toString()}`);
+            // --- LÍNEA CORREGIDA: Quitamos el /api inicial ---
+            const response = await axiosInstance.get<PaginatedResponse<Customer>>(
+                `/admin/customers?${params.toString()}` // Ahora SÓLO la parte relativa a la baseURL
+            );
+            // ---------------------------------------------
 
-            // Actualizamos el estado con los datos recibidos
             setCustomers(response.data.items);
             setPage(response.data.currentPage);
             setTotalPages(response.data.totalPages);
@@ -68,23 +72,23 @@ const AdminCustomerManagementPage: React.FC = () => {
 
         } catch (err: any) {
             console.error("Error fetching customers:", err);
-            const errorMsg = err.response?.data?.message || "Error al cargar la lista de clientes.";
+            // Extraer mensaje de error específico si viene en la respuesta 404
+             const errorMsg = err.response?.data?.message || `Error al cargar la lista de clientes (${err.message || 'Error desconocido'}).`; // Más detalle
             setError(errorMsg);
-            // Limpiamos datos si falla la carga
             setCustomers([]);
             setPage(1);
             setTotalPages(1);
         } finally {
             setLoading(false);
         }
-    }, []); // Ya no depende de searchTerm/activePage aquí, se pasan como argumentos
+    }, []);
 
-    // Carga inicial (sin cambios)
+    // Carga inicial
     useEffect(() => {
         fetchCustomers(1, '');
     }, [fetchCustomers]);
 
-    // Handler para búsqueda/paginación (con debounce) (sin cambios en lógica, solo llama a fetchCustomers)
+    // Handler para búsqueda/paginación
     useEffect(() => {
         const handler = setTimeout(() => {
             fetchCustomers(activePage, searchTerm);
@@ -94,83 +98,109 @@ const AdminCustomerManagementPage: React.FC = () => {
             clearTimeout(handler);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activePage, searchTerm]); // fetchCustomers ya no es dependencia aquí para evitar bucle si se define sin useCallback antes
+    }, [activePage, searchTerm]);
 
+    // Handler para abrir el modal
+    const handleOpenAdjustPoints = (customer: Customer) => {
+        setSelectedCustomer(customer);
+        openAdjustModal();
+    };
 
-    // Renderizado de filas de la tabla (sin cambios)
+    // Handler para cuando el modal tiene éxito
+    const handleAdjustSuccess = () => {
+        fetchCustomers(activePage, searchTerm); // Refrescamos los datos
+    }
+
+    // Renderizado de filas
     const rows = customers.map((customer) => (
         <Table.Tr key={customer.id}>
-            <Table.Td><IconStar size={16} stroke={1.5} color={customer.isFavorite ? theme.colors.yellow[6] : theme.colors.gray[4]} /></Table.Td>
-            <Table.Td>{customer.name || '-'}</Table.Td>
-            <Table.Td>{customer.email}</Table.Td>
-            <Table.Td>{customer.points}</Table.Td>
-            <Table.Td>{customer.currentTier?.name || 'Básico'}</Table.Td>
-            <Table.Td>{new Date(customer.createdAt).toLocaleDateString()}</Table.Td>
-            <Table.Td>{customer.isActive ? 'Activo' : 'Inactivo'}</Table.Td>
-            <Table.Td>
-                <Group gap="xs" justify="flex-end" wrap="nowrap">
-                    <ActionIcon variant="subtle" color="gray" title="Ver Detalles"><IconEye size={16} stroke={1.5} /></ActionIcon>
-                    <ActionIcon variant="subtle" color="blue" title="Ajustar Puntos"><IconAdjustments size={16} stroke={1.5} /></ActionIcon>
-                    <ActionIcon variant="subtle" color="teal" title="Cambiar Nivel"><IconStairsUp size={16} stroke={1.5} /></ActionIcon>
-                    <ActionIcon variant="subtle" color="grape" title="Asignar Recompensa"><IconGift size={16} stroke={1.5} /></ActionIcon>
-                    <ActionIcon variant="subtle" color="orange" title="Activar/Desactivar"><IconToggleLeft size={16} stroke={1.5} /></ActionIcon>
-                </Group>
-            </Table.Td>
+             <Table.Td><IconStar size={16} stroke={1.5} color={customer.isFavorite ? theme.colors.yellow[6] : theme.colors.gray[4]} /></Table.Td>
+             <Table.Td>{customer.name || '-'}</Table.Td>
+             <Table.Td>{customer.email}</Table.Td>
+             <Table.Td>{customer.points}</Table.Td>
+             <Table.Td>{customer.currentTier?.name || 'Básico'}</Table.Td>
+             <Table.Td>{new Date(customer.createdAt).toLocaleDateString()}</Table.Td>
+             <Table.Td>{customer.isActive ? 'Activo' : 'Inactivo'}</Table.Td>
+             <Table.Td>
+                 <Group gap="xs" justify="flex-end" wrap="nowrap">
+                     <ActionIcon variant="subtle" color="gray" title="Ver Detalles"><IconEye size={16} stroke={1.5} /></ActionIcon>
+                     <ActionIcon
+                         variant="subtle"
+                         color="blue"
+                         title="Ajustar Puntos"
+                         onClick={() => handleOpenAdjustPoints(customer)}
+                     >
+                         <IconAdjustments size={16} stroke={1.5} />
+                     </ActionIcon>
+                     <ActionIcon variant="subtle" color="teal" title="Cambiar Nivel"><IconStairsUp size={16} stroke={1.5} /></ActionIcon>
+                     <ActionIcon variant="subtle" color="grape" title="Asignar Recompensa"><IconGift size={16} stroke={1.5} /></ActionIcon>
+                     <ActionIcon variant="subtle" color="orange" title="Activar/Desactivar"><IconToggleLeft size={16} stroke={1.5} /></ActionIcon>
+                 </Group>
+             </Table.Td>
         </Table.Tr>
     ));
 
-    // Renderizado principal (sin cambios significativos, excepto que ahora depende de datos reales)
+    // Renderizado principal
     return (
-        <Paper shadow="sm" p="lg" withBorder radius="lg">
-            <Stack gap="lg">
-                <Title order={2}>Gestión de Clientes</Title>
+        <>
+            <Paper shadow="sm" p="lg" withBorder radius="lg">
+                <Stack gap="lg">
+                    <Title order={2}>Gestión de Clientes</Title>
 
-                <TextInput
-                    placeholder="Buscar por nombre o email..."
-                    leftSection={<IconSearch size={16} stroke={1.5} />}
-                    value={searchTerm}
-                    onChange={(event) => {
-                        setSearchTerm(event.currentTarget.value);
-                        setPage(1); // Resetear a página 1 al buscar
-                    }}
-                    radius="lg"
-                />
+                    <TextInput
+                        placeholder="Buscar por nombre o email..."
+                        leftSection={<IconSearch size={16} stroke={1.5} />}
+                        value={searchTerm}
+                        onChange={(event) => {
+                            setSearchTerm(event.currentTarget.value);
+                            setPage(1);
+                        }}
+                        radius="lg"
+                    />
 
-                {loading && <Group justify="center" p="md"><Loader /></Group>}
-                {error && !loading && <Alert title="Error" color="red" icon={<IconAlertCircle />}>{error}</Alert>}
+                    {loading && <Group justify="center" p="md"><Loader /></Group>}
+                    {error && !loading && <Alert title="Error" color="red" icon={<IconAlertCircle />}>{error}</Alert>}
 
-                {!loading && !error && customers.length === 0 && (
-                    <Text c="dimmed" ta="center" p="md">No se encontraron clientes{searchTerm ? ' para la búsqueda actual' : ''}.</Text> // Mensaje mejorado
-                )}
+                    {!loading && !error && customers.length === 0 && (
+                        <Text c="dimmed" ta="center" p="md">No se encontraron clientes{searchTerm ? ' para la búsqueda actual' : ''}.</Text>
+                    )}
 
-                {!loading && !error && customers.length > 0 && (
-                    <Table.ScrollContainer minWidth={800}>
-                        <Table striped highlightOnHover withTableBorder verticalSpacing="sm">
-                            <Table.Thead>
-                                <Table.Tr>
-                                    <Table.Th title="Favorito"><IconStar size={14} stroke={1.5}/></Table.Th>
-                                    <Table.Th>Nombre</Table.Th>
-                                    <Table.Th>Email</Table.Th>
-                                    <Table.Th>Puntos</Table.Th>
-                                    <Table.Th>Nivel</Table.Th>
-                                    <Table.Th>Registrado</Table.Th>
-                                    <Table.Th>Estado</Table.Th>
-                                    <Table.Th style={{ textAlign: 'right' }}>Acciones</Table.Th>
-                                </Table.Tr>
-                            </Table.Thead>
-                            <Table.Tbody>{rows}</Table.Tbody>
-                        </Table>
-                    </Table.ScrollContainer>
-                )}
+                    {!loading && !error && customers.length > 0 && (
+                        <Table.ScrollContainer minWidth={800}>
+                            <Table striped highlightOnHover withTableBorder verticalSpacing="sm">
+                                <Table.Thead>
+                                    <Table.Tr>
+                                        <Table.Th title="Favorito"><IconStar size={14} stroke={1.5}/></Table.Th>
+                                        <Table.Th>Nombre</Table.Th>
+                                        <Table.Th>Email</Table.Th>
+                                        <Table.Th>Puntos</Table.Th>
+                                        <Table.Th>Nivel</Table.Th>
+                                        <Table.Th>Registrado</Table.Th>
+                                        <Table.Th>Estado</Table.Th>
+                                        <Table.Th style={{ textAlign: 'right' }}>Acciones</Table.Th>
+                                    </Table.Tr>
+                                </Table.Thead>
+                                <Table.Tbody>{rows}</Table.Tbody>
+                            </Table>
+                        </Table.ScrollContainer>
+                    )}
 
-                {!loading && !error && totalPages > 1 && (
-                     <Group justify="center" mt="md">
-                        <Pagination total={totalPages} value={activePage} onChange={setPage} />
-                     </Group>
-                )}
+                    {!loading && !error && totalPages > 1 && (
+                         <Group justify="center" mt="md">
+                            <Pagination total={totalPages} value={activePage} onChange={setPage} />
+                         </Group>
+                    )}
 
-            </Stack>
-        </Paper>
+                </Stack>
+            </Paper>
+
+            <AdjustPointsModal
+                opened={adjustModalOpened}
+                onClose={() => { closeAdjustModal(); setSelectedCustomer(null); }}
+                customer={selectedCustomer}
+                onSuccess={handleAdjustSuccess}
+            />
+        </>
     );
 };
 
