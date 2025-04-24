@@ -1,7 +1,8 @@
 // filename: frontend/src/components/layout/MainLayout.tsx
-// --- INICIO DEL CÓDIGO COMPLETO ---
+// Version: 1.0.1 (Activate Customer NavLink)
+
 import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom'; // Asegúrate que Link está importado
 import {
     AppShell,
     Burger,
@@ -21,56 +22,50 @@ import {
     IconStairsUp,
     IconSettings,
     IconUserCircle,
-    IconLogout // Importar IconLogout
+    IconLogout
 } from '@tabler/icons-react';
-import axiosInstance from '../../services/axiosInstance'; // Ajustar ruta si es necesario
+import axiosInstance from '../../services/axiosInstance';
 
 // Interfaz simplificada para los datos del usuario necesarios en el layout
 interface LayoutUserData {
     name?: string | null;
-    email: string; // Asumimos que siempre tendremos email
-    role: string; // Para saber si mostrar la navbar de admin
+    email: string;
+    role: string;
 }
 
 const MainLayout: React.FC = () => {
     const navigate = useNavigate();
-    const location = useLocation(); // Para marcar NavLinks activos
+    const location = useLocation();
     const [userData, setUserData] = useState<LayoutUserData | null>(null);
     const [loadingUser, setLoadingUser] = useState(true);
     const [navbarOpened, { toggle: toggleNavbar }] = useDisclosure();
 
-    // Efecto para cargar datos del usuario al montar el layout
+    // Efecto para cargar datos del usuario (sin cambios)
     useEffect(() => {
         const fetchUserData = async () => {
             setLoadingUser(true);
             try {
-                // Intentar obtener del localStorage primero (más rápido)
                 const storedUser = localStorage.getItem('user');
                 let userFromStorage: LayoutUserData | null = null;
                 if (storedUser) {
                     try {
                         const parsed = JSON.parse(storedUser);
-                        // Asegurarse de que tenemos los campos mínimos
                         if (parsed && parsed.email && parsed.role) {
-                           userFromStorage = { email: parsed.email, name: parsed.name, role: parsed.role };
+                            userFromStorage = { email: parsed.email, name: parsed.name, role: parsed.role };
                         }
                     } catch (e) { console.error("Failed to parse user from localStorage", e); }
                 }
 
                 if (userFromStorage) {
-                     setUserData(userFromStorage);
+                    setUserData(userFromStorage);
                 } else {
-                    // Si no está en localStorage o falla, pedir a la API
-                     console.log("Fetching user profile from API for layout...");
-                     const response = await axiosInstance.get<LayoutUserData>('/profile'); // Asume que /profile devuelve al menos email y role
-                     setUserData(response.data);
-                     // Opcional: Guardar en localStorage para la próxima vez? Depende de la estrategia
-                     // localStorage.setItem('user', JSON.stringify(response.data));
+                    console.log("Fetching user profile from API for layout...");
+                    const response = await axiosInstance.get<LayoutUserData>('/profile');
+                    setUserData(response.data);
                 }
 
             } catch (error) {
                 console.error("Error fetching user data for layout:", error);
-                // Si falla la carga del perfil (ej: token expirado), desloguear
                 handleLogout();
             } finally {
                 setLoadingUser(false);
@@ -78,60 +73,53 @@ const MainLayout: React.FC = () => {
         };
 
         fetchUserData();
-    }, []); // Se ejecuta solo una vez al montar el Layout
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        navigate('/login', { replace: true }); // Usar replace para no volver atrás al layout
+        navigate('/login', { replace: true });
     };
 
-    // Determinar si mostrar la Navbar de Admin
-    // Podríamos basarlo en el rol o en la ruta actual
     const isAdminRoute = location.pathname.startsWith('/admin/dashboard');
     const showAdminNavbar = userData?.role === 'BUSINESS_ADMIN' && isAdminRoute;
 
     return (
         <AppShell
             header={{ height: 60 }}
-            // Navbar condicional: solo se muestra si showAdminNavbar es true
             navbar={{
                 width: 250,
                 breakpoint: 'sm',
-                collapsed: { mobile: !navbarOpened, desktop: !showAdminNavbar } // Colapsada en desktop si no es admin
+                collapsed: { mobile: !navbarOpened, desktop: !showAdminNavbar }
             }}
             padding="md"
         >
-            {/* Header común para todos los usuarios logueados */}
+            {/* Header común (sin cambios) */}
             <AppShell.Header>
                 <Group h="100%" px="md" justify="space-between">
-                    {/* Botón Burger: solo visible si la navbar debe mostrarse (Admin en móvil) */}
                     <Burger
                         opened={navbarOpened}
                         onClick={toggleNavbar}
                         hiddenFrom="sm"
                         size="sm"
-                        disabled={!showAdminNavbar} // Deshabilitado si no es admin
+                        disabled={!showAdminNavbar}
                     />
-                     {/* Título */}
-                     <Title order={4} style={{ flexGrow: 1 }}>LoyalPyME</Title> {/* Título más genérico */}
-
-                     {/* Saludo y Botón Logout */}
+                    <Title order={4} style={{ flexGrow: 1 }}>LoyalPyME</Title>
                     <Group gap="xs">
                         {loadingUser ? (
-                           <Skeleton height={20} width={100} />
+                            <Skeleton height={20} width={100} />
                         ) : (
-                           <Text size="sm" visibleFrom="xs">
-                                {/* Icono opcional */}
-                               <IconUserCircle size={18} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                               Hola, {userData?.name || userData?.email || 'Usuario'}!
-                           </Text>
+                            <Text size="sm" visibleFrom="xs">
+                                <IconUserCircle size={18} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                                Hola, {userData?.name || userData?.email || 'Usuario'}!
+                            </Text>
                         )}
                         <Button
-                           onClick={handleLogout}
-                           variant="light" // Quizás un estilo más sutil
-                           size="sm"
-                           leftSection={<IconLogout size={16}/>}
+                            onClick={handleLogout}
+                            variant="light"
+                            size="sm"
+                            leftSection={<IconLogout size={16}/>}
                         >
                             Cerrar Sesión
                         </Button>
@@ -139,10 +127,10 @@ const MainLayout: React.FC = () => {
                 </Group>
             </AppShell.Header>
 
-            {/* Navbar específica de Admin (se renderiza solo si showAdminNavbar es true) */}
+            {/* Navbar específica de Admin (condicional) */}
             {showAdminNavbar && (
                 <AppShell.Navbar p="md">
-                    {/* Copiamos los NavLink de AdminDashboardPage aquí */}
+                    {/* Links existentes (sin cambios) */}
                     <NavLink
                         label="Dashboard"
                         leftSection={<IconGauge size="1rem" stroke={1.5} />}
@@ -151,45 +139,49 @@ const MainLayout: React.FC = () => {
                         active={location.pathname === '/admin/dashboard'}
                     />
                    <NavLink
-                        label="Recompensas"
-                        leftSection={<IconGift size="1rem" stroke={1.5} />}
-                        component={Link}
-                        to="/admin/dashboard/rewards"
-                        active={location.pathname === '/admin/dashboard/rewards'}
-                    />
+                       label="Recompensas"
+                       leftSection={<IconGift size="1rem" stroke={1.5} />}
+                       component={Link}
+                       to="/admin/dashboard/rewards"
+                       active={location.pathname === '/admin/dashboard/rewards'}
+                   />
+                   <NavLink
+                       label="Generar QR"
+                       leftSection={<IconQrcode size="1rem" stroke={1.5} />}
+                       component={Link}
+                       to="/admin/dashboard/generate-qr"
+                       active={location.pathname === '/admin/dashboard/generate-qr'}
+                   />
+                   <NavLink
+                       label="Gestionar Niveles"
+                       leftSection={<IconStairsUp size="1rem" stroke={1.5} />}
+                       component={Link}
+                       to="/admin/dashboard/tiers/manage"
+                       active={location.pathname === '/admin/dashboard/tiers/manage'}
+                   />
+                   <NavLink
+                       label="Config. Niveles"
+                       leftSection={<IconSettings size="1rem" stroke={1.5} />}
+                       component={Link}
+                       to="/admin/dashboard/tiers/settings"
+                       active={location.pathname === '/admin/dashboard/tiers/settings'}
+                   />
+                    {/* --- NavLink DE CLIENTES MODIFICADO --- */}
                     <NavLink
-                        label="Generar QR"
-                        leftSection={<IconQrcode size="1rem" stroke={1.5} />}
-                        component={Link}
-                        to="/admin/dashboard/generate-qr"
-                        active={location.pathname === '/admin/dashboard/generate-qr'}
-                    />
-                    <NavLink
-                        label="Gestionar Niveles"
-                        leftSection={<IconStairsUp size="1rem" stroke={1.5} />}
-                        component={Link}
-                        to="/admin/dashboard/tiers/manage"
-                        active={location.pathname === '/admin/dashboard/tiers/manage'}
-                    />
-                    <NavLink
-                        label="Config. Niveles"
-                        leftSection={<IconSettings size="1rem" stroke={1.5} />}
-                        component={Link}
-                        to="/admin/dashboard/tiers/settings"
-                        active={location.pathname === '/admin/dashboard/tiers/settings'}
-                    />
-                     <NavLink
-                        label="Clientes (próx.)"
+                        label="Clientes" // Sin "(próx.)"
                         leftSection={<IconUsers size="1rem" stroke={1.5} />}
-                        disabled
+                        component={Link} // Usar Link para navegar
+                        to="/admin/dashboard/customers" // Apuntar a la nueva ruta
+                        active={location.pathname === '/admin/dashboard/customers'} // Marcar si está activo
+                        // Ya no está 'disabled'
                     />
-                    {/* Puedes añadir más links de admin aquí */}
+                    {/* --- FIN NavLink MODIFICADO --- */}
                 </AppShell.Navbar>
             )}
 
-            {/* Contenido Principal: Aquí se renderizará el componente de la ruta actual */}
+            {/* Contenido Principal (sin cambios) */}
             <AppShell.Main>
-                <Outlet /> {/* ¡IMPORTANTE! Renderiza el componente hijo de la ruta */}
+                <Outlet /> {/* Renderiza el componente hijo de la ruta */}
             </AppShell.Main>
         </AppShell>
     );

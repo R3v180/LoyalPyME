@@ -1,7 +1,8 @@
-// filename: src/pages/admin/AdminOverview.tsx (Actualizado con Tarjeta Config. Niveles)
+// filename: src/pages/admin/AdminOverview.tsx
+// Version: 1.0.2 (Change Customer Card Button Color)
+
 import { useEffect, useState } from 'react';
 import { Container, Title, Text, SimpleGrid, Card, Button, Group, Stack } from '@mantine/core';
-// Asegúrate que IconSettings está importado
 import { IconGift, IconStairsUp, IconQrcode, IconUsers, IconSettings } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
 
@@ -11,7 +12,6 @@ function AdminOverview() {
 
 
     useEffect(() => {
-        // Intentar obtener datos desde localStorage
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
             try {
@@ -29,12 +29,12 @@ function AdminOverview() {
         }
     }, []);
 
-    // Rutas conocidas de tu Navbar
+    // Rutas conocidas
     const routes = {
         rewards: '/admin/dashboard/rewards',
         generateQr: '/admin/dashboard/generate-qr',
         manageTiers: '/admin/dashboard/tiers/manage',
-        settingsTiers: '/admin/dashboard/tiers/settings', // <-- Ruta para Config. Niveles
+        settingsTiers: '/admin/dashboard/tiers/settings',
         customers: '/admin/dashboard/customers',
     };
 
@@ -52,7 +52,7 @@ function AdminOverview() {
 
                 <Title order={3} mt="lg">Accesos Rápidos</Title>
                 <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-                    {/* Tarjeta para Recompensas */}
+                    {/* Tarjeta para Recompensas (sin cambios) */}
                     <Card shadow="sm" padding="lg" radius="md" withBorder>
                         <Group justify="space-between" mt="md" mb="xs">
                             <Text fw={500}>Recompensas</Text>
@@ -69,7 +69,7 @@ function AdminOverview() {
                         </Button>
                     </Card>
 
-                    {/* Tarjeta para Gestionar Niveles */}
+                    {/* Tarjeta para Gestionar Niveles (sin cambios) */}
                     <Card shadow="sm" padding="lg" radius="md" withBorder>
                          <Group justify="space-between" mt="md" mb="xs">
                              <Text fw={500}>Niveles Fidelización</Text>
@@ -86,7 +86,7 @@ function AdminOverview() {
                          </Button>
                     </Card>
 
-                     {/* --- NUEVA TARJETA AÑADIDA --- */}
+                     {/* Tarjeta para Configuración de Niveles (sin cambios) */}
                      <Card shadow="sm" padding="lg" radius="md" withBorder>
                         <Group justify="space-between" mt="md" mb="xs">
                             <Text fw={500}>Configuración Niveles</Text>
@@ -96,20 +96,14 @@ function AdminOverview() {
                             Ajusta la lógica de cómo los clientes suben o bajan de nivel.
                         </Text>
                         <Button
-                            variant="light"
-                            color="orange" // Puedes cambiar el color
-                            fullWidth
-                            mt="md"
-                            radius="md"
-                            component={Link}
-                            to={routes.settingsTiers} // Enlace a la configuración
+                            variant="light" color="orange" fullWidth mt="md" radius="md"
+                            component={Link} to={routes.settingsTiers}
                         >
                             Ajustar Configuración
                         </Button>
                     </Card>
-                    {/* --- FIN NUEVA TARJETA --- */}
 
-                     {/* Tarjeta para Generar QR */}
+                     {/* Tarjeta para Generar QR (sin cambios) */}
                      <Card shadow="sm" padding="lg" radius="md" withBorder>
                          <Group justify="space-between" mt="md" mb="xs">
                              <Text fw={500}>Generar QR Puntos</Text>
@@ -126,22 +120,28 @@ function AdminOverview() {
                          </Button>
                     </Card>
 
-                     {/* Tarjeta para Clientes (Placeholder) */}
+                     {/* --- Tarjeta para Clientes (COLOR DEL BOTÓN MODIFICADO) --- */}
                      <Card shadow="sm" padding="lg" radius="md" withBorder>
                          <Group justify="space-between" mt="md" mb="xs">
                              <Text fw={500}>Clientes</Text>
                              <IconUsers size={24} stroke={1.5} />
                          </Group>
                          <Text size="sm" c="dimmed" miw={60}>
-                             Consulta y gestiona la lista de tus clientes registrados (Próximamente).
+                             Consulta y gestiona la lista de tus clientes registrados.
                          </Text>
                          <Button
-                             variant="light" color="gray" fullWidth mt="md" radius="md"
-                             disabled
+                             variant="light"
+                             color="indigo" // <-- CAMBIADO DE 'gray' a 'indigo' (o el que prefieras)
+                             fullWidth
+                             mt="md"
+                             radius="md"
+                             component={Link}
+                             to={routes.customers}
                          >
                             Gestionar Clientes
                          </Button>
                     </Card>
+                    {/* --- FIN Tarjeta Clientes --- */}
 
                 </SimpleGrid>
             </Stack>
