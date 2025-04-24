@@ -1,5 +1,6 @@
 // filename: backend/prisma/schema.prisma
-// --- INICIO DEL CÓDIGO COMPLETO ---
+// Version: ??? (Added GrantedReward model and relations)
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -8,6 +9,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  // output = "./node_modules/.prisma/client" // Prisma 7+ requerirá esto probablemente
 }
 
 datasource db {
@@ -84,6 +86,8 @@ model Business {
   tierDowngradePolicy       TierDowngradePolicy? @default(NEVER)
   inactivityPeriodMonths    Int?                 // Used if policy is AFTER_INACTIVITY
   tiers                     Tier[]               // One-to-Many with Tier
+  // --- NUEVA RELACIÓN AÑADIDA ---
+  grantedRewards          GrantedReward[]      // Recompensas otorgadas por este negocio
 
   @@map("businesses")
 }
@@ -93,18 +97,16 @@ model User {
   email                 String      @unique
   password              String
   name                  String?
-  phone                 String?     @unique // Made unique
+  phone                 String?     @unique
   role                  UserRole
   isActive              Boolean     @default(true)
-  // --- LÍNEA AÑADIDA ---
-  isFavorite            Boolean     @default(false) // Campo para marcar favoritos por el admin
-  // ---------------------
+  isFavorite            Boolean     @default(false) // Campo añadido previamente
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
   businessId            String      // Foreign Key to Business
   points                Int         @default(0)
   marketingOptIn        Boolean     @default(false)
-  documentId            String?     @unique // Made unique
+  documentId            String?     @unique
   documentType          DocumentType?
   resetPasswordToken    String?     @unique
   resetPasswordExpires  DateTime?
@@ -117,12 +119,15 @@ model User {
   totalVisits         Int?        @default(0)
   totalPointsEarned   Int?        @default(0)
 
+  // --- LÍNEAS DE RELACIÓN INVERSA AÑADIDAS ---
+  grantedRewards        GrantedReward[] @relation("UserGrantedRewards")   // Recompensas que le han regalado a este usuario
+  assignedGrantedRewards GrantedReward[] @relation("AdminGrantedRewards") // Recompensas que este usuario (si es admin) ha regalado
+  // ------------------------------------------
 
-  // Relationships
+  // --- Relaciones existentes ---
   business    Business @relation(fields: [businessId], references: [id])
-  qrCodes     QrCode[] // Relation to QrCodes validated by this user
-  currentTier Tier?    @relation(fields: [currentTierId], references: [id], onDelete: SetNull) // Explicit relation to Tier
-
+  qrCodes     QrCode[]
+  currentTier Tier?    @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
 
   @@map("users")
 }
@@ -139,6 +144,8 @@ model Reward {
 
   // Relationships
   business    Business @relation(fields: [businessId], references: [id])
+  // --- NUEVA RELACIÓN AÑADIDA ---
+  grantedInstances GrantedReward[] // Instancias donde esta recompensa ha sido otorgada
 
   @@map("rewards")
 }
@@ -148,57 +155,79 @@ model QrCode {
   token         String       @unique
   businessId    String       // Foreign Key to Business
   amount        Float
-  ticketNumber  String       // Made mandatory
+  ticketNumber  String
   status        QrCodeStatus @default(PENDING)
   createdAt     DateTime     @default(now())
   expiresAt     DateTime
   completedAt   DateTime?
   userId        String?      // Foreign Key to User (nullable, who completed it)
-  pointsEarned  Int?         // How many points were awarded for this specific QR scan
+  pointsEarned  Int?
 
   // Relationships
   business    Business @relation(fields: [businessId], references: [id])
-  user        User?    @relation(fields: [userId], references: [id]) // Relation to the user who validated
+  user        User?    @relation(fields: [userId], references: [id])
 
   @@map("qr_codes")
 }
 
 
-// --- TIER SYSTEM MODELS ---
+// --- TIER SYSTEM MODELS (sin cambios) ---
 
 model Tier {
   id                  String    @id @default(uuid())
-  businessId          String    // Foreign Key to Business
-  name                String    // e.g., "Bronze", "Silver", "Gold"
-  level               Int       // e.g., 1, 2, 3 (lower is better/higher requirement)
-  minValue            Float     // Minimum value (spend, visits, points) to reach this tier
-  description         String?   // User-facing description of the tier
-  benefitsDescription String?   // Summary of benefits for display
+  businessId          String
+  name                String
+  level               Int
+  minValue            Float
+  description         String?
+  benefitsDescription String?
   isActive            Boolean   @default(true)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
   // Relationships
   business Business @relation(fields: [businessId], references: [id])
-  users    User[]     // Users currently in this tier
-  benefits TierBenefit[] // Benefits associated with this tier
+  users    User[]
+  benefits TierBenefit[]
 
-  @@unique([businessId, level]) // Ensure unique level per business
-  @@unique([businessId, name])  // Ensure unique name per business
+  @@unique([businessId, level])
+  @@unique([businessId, name])
 }
 
 model TierBenefit {
   id          String      @id @default(uuid())
-  tierId      String      // Foreign Key to Tier
-  type        BenefitType // e.g., POINTS_MULTIPLIER
-  value       String      // Value of the benefit (e.g., "1.5" for multiplier, reward ID for access, text for custom)
-  description String?     // Internal or admin-facing description
+  tierId      String
+  type        BenefitType
+  value       String
+  description String?
   isActive    Boolean     @default(true)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
   // Relationships
-  tier Tier @relation(fields: [tierId], references: [id], onDelete: Cascade) // Cascade delete if Tier is deleted
+  tier Tier @relation(fields: [tierId], references: [id], onDelete: Cascade)
 }
+
+
+// --- NUEVO MODELO AÑADIDO ---
+model GrantedReward {
+  id           String   @id @default(uuid())
+  userId       String   // FK al Usuario que recibe el regalo
+  rewardId     String   // FK a la Recompensa que se regala
+  businessId   String   // FK al Negocio (para filtros y seguridad)
+  assignedById String   // FK al Usuario (Admin) que hizo la asignación
+  assignedAt   DateTime @default(now()) // Cuándo se asignó
+  status       String   @default("PENDING") // Estado: PENDING, REDEEMED, EXPIRED?
+  redeemedAt   DateTime? // Cuándo se canjeó
+
+  // Relaciones
+  user         User     @relation("UserGrantedRewards", fields: [userId], references: [id], onDelete: Cascade)
+  reward       Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  business     Business @relation(fields: [businessId], references: [id])
+  assignedBy   User     @relation("AdminGrantedRewards", fields: [assignedById], references: [id])
+
+  @@map("granted_rewards") // Nombre de la tabla en la BD
+}
+// --- FIN NUEVO MODELO ---
 
 // --- FIN DEL CÓDIGO COMPLETO ---

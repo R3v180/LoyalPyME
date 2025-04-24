@@ -1,5 +1,5 @@
 // filename: backend/src/routes/admin.routes.ts
-// Version: 1.2.0 (Add route PUT /customers/:customerId/tier)
+// Version: 1.4.0 (Add route POST /customers/:customerId/assign-reward)
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
@@ -8,11 +8,12 @@ import { UserRole } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { checkRole } from '../middleware/role.middleware';
 
-// Controladores (Importamos los 3 handlers del customer controller ahora)
+// Controladores (Importamos TODOS los handlers de customer.controller)
 import {
     getAdminCustomers,
     adjustCustomerPoints,
-    changeCustomerTierHandler // <-- Añadida esta importación
+    changeCustomerTierHandler,
+    assignRewardHandler // <-- Añadida esta importación
 } from '../customer/customer.controller';
 
 const router = Router();
@@ -35,14 +36,21 @@ router.post(
     adjustCustomerPoints
 );
 
-// --- NUEVA RUTA AÑADIDA ---
-// PUT /customers/:customerId/tier - Cambiar manualmente el tier de un cliente
-// Usamos PUT porque estamos reemplazando/estableciendo el valor del tier para ese cliente.
+// PUT /customers/:customerId/tier - Cambiar manualmente el tier
 router.put(
-    '/customers/:customerId/tier',    // Path con parámetro :customerId
-    authenticateToken,                 // 1. Requiere login
-    checkRole([UserRole.BUSINESS_ADMIN]), // 2. Requiere rol admin
-    changeCustomerTierHandler          // 3. Llama al controlador correspondiente
+    '/customers/:customerId/tier',
+    authenticateToken,
+    checkRole([UserRole.BUSINESS_ADMIN]),
+    changeCustomerTierHandler
+);
+
+// --- NUEVA RUTA AÑADIDA ---
+// POST /customers/:customerId/assign-reward - Asignar una recompensa como regalo
+router.post(
+    '/customers/:customerId/assign-reward', // Path con parámetro :customerId
+    authenticateToken,                     // 1. Requiere login
+    checkRole([UserRole.BUSINESS_ADMIN]),     // 2. Requiere rol admin
+    assignRewardHandler                    // 3. Llama al controlador correspondiente
 );
 // --- FIN NUEVA RUTA ---
 
@@ -50,3 +58,5 @@ router.put(
 // Aquí podríamos añadir otras rutas de admin en el futuro
 
 export default router;
+
+// End of File
