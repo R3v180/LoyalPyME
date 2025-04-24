@@ -1,29 +1,50 @@
 // File: backend/src/routes/customer.routes.ts
-// Version: 1.2.0 (Remove admin route, keep only customer routes)
+// Version: 1.4.0 (Add POST /granted-rewards/:id/redeem route - FINAL)
 
 import { Router } from 'express';
-import { UserRole } from '@prisma/client'; // UserRole sí se usa en checkRole aquí abajo
+import { UserRole } from '@prisma/client';
 
-// Importar Middleware necesario para esta ruta
+// Importar Middleware necesario
 import { checkRole } from '../middleware/role.middleware';
-// Asumimos que authenticateToken se aplica ANTES en index.ts al montar en /api/customer
+// ASUNCIÓN: authenticateToken se aplica ANTES en index.ts al montar en /api/customer
 
-// Importar SOLO los handlers necesarios para ESTE router (rutas de cliente)
-import { getCustomerRewardsHandler } from '../customer/customer.controller';
+// Importar los handlers necesarios de customer.controller.ts
+import {
+    getCustomerRewardsHandler,
+    getPendingGrantedRewardsHandler,
+    redeemGrantedRewardHandler // <-- Añadida esta importación
+} from '../customer/customer.controller';
 
 
 const router = Router();
 
-// --- Rutas específicas para Clientes ---
+// --- Rutas específicas para Clientes (montadas bajo /api/customer) ---
 
 // GET /rewards - Obtener recompensas activas para el negocio del cliente
-// La URL final será /api/customer/rewards (si se monta en /api/customer)
 router.get(
     '/rewards',
-    // authenticateToken, // Descomentar si NO se aplica antes globalmente
-    checkRole([UserRole.CUSTOMER_FINAL]), // Solo accesible para clientes finales
+    checkRole([UserRole.CUSTOMER_FINAL]), // Solo clientes
     getCustomerRewardsHandler
 );
+
+// GET /granted-rewards - Obtener las recompensas regaladas pendientes
+router.get(
+    '/granted-rewards',
+    checkRole([UserRole.CUSTOMER_FINAL]), // Solo clientes
+    getPendingGrantedRewardsHandler
+);
+
+// --- **NUEVA RUTA AÑADIDA** ---
+// POST /granted-rewards/:grantedRewardId/redeem - Canjear una recompensa otorgada específica
+// La URL final será /api/customer/granted-rewards/:grantedRewardId/redeem
+router.post(
+    '/granted-rewards/:grantedRewardId/redeem', // Path con parámetro :grantedRewardId
+    // authenticateToken, // Asumimos que ya está aplicado globalmente a /api/customer
+    checkRole([UserRole.CUSTOMER_FINAL]),    // Solo clientes pueden canjear sus regalos
+    redeemGrantedRewardHandler             // Llama al handler de canje que ya existe
+);
+// --- FIN NUEVA RUTA ---
+
 
 // Otras rutas de cliente irían aquí
 
