@@ -1,8 +1,8 @@
 // File: backend/src/customer/customer.controller.ts
-// Version: 1.7.0 (Add toggleFavoriteHandler - 100% FULL CODE)
+// Version: 1.8.0 (Add toggleFavoriteHandler and filter logic to getAdminCustomers - 100% FULL CODE)
 
 import { Request, Response, NextFunction } from 'express';
-// Importa el servicio (¡Ahora TODAS las 8 funciones!)
+// Importa el servicio (Las 8 funciones)
 import {
     findActiveRewardsForCustomer,
     getCustomersForBusiness,
@@ -11,9 +11,9 @@ import {
     assignRewardToCustomer,
     getPendingGrantedRewards,
     redeemGrantedReward,
-    toggleFavoriteStatus // <-- Añadida esta importación
+    toggleFavoriteStatus
 } from './customer.service';
-import { User } from '@prisma/client'; // Importar tipo User si lo devuelve el servicio
+import { User, UserRole } from '@prisma/client'; // Importar UserRole también
 
 /** (Handler 1: getCustomerRewardsHandler) */
 export const getCustomerRewardsHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -35,7 +35,11 @@ export const getCustomerRewardsHandler = async (req: Request, res: Response, nex
   }
 };
 
-/** (Handler 2: getAdminCustomers) */
+// --- Handler 2: getAdminCustomers (MODIFICADO PARA FILTROS/SORT/PAG) ---
+/**
+ * Controlador para que el Admin obtenga la lista PAGINADA, FILTRADA y ORDENADA de clientes.
+ * Lee query parameters: page, limit, sortBy, sortDir, search, isFavorite, isActive
+ */
 export const getAdminCustomers = async (req: Request, res: Response, next: NextFunction) => {
     // @ts-ignore
     const adminBusinessId = req.user?.businessId;
@@ -43,85 +47,88 @@ export const getAdminCustomers = async (req: Request, res: Response, next: NextF
         console.error("[CUST CTRL] No businessId found in req.user for admin.");
         return res.status(403).json({ message: "No se pudo identificar el negocio del administrador." });
     }
-    console.log(`[CUST CTRL] Request received for admin customers list for business: ${adminBusinessId}`);
+
+    // --- LEER QUERY PARAMS ---
+    const page = parseInt(req.query.page as string || '1', 10);
+    const limit = parseInt(req.query.limit as string || '10', 10);
+    const sortBy = req.query.sortBy as string || 'createdAt'; // Campo por defecto
+    const sortDir = (req.query.sortDir as string === 'asc') ? 'asc' : 'desc'; // Dirección por defecto
+    const search = req.query.search as string || undefined;
+    const isFavoriteParam = req.query.isFavorite as string;
+    const isActiveParam = req.query.isActive as string;
+
+    // Convertir params a tipos correctos para el servicio
+    // Definimos GetCustomersOptions aquí para claridad (idealmente iría en un archivo de tipos)
+    interface GetCustomersOptions {
+        page?: number; limit?: number; sortBy?: string; sortDir?: 'asc' | 'desc';
+        filters?: { search?: string; isFavorite?: boolean; isActive?: boolean; }
+    }
+    const options: GetCustomersOptions = {
+        page: isNaN(page) || page < 1 ? 1 : page,
+        limit: isNaN(limit) || limit < 1 ? 10 : limit,
+        sortBy: sortBy,
+        sortDir: sortDir,
+        filters: {
+            search: search?.trim() || undefined,
+            isFavorite: isFavoriteParam === undefined ? undefined : isFavoriteParam === 'true',
+            isActive: isActiveParam === undefined ? undefined : isActiveParam === 'true',
+        }
+    };
+    // --------------------------
+
+    console.log(`[CUST CTRL] Request received for admin customers list for business: ${adminBusinessId} with options:`, options);
+
     try {
-        const customers = await getCustomersForBusiness(adminBusinessId);
-        // Respuesta con paginación placeholder
-        const responseData = {
-            items: customers,
-            currentPage: 1, // Fijo por ahora
-            totalPages: 1,  // Fijo por ahora
-            totalItems: customers.length
-        };
-        console.log(`[CUST CTRL] Sending ${customers.length} customers.`);
-        res.status(200).json(responseData);
+        // Llamamos al servicio CON el objeto options
+        const result = await getCustomersForBusiness(adminBusinessId, options);
+
+        // El servicio ya devuelve el objeto con formato { items, currentPage, totalPages, totalItems }
+        console.log(`[CUST CTRL] Sending ${result.items.length} customers of ${result.totalItems} total.`);
+        res.status(200).json(result); // Devolvemos directamente el resultado del servicio
+
     } catch (error) {
          console.error("[CUST CTRL] Error in getAdminCustomers controller:", error);
          next(error);
     }
 };
+// --- FIN Handler 2 MODIFICADO ---
+
 
 /** (Handler 3: adjustCustomerPoints) */
 export const adjustCustomerPoints = async (req: Request, res: Response, next: NextFunction) => {
-    const { customerId } = req.params;
-    const { amount, reason } = req.body;
-    // @ts-ignore
-    const adminUserId = req.user?.id;
-    // @ts-ignore
+    const { customerId } = req.params; const { amount, reason } = req.body; // @ts-ignore
+    const adminUserId = req.user?.id; // @ts-ignore
     const adminBusinessId = req.user?.businessId;
     console.log(`[CUST CTRL] Request to adjust points for customer ${customerId} by admin ${adminUserId} from business ${adminBusinessId}`);
     if (!adminBusinessId || !adminUserId) { return res.status(403).json({ message: "Información de administrador no disponible." }); }
     if (!customerId) { return res.status(400).json({ message: "Falta el ID del cliente." }); }
     if (typeof amount !== 'number' || amount === 0) { return res.status(400).json({ message: "La cantidad ('amount') debe ser un número distinto de cero." }); }
-    try {
-        const updatedCustomer = await adjustPointsForCustomer( customerId, adminBusinessId, amount, reason );
-        res.status(200).json({ message: `Puntos ajustados correctamente para ${updatedCustomer.email}.`, customer: { id: updatedCustomer.id, points: updatedCustomer.points } });
-    } catch (error) {
-        console.error(`[CUST CTRL] Failed to adjust points for customer ${customerId}:`, error);
-        next(error);
-    }
+    try { const updatedCustomer = await adjustPointsForCustomer( customerId, adminBusinessId, amount, reason ); res.status(200).json({ message: `Puntos ajustados correctamente para ${updatedCustomer.email}.`, customer: { id: updatedCustomer.id, points: updatedCustomer.points } }); }
+    catch (error) { console.error(`[CUST CTRL] Failed to adjust points for customer ${customerId}:`, error); next(error); }
 };
-
 
 /** (Handler 4: changeCustomerTierHandler) */
 export const changeCustomerTierHandler = async (req: Request, res: Response, next: NextFunction) => {
-    const { customerId } = req.params; // ID del cliente desde la URL
-    const { tierId } = req.body;      // ID del nuevo Tier desde el cuerpo (puede ser null)
-    // @ts-ignore
-    const adminBusinessId = req.user?.businessId; // ID del negocio del admin (para validación)
+    const { customerId } = req.params; const { tierId } = req.body; // @ts-ignore
+    const adminBusinessId = req.user?.businessId;
     console.log(`[CUST CTRL] Request to change tier for customer ${customerId} to tier ${tierId} by admin from business ${adminBusinessId}`);
-    // Validación básica
     if (!adminBusinessId) { return res.status(403).json({ message: "Información de administrador no disponible." }); }
-     if (!customerId) { return res.status(400).json({ message: "Falta el ID del cliente." }); }
-    try {
-        const updatedCustomer = await changeCustomerTier( customerId, adminBusinessId, tierId );
-        res.status(200).json({ message: `Nivel cambiado correctamente para ${updatedCustomer.email}.`, customer: { id: updatedCustomer.id, currentTierId: updatedCustomer.currentTierId, tierAchievedAt: updatedCustomer.tierAchievedAt } });
-    } catch (error) {
-        console.error(`[CUST CTRL] Failed to change tier for customer ${customerId} to ${tierId}:`, error);
-        next(error);
-    }
+    if (!customerId) { return res.status(400).json({ message: "Falta el ID del cliente." }); }
+    try { const updatedCustomer = await changeCustomerTier( customerId, adminBusinessId, tierId ); res.status(200).json({ message: `Nivel cambiado correctamente para ${updatedCustomer.email}.`, customer: { id: updatedCustomer.id, currentTierId: updatedCustomer.currentTierId, tierAchievedAt: updatedCustomer.tierAchievedAt } }); }
+    catch (error) { console.error(`[CUST CTRL] Failed to change tier for customer ${customerId} to ${tierId}:`, error); next(error); }
 };
 
 /** (Handler 5: assignRewardHandler) */
 export const assignRewardHandler = async (req: Request, res: Response, next: NextFunction) => {
-    const { customerId } = req.params;   // ID del cliente desde la URL
-    const { rewardId } = req.body;       // ID de la recompensa desde el cuerpo
-    // @ts-ignore
-    const adminUserId = req.user?.id;    // ID del admin que hace la acción
-    // @ts-ignore
-    const adminBusinessId = req.user?.businessId; // ID del negocio del admin
+    const { customerId } = req.params; const { rewardId } = req.body; // @ts-ignore
+    const adminUserId = req.user?.id; // @ts-ignore
+    const adminBusinessId = req.user?.businessId;
     console.log(`[CUST CTRL] Request to assign reward ${rewardId} to customer ${customerId} by admin ${adminUserId} from business ${adminBusinessId}`);
-    // Validaciones básicas de entrada
     if (!adminBusinessId || !adminUserId) { return res.status(403).json({ message: "Información de administrador no disponible." }); }
     if (!customerId) { return res.status(400).json({ message: "Falta el ID del cliente." }); }
     if (!rewardId || typeof rewardId !== 'string') { return res.status(400).json({ message: "Falta el ID de la recompensa ('rewardId') o no es válido." }); }
-    try {
-        const grantedReward = await assignRewardToCustomer( customerId, adminBusinessId, rewardId, adminUserId );
-        res.status(201).json({ message: `Recompensa asignada correctamente al cliente.`, grantedRewardId: grantedReward.id });
-    } catch (error) {
-        console.error(`[CUST CTRL] Failed to assign reward ${rewardId} to customer ${customerId}:`, error);
-        next(error);
-    }
+    try { const grantedReward = await assignRewardToCustomer( customerId, adminBusinessId, rewardId, adminUserId ); res.status(201).json({ message: `Recompensa asignada correctamente al cliente.`, grantedRewardId: grantedReward.id }); }
+    catch (error) { console.error(`[CUST CTRL] Failed to assign reward ${rewardId} to customer ${customerId}:`, error); next(error); }
 };
 
 /** (Handler 6: getPendingGrantedRewardsHandler) */
@@ -138,65 +145,23 @@ export const getPendingGrantedRewardsHandler = async (req: Request, res: Respons
 /** (Handler 7: redeemGrantedRewardHandler) */
 export const redeemGrantedRewardHandler = async (req: Request, res: Response, next: NextFunction) => {
     // @ts-ignore
-    const userId = req.user?.id;
-    const { grantedRewardId } = req.params;
+    const userId = req.user?.id; const { grantedRewardId } = req.params;
     console.log(`[CUST CTRL] User ${userId} attempting to redeem granted reward ID: ${grantedRewardId}`);
     if (!userId) { return res.status(401).json({ message: 'Información de usuario no encontrada en la sesión.' }); }
     if (!grantedRewardId) { return res.status(400).json({ message: 'Falta el ID del regalo otorgado en la URL.' }); }
-    try {
-        const redeemedGrant = await redeemGrantedReward(userId, grantedRewardId);
-        res.status(200).json({ message: 'Regalo canjeado con éxito.', grantedRewardId: redeemedGrant.id, rewardId: redeemedGrant.rewardId, redeemedAt: redeemedGrant.redeemedAt });
-    } catch (error) {
-        console.error(`[CUST CTRL] Failed to redeem granted reward ${grantedRewardId} for user ${userId}:`, error);
-        if (error instanceof Error && (error.message.includes('no te pertenece') || error.message.includes('no encontrado'))) { return res.status(403).json({ message: error.message }); }
-        if (error instanceof Error && error.message.includes('ya fue canjeado')) { return res.status(409).json({ message: error.message }); }
-        next(error);
-    }
+    try { const redeemedGrant = await redeemGrantedReward(userId, grantedRewardId); res.status(200).json({ message: 'Regalo canjeado con éxito.', grantedRewardId: redeemedGrant.id, rewardId: redeemedGrant.rewardId, redeemedAt: redeemedGrant.redeemedAt }); }
+    catch (error) { console.error(`[CUST CTRL] Failed to redeem granted reward ${grantedRewardId} for user ${userId}:`, error); if (error instanceof Error && (error.message.includes('no te pertenece') || error.message.includes('no encontrado'))) { return res.status(403).json({ message: error.message }); } if (error instanceof Error && error.message.includes('ya fue canjeado')) { return res.status(409).json({ message: error.message }); } next(error); }
 };
 
-// --- **Handler 8: toggleFavoriteHandler (AÑADIDO)** ---
-/**
- * Controlador para que un Admin marque o desmarque un cliente como favorito.
- * PATCH /api/admin/customers/:customerId/toggle-favorite (o PUT)
- */
+/** (Handler 8: toggleFavoriteHandler) */
 export const toggleFavoriteHandler = async (req: Request, res: Response, next: NextFunction) => {
-    const { customerId } = req.params; // ID del cliente desde la URL
-    // @ts-ignore
-    const adminBusinessId = req.user?.businessId; // ID del negocio del admin
-
+    const { customerId } = req.params; // @ts-ignore
+    const adminBusinessId = req.user?.businessId;
     console.log(`[CUST CTRL] Request to toggle favorite status for customer ${customerId} by admin from business ${adminBusinessId}`);
-
-    // Validaciones básicas
-    if (!adminBusinessId) {
-        return res.status(403).json({ message: "Información de administrador no disponible." });
-    }
-     if (!customerId) {
-        return res.status(400).json({ message: "Falta el ID del cliente." });
-    }
-
-    try {
-        // Llamamos a la función del servicio que creamos en el paso anterior
-        const updatedCustomer = await toggleFavoriteStatus(
-            customerId,
-            adminBusinessId
-        );
-
-        // Enviamos respuesta de éxito
-        res.status(200).json({
-            message: `Estado de favorito cambiado para ${updatedCustomer.email}. Nuevo estado: ${updatedCustomer.isFavorite}`,
-            customer: { // Devolvemos info útil para actualizar UI si es necesario
-                id: updatedCustomer.id,
-                isFavorite: updatedCustomer.isFavorite // El nuevo estado
-            }
-        });
-
-    } catch (error) {
-        console.error(`[CUST CTRL] Failed to toggle favorite status for customer ${customerId}:`, error);
-        // Pasamos el error al manejador global (puede ser un error 403/404 si el servicio lo lanza)
-        next(error);
-    }
+    if (!adminBusinessId) { return res.status(403).json({ message: "Información de administrador no disponible." }); }
+    if (!customerId) { return res.status(400).json({ message: "Falta el ID del cliente." }); }
+    try { const updatedCustomer = await toggleFavoriteStatus( customerId, adminBusinessId ); res.status(200).json({ message: `Estado de favorito cambiado para ${updatedCustomer.email}. Nuevo estado: ${updatedCustomer.isFavorite}`, customer: { id: updatedCustomer.id, isFavorite: updatedCustomer.isFavorite } }); }
+    catch (error) { console.error(`[CUST CTRL] Failed to toggle favorite status for customer ${customerId}:`, error); next(error); }
 };
-// --- FIN NUEVA FUNCIÓN ---
-
 
 // End of File: backend/src/customer/customer.controller.ts
