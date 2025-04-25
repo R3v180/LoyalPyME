@@ -1,5 +1,5 @@
 // File: backend/src/customer/customer.service.ts
-// Version: 1.6.0 (Add redeemGrantedReward function - FULL CODE)
+// Version: 1.7.0 (Add toggleFavoriteStatus function - ABSOLUTELY 100% FULL CODE)
 
 import { PrismaClient, Reward, Prisma, UserRole, User, GrantedReward } from '@prisma/client';
 
@@ -27,6 +27,7 @@ export const getCustomersForBusiness = async (businessId: string) => {
             where: { businessId: businessId, role: UserRole.CUSTOMER_FINAL },
             select: { id: true, name: true, email: true, points: true, createdAt: true, isActive: true, isFavorite: true, currentTier: { select: { name: true, id: true } } },
             orderBy: { createdAt: 'desc' }
+            // TODO: Paginación y búsqueda
         });
         console.log(`[CUST SVC] Found ${customers.length} customers for business ${businessId}`);
         return customers;
@@ -46,14 +47,22 @@ export const adjustPointsForCustomer = async ( customerId: string, adminBusiness
             if (!customer) { throw new Error(`Cliente con ID ${customerId} no encontrado.`); }
             if (customer.businessId !== adminBusinessId) { throw new Error("No tienes permiso para modificar este cliente."); }
             const userAfterUpdate = await tx.user.update({ where: { id: customerId, businessId: adminBusinessId, }, data: { points: { increment: amount } } });
+            // TODO: Log Auditoría
             console.log(`[CUST SVC] Points adjusted successfully for customer ${customerId}. New balance potentially: ${userAfterUpdate.points}`);
             return userAfterUpdate;
         });
         return updatedUser;
     } catch (error) {
         console.error(`[CUST SVC] Error adjusting points for customer ${customerId}:`, error);
-        if (error instanceof Prisma.PrismaClientKnownRequestError) { if (error.code === 'P2025') { throw new Error(`No se encontró el cliente especificado para actualizar.`); } throw new Error(`Error de base de datos al ajustar puntos: ${error.message}`); }
-        if (error instanceof Error) { throw error; }
+        if (error instanceof Prisma.PrismaClientKnownRequestError) { // Asegúrate de tener Prisma importado
+             if (error.code === 'P2025') { // Error específico si el registro a actualizar no se encuentra
+                 throw new Error(`No se encontró el cliente especificado para actualizar.`);
+             }
+             throw new Error(`Error de base de datos al ajustar puntos: ${error.message}`);
+        }
+        if (error instanceof Error) { // Capturar errores lanzados desde la transacción
+             throw error;
+        }
         throw new Error('Error inesperado al ajustar los puntos.');
     }
 };
@@ -123,79 +132,103 @@ export const getPendingGrantedRewards = async (userId: string) => {
     }
 };
 
-// --- **NUEVA FUNCIÓN AÑADIDA (PARA CANJEAR REGALO)** ---
-/**
- * Marca una recompensa otorgada específica como canjeada por el cliente.
- * Verifica que el regalo pertenezca al cliente y esté pendiente.
- *
- * @param userId - ID del cliente que realiza la acción.
- * @param grantedRewardId - ID del registro GrantedReward a canjear.
- * @returns El objeto GrantedReward actualizado.
- * @throws Error si el regalo no se encuentra, no pertenece al usuario, ya fue canjeado, o falla la actualización.
- */
-export const redeemGrantedReward = async (
-    userId: string,
-    grantedRewardId: string
-): Promise<GrantedReward> => {
+// --- Función 7 (Cliente - Canjear Regalo) ---
+export const redeemGrantedReward = async ( userId: string, grantedRewardId: string ): Promise<GrantedReward> => {
     console.log(`[CUST SVC] User ${userId} attempting to redeem granted reward ${grantedRewardId}`);
+    try {
+        const updatedGrantedReward = await prisma.$transaction(async (tx) => {
+            const grantedReward = await tx.grantedReward.findUnique({ where: { id: grantedRewardId }, include: { reward: { select: { name: true }} } });
+            if (!grantedReward) { throw new Error(`Regalo con ID ${grantedRewardId} no encontrado.`); }
+            if (grantedReward.userId !== userId) { throw new Error("Este regalo no te pertenece."); }
+            if (grantedReward.status !== 'PENDING') { throw new Error(`Este regalo (${grantedReward.reward.name}) ya fue canjeado o no es válido (Estado: ${grantedReward.status}).`); }
+            const redeemed = await tx.grantedReward.update({ where: { id: grantedRewardId, userId: userId, status: 'PENDING' }, data: { status: 'REDEEMED', redeemedAt: new Date() } });
+            console.log(`[CUST SVC] Granted reward ${grantedRewardId} (${redeemed.rewardId}) successfully redeemed by user ${userId}`);
+            return redeemed;
+        });
+        return updatedGrantedReward;
+    } catch (error) {
+        console.error(`[CUST SVC] Error redeeming granted reward ${grantedRewardId} for user ${userId}:`, error);
+        if (error instanceof Prisma.PrismaClientKnownRequestError) { if (error.code === 'P2025') { throw new Error("El regalo no se encontró o ya no estaba pendiente al intentar canjearlo."); } throw new Error(`Error de base de datos al canjear el regalo: ${error.message}`); }
+        if (error instanceof Error) { throw error; }
+        throw new Error('Error inesperado al canjear el regalo.');
+    }
+};
+
+// --- **NUEVA FUNCIÓN AÑADIDA (PARA MARCAR/DESMARCAR FAVORITO)** ---
+/**
+ * Cambia el estado de 'isFavorite' para un cliente específico.
+ * Verifica que el cliente pertenezca al negocio del admin.
+ *
+ * @param customerId ID del cliente a modificar.
+ * @param adminBusinessId ID del negocio del admin.
+ * @returns El objeto User del cliente con el estado de favorito actualizado.
+ * @throws Error si el cliente no existe o no pertenece al negocio.
+ */
+export const toggleFavoriteStatus = async (
+    customerId: string,
+    adminBusinessId: string
+): Promise<User> => { // Devolvemos el User completo por si el frontend lo necesita
+    console.log(`[CUST SVC] Attempting to toggle favorite status for customer ${customerId} by admin from business ${adminBusinessId}`);
 
     try {
-        // Es importante hacer la verificación y la actualización en una transacción
-        // para evitar que se canjee dos veces si hay peticiones simultáneas.
-        const updatedGrantedReward = await prisma.$transaction(async (tx) => {
-            // 1. Buscar el registro del regalo incluyendo el userId para validar pertenencia
-            const grantedReward = await tx.grantedReward.findUnique({
-                where: { id: grantedRewardId },
-                include: { reward: { select: { name: true }} } // Incluir nombre para logs/errores
-            });
-
-            // 2. Validaciones
-            if (!grantedReward) {
-                throw new Error(`Regalo con ID ${grantedRewardId} no encontrado.`);
-            }
-            if (grantedReward.userId !== userId) {
-                console.warn(`[CUST SVC] SECURITY ALERT: User ${userId} attempted to redeem granted reward ${grantedRewardId} belonging to user ${grantedReward.userId}.`);
-                throw new Error("Este regalo no te pertenece.");
-            }
-            if (grantedReward.status !== 'PENDING') {
-                throw new Error(`Este regalo (${grantedReward.reward.name}) ya fue canjeado o no es válido (Estado: ${grantedReward.status}).`);
-            }
-
-            // 3. Actualizar el estado y la fecha de canje
-            const redeemed = await tx.grantedReward.update({
+        // Usamos transacción para leer y luego escribir de forma segura
+        const updatedUser = await prisma.$transaction(async (tx) => {
+            // 1. Buscar cliente y su estado actual de favorito, validando pertenencia
+            const customer = await tx.user.findUnique({
                 where: {
-                    id: grantedRewardId,
-                    // Añadir userId y status aquí asegura que solo se actualice si
-                    // pertenece al usuario Y todavía está pendiente (protección extra contra concurrencia)
-                    userId: userId,
-                    status: 'PENDING'
+                    id: customerId,
+                    businessId: adminBusinessId // Asegura que pertenece al negocio
                 },
-                data: {
-                    status: 'REDEEMED',
-                    redeemedAt: new Date()
+                select: {
+                    id: true,
+                    isFavorite: true // Necesitamos el valor actual
                 }
             });
 
-            console.log(`[CUST SVC] Granted reward ${grantedRewardId} (${redeemed.rewardId}) successfully redeemed by user ${userId}`);
-            return redeemed; // Devolvemos el registro actualizado
+            // 2. Validar si se encontró
+            if (!customer) {
+                throw new Error(`Cliente con ID ${customerId} no encontrado o no pertenece a tu negocio.`);
+            }
+
+            // 3. Calcular el nuevo estado (el inverso del actual)
+            const newFavoriteStatus = !customer.isFavorite;
+
+            // 4. Actualizar el campo isFavorite en la base de datos
+            const userAfterUpdate = await tx.user.update({
+                where: {
+                    id: customerId
+                    // No necesitamos businessId aquí porque ya validamos arriba
+                },
+                data: {
+                    isFavorite: newFavoriteStatus
+                },
+                // Devolvemos todos los campos necesarios para la tabla del admin
+                select: {
+                     id: true, name: true, email: true, points: true, createdAt: true,
+                     isActive: true, isFavorite: true, // Devolver el nuevo estado
+                     currentTier: { select: { name: true, id: true } }
+                }
+            });
+
+            console.log(`[CUST SVC] Favorite status for customer ${customerId} toggled to ${newFavoriteStatus}`);
+            return userAfterUpdate;
         });
 
-        return updatedGrantedReward;
+        // @ts-ignore // Prisma select no siempre infiere bien el tipo exacto con relaciones, castear si es necesario o ajustar select
+        return updatedUser as User;
 
     } catch (error) {
-        console.error(`[CUST SVC] Error redeeming granted reward ${grantedRewardId} for user ${userId}:`, error);
-         if (error instanceof Prisma.PrismaClientKnownRequestError) {
-             // El código 'P2025' (Record to update not found) podría indicar que
-             // justo en el momento de actualizar, otro proceso ya lo había canjeado.
-             if (error.code === 'P2025') {
-                  throw new Error("El regalo no se encontró o ya no estaba pendiente al intentar canjearlo.");
-             }
-             throw new Error(`Error de base de datos al canjear el regalo: ${error.message}`);
-         }
-         if (error instanceof Error) { // Capturar errores lanzados desde la transacción
-              throw error;
-         }
-         throw new Error('Error inesperado al canjear el regalo.');
+        console.error(`[CUST SVC] Error toggling favorite status for customer ${customerId}:`, error);
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            if (error.code === 'P2025') { // Error si no encuentra el user para actualizar
+                 throw new Error(`No se encontró el cliente especificado al intentar actualizar.`);
+            }
+            throw new Error(`Error de base de datos al cambiar estado de favorito: ${error.message}`);
+        }
+        if (error instanceof Error) { // Capturar errores de validación lanzados arriba
+             throw error;
+        }
+        throw new Error('Error inesperado al cambiar el estado de favorito.');
     }
 };
 // --- FIN NUEVA FUNCIÓN ---

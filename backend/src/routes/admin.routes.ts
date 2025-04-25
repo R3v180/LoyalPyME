@@ -1,5 +1,5 @@
 // filename: backend/src/routes/admin.routes.ts
-// Version: 1.4.0 (Add route POST /customers/:customerId/assign-reward)
+// Version: 1.5.0 (Add PATCH /customers/:customerId/toggle-favorite route - FINAL)
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
@@ -8,19 +8,20 @@ import { UserRole } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { checkRole } from '../middleware/role.middleware';
 
-// Controladores (Importamos TODOS los handlers de customer.controller)
+// Controladores (Importamos los 5 handlers necesarios para estas rutas)
 import {
     getAdminCustomers,
     adjustCustomerPoints,
     changeCustomerTierHandler,
-    assignRewardHandler // <-- Añadida esta importación
+    assignRewardHandler,
+    toggleFavoriteHandler
 } from '../customer/customer.controller';
 
 const router = Router();
 
 // --- Rutas específicas de Admin relacionadas con Clientes ---
 
-// GET /customers - Obtener la lista de clientes
+// GET /customers
 router.get(
     '/customers',
     authenticateToken,
@@ -28,7 +29,7 @@ router.get(
     getAdminCustomers
 );
 
-// POST /customers/:customerId/adjust-points - Ajustar puntos
+// POST /customers/:customerId/adjust-points
 router.post(
     '/customers/:customerId/adjust-points',
     authenticateToken,
@@ -36,7 +37,7 @@ router.post(
     adjustCustomerPoints
 );
 
-// PUT /customers/:customerId/tier - Cambiar manualmente el tier
+// PUT /customers/:customerId/tier
 router.put(
     '/customers/:customerId/tier',
     authenticateToken,
@@ -44,18 +45,22 @@ router.put(
     changeCustomerTierHandler
 );
 
-// --- NUEVA RUTA AÑADIDA ---
-// POST /customers/:customerId/assign-reward - Asignar una recompensa como regalo
+// POST /customers/:customerId/assign-reward
 router.post(
-    '/customers/:customerId/assign-reward', // Path con parámetro :customerId
-    authenticateToken,                     // 1. Requiere login
-    checkRole([UserRole.BUSINESS_ADMIN]),     // 2. Requiere rol admin
-    assignRewardHandler                    // 3. Llama al controlador correspondiente
+    '/customers/:customerId/assign-reward',
+    authenticateToken,
+    checkRole([UserRole.BUSINESS_ADMIN]),
+    assignRewardHandler
 );
-// --- FIN NUEVA RUTA ---
 
+// PATCH /customers/:customerId/toggle-favorite <-- RUTA NECESARIA
+router.patch(
+    '/customers/:customerId/toggle-favorite',
+    authenticateToken,
+    checkRole([UserRole.BUSINESS_ADMIN]),
+    toggleFavoriteHandler // Llama al handler correcto que SÍ existe en el controller
+);
 
-// Aquí podríamos añadir otras rutas de admin en el futuro
 
 export default router;
 

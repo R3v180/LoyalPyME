@@ -8,7 +8,7 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle, IconCircleCheck, IconScan, IconTicket, IconX } from '@tabler/icons-react';
-import axiosInstance from '../services/axiosInstance'; // <-- Verifica esta ruta desde aquí
+import axiosInstance from '../../services/axiosInstance'; // <-- Verifica esta ruta desde aquí
 import { QrReader } from 'react-qr-reader';
 import { AxiosError } from 'axios';
 

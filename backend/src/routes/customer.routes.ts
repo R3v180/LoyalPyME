@@ -21,6 +21,7 @@ const router = Router();
 // --- Rutas específicas para Clientes (montadas bajo /api/customer) ---
 
 // GET /rewards - Obtener recompensas activas para el negocio del cliente
+// URL Final: GET /api/customer/rewards
 router.get(
     '/rewards',
     checkRole([UserRole.CUSTOMER_FINAL]), // Solo clientes
@@ -28,6 +29,7 @@ router.get(
 );
 
 // GET /granted-rewards - Obtener las recompensas regaladas pendientes
+// URL Final: GET /api/customer/granted-rewards
 router.get(
     '/granted-rewards',
     checkRole([UserRole.CUSTOMER_FINAL]), // Solo clientes
@@ -36,7 +38,7 @@ router.get(
 
 // --- **NUEVA RUTA AÑADIDA** ---
 // POST /granted-rewards/:grantedRewardId/redeem - Canjear una recompensa otorgada específica
-// La URL final será /api/customer/granted-rewards/:grantedRewardId/redeem
+// URL Final: POST /api/customer/granted-rewards/:grantedRewardId/redeem
 router.post(
     '/granted-rewards/:grantedRewardId/redeem', // Path con parámetro :grantedRewardId
     // authenticateToken, // Asumimos que ya está aplicado globalmente a /api/customer
