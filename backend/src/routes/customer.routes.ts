@@ -1,5 +1,7 @@
+// filename: backend/src/routes/customer.routes.ts
+// --- INICIO DEL CÓDIGO CORREGIDO Y COMPLETO ---
 // File: backend/src/routes/customer.routes.ts
-// Version: 1.4.0 (Add POST /granted-rewards/:id/redeem route - FINAL)
+// Version: 1.5.0 (Includes GET /tiers route - Moved from tiers.routes)
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
@@ -9,11 +11,13 @@ import { checkRole } from '../middleware/role.middleware';
 // ASUNCIÓN: authenticateToken se aplica ANTES en index.ts al montar en /api/customer
 
 // Importar los handlers necesarios de customer.controller.ts
+// (Asegúrate de que este archivo contiene los 4 handlers)
 import {
     getCustomerRewardsHandler,
     getPendingGrantedRewardsHandler,
-    redeemGrantedRewardHandler // <-- Añadida esta importación
-} from '../customer/customer.controller';
+    redeemGrantedRewardHandler,
+    getCustomerTiersHandler // <-- Handler movido desde tiers.controller
+} from '../customer/customer.controller'; // Importar desde el controlador de cliente
 
 
 const router = Router();
@@ -36,16 +40,23 @@ router.get(
     getPendingGrantedRewardsHandler
 );
 
-// --- **NUEVA RUTA AÑADIDA** ---
 // POST /granted-rewards/:grantedRewardId/redeem - Canjear una recompensa otorgada específica
 // URL Final: POST /api/customer/granted-rewards/:grantedRewardId/redeem
 router.post(
-    '/granted-rewards/:grantedRewardId/redeem', // Path con parámetro :grantedRewardId
-    // authenticateToken, // Asumimos que ya está aplicado globalmente a /api/customer
-    checkRole([UserRole.CUSTOMER_FINAL]),    // Solo clientes pueden canjear sus regalos
-    redeemGrantedRewardHandler             // Llama al handler de canje que ya existe
+    '/granted-rewards/:grantedRewardId/redeem',
+    checkRole([UserRole.CUSTOMER_FINAL]),
+    redeemGrantedRewardHandler
 );
-// --- FIN NUEVA RUTA ---
+
+// --- **RUTA AÑADIDA (Movida desde tiers.routes.ts)** ---
+// GET /tiers - Obtener los tiers disponibles para el cliente
+// URL Final: GET /api/customer/tiers
+router.get(
+    '/tiers', // Ruta relativa al punto de montaje /api/customer
+    checkRole([UserRole.CUSTOMER_FINAL]), // Solo clientes
+    getCustomerTiersHandler             // Handler que movimos a customer.controller
+);
+// --- FIN RUTA AÑADIDA ---
 
 
 // Otras rutas de cliente irían aquí
@@ -53,3 +64,4 @@ router.post(
 export default router;
 
 // End of File: backend/src/routes/customer.routes.ts
+// --- FIN DEL CÓDIGO CORREGIDO Y COMPLETO ---

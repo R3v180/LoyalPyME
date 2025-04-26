@@ -1,46 +1,42 @@
-// File: backend/src/routes/tiers.routes.ts
-// Version: 1.0.0 (Initial routes for Tier management and viewing)
+// filename: backend/src/routes/tiers.routes.ts
+// Version: 2.0.0 (Update handler imports after controller refactoring)
 
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth.middleware';
 import { checkRole } from '../middleware/role.middleware';
-import { UserRole } from '@prisma/client'; // Importar enum de roles
+import { UserRole } from '@prisma/client';
 
-// Importar todos los handlers del controlador
-import * as TiersController from '../tiers/tiers.controller';
+// --- NUEVO: Importar handlers desde los controladores especÃ­ficos ---
+import { getBusinessTierConfigHandler, updateBusinessTierConfigHandler } from '../tiers/tier-config.controller';
+import { createTierHandler, getBusinessTiersHandler, getTierByIdHandler, updateTierHandler, deleteTierHandler } from '../tiers/tier-crud.controller';
+import { createTierBenefitHandler, getTierBenefitsHandler, updateTierBenefitHandler, deleteTierBenefitHandler } from '../tiers/tier-benefit.controller';
+// --- FIN NUEVO ---
 
 const tierRouter = Router();
 
-// --- Rutas de Administración (Requieren rol BUSINESS_ADMIN) ---
-const adminOnly = [authenticateToken, checkRole([UserRole.BUSINESS_ADMIN])];
+// Middleware array solo para rol (asumiendo que authenticateToken se aplica globalmente)
+const adminOnly = [checkRole([UserRole.BUSINESS_ADMIN])];
 
-// Rutas para Configuración del Negocio
-tierRouter.get('/config', adminOnly, TiersController.getBusinessTierConfigHandler);
-tierRouter.put('/config', adminOnly, TiersController.updateBusinessTierConfigHandler);
+// --- Rutas de AdministraciÃ³n (Requieren rol BUSINESS_ADMIN) ---
 
-// Rutas para Tiers
-tierRouter.post('/tiers', adminOnly, TiersController.createTierHandler);
-tierRouter.get('/tiers', adminOnly, TiersController.getBusinessTiersHandler); // Lista Tiers del negocio
-tierRouter.get('/tiers/:tierId', adminOnly, TiersController.getTierByIdHandler);
-tierRouter.put('/tiers/:tierId', adminOnly, TiersController.updateTierHandler);
-tierRouter.delete('/tiers/:tierId', adminOnly, TiersController.deleteTierHandler);
+// Rutas para ConfiguraciÃ³n del Negocio (usan tier-config.controller)
+tierRouter.get('/config', adminOnly, getBusinessTierConfigHandler);
+tierRouter.put('/config', adminOnly, updateBusinessTierConfigHandler);
 
-// Rutas para Beneficios (anidadas bajo tiers para creación/listado)
-tierRouter.post('/tiers/:tierId/benefits', adminOnly, TiersController.createTierBenefitHandler);
-tierRouter.get('/tiers/:tierId/benefits', adminOnly, TiersController.getTierBenefitsHandler);
+// Rutas para Tiers (usan tier-crud.controller)
+tierRouter.post('/tiers', adminOnly, createTierHandler);
+tierRouter.get('/tiers', adminOnly, getBusinessTiersHandler); // Lista Tiers del negocio
+tierRouter.get('/tiers/:tierId', adminOnly, getTierByIdHandler);
+tierRouter.put('/tiers/:tierId', adminOnly, updateTierHandler);
+tierRouter.delete('/tiers/:tierId', adminOnly, deleteTierHandler);
 
-// Rutas para Beneficios individuales (actualizar/eliminar por ID de beneficio)
-// Usamos una ruta separada para simplificar, aunque podría anidarse más
-tierRouter.put('/benefits/:benefitId', adminOnly, TiersController.updateTierBenefitHandler);
-tierRouter.delete('/benefits/:benefitId', adminOnly, TiersController.deleteTierBenefitHandler);
+// Rutas para Beneficios (usan tier-benefit.controller)
+tierRouter.post('/tiers/:tierId/benefits', adminOnly, createTierBenefitHandler); // Crear beneficio para un Tier
+tierRouter.get('/tiers/:tierId/benefits', adminOnly, getTierBenefitsHandler); // Obtener beneficios de un Tier
+tierRouter.put('/benefits/:benefitId', adminOnly, updateTierBenefitHandler); // Actualizar beneficio por su ID
+tierRouter.delete('/benefits/:benefitId', adminOnly, deleteTierBenefitHandler); // Eliminar beneficio por su ID
 
-
-// --- Rutas de Cliente (Requieren rol CUSTOMER_FINAL) ---
-const customerOnly = [authenticateToken, checkRole([UserRole.CUSTOMER_FINAL])];
-
-// Ruta para que el cliente vea los Tiers disponibles en su programa
-tierRouter.get('/customer/tiers', customerOnly, TiersController.getCustomerTiersHandler);
-
+// --- Rutas de Cliente ---
+// La ruta GET /customer/tiers fue MOVIDA a customer.routes.ts
 
 export default tierRouter;
 
