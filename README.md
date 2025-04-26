@@ -1,10 +1,10 @@
 # LoyalPyME
 
-[![GitHub repo size](https://img.shields.io/github/repo-size/tu_usuario_github/LoyalPyME?style=flat-square)](https://github.com/tu_usuario_github/LoyalPyME)
-[![GitHub contributors](https://img.shields.io/github/contributors/tu_usuario_github/LoyalPyME?style=flat-square)](https://github.com/tu_usuario_github/LoyalPyME/graphs/contributors)
-[![GitHub last commit](https://img.shields.io/github/last-commit/tu_usuario_github/LoyalPyME?style=flat-square)](https://github.com/tu_usuario_github/LoyalPyME/commits/main)
-[![GitHub issues](https://img.shields.io/github/issues/tu_usuario_github/LoyalPyME?style=flat-square)](https://github.com/tu_usuario_github/LoyalPyME/issues)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/tu_usuario_github/LoyalPyME?style=flat-square)](https://github.com/tu_usuario_github/LoyalPyME/pulls)
+[![GitHub repo size](https://img.shields.io/github/repo-size/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME)
+[![GitHub contributors](https://img.shields.io/github/contributors/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/graphs/contributors)
+[![GitHub last commit](https://img.shields.io/github/last-commit/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/commits/main)
+[![GitHub issues](https://img.shields.io/github/issues/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/pulls)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/agpl-3.0)
 
 **LoyalPyME** es una plataforma web integral diseñada para empoderar a Pequeñas y Medianas Empresas (PyMEs) con un programa de fidelización de clientes digital, potente y fácil de gestionar.
@@ -28,9 +28,9 @@ El desarrollo de LoyalPyME sigue una hoja de ruta por fases, priorizando la entr
 *   **Gestión de Recompensas:** Creación, edición, eliminación y gestión del estado (activo/inactivo) de recompensas canjeables por puntos. **(Funcional)**
 *   **Sistema de Puntos Transaccional:** Generación de códigos QR únicos por transacción (importe, ticket) para asignación de puntos. **(Funcional)** Validación de códigos QR por el cliente final a través de su portal web para sumar puntos. **(Funcional)**
 *   **Sistema de Niveles (Tiers):** Definición de niveles con umbrales (puntos, gasto, visitas) y gestión de beneficios por nivel. Configuración de la lógica de cálculo y descenso de nivel. **(Funcional)**
-*   **Panel Cliente Básico:** Visualización del perfil de usuario (puntos, nivel) e historial de transacciones. Visualización de recompensas canjeables por puntos y regalos asignados directamente por el negocio. Canjeo de ambas categorías. **(Funcional)**
+*   **Panel Cliente Esencial:** Visualización del perfil de usuario (puntos, nivel) e historial de transacciones. Visualización de recompensas disponibles y regalos asignados directamente por el negocio. Canjeo de ambas categorías. **(Funcional)**
 *   **Gestión de Clientes (Admin):** Listado de clientes registrados en el negocio, con datos clave (puntos, nivel, fecha registro, estado). Ajuste manual de puntos, cambio manual de nivel, asignación de recompensas como regalo, y marcar/desmarcar como "Favorito" para clientes individuales. **(Funcional)**
-*   *Próximo en Fase 1:* Implementación completa de filtros (ej: Favoritos, Activos), búsqueda por nombre/email y paginación real en la gestión de clientes Admin. Desarrollo del modal "Ver Detalles" de cliente (posiblemente incluyendo notas internas para Admin). Acción Activar/Desactivar clientes.
+*   *Próximo en Fase 1:* Implementación completa de filtros (ej: Favoritos, Activos), búsqueda por nombre/email y paginación real en la gestión de clientes Admin. Desarrollo del modal "Ver Detalles" de cliente (posiblemente incluyendo notas internas para Admin). Acción Activar/Desactivar cliente.
 
 **Fases Futuras (Hacia un Ecosistema Completo):**
 *   **Fase 2 (Expansión Web):** Reglas de puntos y recompensas más complejas, herramientas básicas de comunicación directa (email, publicaciones en portal), segmentación avanzada de clientes, acciones masivas en panel Admin.
@@ -71,7 +71,7 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 ### Configuración del Backend
 1.  Clona el repositorio y navega a la carpeta `backend`:
     ```bash
-    git clone https://github.com/tu_usuario_github/LoyalPyME.git
+    git clone https://github.com/R3v180/LoyalPyME.git
     cd LoyalPyME/backend
     ```
 2.  Instala las dependencias:
@@ -150,7 +150,7 @@ Copyright (c) 2024 Olivier Hottelet
 
 Para cualquier pregunta o consulta sobre el proyecto, puedes contactar a:
 
-*   Olivier Hottelet
-*   olivierhottelet1980@gmail.com
+*   **Olivier Hottelet**
+*   [Opcional: Añade aquí tu email de contacto público o perfil de LinkedIn si lo deseas]
 
 ---
