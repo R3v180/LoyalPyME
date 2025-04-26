@@ -13,10 +13,10 @@
 
 En un mercado competitivo, la lealtad del cliente es un activo invaluable. LoyalPyME nace para proporcionar a las PyMEs las herramientas necesarias para:
 
-*   **Fomentar la Repetición de Compra:** Implementando sistemas de puntos, niveles y recompensas atractivas.
-*   **Construir Relaciones Sólidas:** Reconociendo y premiando la lealtad de sus clientes.
-*   **Simplificar la Gestión:** Ofreciendo un panel de administración intuitivo y eficiente.
-*   **Mejorar la Experiencia del Cliente:** Proporcionando un portal digital accesible y transparente.
+- **Fomentar la Repetición de Compra:** Implementando sistemas de puntos, niveles y recompensas atractivas.
+- **Construir Relaciones Sólidas:** Reconociendo y premiando la lealtad de sus clientes.
+- **Simplificar la Gestión:** Ofreciendo un panel de administración intuitivo y eficiente.
+- **Mejorar la Experiencia del Cliente:** Proporcionando un portal digital accesible y transparente.
 
 Nuestro objetivo es ser el aliado tecnológico que permita a cualquier PyME, independientemente de su sector (retail, hostelería, servicios, etc.), digitalizar y optimizar su estrategia de retención de clientes, sentando las bases para el crecimiento a largo plazo.
 
@@ -25,50 +25,56 @@ Nuestro objetivo es ser el aliado tecnológico que permita a cualquier PyME, ind
 El desarrollo de LoyalPyME sigue una hoja de ruta por fases, priorizando la entrega de un núcleo de fidelización funcional y escalando hacia capacidades avanzadas y comunitarias.
 
 **Fase 1: Núcleo de Fidelización Web (Operativa Principalmente)**
-*   **Gestión de Recompensas:** Creación, edición, eliminación y gestión del estado (activo/inactivo) de recompensas canjeables por puntos. **(Funcional)**
-*   **Sistema de Puntos Transaccional:** Generación de códigos QR únicos por transacción (importe, ticket) para asignación de puntos. **(Funcional)** Validación de códigos QR por el cliente final a través de su portal web para sumar puntos. **(Funcional)**
-*   **Sistema de Niveles (Tiers):** Definición de niveles con umbrales (puntos, gasto, visitas) y gestión de beneficios por nivel. Configuración de la lógica de cálculo y descenso de nivel. **(Funcional)**
-*   **Panel Cliente Esencial:** Visualización del perfil de usuario (puntos, nivel) e historial de transacciones. Visualización de recompensas disponibles y regalos asignados directamente por el negocio. Canjeo de ambas categorías. **(Funcional)**
-*   **Gestión de Clientes (Admin):** Listado de clientes registrados en el negocio, con datos clave (puntos, nivel, fecha registro, estado). Ajuste manual de puntos, cambio manual de nivel, asignación de recompensas como regalo, y marcar/desmarcar como "Favorito" para clientes individuales. **(Funcional)**
-*   *Próximo en Fase 1:* Implementación completa de filtros (ej: Favoritos, Activos), búsqueda por nombre/email y paginación real en la gestión de clientes Admin. Desarrollo del modal "Ver Detalles" de cliente (posiblemente incluyendo notas internas para Admin). Acción Activar/Desactivar cliente.
+
+- **Gestión de Recompensas:** Creación, edición, eliminación y gestión del estado (activo/inactivo) de recompensas canjeables por puntos. **(Funcional)**
+- **Sistema de Puntos Transaccional:** Generación de códigos QR únicos por transacción (importe, ticket) para asignación de puntos. **(Funcional)** Validación de códigos QR por el cliente final a través de su portal web para sumar puntos. **(Funcional)**
+- **Sistema de Niveles (Tiers):** Definición de niveles con umbrales (puntos, gasto, visitas) y gestión de beneficios por nivel. Configuración de la lógica de cálculo y descenso de nivel. **(Funcional)**
+- **Panel Cliente Esencial:** Visualización del perfil de usuario (puntos, nivel) e historial de transacciones. Visualización de recompensas disponibles y regalos asignados directamente por el negocio. Canjeo de ambas categorías. **(Funcional)**
+- **Gestión de Clientes (Admin):** Listado de clientes registrados en el negocio, con datos clave (puntos, nivel, fecha registro, estado). Ajuste manual de puntos, cambio manual de nivel, asignación de recompensas como regalo, y marcar/desmarcar como "Favorito" para clientes individuales. **(Funcional)**
+- _Próximo en Fase 1:_ Implementación completa de filtros (ej: Favoritos, Activos), búsqueda por nombre/email y paginación real en la gestión de clientes Admin. Desarrollo del modal "Ver Detalles" de cliente (posiblemente incluyendo notas internas para Admin). Acción Activar/Desactivar cliente.
 
 **Fases Futuras (Hacia un Ecosistema Completo):**
-*   **Fase 2 (Expansión Web):** Reglas de puntos y recompensas más complejas, herramientas básicas de comunicación directa (email, publicaciones en portal), segmentación avanzada de clientes, acciones masivas en panel Admin.
-*   **Fase 3 (Plataforma Móvil):** Aplicaciones nativas para clientes y personal, notificaciones push, check-in basado en localización, tarjeta de fidelización digital en app.
-*   **Fase 4 (Inteligencia y CRM Ligero):** Módulos de análisis e informes sobre comportamiento y valor del cliente, funcionalidades de CRM ligero (notas, historial completo), automatización de marketing.
-*   **Fase 5 (Ecosistemas Conectados y Potencial Social):** Programas de fidelización compartidos entre grupos de negocios, módulo de eventos, chat Cliente-Negocio y potencial chat comunitario/social (ej: mapa de actividad anónima en sectores específicos como el ocio nocturno), expansión a otros sectores y geografías.
+
+- **Fase 2 (Expansión Web):** Reglas de puntos y recompensas más complejas, herramientas básicas de comunicación directa (email, publicaciones en portal), segmentación avanzada de clientes, acciones masivas en panel Admin.
+- **Fase 3 (Plataforma Móvil):** Aplicaciones nativas para clientes y personal, notificaciones push, check-in basado en localización, tarjeta de fidelización digital en app.
+- **Fase 4 (Inteligencia y CRM Ligero):** Módulos de análisis e informes sobre comportamiento y valor del cliente, funcionalidades de CRM ligero (notas, historial completo), automatización de marketing.
+- **Fase 5 (Ecosistemas Conectados y Potencial Social):** Programas de fidelización compartidos entre grupos de negocios, módulo de eventos, chat Cliente-Negocio y potencial chat comunitario/social (ej: mapa de actividad anónima en sectores específicos como el ocio nocturno), expansión a otros sectores y geografías.
 
 ## Tecnologías Utilizadas
 
 **Frontend:**
-*   React & TypeScript
-*   Vite
-*   Mantine UI (v7+)
-*   Axios
-*   React Router DOM (v6+)
-*   qrcode.react, react-qr-reader
-*   Zod, Mantine Form, @mantine/notifications
+
+- React & TypeScript
+- Vite
+- Mantine UI (v7+)
+- Axios
+- React Router DOM (v6+)
+- qrcode.react, react-qr-reader
+- Zod, Mantine Form, @mantine/notifications
 
 **Backend:**
-*   Node.js, Express, TypeScript
-*   Prisma, PostgreSQL
-*   JWT para autenticación
-*   bcryptjs
-*   dotenv
-*   node-cron (para tareas programadas, ej. cálculo de tiers)
-*   uuid, date-fns
-*   cors
+
+- Node.js, Express, TypeScript
+- Prisma, PostgreSQL
+- JWT para autenticación
+- bcryptjs
+- dotenv
+- node-cron (para tareas programadas, ej. cálculo de tiers)
+- uuid, date-fns
+- cors
 
 ## Instalación y Configuración Local
 
 Para poner el proyecto en marcha en tu entorno de desarrollo:
 
 ### Prerrequisitos
-*   Node.js (v18+ recomendado)
-*   yarn
-*   Servidor de base de datos PostgreSQL accesible
+
+- Node.js (v18+ recomendado)
+- yarn
+- Servidor de base de datos PostgreSQL accesible
 
 ### Configuración del Backend
+
 1.  Clona el repositorio y navega a la carpeta `backend`:
     ```bash
     git clone https://github.com/R3v180/LoyalPyME.git
@@ -92,9 +98,10 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
     ```bash
     npx ts-node scripts/hash-customer-password.ts
     ```
-    *(Edita `scripts/hash-customer-password.ts` antes de ejecutarlo para configurar el email y contraseña deseados).*
+    _(Edita `scripts/hash-customer-password.ts` antes de ejecutarlo para configurar el email y contraseña deseados)._
 
 ### Configuración del Frontend
+
 1.  Navega a la carpeta `frontend`:
     ```bash
     cd ../frontend
@@ -150,7 +157,7 @@ Copyright (c) 2024 Olivier Hottelet
 
 Para cualquier pregunta o consulta sobre el proyecto, puedes contactar a:
 
-*   **Olivier Hottelet**
-*   [Opcional: Añade aquí tu email de contacto público o perfil de LinkedIn si lo deseas]
+- **Olivier Hottelet**
+- olivierhottelet1980@gmail.com
 
 ---
