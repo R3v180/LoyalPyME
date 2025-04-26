@@ -86,57 +86,57 @@ To get the project up and running in your development environment:
 ### Backend Setup
 
 1.  Clone the repository and navigate to the `backend` folder:
-    ```bash
-    git clone https://github.com/R3v180/LoyalPyME.git
-    cd LoyalPyME/backend
-    ```
+        `bash
+    git clone [https://github.com/R3v180/LoyalPyME.git](https://github.com/R3v180/LoyalPyME.git)
+    cd LoyalPyME/backend
+    `
 2.  Install dependencies:
-    ```bash
-    yarn install
-    ```
+        `bash
+    yarn install
+    `
 3.  Create a `.env` file in the root of the `backend/` folder with the following variables:
-    ```env
-    DATABASE_URL="postgresql://your_user:your_password@host:port/your_db?schema=public"
-    JWT_SECRET="a_long_and_secure_random_string"
-    # Other variables if needed
-    ```
+        `env
+    DATABASE_URL="postgresql://your_user:your_password@host:port/your_db?schema=public"
+    JWT_SECRET="a_long_and_secure_random_string"
+    # Other variables if needed
+    `
 4.  Run Prisma migrations to set up the database schema:
-    ```bash
-    npx prisma migrate dev
-    ```
+        `bash
+    npx prisma migrate dev
+    `
 5.  (Optional) You can generate a test customer user by running the script:
-    ```bash
-    npx ts-node scripts/hash-customer-password.ts
-    ```
-    _(Edit `scripts/hash-customer-customer.ts` before running to configure the desired email and password)._
+        `bash
+    npx ts-node scripts/hash-customer-password.ts
+    `
+        _(Edit `scripts/hash-customer-customer.ts` before running to configure the desired email and password)._
 
 ### Frontend Setup
 
 1.  Navigate to the `frontend` folder:
-    ```bash
-    cd ../frontend
-    ```
+        `bash
+    cd ../frontend
+    `
 2.  Install dependencies:
-    ```bash
-    yarn install
-    ```
+        `bash
+    yarn install
+    `
 
 ## Running the Project
 
 1.  Ensure your PostgreSQL server is running.
 2.  Start the backend from the `backend` folder (in one terminal):
-    ```bash
-    # For development with hot-reloading (may be unstable):
-    yarn dev
-    # Or for a more robust execution after building:
-    yarn build && node dist/index.js
-    ```
-    The backend will run on `http://localhost:3000`.
+        `bash
+    # For development with hot-reloading (may be unstable):
+    yarn dev
+    # Or for a more robust execution after building:
+    yarn build && node dist/index.js
+    `
+        The backend will run on `http://localhost:3000`.
 3.  Start the frontend from the `frontend` folder (in another terminal):
-    ```bash
-    yarn dev
-    ```
-    The frontend will run on `http://localhost:5173`.
+        `bash
+    yarn dev
+    `
+        The frontend will run on `http://localhost:5173`.
 
 Access the application through `http://localhost:5173` in your browser.
 
@@ -245,8 +245,8 @@ El desarrollo de LoyalPyME sigue una hoja de ruta por fases, priorizando la entr
 **Fases Futuras (Hacia un Ecosistema Completo):**
 
 - **Fase 2 (Expansión Web):** Reglas de puntos y recompensas más complejas, herramientas básicas de comunicación directa (email, publicaciones en portal), segmentación avanzada de clientes, acciones masivas en panel Admin.
-- **Fase 3 (Plataforma Móvil):** Aplicaciones nativas para clientes y personal, notificaciones push, location-based check-in, digital loyalty card in the app.
-- **Fase 4 (Inteligencia y CRM Ligero):** Módulos de análisis e informes sobre comportamiento y valor del cliente, funcionalidades de CRM ligero (notas, historial completo), marketing automation.
+- **Fase 3 (Plataforma Móvil):** Aplicaciones nativas para clientes y personal, notificaciones push, check-in basado en ubicación, tarjeta de fidelización digital en la app.
+- **Fase 4 (Inteligencia y CRM Ligero):** Módulos de análisis e informes sobre comportamiento y valor del cliente, funcionalidades de CRM ligero (notas, historial completo), automatización de marketing.
 - **Fase 5 (Ecosistemas Conectados y Potencial Social):** Programas de fidelización compartidos entre grupos de negocios, módulo de eventos, chat Cliente-Negocio y potencial chat comunitario/social (ej: mapa de actividad anónima en sectores específicos como el ocio nocturno), expansión a otros sectores y geografías.
 
 ## Tecnologías Utilizadas
@@ -265,7 +265,7 @@ El desarrollo de LoyalPyME sigue una hoja de ruta por fases, priorizando la entr
 
 - Node.js, Express, TypeScript
 - Prisma, PostgreSQL
-- JWT for authentication
+- JWT para autenticación
 - bcryptjs
 - dotenv
 - node-cron (para tareas programadas, ej. cálculo de tiers)
@@ -285,72 +285,72 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 ### Configuración del Backend
 
 1.  Clona el repositorio y navega a la carpeta `backend`:
-    ```bash
-    git clone https://github.com/R3v180/LoyalPyME.git
-    cd LoyalPyME/backend
-    ```
-2.  Install dependencies:
-    ```bash
-    yarn install
-    ```
+        `bash
+    git clone [https://github.com/R3v180/LoyalPyME.git](https://github.com/R3v180/LoyalPyME.git)
+    cd LoyalPyME/backend
+    `
+2.  Instala las dependencias:
+        `bash
+    yarn install
+    `
 3.  Crea un archivo `.env` en la raíz de la carpeta `backend/` con las siguientes variables:
-    ```env
-    DATABASE_URL="postgresql://your_user:your_password@host:port/your_db?schema=public"
-    JWT_SECRET="a_long_and_secure_random_string"
-    # Other variables if needed
-    ```
-4.  Run Prisma migrations to set up the database schema:
-    ```bash
-    npx prisma migrate dev
-    ```
-5.  (Optional) You can generate a test customer user by running the script:
-    ```bash
-    npx ts-node scripts/hash-customer-password.ts
-    ```
-    _(Edit `scripts/hash-customer-customer.ts` before running to configure the desired email and password)._
+        `env
+    DATABASE_URL="postgresql://your_user:your_password@host:port/your_db?schema=public"
+    JWT_SECRET="una_cadena_aleatoria_larga_y_segura"
+    # Otras variables si son necesarias
+    `
+4.  Ejecuta las migraciones de Prisma para configurar el esquema de la base de datos:
+        `bash
+    npx prisma migrate dev
+    `
+5.  (Opcional) Puedes generar un usuario cliente de prueba ejecutando el script:
+        `bash
+    npx ts-node scripts/hash-customer-password.ts
+    `
+        _(Edita `scripts/hash-customer-customer.ts` antes de ejecutarlo para configurar el email y la contraseña deseados)._
 
-### Frontend Setup
+### Configuración del Frontend
 
-1.  Navigate to the `frontend` folder:
-    ```bash
-    cd ../frontend
-    ```
-2.  Install dependencies:
-    ```bash
-    yarn install
-    ```
+1.  Navega a la carpeta `frontend`:
+        `bash
+    cd ../frontend
+    `
+2.  Instala las dependencias:
+        `bash
+    yarn install
+    `
 
-## Running the Project
+## Ejecutar el Proyecto
 
-1.  Ensure your PostgreSQL server is running.
-2.  Start the backend from the `backend` folder (in one terminal):
-    ```bash
-    # For development with hot-reloading (may be unstable):
-    yarn dev
-    # Or for a more robust execution after building:
-    yarn build && node dist/index.js
-    ```
-    The backend will run on `http://localhost:3000`.
-3.  Start the frontend from the `frontend` folder (in another terminal):
-    ```bash
-    yarn dev
-    ```
-    The frontend will run on `http://localhost:5173`.
+1.  Asegúrate de que tu servidor PostgreSQL está en ejecución.
+2.  Inicia el backend desde la carpeta `backend` (en una terminal):
+        `bash
+    # Para desarrollo con recarga en caliente (puede ser inestable):
+    yarn dev
+    # O para una ejecución más robusta después de compilar:
+    yarn build && node dist/index.js
+    `
+        El backend se ejecutará en `http://localhost:3000`.
+3.  Inicia el frontend desde la carpeta `frontend` (en otra terminal):
+        `bash
+    yarn dev
+    `
+        El frontend se ejecutará en `http://localhost:5173`.
 
-Access the application through `http://localhost:5173` in your browser.
+Accede a la aplicación a través de `http://localhost:5173` en tu navegador.
 
 ## Contribuciones
 
-We welcome and encourage contributions to LoyalPyME! If you find a bug, have an idea for a new feature, or want to improve the code, please:
+¡Damos la bienvenida y animamos a las contribuciones a LoyalPyME! Si encuentras un error, tienes una idea para una nueva funcionalidad o quieres mejorar el código, por favor:
 
-1.  Fork this repository.
-2.  Clone your fork locally.
-3.  Create a new branch for your work (`git checkout -b feature/nombre-funcionalidad` o `fix/descripcion-bug`).
+1.  Haz un fork de este repositorio.
+2.  Clona tu fork localmente.
+3.  Crea una nueva rama para tu trabajo (`git checkout -b feature/nombre-funcionalidad` o `fix/descripcion-bug`).
 4.  Realiza tus cambios y asegúrate de que pasen las comprobaciones de linting (si hay).
 5.  Escribe mensajes de commit claros y descriptivos.
 6.  Empuja tu rama a tu fork en GitHub.
-7.  Open a Pull Request (PR) from your branch to the `main` branch of this repository.
-8.  Describe your proposed changes in detail in the PR.
+7.  Abre una Pull Request (PR) desde tu rama hacia la rama `main` de este repositorio.
+8.  Describe los cambios propuestos en detalle en la PR.
 
 ## Licencia
 
