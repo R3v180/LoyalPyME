@@ -172,6 +172,46 @@ For any questions or inquiries about the project, you can contact:
 
 ---
 
+## Simple Start: Subscription and Connection
+
+Getting started with LoyalPyME is designed to be quick and easy:
+
+1.  **Register:** Complete the form in just 2 minutes. No complicated paperwork.
+2.  **Configure:** Personalize with your brand and set your loyalty rules.
+3.  **Connect:** Integrate with your current system and start building loyalty.
+
+---
+
+## LoyalPyME: Your Strategic Partner
+
+We are more than just software; we are your ally in transforming customer loyalty into sustainable growth and exploring new ways to connect in your market.
+
+---
+
+## Contact: Request a Personalized Demo
+
+Ready to see LoyalPyME in action for your business?
+
+### Schedule a Meeting
+
+Call 900-123-456 or write to contacto@loyalpyme.com
+
+### Receive Your Demo
+
+Adapted specifically to your business needs.
+
+### Start Growing
+
+Fast implementation and results from the first month.
+
+---
+
+## Questions and Next Steps
+
+Got questions? We're here to answer them. Let's discuss how LoyalPyME can benefit your business and plan the next steps together.
+
+---
+
 # LoyalPyME 🇪🇸
 
 **LoyalPyME** es una plataforma web integral diseñada para empoderar a Pequeñas y Medianas Empresas (PyMEs) con un programa de fidelización de clientes digital, potente y fácil de gestionar.
@@ -205,8 +245,8 @@ El desarrollo de LoyalPyME sigue una hoja de ruta por fases, priorizando la entr
 **Fases Futuras (Hacia un Ecosistema Completo):**
 
 - **Fase 2 (Expansión Web):** Reglas de puntos y recompensas más complejas, herramientas básicas de comunicación directa (email, publicaciones en portal), segmentación avanzada de clientes, acciones masivas en panel Admin.
-- **Fase 3 (Plataforma Móvil):** Aplicaciones nativas para clientes y personal, notificaciones push, check-in basado en localización, tarjeta de fidelización digital en app.
-- **Fase 4 (Inteligencia y CRM Ligero):** Módulos de análisis e informes sobre comportamiento y valor del cliente, funcionalidades de CRM ligero (notas, historial completo), automatización de marketing.
+- **Fase 3 (Plataforma Móvil):** Aplicaciones nativas para clientes y personal, notificaciones push, location-based check-in, digital loyalty card in the app.
+- **Fase 4 (Inteligencia y CRM Ligero):** Módulos de análisis e informes sobre comportamiento y valor del cliente, funcionalidades de CRM ligero (notas, historial completo), marketing automation.
 - **Fase 5 (Ecosistemas Conectados y Potencial Social):** Programas de fidelización compartidos entre grupos de negocios, módulo de eventos, chat Cliente-Negocio y potencial chat comunitario/social (ej: mapa de actividad anónima en sectores específicos como el ocio nocturno), expansión a otros sectores y geografías.
 
 ## Tecnologías Utilizadas
@@ -225,7 +265,7 @@ El desarrollo de LoyalPyME sigue una hoja de ruta por fases, priorizando la entr
 
 - Node.js, Express, TypeScript
 - Prisma, PostgreSQL
-- JWT para autenticación
+- JWT for authentication
 - bcryptjs
 - dotenv
 - node-cron (para tareas programadas, ej. cálculo de tiers)
@@ -299,32 +339,32 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 
 Access the application through `http://localhost:5173` in your browser.
 
-## Contributions
+## Contribuciones
 
 We welcome and encourage contributions to LoyalPyME! If you find a bug, have an idea for a new feature, or want to improve the code, please:
 
 1.  Fork this repository.
 2.  Clone your fork locally.
-3.  Create a new branch for your work (`git checkout -b feature/feature-name` or `fix/bug-description`).
-4.  Make your changes and ensure they pass any linting checks (if available).
-5.  Write clear and descriptive commit messages.
-6.  Push your branch to your fork on GitHub.
+3.  Create a new branch for your work (`git checkout -b feature/nombre-funcionalidad` o `fix/descripcion-bug`).
+4.  Realiza tus cambios y asegúrate de que pasen las comprobaciones de linting (si hay).
+5.  Escribe mensajes de commit claros y descriptivos.
+6.  Empuja tu rama a tu fork en GitHub.
 7.  Open a Pull Request (PR) from your branch to the `main` branch of this repository.
 8.  Describe your proposed changes in detail in the PR.
 
-## License
+## Licencia
 
-This project is licensed under the terms of the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+Este proyecto está licenciado bajo los términos de la **Licencia Pública General Affero de GNU v3.0 (AGPL-3.0)**.
 
-You can find the full license text in the [`LICENSE`](LICENSE) file at the root of this repository.
+Puedes encontrar el texto completo de la licencia en el archivo [`LICENSE`](LICENSE) en la raíz de este repositorio.
 
-The AGPL v3 is a copyleft license that ensures the software's source code, including any modifications, is available to users, especially when the software is used to offer a service over a network. This promotes collaboration and ensures that improvements made remain within the project's ecosystem.
+La AGPL v3 es una licencia copyleft que garantiza que el código fuente del software, incluyendo cualquier modificación, esté disponible para los usuarios, especialmente cuando el software se utiliza para ofrecer a un servicio a través de una red. Esto promueve la colaboración y asegura que las mejoras realizadas permanezcan dentro del ecosistema del proyecto.
 
 Copyright (c) 2024 Olivier Hottelet
 
-## Contact
+## Contacto
 
-For any questions or inquiries about the project, you can contact:
+Para cualquier pregunta o consulta sobre el proyecto, puedes contactar a:
 
 - **Olivier Hottelet**
 - olivierhottelet1980@gmail.com
