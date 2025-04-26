@@ -28,6 +28,8 @@ In a competitive market, customer loyalty is an invaluable asset. LoyalPyME is b
 
 Our goal is to be the technological ally that enables any SME, regardless of its sector (retail, hospitality, services, etc.), to digitize and optimize its customer retention strategy, laying the groundwork for long-term growth.
 
+![Screenshot of the LoyalPyME Admin Dashboard](images/SC_LoyalPyME.png)
+
 ## Functional Evolution Phases
 
 LoyalPyME's development follows a phased roadmap, prioritizing the delivery of a functional loyalty core and scaling towards advanced and community capabilities.
@@ -106,7 +108,7 @@ To get the project up and running in your development environment:
     ```bash
     npx ts-node scripts/hash-customer-password.ts
     ```
-    _(Edit `scripts/hash-customer-password.ts` before running to configure the desired email and password)._
+    _(Edit `scripts/hash-customer-customer.ts` before running to configure the desired email and password)._
 
 ### Frontend Setup
 
@@ -185,6 +187,8 @@ En un mercado competitivo, la lealtad del cliente es un activo invaluable. Loyal
 
 Nuestro objetivo es ser el aliado tecnológico que permita a cualquier PyME, independientemente de su sector (retail, hostelería, servicios, etc.), digitalizar y optimizar su estrategia de retención de clientes, sentando las bases para el crecimiento a largo plazo.
 
+![Captura del Dashboard de Administración de LoyalPyME](images/SC_LoyalPyME.png)
+
 ## Fases de Evolución Funcional
 
 El desarrollo de LoyalPyME sigue una hoja de ruta por fases, priorizando la entrega de un núcleo de fidelización funcional y escalando hacia capacidades avanzadas y comunitarias.
@@ -245,82 +249,82 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
     git clone https://github.com/R3v180/LoyalPyME.git
     cd LoyalPyME/backend
     ```
-2.  Instala las dependencias:
+2.  Install dependencies:
     ```bash
     yarn install
     ```
 3.  Crea un archivo `.env` en la raíz de la carpeta `backend/` con las siguientes variables:
     ```env
-    DATABASE_URL="postgresql://tu_usuario:tu_contraseña@host:puerto/tu_base_de_datos?schema=public"
-    JWT_SECRET="una_cadena_larga_y_segura_aleatoria"
-    # Otras variables si son necesarias
+    DATABASE_URL="postgresql://your_user:your_password@host:port/your_db?schema=public"
+    JWT_SECRET="a_long_and_secure_random_string"
+    # Other variables if needed
     ```
-4.  Ejecuta las migraciones de Prisma para preparar la base de datos:
+4.  Run Prisma migrations to set up the database schema:
     ```bash
     npx prisma migrate dev
     ```
-5.  (Opcional) Puedes generar un usuario de prueba cliente ejecutando el script:
+5.  (Optional) You can generate a test customer user by running the script:
     ```bash
     npx ts-node scripts/hash-customer-password.ts
     ```
-    _(Edita `scripts/hash-customer-password.ts` antes de ejecutarlo para configurar el email y contraseña deseados)._
+    _(Edit `scripts/hash-customer-customer.ts` before running to configure the desired email and password)._
 
-### Configuración del Frontend
+### Frontend Setup
 
-1.  Navega a la carpeta `frontend`:
+1.  Navigate to the `frontend` folder:
     ```bash
     cd ../frontend
     ```
-2.  Instala las dependencias:
+2.  Install dependencies:
     ```bash
     yarn install
     ```
 
-## Ejecutar el Proyecto
+## Running the Project
 
-1.  Asegúrate de que tu servidor PostgreSQL está corriendo.
-2.  Inicia el backend desde la carpeta `backend` (en una terminal):
+1.  Ensure your PostgreSQL server is running.
+2.  Start the backend from the `backend` folder (in one terminal):
     ```bash
-    # Para desarrollo con hot-reloading (puede ser inestable):
+    # For development with hot-reloading (may be unstable):
     yarn dev
-    # O para una ejecución más robusta después de construir:
+    # Or for a more robust execution after building:
     yarn build && node dist/index.js
     ```
-    El backend se ejecutará en `http://localhost:3000`.
-3.  Inicia el frontend desde la carpeta `frontend` (en otra terminal):
+    The backend will run on `http://localhost:3000`.
+3.  Start the frontend from the `frontend` folder (in another terminal):
     ```bash
     yarn dev
     ```
-    El frontend se ejecutará en `http://localhost:5173`.
+    The frontend will run on `http://localhost:5173`.
 
-Accede a la aplicación a través de `http://localhost:5173` en tu navegador.
+Access the application through `http://localhost:5173` in your browser.
 
-## Contribuciones
+## Contributions
 
-¡Agradecemos y alentamos las contribuciones a LoyalPyME! Si encuentras un bug, tienes una idea para una nueva funcionalidad, o quieres mejorar el código, por favor:
+We welcome and encourage contributions to LoyalPyME! If you find a bug, have an idea for a new feature, or want to improve the code, please:
 
-1.  Haz un "Fork" de este repositorio.
-2.  Clona tu fork localmente.
-3.  Crea una rama nueva para tu trabajo (`git checkout -b feature/nombre-funcionalidad` o `fix/descripcion-bug`).
-4.  Realiza tus cambios y asegúrate de que pasen las comprobaciones de linting (si hay).
-5.  Escribe mensajes de commit claros y descriptivos.
-6.  Empuja tu rama a tu fork en GitHub.
-7.  Abre un Pull Request (PR) hacia la rama `main` de este repositorio.
-8.  Describe detalladamente los cambios propuestos en el PR.
+1.  Fork this repository.
+2.  Clone your fork locally.
+3.  Create a new branch for your work (`git checkout -b feature/feature-name` or `fix/bug-description`).
+4.  Make your changes and ensure they pass any linting checks (if available).
+5.  Write clear and descriptive commit messages.
+6.  Push your branch to your fork on GitHub.
+7.  Open a Pull Request (PR) from your branch to the `main` branch of this repository.
+8.  Describe your proposed changes in detail in the PR.
 
-## Licencia
+## License
 
-Este proyecto está licenciado bajo los términos de la **Licencia Pública General Affero de GNU v3.0 (AGPL-3.0)**.
+This project is licensed under the terms of the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
 
-Puedes encontrar el texto completo de la licencia en el archivo [`LICENSE`](LICENSE) en la raíz de este repositorio.
+You can find the full license text in the [`LICENSE`](LICENSE) file at the root of this repository.
 
-La AGPL v3 es una licencia copyleft que garantiza que el código fuente del software, incluyendo cualquier modificación, esté disponible para los usuarios, especialmente cuando el software se utiliza para ofrecer un servicio a través de una red. Esto fomenta la colaboración y asegura que las mejoras realizadas permanezcan en el ecosistema del proyecto.
+The AGPL v3 is a copyleft license that ensures the software's source code, including any modifications, is available to users, especially when the software is used to offer a service over a network. This promotes collaboration and ensures that improvements made remain within the project's ecosystem.
 
 Copyright (c) 2024 Olivier Hottelet
 
-## Contacto
+## Contact
 
-Para cualquier pregunta o consulta sobre el proyecto, puedes contactar a:
+For any questions or inquiries about the project, you can contact:
 
 - **Olivier Hottelet**
 - olivierhottelet1980@gmail.com
