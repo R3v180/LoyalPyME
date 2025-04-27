@@ -1,5 +1,5 @@
 // File: backend/src/routes/admin.routes.ts
-// Version: 1.8.2 (Restore checkRole for details route)
+// Version: 1.9.0 (Add route for updating admin notes)
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
@@ -15,7 +15,8 @@ import {
     assignRewardHandler,
     toggleFavoriteHandler,
     toggleActiveStatusHandler,
-    getCustomerDetailsHandler
+    getCustomerDetailsHandler,
+    updateCustomerNotesHandler // <-- Importar el nuevo handler
 } from '../customer/admin-customer.controller'; // Asegúrate que esta ruta es correcta
 
 const router = Router();
@@ -32,9 +33,18 @@ router.get(
 // GET /customers/:customerId/details (Detalles de un cliente)
 router.get(
     '/customers/:customerId/details',
-    checkRole([UserRole.BUSINESS_ADMIN]), // <-- Middleware DESCOMENTADO de nuevo
+    checkRole([UserRole.BUSINESS_ADMIN]),
     getCustomerDetailsHandler
 );
+
+// --- NUEVA RUTA ---
+// PATCH /customers/:customerId/notes (Actualizar notas de admin)
+router.patch(
+    '/customers/:customerId/notes',
+    checkRole([UserRole.BUSINESS_ADMIN]),   // Solo admins
+    updateCustomerNotesHandler              // Nuevo handler a implementar
+);
+// --- FIN NUEVA RUTA ---
 
 // POST /customers/:customerId/adjust-points
 router.post(
