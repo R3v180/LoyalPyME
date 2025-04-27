@@ -1,30 +1,24 @@
 // filename: frontend/src/pages/admin/AdminCustomerManagementPage.tsx
-// Version: 1.7.0 (Refactor: Use CustomerTable component)
+// Version: 1.8.1 (Fix: Restore missing useDisclosure import)
 
 import React, { useState, useCallback } from 'react';
 import {
     Paper, Title, Stack, TextInput, Loader, Alert, Pagination, Group, Text
-    // Ya no se necesitan: Table, ActionIcon, useMantineTheme, UnstyledButton, Center, rem
 } from '@mantine/core';
 import {
     IconSearch, IconAlertCircle, IconCheck, IconX
-    // Ya no se necesitan iconos de tabla: IconAdjustments, IconGift, IconEye, IconStar, IconToggleLeft, IconStairsUp, IconSelector, IconChevronDown, IconChevronUp
 } from '@tabler/icons-react';
-import { useDisclosure } from '@mantine/hooks';
-import axiosInstance from '../../services/axiosInstance'; // Necesario para toggleFavorite
+import { useDisclosure } from '@mantine/hooks'; // <-- Importación restaurada
+import axiosInstance from '../../services/axiosInstance';
 import AdjustPointsModal from '../../components/admin/AdjustPointsModal';
 import ChangeTierModal from '../../components/admin/ChangeTierModal';
 import AssignRewardModal from '../../components/admin/AssignRewardModal';
 import { notifications } from '@mantine/notifications';
-// Ya no necesitamos importar classes de CSS aquí si CustomerTable lo importa
-// import classes from './AdminCustomerManagementPage.module.css';
 
 // Importamos el hook y el tipo Customer
-import { useAdminCustomers, Customer } from '../../hooks/useAdminCustomers'; // SortStatus ya no se importa aquí
-// Importamos el nuevo componente de tabla
+import { useAdminCustomers, Customer } from '../../hooks/useAdminCustomers';
+// Importamos el componente de tabla
 import CustomerTable from '../../components/admin/CustomerTable';
-
-// Ya no necesitamos definir Th ni ThProps aquí
 
 // --- COMPONENTE PRINCIPAL ---
 const AdminCustomerManagementPage: React.FC = () => {
@@ -34,27 +28,30 @@ const AdminCustomerManagementPage: React.FC = () => {
         searchTerm, setSearchTerm, sortStatus, handleSort, refreshData
     } = useAdminCustomers();
 
-    // Estados locales de UI (modales, selección, estado de carga acción favorita)
+    // Estados locales de UI
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    // Estados y controles de los modales (usan useDisclosure)
     const [adjustModalOpened, { open: openAdjustModal, close: closeAdjustModal }] = useDisclosure(false);
     const [changeTierModalOpened, { open: openChangeTierModal, close: closeChangeTierModal }] = useDisclosure(false);
     const [assignRewardModalOpened, { open: openAssignRewardModal, close: closeAssignRewardModal }] = useDisclosure(false);
+    // Estados de carga para acciones en fila
     const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
+    const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
 
-    // --- Handlers de Modales y Acciones (pasados como props a CustomerTable) ---
-    const handleOpenAdjustPoints = useCallback((customer: Customer) => { setSelectedCustomer(customer); openAdjustModal(); }, []);
-    const handleAdjustSuccess = useCallback(() => { refreshData(); }, [refreshData]);
+    // --- Handlers de Modales y Acciones ---
+    const handleOpenAdjustPoints = useCallback((customer: Customer) => { setSelectedCustomer(customer); openAdjustModal(); }, [openAdjustModal]); // Añadir dependencia
+    const handleAdjustSuccess = useCallback(() => { refreshData(); closeAdjustModal(); setSelectedCustomer(null); }, [refreshData, closeAdjustModal]);
 
-    const handleOpenChangeTier = useCallback((customer: Customer) => { setSelectedCustomer(customer); openChangeTierModal(); }, []);
-    const handleChangeTierSuccess = useCallback(() => { refreshData(); }, [refreshData]);
+    const handleOpenChangeTier = useCallback((customer: Customer) => { setSelectedCustomer(customer); openChangeTierModal(); }, [openChangeTierModal]); // Añadir dependencia
+    const handleChangeTierSuccess = useCallback(() => { refreshData(); closeChangeTierModal(); setSelectedCustomer(null); }, [refreshData, closeChangeTierModal]);
 
-    const handleOpenAssignReward = useCallback((customer: Customer) => { setSelectedCustomer(customer); openAssignRewardModal(); }, []);
-    const handleAssignRewardSuccess = useCallback(() => { console.log('AssignRewardModal success callback triggered (no refresh implemented).'); }, []);
+    const handleOpenAssignReward = useCallback((customer: Customer) => { setSelectedCustomer(customer); openAssignRewardModal(); }, [openAssignRewardModal]); // Añadir dependencia
+    const handleAssignRewardSuccess = useCallback(() => { console.log('AssignRewardModal success callback triggered (no refresh implemented).'); closeAssignRewardModal(); setSelectedCustomer(null); }, [closeAssignRewardModal]);
 
     const handleToggleFavorite = useCallback(async (customerId: string, currentIsFavorite: boolean) => {
         setTogglingFavoriteId(customerId);
         try {
-            await axiosInstance.patch(`/admin/customers/${customerId}/toggle-favorite`);
+            await axiosInstance.patch(`/api/admin/customers/${customerId}/toggle-favorite`);
             notifications.show({ title: 'Estado Cambiado', message: `Cliente ${!currentIsFavorite ? 'marcado como' : 'desmarcado de'} favorito.`, color: 'green', icon: <IconCheck size={18} /> });
             refreshData();
         } catch (err: any) {
@@ -62,25 +59,44 @@ const AdminCustomerManagementPage: React.FC = () => {
         } finally {
             setTogglingFavoriteId(null);
         }
-    }, [refreshData]); // Añadimos refreshData como dependencia
+    }, [refreshData]);
 
-    // --- Placeholders para acciones futuras de la tabla ---
+    // handleViewDetails (placeholder sin cambios)
     const handleViewDetails = useCallback((customer: Customer) => {
         console.log('TODO: Implement View Details for customer:', customer.id);
         alert(`FUNCIONALIDAD PENDIENTE: Ver Detalles para ${customer.email}`);
-        // Aquí iría la lógica para abrir un modal de detalles o navegar a otra página
     }, []);
 
-    const handleToggleActive = useCallback((customer: Customer) => {
-        console.log('TODO: Implement Toggle Active for customer:', customer.id);
-        alert(`FUNCIONALIDAD PENDIENTE: Activar/Desactivar a ${customer.email}`);
-        // Aquí iría la lógica para llamar a la API, mostrar notificación y refrescar
-        // const newStatus = !customer.isActive;
-        // try { ... await axiosInstance.patch(...); refreshData(); ... } catch { ... }
-    }, []); // Añadir refreshData como dependencia cuando se implemente
+    // Handler Implementado para Activar/Desactivar
+    const handleToggleActive = useCallback(async (customer: Customer) => {
+        const actionText = customer.isActive ? 'desactivar' : 'activar';
+        if (!window.confirm(`¿Estás seguro de que quieres ${actionText} a ${customer.email}?`)) {
+            return;
+        }
+        setTogglingActiveId(customer.id);
+        try {
+            await axiosInstance.patch(`/api/admin/customers/${customer.id}/toggle-active`);
+            notifications.show({
+                title: 'Estado Actualizado',
+                message: `Cliente ${customer.email} ${customer.isActive ? 'desactivado' : 'activado'} correctamente.`,
+                color: 'green',
+                icon: <IconCheck size={18} />,
+            });
+            refreshData();
+        } catch (err: any) {
+            console.error(`Error toggling active status for customer ${customer.id}:`, err);
+            notifications.show({
+                title: 'Error',
+                message: `No se pudo cambiar el estado: ${err.response?.data?.message || err.message}`,
+                color: 'red',
+                icon: <IconX size={18} />,
+            });
+        } finally {
+            setTogglingActiveId(null);
+        }
+    }, [refreshData]);
 
-    // --- Renderizado principal ---
-    // Ahora es mucho más limpio, la complejidad de la tabla está en CustomerTable
+    // --- Renderizado principal (sin cambios) ---
     return (
         <>
             <Paper shadow="sm" p="lg" withBorder radius="lg">
@@ -100,19 +116,20 @@ const AdminCustomerManagementPage: React.FC = () => {
                         </Text>
                     )}
 
-                    {/* Renderizado de la Tabla (si hay datos y no hay carga/error) */}
+                    {/* Renderizado de la Tabla */}
                     {!loading && !error && customers.length > 0 && (
                         <CustomerTable
                             customers={customers}
                             sortStatus={sortStatus}
                             togglingFavoriteId={togglingFavoriteId}
+                            togglingActiveId={togglingActiveId}
                             onSort={handleSort}
                             onToggleFavorite={handleToggleFavorite}
                             onOpenAdjustPoints={handleOpenAdjustPoints}
                             onOpenChangeTier={handleOpenChangeTier}
                             onOpenAssignReward={handleOpenAssignReward}
-                            onViewDetails={handleViewDetails} // Pasamos el placeholder
-                            onToggleActive={handleToggleActive} // Pasamos el placeholder
+                            onViewDetails={handleViewDetails}
+                            onToggleActive={handleToggleActive}
                         />
                     )}
 
@@ -125,7 +142,7 @@ const AdminCustomerManagementPage: React.FC = () => {
                 </Stack>
             </Paper>
 
-            {/* Modales (sin cambios) */}
+            {/* Modales */}
             <AdjustPointsModal opened={adjustModalOpened} onClose={() => { closeAdjustModal(); setSelectedCustomer(null); }} customer={selectedCustomer} onSuccess={handleAdjustSuccess}/>
             <ChangeTierModal opened={changeTierModalOpened} onClose={() => { closeChangeTierModal(); setSelectedCustomer(null); }} customer={selectedCustomer} onSuccess={handleChangeTierSuccess}/>
             <AssignRewardModal opened={assignRewardModalOpened} onClose={() => { closeAssignRewardModal(); setSelectedCustomer(null); }} customer={selectedCustomer} onSuccess={handleAssignRewardSuccess}/>
