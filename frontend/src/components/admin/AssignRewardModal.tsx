@@ -1,91 +1,129 @@
 // filename: frontend/src/components/admin/AssignRewardModal.tsx
-// Version: 1.0.2 (Use CORRECT axiosInstance import path: ../../)
+// Version: 1.1.0 (Fix: Update Customer import path)
 
-import React, { useState, useEffect, FormEvent } from 'react';
-import {
-    Modal, Button, Stack, Select, Group, Text, LoadingOverlay, Alert, Loader
-} from '@mantine/core';
-import { notifications } from '@mantine/notifications';
-import { IconCheck, IconX, IconAlertCircle, IconGift } from '@tabler/icons-react';
-// --- RUTA DE IMPORTACIÓN CORREGIDA (según tu indicación) ---
+import React, { useState, useEffect } from 'react';
+import { Modal, Select, Button, Group, Text, Loader, Alert } from '@mantine/core';
 import axiosInstance from '../../services/axiosInstance';
-// --------------------------------------------------------
-import { AxiosResponse } from 'axios';
-import { Customer } from '../../pages/admin/AdminCustomerManagementPage'; // Importar tipo Customer
+import { notifications } from '@mantine/notifications';
+import { IconCheck, IconX, IconAlertCircle } from '@tabler/icons-react';
 
-// Interfaces (sin cambios)
-interface RewardOption { id: string; name: string; pointsCost: number; }
-interface AssignRewardModalProps { opened: boolean; onClose: () => void; customer: Customer | null; onSuccess: () => void; }
+// Importar Customer desde la ubicación correcta (el hook)
+import { Customer } from '../../hooks/useAdminCustomers'; // <-- Ruta actualizada
 
-const AssignRewardModal: React.FC<AssignRewardModalProps> = ({
-    opened,
-    onClose,
-    customer,
-    onSuccess
-}) => {
-    const [availableRewards, setAvailableRewards] = useState<{ value: string; label: string }[]>([]);
-    const [loadingRewards, setLoadingRewards] = useState<boolean>(false);
+// Interfaz para las recompensas obtenidas de la API
+interface Reward {
+    id: string;
+    name: string;
+    pointsRequired: number;
+    description?: string | null;
+    // Añade otros campos si son necesarios para la lógica de asignación
+}
+
+interface AssignRewardModalProps {
+    opened: boolean;
+    onClose: () => void;
+    customer: Customer | null;
+    onSuccess: () => void; // Callback (actualmente no refresca, ver nota)
+}
+
+const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, customer, onSuccess }) => {
+    const [rewards, setRewards] = useState<{ value: string; label: string }[]>([]);
     const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+    const [loadingRewards, setLoadingRewards] = useState(false);
+    const [loadingAssign, setLoadingAssign] = useState(false);
+    const [errorRewards, setErrorRewards] = useState<string | null>(null);
 
-    // useEffect para cargar Tiers (Sin cambios funcionales, solo usa axiosInstance con path relativo a baseURL)
+    // Cargar recompensas disponibles cuando se abre el modal
     useEffect(() => {
-        if (opened && customer) {
-            setLoadingRewards(true); setError(null); setSelectedRewardId(null);
-            axiosInstance.get<RewardOption[]>('/rewards?isActive=true') // Llamada relativa a baseURL
-                .then((response: AxiosResponse<RewardOption[]>) => {
-                    if (!response.data || response.data.length === 0) { setError("No hay recompensas activas para asignar."); setAvailableRewards([]); return; }
-                    const rewardOptions = response.data.map((reward: RewardOption) => ({ value: reward.id, label: `${reward.name} (${reward.pointsCost} pts)` }));
-                    setAvailableRewards(rewardOptions);
+        if (opened) {
+            setLoadingRewards(true);
+            setErrorRewards(null);
+            setSelectedRewardId(null); // Resetear selección
+            axiosInstance.get<Reward[]>('/rewards') // Asume endpoint /api/rewards para obtener todas las recompensas
+                .then(response => {
+                    const availableRewards = response.data.map(reward => ({
+                        value: reward.id,
+                        label: `${reward.name} (${reward.pointsRequired} pts)`
+                    }));
+                    setRewards(availableRewards);
                 })
-                .catch((err: any) => { console.error("Error fetching available rewards:", err); setError("Error al cargar las recompensas disponibles."); setAvailableRewards([]); })
-                .finally(() => { setLoadingRewards(false); });
-        } else { setAvailableRewards([]); setSelectedRewardId(null); setError(null); setIsSubmitting(false); setLoadingRewards(false); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [opened, customer]);
+                .catch(err => {
+                    console.error("Error fetching rewards for modal:", err);
+                    setErrorRewards(`No se pudieron cargar las recompensas: ${err.response?.data?.message || err.message}`);
+                })
+                .finally(() => {
+                    setLoadingRewards(false);
+                });
+        }
+    }, [opened]);
 
-    // handleSubmit (Sin cambios funcionales, solo usa axiosInstance con path relativo a baseURL)
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault(); setError(null);
-        if (!customer) { setError('No se ha seleccionado un cliente válido.'); return; }
-        if (!selectedRewardId) { setError('Debes seleccionar una recompensa para asignar.'); return; }
-        setIsSubmitting(true);
+    const handleAssign = async () => {
+        if (!customer || !selectedRewardId) return;
+        setLoadingAssign(true);
         try {
-            console.log(`[AssignReward] Sending request for customer ${customer.id}: rewardId=${selectedRewardId}`);
-            await axiosInstance.post(`/admin/customers/${customer.id}/assign-reward`, { rewardId: selectedRewardId }); // Llamada relativa a baseURL
-            const assignedReward = availableRewards.find(r => r.value === selectedRewardId);
-            const rewardName = assignedReward ? assignedReward.label.split('(')[0].trim() : 'seleccionada';
-            notifications.show({ title: 'Recompensa Asignada', message: `Recompensa "${rewardName}" asignada a ${customer.name || customer.email}. El cliente ya puede canjearla.`, color: 'green', icon: <IconCheck size={18} />, autoClose: 5000, });
-            onSuccess(); onClose();
-        } catch (err: any) {
-            console.error(`[AssignReward] Error assigning reward ${selectedRewardId} to customer ${customer?.id}:`, err);
-            const errorMsg = err.response?.data?.message || `Error al asignar recompensa: ${err.message || 'Error desconocido'}`;
-            setError(errorMsg); notifications.show({ title: 'Error al Asignar', message: errorMsg, color: 'red', icon: <IconX size={18} />, autoClose: 6000, });
-        } finally { setIsSubmitting(false); }
+            // Endpoint para que el admin asigne una recompensa como regalo
+            await axiosInstance.post(`/admin/customers/${customer.id}/grant-reward`, {
+                rewardId: selectedRewardId
+            });
+            notifications.show({
+                title: 'Éxito',
+                message: `Recompensa asignada correctamente a ${customer.name || customer.email}.`,
+                color: 'green',
+                icon: <IconCheck size={18} />,
+            });
+            onSuccess(); // Llama al callback (actualmente no hace nada en la página)
+            onClose(); // Cierra el modal
+        } catch (error: any) {
+            console.error("Error assigning reward:", error);
+            notifications.show({
+                title: 'Error',
+                message: `No se pudo asignar la recompensa: ${error.response?.data?.message || error.message}`,
+                color: 'red',
+                icon: <IconX size={18} />,
+            });
+        } finally {
+            setLoadingAssign(false);
+        }
     };
 
-    if (!customer) return null;
-
-    // JSX (sin cambios funcionales)
     return (
-        <Modal opened={opened} onClose={onClose} title={`Asignar Recompensa a ${customer.name || customer.email}`} centered radius="lg" overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}>
-            <LoadingOverlay visible={isSubmitting || loadingRewards} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
-            <form onSubmit={handleSubmit}>
-                <Stack gap="md">
-                    <Text size="sm">Selecciona la recompensa que quieres regalar a este cliente. Podrá canjearla sin coste de puntos.</Text>
-                    {loadingRewards && <Group justify="center" p="sm"><Loader size="sm" /> Cargando recompensas...</Group>}
-                    {!loadingRewards && availableRewards.length > 0 && (
-                         <Select label="Recompensa a Asignar" placeholder="Elige una recompensa..." data={availableRewards} value={selectedRewardId} onChange={setSelectedRewardId} disabled={isSubmitting || loadingRewards} required searchable nothingFoundMessage="No se encontraron recompensas activas" radius="lg" comboboxProps={{ transitionProps: { transition: 'pop', duration: 200 } }} />
-                    )}
-                    {!loadingRewards && availableRewards.length === 0 && !error && ( <Text c="dimmed" ta="center" size="sm">No hay recompensas activas para asignar.</Text> )}
-                    {error && (<Alert title="Error" color="red" icon={<IconAlertCircle size={16}/>} radius="lg" withCloseButton onClose={() => setError(null)}>{error}</Alert>)}
-                    <Group justify="flex-end" mt="md">
-                        <Button variant="light" onClick={onClose} disabled={isSubmitting} radius="lg"> Cancelar </Button>
-                        <Button type="submit" loading={isSubmitting} disabled={loadingRewards || !selectedRewardId || isSubmitting} radius="lg" leftSection={<IconGift size={16}/>}> Confirmar Asignación </Button>
+        <Modal
+            opened={opened}
+            onClose={onClose}
+            title={`Asignar Recompensa como Regalo a ${customer?.name || customer?.email || 'Cliente'}`}
+            centered
+        >
+            {loadingRewards && <Group justify="center"><Loader /></Group>}
+            {errorRewards && !loadingRewards && (
+                <Alert title="Error Cargando Recompensas" color="red" icon={<IconAlertCircle />}>
+                    {errorRewards}
+                </Alert>
+            )}
+            {!loadingRewards && !errorRewards && customer && (
+                <>
+                    <Select
+                        label="Selecciona una Recompensa"
+                        placeholder="Elige una recompensa de la lista"
+                        data={rewards}
+                        value={selectedRewardId}
+                        onChange={setSelectedRewardId}
+                        searchable
+                        nothingFoundMessage="No hay recompensas disponibles o no se encontraron."
+                        required
+                        disabled={rewards.length === 0} // Deshabilitar si no hay recompensas
+                        mb="md"
+                    />
+                    <Group justify="flex-end" mt="lg">
+                        <Button variant="default" onClick={onClose} disabled={loadingAssign}>Cancelar</Button>
+                        <Button onClick={handleAssign} loading={loadingAssign} disabled={!selectedRewardId}>
+                            Asignar Recompensa
+                        </Button>
                     </Group>
-                </Stack>
-            </form>
+                </>
+            )}
+             {!loadingRewards && !errorRewards && !customer && (
+                 <Text c="dimmed">No se ha seleccionado ningún cliente.</Text>
+             )}
         </Modal>
     );
 };

@@ -1,89 +1,101 @@
 // filename: frontend/src/components/admin/AdjustPointsModal.tsx
-// Version: 1.1.1 (Fix API POST URL - remove leading /api)
+// Version: 1.1.0 (Fix: Update Customer import path)
 
-import React, { useState, useEffect, FormEvent } from 'react';
-import {
-    Modal, Button, Stack, NumberInput, Textarea, Group, Text, LoadingOverlay, Alert
-} from '@mantine/core';
+import React, { useState, useEffect } from 'react';
+import { Modal, TextInput, Button, Group, Text, NumberInput } from '@mantine/core';
+import { useForm } from '@mantine/form';
+import axiosInstance from '../../services/axiosInstance';
 import { notifications } from '@mantine/notifications';
-import { IconCheck, IconX, IconAlertCircle } from '@tabler/icons-react';
-import axiosInstance from '../../services/axiosInstance'; // Ruta correcta
+import { IconCheck, IconX } from '@tabler/icons-react';
 
-// Importar el tipo Customer desde la página padre
-import { Customer } from '../../pages/admin/AdminCustomerManagementPage';
+// Importar Customer desde la ubicación correcta (el hook)
+import { Customer } from '../../hooks/useAdminCustomers'; // <-- Ruta actualizada
 
-// Props que recibirá el modal
 interface AdjustPointsModalProps {
     opened: boolean;
     onClose: () => void;
-    customer: Customer | null; // Usar tipo compartido
-    onSuccess: () => void;
+    customer: Customer | null;
+    onSuccess: () => void; // Callback para refrescar datos
 }
 
-const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({
-    opened,
-    onClose,
-    customer,
-    onSuccess
-}) => {
-    const [pointsToAdd, setPointsToAdd] = useState<number | ''>('');
-    const [reason, setReason] = useState<string>('');
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
-
-    // Resetear estado (sin cambios)
-    useEffect(() => {
-        if (!opened) {
-            setPointsToAdd(''); setReason(''); setError(null); setIsSubmitting(false);
+const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({ opened, onClose, customer, onSuccess }) => {
+    const [loading, setLoading] = useState(false);
+    const form = useForm({
+        initialValues: {
+            amount: 0,
+            reason: '' // Campo opcional para la razón
+        },
+        validate: {
+            amount: (value) => (value === 0 ? 'La cantidad no puede ser cero' : null),
         }
+    });
+
+    // Resetear form cuando el modal se abre o el cliente cambia
+    useEffect(() => {
+        if (opened) {
+            form.reset();
+            // Podrías inicializar la razón si quieres
+            // form.setFieldValue('reason', `Ajuste para ${customer?.name || customer?.email}`);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [opened, customer]);
 
-    // handleSubmit CORREGIDO
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault(); setError(null);
-        if (pointsToAdd === '' || pointsToAdd === 0) { setError('Debes indicar una cantidad de puntos a añadir o restar (no puede ser cero).'); return; }
-        if (!customer) { setError('No se ha seleccionado un cliente válido.'); return; }
-        setIsSubmitting(true); const amount = Number(pointsToAdd);
+    const handleSubmit = async (values: typeof form.values) => {
+        if (!customer) return;
+        setLoading(true);
         try {
-            console.log(`[AdjustPoints] Sending request for customer ${customer.id}: amount=${amount}, reason=${reason}`);
-
-            // --- LLAMADA API CORREGIDA: Quitamos el /api inicial ---
-            await axiosInstance.post(
-                `/admin/customers/${customer.id}/adjust-points`, // SIN /api al principio
-                 {
-                    amount: amount,
-                    reason: reason.trim() || null
-                 }
-            );
-            // ------------------------------------------------------
-
-            notifications.show({ title: 'Éxito', message: `Se han ajustado ${amount} puntos para ${customer.name || customer.email}.`, color: 'green', icon: <IconCheck size={18} />, autoClose: 4000, });
-            onSuccess(); onClose();
-        } catch (err: any) {
-            console.error(`[AdjustPoints] Error adjusting points for customer ${customer?.id}:`, err);
-            const errorMsg = err.response?.data?.message || `Error al ajustar puntos: ${err.message || 'Error desconocido'}`;
-            setError(errorMsg); notifications.show({ title: 'Error al Ajustar Puntos', message: errorMsg, color: 'red', icon: <IconX size={18} />, autoClose: 6000, });
-        } finally { setIsSubmitting(false); }
+            const payload = {
+                amount: values.amount,
+                reason: values.reason || null // Enviar null si está vacío
+            };
+            await axiosInstance.patch(`/admin/customers/${customer.id}/adjust-points`, payload);
+            notifications.show({
+                title: 'Éxito',
+                message: `Puntos ajustados correctamente para ${customer.name || customer.email}.`,
+                color: 'green',
+                icon: <IconCheck size={18} />,
+            });
+            onSuccess(); // Llama al callback para refrescar
+            onClose(); // Cierra el modal
+        } catch (error: any) {
+            console.error("Error adjusting points:", error);
+            notifications.show({
+                title: 'Error',
+                message: `No se pudo ajustar los puntos: ${error.response?.data?.message || error.message}`,
+                color: 'red',
+                icon: <IconX size={18} />,
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    if (!customer) return null;
-
-    // JSX del Modal (sin cambios)
     return (
-        <Modal opened={opened} onClose={onClose} title={`Ajustar Puntos para ${customer.name || customer.email}`} centered radius="lg" overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}>
-            <LoadingOverlay visible={isSubmitting} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
-            <form onSubmit={handleSubmit}>
-                <Stack gap="md">
-                    <Text size="sm">Introduce la cantidad de puntos a añadir (positivo) o restar (negativo).</Text>
-                    <NumberInput label="Puntos a Añadir/Restar" placeholder="Ej: 50 o -20" value={pointsToAdd} onChange={(value) => setPointsToAdd(typeof value === 'number' ? value : '')} allowNegative required radius="lg" data-autofocus />
-                    <Textarea label="Motivo del ajuste (Opcional)" placeholder="Ej: Compensación por retraso, Bonus especial..." value={reason} onChange={(event) => setReason(event.currentTarget.value)} rows={3} radius="lg" />
-                    {error && (<Alert title="Error" color="red" icon={<IconAlertCircle size={16}/>} radius="lg" withCloseButton onClose={() => setError(null)}>{error}</Alert>)}
-                    <Group justify="flex-end" mt="md">
-                        <Button variant="light" onClick={onClose} disabled={isSubmitting} radius="lg"> Cancelar </Button>
-                        <Button type="submit" loading={isSubmitting} radius="lg"> Confirmar Ajuste </Button>
+        <Modal opened={opened} onClose={onClose} title={`Ajustar Puntos para ${customer?.name || customer?.email || 'Cliente'}`} centered>
+            {customer ? (
+                <form onSubmit={form.onSubmit(handleSubmit)}>
+                    <Text size="sm" mb="md">Puntos actuales: {customer.points}</Text>
+                    <NumberInput
+                        label="Cantidad a Añadir/Restar"
+                        placeholder="Ej: 50 (añadir) o -20 (restar)"
+                        required
+                        allowNegative
+                        {...form.getInputProps('amount')}
+                    />
+                    <TextInput
+                        label="Razón (Opcional)"
+                        placeholder="Ej: Corrección manual, Bonificación especial"
+                        mt="md"
+                        {...form.getInputProps('reason')}
+                    />
+                    <Group justify="flex-end" mt="lg">
+                        <Button variant="default" onClick={onClose} disabled={loading}>Cancelar</Button>
+                        <Button type="submit" loading={loading}>Ajustar Puntos</Button>
                     </Group>
-                </Stack>
-            </form>
+                </form>
+            ) : (
+                <Text c="dimmed">No se ha seleccionado ningún cliente.</Text>
+            )}
         </Modal>
     );
 };

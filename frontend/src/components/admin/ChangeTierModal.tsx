@@ -1,102 +1,142 @@
 // filename: frontend/src/components/admin/ChangeTierModal.tsx
-// Version: 1.1.1 (Fix API GET/PUT URLs - remove leading /api)
+// Version: 1.1.0 (Fix: Update Customer import path)
 
-import React, { useState, useEffect, FormEvent } from 'react';
-import {
-    Modal, Button, Stack, Select, Group, Text, LoadingOverlay, Alert
-} from '@mantine/core';
+import React, { useState, useEffect } from 'react';
+import { Modal, Select, Button, Group, Text, Loader, Alert } from '@mantine/core';
+import axiosInstance from '../../services/axiosInstance';
 import { notifications } from '@mantine/notifications';
-import { IconCheck, IconX, IconAlertCircle, IconStairsUp } from '@tabler/icons-react';
-import axiosInstance from '../../services/axiosInstance'; // Ruta corregida
-import { AxiosResponse } from 'axios';
+import { IconCheck, IconX, IconAlertCircle } from '@tabler/icons-react';
 
-// Importar el tipo Customer desde la página padre
-import { Customer } from '../../pages/admin/AdminCustomerManagementPage';
+// Importar Customer desde la ubicación correcta (el hook)
+import { Customer } from '../../hooks/useAdminCustomers'; // <-- Ruta actualizada
 
-// Interfaz TierOption (sin cambios)
-interface TierOption { id: string; name: string; level: number; }
+// Interfaz para los Tiers/Niveles obtenidos de la API
+interface Tier {
+    id: string;
+    name: string;
+    level: number; // Asumiendo que el nivel se usa para ordenar o mostrar
+    // Otros campos si son necesarios
+}
 
-// Props (usando Customer importado)
 interface ChangeTierModalProps {
     opened: boolean;
     onClose: () => void;
     customer: Customer | null;
-    onSuccess: () => void;
+    onSuccess: () => void; // Callback para refrescar datos
 }
 
-const ChangeTierModal: React.FC<ChangeTierModalProps> = ({
-    opened,
-    onClose,
-    customer,
-    onSuccess
-}) => {
-    const [availableTiers, setAvailableTiers] = useState<{ value: string; label: string }[]>([]);
-    const [loadingTiers, setLoadingTiers] = useState<boolean>(false);
+const ChangeTierModal: React.FC<ChangeTierModalProps> = ({ opened, onClose, customer, onSuccess }) => {
+    const [tiers, setTiers] = useState<{ value: string; label: string }[]>([]);
     const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+    const [loadingTiers, setLoadingTiers] = useState(false);
+    const [loadingChange, setLoadingChange] = useState(false);
+    const [errorTiers, setErrorTiers] = useState<string | null>(null);
 
-    // Efecto para cargar los Tiers disponibles
+    // Cargar niveles disponibles cuando se abre el modal
     useEffect(() => {
         if (opened && customer) {
-            setLoadingTiers(true); setError(null);
+            setLoadingTiers(true);
+            setErrorTiers(null);
+            // Inicializar con el nivel actual del cliente si está disponible
+            setSelectedTierId(customer.currentTier?.id || null);
 
-            // --- LLAMADA GET CORREGIDA: SIN /api ---
-            axiosInstance.get<TierOption[]>('/tiers/tiers?includeBenefits=false') // Ruta relativa a la baseURL
-            // --------------------------------------
-                .then((response: AxiosResponse<TierOption[]>) => {
-                    const tierOptions = [ { value: 'null', label: '(Quitar Nivel / Básico)' }, ...response.data .sort((a: TierOption, b: TierOption) => a.level - b.level) .map((tier: TierOption) => ({ value: tier.id, label: tier.name })) ];
-                    setAvailableTiers(tierOptions); setSelectedTierId(customer.currentTier?.id ?? 'null');
+            axiosInstance.get<Tier[]>('/tiers') // Asume endpoint /api/tiers para obtener todos los niveles
+                .then(response => {
+                    // Ordenar tiers por nivel para el Select
+                    const sortedTiers = response.data.sort((a, b) => a.level - b.level);
+                    const availableTiers = sortedTiers.map(tier => ({
+                        value: tier.id,
+                        label: `${tier.name} (Nivel ${tier.level})`
+                    }));
+                    setTiers(availableTiers);
                 })
-                .catch((err: any) => { console.error("Error fetching available tiers:", err); setError("Error al cargar los niveles disponibles."); setAvailableTiers([{ value: 'null', label: '(Quitar Nivel / Básico)' }]); })
-                .finally(() => { setLoadingTiers(false); });
-        } else { setAvailableTiers([]); setSelectedTierId(null); setError(null); setIsSubmitting(false); }
+                .catch(err => {
+                    console.error("Error fetching tiers for modal:", err);
+                    setErrorTiers(`No se pudieron cargar los niveles: ${err.response?.data?.message || err.message}`);
+                })
+                .finally(() => {
+                    setLoadingTiers(false);
+                });
+        } else if (!opened) {
+             // Resetear estado si el modal se cierra
+             setSelectedTierId(null);
+             setTiers([]);
+        }
     }, [opened, customer]);
 
-    // handleSubmit CORREGIDO
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault(); setError(null);
-        if (!customer) { setError('No se ha seleccionado un cliente válido.'); return; }
-        const currentAssignedTierId = customer.currentTier?.id ?? null;
-        const newSelectedTierId = selectedTierId === 'null' ? null : selectedTierId;
-        if (currentAssignedTierId === newSelectedTierId) { notifications.show({ title: 'Sin Cambios', message: 'El nivel seleccionado es el mismo que el actual.', color: 'blue', }); onClose(); return; }
-        setIsSubmitting(true);
+    const handleChangeTier = async () => {
+        if (!customer || !selectedTierId) return;
+        setLoadingChange(true);
         try {
-            console.log(`[ChangeTier] Sending request for customer ${customer.id}: newTierId=${newSelectedTierId}`);
-
-            // --- LLAMADA PUT CORREGIDA: SIN /api ---
-            await axiosInstance.put(
-                `/admin/customers/${customer.id}/tier`, // Ruta relativa a la baseURL
-                { tierId: newSelectedTierId }
-            );
-            // --------------------------------------
-
-            notifications.show({ title: 'Éxito', message: `Se ha cambiado el nivel para ${customer.name || customer.email}.`, color: 'green', icon: <IconCheck size={18} />, autoClose: 4000, });
-            onSuccess(); onClose();
-        } catch (err: any) {
-            console.error(`[ChangeTier] Error changing tier for customer ${customer?.id}:`, err);
-            const errorMsg = err.response?.data?.message || `Error al cambiar nivel: ${err.message || 'Error desconocido'}`;
-            setError(errorMsg); notifications.show({ title: 'Error al Cambiar Nivel', message: errorMsg, color: 'red', icon: <IconX size={18} />, autoClose: 6000, });
-        } finally { setIsSubmitting(false); }
+            // Endpoint para que el admin cambie manualmente el nivel de un cliente
+            await axiosInstance.patch(`/admin/customers/${customer.id}/change-tier`, {
+                newTierId: selectedTierId
+            });
+            notifications.show({
+                title: 'Éxito',
+                message: `Nivel cambiado correctamente para ${customer.name || customer.email}.`,
+                color: 'green',
+                icon: <IconCheck size={18} />,
+            });
+            onSuccess(); // Llama al callback para refrescar
+            onClose(); // Cierra el modal
+        } catch (error: any) {
+            console.error("Error changing tier:", error);
+            notifications.show({
+                title: 'Error',
+                message: `No se pudo cambiar el nivel: ${error.response?.data?.message || error.message}`,
+                color: 'red',
+                icon: <IconX size={18} />,
+            });
+        } finally {
+            setLoadingChange(false);
+        }
     };
 
-    if (!customer) return null;
-
-    // JSX (sin cambios)
     return (
-        <Modal opened={opened} onClose={onClose} title={`Cambiar Nivel para ${customer.name || customer.email}`} centered radius="lg" overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}>
-            <LoadingOverlay visible={isSubmitting || loadingTiers} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
-            <form onSubmit={handleSubmit}>
-                <Stack gap="md">
-                    <Text size="sm">Nivel Actual: <Text span fw={700}>{customer.currentTier?.name || 'Básico'}</Text></Text>
-                    <Select label="Selecciona el Nuevo Nivel" placeholder={loadingTiers ? "Cargando niveles..." : "Selecciona un nivel"} data={availableTiers} value={selectedTierId} onChange={setSelectedTierId} disabled={loadingTiers || isSubmitting} required searchable nothingFoundMessage="No se encontraron niveles" radius="lg"/>
-                    {error && (<Alert title="Error" color="red" icon={<IconAlertCircle size={16}/>} radius="lg" withCloseButton onClose={() => setError(null)}>{error}</Alert>)}
-                    <Group justify="flex-end" mt="md">
-                        <Button variant="light" onClick={onClose} disabled={isSubmitting} radius="lg"> Cancelar </Button>
-                        <Button type="submit" loading={isSubmitting} disabled={loadingTiers || selectedTierId === null || (customer.currentTier?.id ?? 'null') === selectedTierId} radius="lg" leftSection={<IconStairsUp size={16}/>}> Confirmar Cambio </Button>
+        <Modal
+            opened={opened}
+            onClose={onClose}
+            title={`Cambiar Nivel Manualmente para ${customer?.name || customer?.email || 'Cliente'}`}
+            centered
+        >
+             {customer && <Text size="sm" mb="xs">Nivel actual: {customer.currentTier?.name || 'Básico'}</Text>}
+
+            {loadingTiers && <Group justify="center"><Loader /></Group>}
+            {errorTiers && !loadingTiers && (
+                <Alert title="Error Cargando Niveles" color="red" icon={<IconAlertCircle />}>
+                    {errorTiers}
+                </Alert>
+            )}
+            {!loadingTiers && !errorTiers && customer && (
+                <>
+                    <Select
+                        label="Selecciona el Nuevo Nivel"
+                        placeholder="Elige un nivel de la lista"
+                        data={tiers}
+                        value={selectedTierId}
+                        onChange={setSelectedTierId}
+                        searchable
+                        nothingFoundMessage="No hay niveles disponibles o no se encontraron."
+                        required
+                        disabled={tiers.length === 0} // Deshabilitar si no hay niveles
+                        mb="md"
+                    />
+                    <Group justify="flex-end" mt="lg">
+                        <Button variant="default" onClick={onClose} disabled={loadingChange}>Cancelar</Button>
+                        <Button
+                            onClick={handleChangeTier}
+                            loading={loadingChange}
+                            disabled={!selectedTierId || selectedTierId === (customer.currentTier?.id || null)} // Deshabilitar si no se selecciona o es el mismo nivel
+                        >
+                            Cambiar Nivel
+                        </Button>
                     </Group>
-                </Stack>
-            </form>
+                </>
+            )}
+             {!loadingTiers && !errorTiers && !customer && (
+                 <Text c="dimmed">No se ha seleccionado ningún cliente.</Text>
+             )}
         </Modal>
     );
 };
