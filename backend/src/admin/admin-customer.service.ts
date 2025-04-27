@@ -1,5 +1,5 @@
 // filename: backend/src/admin/admin-customer.service.ts
-// Version: 1.1.0 (Add toggleActiveStatusForCustomer function)
+// Version: 1.2.1 (Fix: Remove non-existent minPoints from Tier select in details)
 
 // Contiene la lógica para las operaciones de administrador sobre clientes
 
@@ -20,9 +20,40 @@ interface GetCustomersOptions {
     }
 }
 
+// --- Selector y Tipo para Detalles del Cliente ---
+const customerDetailsSelector = Prisma.validator<Prisma.UserSelect>()({
+    id: true,
+    email: true,
+    name: true,
+    points: true,
+    createdAt: true,
+    isActive: true,
+    isFavorite: true,
+    tierAchievedAt: true,
+    // lastActivityAt: true,
+    // adminNotes: true,
+    businessId: true,
+    role: true,
+    currentTier: {
+        select: {
+            id: true,
+            name: true,
+            level: true,
+            // minPoints: true, // <-- CAMPO ELIMINADO PORQUE NO EXISTE
+            description: true
+        }
+    }
+});
+
+// Creamos un tipo basado en el selector para usarlo como tipo de retorno
+export type CustomerDetails = Prisma.UserGetPayload<{ select: typeof customerDetailsSelector }>;
+// --- Fin Selector y Tipo ---
+
+
 // getCustomersForBusiness (sin cambios)
-export const getCustomersForBusiness = async ( businessId: string, options: GetCustomersOptions = {} ) => {
+export const getCustomersForBusiness = async ( businessId: string, options: GetCustomersOptions = {} ): Promise<{ items: any[], totalPages: number, currentPage: number, totalItems: number }> => {
     const { page = 1, limit = 10, sortBy = 'createdAt', sortDir = 'desc', filters = {} } = options;
+    // ... (resto de la función sin cambios)
     console.log(`[ADM_CUST_SVC] Fetching customers for business ID: ${businessId}, Page: ${page}, Limit: ${limit}, SortBy: ${sortBy}, SortDir: ${sortDir}, Filters:`, filters);
     const allowedSortByFields = ['name', 'email', 'points', 'createdAt', 'isActive', 'isFavorite', 'currentTier.level'];
     const safeSortBy = allowedSortByFields.includes(sortBy) ? sortBy : 'createdAt';
@@ -65,9 +96,44 @@ export const getCustomersForBusiness = async ( businessId: string, options: GetC
     }
 };
 
+// getCustomerDetailsById (sin cambios funcionales, solo la definición del selector)
+export const getCustomerDetailsById = async (customerId: string, adminBusinessId: string): Promise<CustomerDetails | null> => {
+    console.log(`[ADM_CUST_SVC] Getting details for customer ${customerId} by admin from business ${adminBusinessId}`);
+    try {
+        const customerDetails = await prisma.user.findUnique({
+            where: {
+                id: customerId,
+                businessId: adminBusinessId,
+                role: UserRole.CUSTOMER_FINAL
+            },
+            select: customerDetailsSelector // Usa el selector corregido
+        });
+
+        if (!customerDetails) {
+            console.warn(`[ADM_CUST_SVC] Customer details not found or access denied for customer ${customerId}, admin business ${adminBusinessId}.`);
+            throw new Error(`Cliente con ID ${customerId} no encontrado o no pertenece a tu negocio.`);
+        }
+
+        console.log(`[ADM_CUST_SVC] Details found for customer ${customerId}`);
+        return customerDetails;
+
+    } catch (error) {
+        console.error(`[ADM_CUST_SVC] Error getting details for customer ${customerId}:`, error);
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+             throw new Error(`Error de base de datos al obtener detalles del cliente: ${error.message}`);
+         }
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error('Error inesperado al obtener los detalles del cliente.');
+    }
+};
+
+
 // adjustPointsForCustomer (sin cambios)
 export const adjustPointsForCustomer = async ( customerId: string, adminBusinessId: string, amount: number, reason?: string | null ): Promise<User> => {
-    console.log(`[ADM_CUST_SVC] Attempting to adjust points for customer ${customerId} by ${amount}. Reason: ${reason || 'N/A'}. Admin Business: ${adminBusinessId}`);
+    // ... (código existente sin cambios)
+     console.log(`[ADM_CUST_SVC] Attempting to adjust points for customer ${customerId} by ${amount}. Reason: ${reason || 'N/A'}. Admin Business: ${adminBusinessId}`);
     if (amount === 0) { throw new Error("La cantidad de puntos a ajustar no puede ser cero."); }
     try {
         const updatedUser = await prisma.$transaction(async (tx) => {
@@ -89,7 +155,8 @@ export const adjustPointsForCustomer = async ( customerId: string, adminBusiness
 
 // changeCustomerTier (sin cambios)
 export const changeCustomerTier = async ( customerId: string, adminBusinessId: string, newTierId: string | null ): Promise<User> => {
-    console.log(`[ADM_CUST_SVC] Attempting to change tier for customer ${customerId} to tier ${newTierId ?? 'NULL'}. Admin Business: ${adminBusinessId}`);
+    // ... (código existente sin cambios)
+     console.log(`[ADM_CUST_SVC] Attempting to change tier for customer ${customerId} to tier ${newTierId ?? 'NULL'}. Admin Business: ${adminBusinessId}`);
     try {
         const updatedUser = await prisma.$transaction(async (tx) => {
             const customer = await tx.user.findUnique({ where: { id: customerId, businessId: adminBusinessId }, select: { id: true, email: true } });
@@ -110,7 +177,8 @@ export const changeCustomerTier = async ( customerId: string, adminBusinessId: s
 
 // assignRewardToCustomer (sin cambios)
 export const assignRewardToCustomer = async ( customerId: string, adminBusinessId: string, rewardId: string, adminUserId: string ): Promise<GrantedReward> => {
-    console.log(`[ADM_CUST_SVC] Attempting to assign reward ${rewardId} to customer ${customerId} by admin ${adminUserId} from business ${adminBusinessId}`);
+    // ... (código existente sin cambios)
+     console.log(`[ADM_CUST_SVC] Attempting to assign reward ${rewardId} to customer ${customerId} by admin ${adminUserId} from business ${adminBusinessId}`);
     try {
         const grantedReward = await prisma.$transaction(async (tx) => {
             const customer = await tx.user.findUnique({ where: { id: customerId, businessId: adminBusinessId }, select: { id: true, email: true } });
@@ -131,20 +199,19 @@ export const assignRewardToCustomer = async ( customerId: string, adminBusinessI
     }
 };
 
-// toggleFavoriteStatus (sin cambios, pero ajustamos tipo de retorno)
-// Definimos un tipo para la respuesta parcial que necesitamos
+// toggleFavoriteStatus (sin cambios funcionales)
 type FavoriteStatusUpdate = Pick<User, 'id' | 'email' | 'isFavorite'>;
-
 export const toggleFavoriteStatus = async ( customerId: string, adminBusinessId: string ): Promise<FavoriteStatusUpdate> => {
-    console.log(`[ADM_CUST_SVC] Attempting to toggle favorite status for customer ${customerId} by admin from business ${adminBusinessId}`);
+    // ... (código existente sin cambios)
+     console.log(`[ADM_CUST_SVC] Attempting to toggle favorite status for customer ${customerId} by admin from business ${adminBusinessId}`);
     try {
         const updatedUser = await prisma.$transaction(async (tx) => {
             const customer = await tx.user.findUnique({ where: { id: customerId, businessId: adminBusinessId }, select: { id: true, isFavorite: true, email: true } });
             if (!customer) { throw new Error(`Cliente con ID ${customerId} no encontrado o no pertenece a tu negocio.`); }
             const newFavoriteStatus = !customer.isFavorite;
-            const userAfterUpdate = await tx.user.update({ where: { id: customerId }, data: { isFavorite: newFavoriteStatus }, select: { id: true, email: true, isFavorite: true } }); // Seleccionamos solo lo necesario
+            const userAfterUpdate = await tx.user.update({ where: { id: customerId }, data: { isFavorite: newFavoriteStatus }, select: { id: true, email: true, isFavorite: true } });
             console.log(`[ADM_CUST_SVC] Favorite status for customer ${customer.email} (${customerId}) toggled to ${newFavoriteStatus}`);
-            return userAfterUpdate; // El tipo devuelto ahora coincide con FavoriteStatusUpdate
+            return userAfterUpdate;
         });
         return updatedUser;
     } catch (error) {
@@ -155,75 +222,27 @@ export const toggleFavoriteStatus = async ( customerId: string, adminBusinessId:
     }
 };
 
-
-// --- NUEVA FUNCIÓN ---
-/**
- * Cambia el estado activo/inactivo de un cliente.
- * Verifica que el admin pertenezca al mismo negocio que el cliente.
- */
-// Definimos un tipo para la respuesta parcial que necesitamos
+// toggleActiveStatusForCustomer (sin cambios)
 type ActiveStatusUpdate = Pick<User, 'id' | 'email' | 'isActive'>;
-
 export const toggleActiveStatusForCustomer = async ( customerId: string, adminBusinessId: string ): Promise<ActiveStatusUpdate> => {
-    console.log(`[ADM_CUST_SVC] Attempting to toggle active status for customer ${customerId} by admin from business ${adminBusinessId}`);
+    // ... (código existente sin cambios)
+     console.log(`[ADM_CUST_SVC] Attempting to toggle active status for customer ${customerId} by admin from business ${adminBusinessId}`);
     try {
-        // Usar transacciÃ³n para verificar pertenencia y obtener estado actual antes de actualizar
         const updatedUser = await prisma.$transaction(async (tx) => {
-            // 1. Buscar cliente, verificar pertenencia y obtener estado actual
-            const customer = await tx.user.findUnique({
-                where: {
-                    id: customerId,
-                    businessId: adminBusinessId // Verificar pertenencia directamente
-                },
-                select: {
-                    id: true,
-                    isActive: true, // Necesitamos el estado actual
-                    email: true     // Para logs/mensajes
-                }
-            });
-
-            // Verificar si el cliente existe y pertenece al negocio
-            if (!customer) {
-                throw new Error(`Cliente con ID ${customerId} no encontrado o no pertenece a tu negocio.`);
-            }
-
-            // 2. Calcular el nuevo estado y actualizar
+            const customer = await tx.user.findUnique({ where: { id: customerId, businessId: adminBusinessId }, select: { id: true, isActive: true, email: true } });
+            if (!customer) { throw new Error(`Cliente con ID ${customerId} no encontrado o no pertenece a tu negocio.`); }
             const newActiveStatus = !customer.isActive;
-            const userAfterUpdate = await tx.user.update({
-                where: {
-                    id: customerId
-                    // No necesitamos businessId aquÃ­ porque ya lo verificamos en findUnique
-                },
-                data: {
-                    isActive: newActiveStatus // Establecer el nuevo estado
-                },
-                select: { // Seleccionar solo los campos necesarios para la respuesta
-                    id: true,
-                    email: true,
-                    isActive: true
-                }
-            });
-
+            const userAfterUpdate = await tx.user.update({ where: { id: customerId }, data: { isActive: newActiveStatus }, select: { id: true, email: true, isActive: true } });
             console.log(`[ADM_CUST_SVC] Active status for customer ${customer.email} (${customerId}) toggled to ${newActiveStatus}`);
-            return userAfterUpdate; // Devuelve el objeto con id, email, isActive
+            return userAfterUpdate;
         });
-
-        // El tipo devuelto por la transacciÃ³n coincide con ActiveStatusUpdate
         return updatedUser;
-
     } catch (error) {
         console.error(`[ADM_CUST_SVC] Error toggling active status for customer ${customerId}:`, error);
-        if (error instanceof Prisma.PrismaClientKnownRequestError) {
-             // El cÃ³digo P2025 ('Record to update not found.') serÃ­a manejado por el findUnique inicial
-             if (error.code === 'P2025') { throw new Error(`No se encontrÃ³ el cliente especificado al intentar actualizar.`); }
-             throw new Error(`Error de base de datos al cambiar estado activo: ${error.message}`);
-         }
-        if (error instanceof Error) { // Relanzar errores de validaciÃ³n (no encontrado, etc.)
-            throw error;
-        }
+        if (error instanceof Prisma.PrismaClientKnownRequestError) { if (error.code === 'P2025') { throw new Error(`No se encontró el cliente especificado al intentar actualizar.`); } throw new Error(`Error de base de datos al cambiar estado activo: ${error.message}`); }
+        if (error instanceof Error) { throw error; }
         throw new Error('Error inesperado al cambiar el estado activo del cliente.');
     }
 };
-// --- FIN NUEVA FUNCIÓN ---
 
 // End of File: backend/src/admin/admin-customer.service.ts

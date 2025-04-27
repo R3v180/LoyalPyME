@@ -1,5 +1,5 @@
-// File: backend/src/tiers/tier.service.ts
-// Version: 1.0.0 (Contains CRUD operations for Tier model)
+// filename: backend/src/tiers/tiers.service.ts
+// Version: 1.0.1 (Add debug log)
 
 import { PrismaClient, Tier, Prisma } from '@prisma/client';
 
@@ -21,15 +21,15 @@ export const createTier = async (
              data: {
                  ...tierData,
                  business: {
-                    connect: { id: businessId }
+                     connect: { id: businessId }
                  }
              },
         });
         console.log(`[Tier SVC] Tier created successfully with ID: ${newTier.id}`);
         return newTier;
      } catch (error) {
-        console.error(`[Tier SVC] Error creating tier for business ${businessId}:`, error);
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+         console.error(`[Tier SVC] Error creating tier for business ${businessId}:`, error);
+         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
              const target = error.meta?.target as string[];
              if (target?.includes('level')) {
                  throw new Error(`Ya existe un Tier con el nivel '${tierData.level}' para este negocio.`);
@@ -37,8 +37,8 @@ export const createTier = async (
                  throw new Error(`Ya existe un Tier con el nombre '${tierData.name}' para este negocio.`);
              }
              throw new Error('Conflicto de unicidad al crear el Tier (nivel o nombre ya existen).');
-        }
-        throw new Error('Error al crear el nivel de fidelización.');
+         }
+         throw new Error('Error al crear el nivel de fidelización.');
      }
 };
 
@@ -58,9 +58,15 @@ export const findTiersByBusiness = async (businessId: string, includeBenefits: b
                 benefits: includeBenefits,
             }
         });
+        // --- NUEVO LOG ---
+        console.log(`[Tier SVC] Prisma findMany finished. Found ${tiers.length} tiers.`);
+        // ---------------
         return tiers;
     } catch (error) {
-         console.error(`[Tier SVC] Error finding tiers for business ${businessId}:`, error);
+        // --- NUEVO LOG ---
+        console.error(`[Tier SVC] *** ERROR within findTiersByBusiness try/catch for business ${businessId}:`, error);
+        // ---------------
+         console.error(`[Tier SVC] Error finding tiers for business ${businessId}:`, error); // Mantener log original también
          throw new Error('Error al buscar los niveles de fidelización.');
     }
 };
@@ -166,4 +172,4 @@ export const deleteTier = async (tierId: string, businessId: string): Promise<Ti
      }
 };
 
-// End of File: backend/src/tiers/tier.service.ts
+// End of File: backend/src/tiers/tiers.service.ts

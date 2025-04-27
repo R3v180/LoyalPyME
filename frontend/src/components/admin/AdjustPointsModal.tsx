@@ -1,5 +1,5 @@
 // filename: frontend/src/components/admin/AdjustPointsModal.tsx
-// Version: 1.1.0 (Fix: Update Customer import path)
+// Version: 1.1.1 (Fix: Use POST method to match backend route)
 
 import React, { useState, useEffect } from 'react';
 import { Modal, TextInput, Button, Group, Text, NumberInput } from '@mantine/core';
@@ -9,7 +9,7 @@ import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX } from '@tabler/icons-react';
 
 // Importar Customer desde la ubicación correcta (el hook)
-import { Customer } from '../../hooks/useAdminCustomers'; // <-- Ruta actualizada
+import { Customer } from '../../hooks/useAdminCustomers'; // Ruta actualizada
 
 interface AdjustPointsModalProps {
     opened: boolean;
@@ -21,22 +21,13 @@ interface AdjustPointsModalProps {
 const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({ opened, onClose, customer, onSuccess }) => {
     const [loading, setLoading] = useState(false);
     const form = useForm({
-        initialValues: {
-            amount: 0,
-            reason: '' // Campo opcional para la razón
-        },
-        validate: {
-            amount: (value) => (value === 0 ? 'La cantidad no puede ser cero' : null),
-        }
+        initialValues: { amount: 0, reason: '' },
+        validate: { amount: (value) => (value === 0 ? 'La cantidad no puede ser cero' : null), }
     });
 
     // Resetear form cuando el modal se abre o el cliente cambia
     useEffect(() => {
-        if (opened) {
-            form.reset();
-            // Podrías inicializar la razón si quieres
-            // form.setFieldValue('reason', `Ajuste para ${customer?.name || customer?.email}`);
-        }
+        if (opened) { form.reset(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [opened, customer]);
 
@@ -46,17 +37,19 @@ const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({ opened, onClose, 
         try {
             const payload = {
                 amount: values.amount,
-                reason: values.reason || null // Enviar null si está vacío
+                reason: values.reason || null
             };
-            await axiosInstance.patch(`/admin/customers/${customer.id}/adjust-points`, payload);
+            // --- CORRECCIÓN: Cambiar .patch a .post ---
+            await axiosInstance.post(`/admin/customers/${customer.id}/adjust-points`, payload);
+            // --- FIN CORRECCIÓN ---
             notifications.show({
                 title: 'Éxito',
                 message: `Puntos ajustados correctamente para ${customer.name || customer.email}.`,
                 color: 'green',
                 icon: <IconCheck size={18} />,
             });
-            onSuccess(); // Llama al callback para refrescar
-            onClose(); // Cierra el modal
+            onSuccess();
+            onClose();
         } catch (error: any) {
             console.error("Error adjusting points:", error);
             notifications.show({
