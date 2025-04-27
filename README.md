@@ -9,7 +9,9 @@
 
 ---
 
-🇬🇧 **You are reading the English version.** | 🇪🇸 [Leer en Español](README.es.md) ---
+🇬🇧 **You are reading the English version.** | 🇪🇸 [Leer en Español](README.es.md)
+
+---
 
 # LoyalPyME 🇬🇧
 
@@ -169,7 +171,7 @@ To get the project up and running in your development environment:
     ```
     _(See `backend/.env.example` for variable details and examples)._
 4.  **Configure your `.env` file:** Open the newly created `backend/.env` file and:
-    - Replace the `DATABASE_URL` placeholders (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`) with your **actual local PostgreSQL connection details**. _(Example based on your setup: `postgresql://postgres:Matrix2010%40@localhost:5432/loyalpymedb?schema=public` - Adjust user/password/db name if different!)_
+    - Replace the `DATABASE_URL` placeholders (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`) with your **actual local PostgreSQL connection details**. _(Example: `postgresql://postgres:YOUR_DB_PASSWORD@localhost:5432/loyalpymedb?schema=public` - Adjust user/password/db name with your local details!)_
     - Replace the `JWT_SECRET` placeholder with a **strong, unique, random string** (at least 32 characters long). You can generate one using `openssl rand -hex 32` in your terminal or a reliable online generator. **Do not use the placeholder value!**
     - Optionally, set the `PORT` if you need the backend to run on a port other than 3000.
     - **Important:** Ensure your `.env` file is listed in your root `.gitignore` file to prevent accidentally committing secrets.

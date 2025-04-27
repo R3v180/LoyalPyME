@@ -171,7 +171,7 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
     ```
     _(Consulta `backend/.env.example` para detalles y ejemplos de las variables)._
 4.  **Configura tu archivo `.env`:** Abre el archivo `backend/.env` recién creado y:
-    - Reemplaza los placeholders de `DATABASE_URL` (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`) con los detalles de **tu conexión local a PostgreSQL**. _(Ejemplo basado en tu configuración: `postgresql://postgres:Matrix2010%40@localhost:5432/loyalpymedb?schema=public` - ¡Ajusta usuario/contraseña/nombre de BD si son diferentes!)_
+    - Reemplaza los placeholders de `DATABASE_URL` (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`) con los detalles de **tu conexión local a PostgreSQL**. _(Ejemplo: `postgresql://postgres:TU_CONTRASENA_BD@localhost:5432/loyalpymedb?schema=public` - ¡Ajusta usuario/contraseña/nombre de BD con tus datos locales!)_
     - Reemplaza el placeholder de `JWT_SECRET` con una **cadena de texto aleatoria, única y segura** (mínimo 32 caracteres). Puedes generar una con `openssl rand -hex 32` en tu terminal o un generador online fiable. **¡No uses el valor del placeholder!**
     - Opcionalmente, define el `PORT` si necesitas que el backend se ejecute en un puerto distinto al 3000.
     - **Importante:** Asegúrate de que tu archivo `.env` está listado en tu archivo `.gitignore` raíz para prevenir subir secretos accidentalmente.
