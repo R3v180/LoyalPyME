@@ -1,5 +1,5 @@
 // filename: frontend/src/pages/admin/AdminCustomerManagementPage.tsx
-// Version: 1.9.1 (Fix: Remove redundant /api prefix in axios calls)
+// Version: 1.9.3 (Fix: Remove unused AxiosError import)
 
 import React, { useState, useCallback } from 'react';
 import {
@@ -15,6 +15,7 @@ import ChangeTierModal from '../../components/admin/ChangeTierModal';
 import AssignRewardModal from '../../components/admin/AssignRewardModal';
 import CustomerDetailsModal, { CustomerDetails } from '../../components/admin/CustomerDetailsModal';
 import { notifications } from '@mantine/notifications';
+// import { AxiosError } from 'axios'; // <-- Importación eliminada
 
 // Importamos el hook y el tipo Customer básico
 import { useAdminCustomers, Customer } from '../../hooks/useAdminCustomers';
@@ -29,29 +30,24 @@ const AdminCustomerManagementPage: React.FC = () => {
         searchTerm, setSearchTerm, sortStatus, handleSort, refreshData
     } = useAdminCustomers();
 
-    // Estados locales de UI para Modales existentes
+    // Estados locales de UI
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [adjustModalOpened, { open: openAdjustModal, close: closeAdjustModal }] = useDisclosure(false);
     const [changeTierModalOpened, { open: openChangeTierModal, close: closeChangeTierModal }] = useDisclosure(false);
     const [assignRewardModalOpened, { open: openAssignRewardModal, close: closeAssignRewardModal }] = useDisclosure(false);
-
-    // Nuevos Estados para el Modal de Detalles
     const [detailsModalOpened, { open: openDetailsModal, close: closeDetailsModal }] = useDisclosure(false);
     const [selectedCustomerDetails, setSelectedCustomerDetails] = useState<CustomerDetails | null>(null);
     const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
     const [errorDetails, setErrorDetails] = useState<string | null>(null);
-
-    // Estados de carga para acciones en fila
     const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
     const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
+    const [isSavingNotes, setIsSavingNotes] = useState<boolean>(false);
 
     // --- Handlers Modales Existentes ---
     const handleOpenAdjustPoints = useCallback((customer: Customer) => { setSelectedCustomer(customer); openAdjustModal(); }, [openAdjustModal]);
     const handleAdjustSuccess = useCallback(() => { refreshData(); closeAdjustModal(); setSelectedCustomer(null); }, [refreshData, closeAdjustModal]);
-
     const handleOpenChangeTier = useCallback((customer: Customer) => { setSelectedCustomer(customer); openChangeTierModal(); }, [openChangeTierModal]);
     const handleChangeTierSuccess = useCallback(() => { refreshData(); closeChangeTierModal(); setSelectedCustomer(null); }, [refreshData, closeChangeTierModal]);
-
     const handleOpenAssignReward = useCallback((customer: Customer) => { setSelectedCustomer(customer); openAssignRewardModal(); }, [openAssignRewardModal]);
     const handleAssignRewardSuccess = useCallback(() => { console.log('AssignRewardModal success callback triggered (no refresh implemented).'); closeAssignRewardModal(); setSelectedCustomer(null); }, [closeAssignRewardModal]);
 
@@ -59,7 +55,6 @@ const AdminCustomerManagementPage: React.FC = () => {
     const handleToggleFavorite = useCallback(async (customerId: string, currentIsFavorite: boolean) => {
         setTogglingFavoriteId(customerId);
         try {
-            // CORREGIDO: Quitar /api inicial
             await axiosInstance.patch(`/admin/customers/${customerId}/toggle-favorite`);
             notifications.show({ title: 'Estado Cambiado', message: `Cliente ${!currentIsFavorite ? 'marcado como' : 'desmarcado de'} favorito.`, color: 'green', icon: <IconCheck size={18} /> });
             refreshData();
@@ -69,11 +64,10 @@ const AdminCustomerManagementPage: React.FC = () => {
     }, [refreshData]);
 
     const handleToggleActive = useCallback(async (customer: Customer) => {
-        const actionText = customer.isActive ? 'desactivar' : 'activar';
+       const actionText = customer.isActive ? 'desactivar' : 'activar';
         if (!window.confirm(`¿Estás seguro de que quieres ${actionText} a ${customer.email}?`)) { return; }
         setTogglingActiveId(customer.id);
         try {
-             // CORREGIDO: Quitar /api inicial
             await axiosInstance.patch(`/admin/customers/${customer.id}/toggle-active`);
             notifications.show({ title: 'Estado Actualizado', message: `Cliente ${customer.email} ${customer.isActive ? 'desactivado' : 'activado'} correctamente.`, color: 'green', icon: <IconCheck size={18} />, });
             refreshData();
@@ -83,11 +77,11 @@ const AdminCustomerManagementPage: React.FC = () => {
         } finally { setTogglingActiveId(null); }
     }, [refreshData]);
 
+    // Handler Ver Detalles
     const handleViewDetails = useCallback(async (customer: Customer) => {
         console.log(`Workspaceing details for customer: ${customer.id}`);
         setSelectedCustomerDetails(null); setErrorDetails(null); setLoadingDetails(true); openDetailsModal();
         try {
-            // CORREGIDO: Quitar /api inicial
             const response = await axiosInstance.get<CustomerDetails>(`/admin/customers/${customer.id}/details`);
             setSelectedCustomerDetails(response.data);
         } catch (err: any) {
@@ -96,19 +90,47 @@ const AdminCustomerManagementPage: React.FC = () => {
         } finally { setLoadingDetails(false); }
     }, [openDetailsModal]);
 
+     // Handler Cerrar Modal Detalles
      const handleCloseDetailsModal = () => {
          closeDetailsModal(); setSelectedCustomerDetails(null); setLoadingDetails(false); setErrorDetails(null);
      };
+
+    // Handler para Guardar Notas
+    const handleSaveNotes = useCallback(async (notes: string | null) => {
+        if (!selectedCustomerDetails?.id) {
+             console.error("Cannot save notes, customer details or ID are missing.");
+             notifications.show({ title: 'Error Interno', message: 'No se puede guardar notas: falta información del cliente.', color: 'red' });
+             return Promise.reject(new Error("Missing customer ID")); // Devolver promesa rechazada
+        }
+        const customerId = selectedCustomerDetails.id;
+        console.log(`[ADM_CUST_PAGE] Saving notes for customer ${customerId}`);
+        setIsSavingNotes(true);
+
+        try {
+            await axiosInstance.patch(`/admin/customers/${customerId}/notes`, { notes: notes });
+            notifications.show({ title: 'Notas Guardadas', message: 'Las notas del administrador se han guardado correctamente.', color: 'green', icon: <IconCheck size={18} />, });
+            // Refrescar detalles en el modal
+            const response = await axiosInstance.get<CustomerDetails>(`/admin/customers/${customerId}/details`);
+            setSelectedCustomerDetails(response.data);
+            // return Promise.resolve(); // Indicar éxito al modal (opcional)
+
+        } catch (err: any) {
+            console.error(`Error saving notes for customer ${customerId}:`, err);
+            notifications.show({ title: 'Error al Guardar', message: `No se pudieron guardar las notas: ${err.response?.data?.message || err.message}`, color: 'red', icon: <IconX size={18} />, });
+            throw err; // Relanzar error para que el modal sepa que falló
+        } finally {
+            setIsSavingNotes(false);
+        }
+    }, [selectedCustomerDetails, setSelectedCustomerDetails]);
     // --------------------------------------
 
-    // --- Renderizado principal (sin cambios) ---
+    // --- Renderizado principal ---
     return (
         <>
             <Paper shadow="sm" p="lg" withBorder radius="lg">
                 <Stack gap="lg">
                     <Title order={2}>Gestión de Clientes</Title>
                     <TextInput placeholder="Buscar por nombre o email..." leftSection={<IconSearch size={16} stroke={1.5} />} value={searchTerm} onChange={(event) => setSearchTerm(event.currentTarget.value)} radius="lg"/>
-                    {/* TODO: Añadir aquí el Checkbox/Switch para filtrar favoritos */}
                     {loading && <Group justify="center" p="md"><Loader /></Group>}
                     {error && !loading && <Alert title="Error" color="red" icon={<IconAlertCircle />}>{error}</Alert>}
                     {!loading && !error && customers.length === 0 && (<Text c="dimmed" ta="center" p="md"> No se encontraron clientes{searchTerm ? ' para la búsqueda actual' : ''}. </Text> )}
@@ -139,8 +161,9 @@ const AdminCustomerManagementPage: React.FC = () => {
                  opened={detailsModalOpened}
                  onClose={handleCloseDetailsModal}
                  customerDetails={selectedCustomerDetails}
-                 isLoading={loadingDetails}
+                 isLoading={loadingDetails || isSavingNotes} // Pasamos también isSavingNotes
                  error={errorDetails}
+                 onSaveNotes={handleSaveNotes} // Pasamos la función de guardado
              />
         </>
     );
