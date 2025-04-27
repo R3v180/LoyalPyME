@@ -1,5 +1,5 @@
 // filename: frontend/src/pages/admin/AdminCustomerManagementPage.tsx
-// Version: 1.12.0 (Implement bulk delete action with confirmation - COMPLETE FILE)
+// Version: 1.13.1 (Fix: Correct type for handleBulkAdjustPointsSubmit parameter - COMPLETE FILE MANUALLY VERIFIED)
 
 import React, { useState, useCallback } from 'react';
 import {
@@ -8,15 +8,16 @@ import {
 } from '@mantine/core';
 import {
     IconSearch, IconAlertCircle, IconCheck, IconX,
-    IconPlayerPlay, IconPlayerStop, IconTrash // <-- Icono para borrar
+    IconPlayerPlay, IconPlayerStop, IconTrash, IconPlusMinus // Añadido IconPlusMinus
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
-import { useModals } from '@mantine/modals'; // <-- Importar useModals
+import { useModals } from '@mantine/modals';
 import axiosInstance from '../../services/axiosInstance';
 import AdjustPointsModal from '../../components/admin/AdjustPointsModal';
 import ChangeTierModal from '../../components/admin/ChangeTierModal';
 import AssignRewardModal from '../../components/admin/AssignRewardModal';
 import CustomerDetailsModal, { CustomerDetails } from '../../components/admin/CustomerDetailsModal';
+import BulkAdjustPointsModal from '../../components/admin/BulkAdjustPointsModal'; // Importar nuevo modal
 import { notifications } from '@mantine/notifications';
 
 // Importamos el hook y el tipo Customer básico
@@ -28,7 +29,7 @@ import CustomerTable from '../../components/admin/CustomerTable';
 const AdminCustomerManagementPage: React.FC = () => {
     // Hooks
     const { customers, loading, error, activePage, totalPages, setPage, searchTerm, setSearchTerm, sortStatus, handleSort, refreshData } = useAdminCustomers();
-    const modals = useModals(); // Hook para modales de confirmación
+    const modals = useModals();
 
     // Estados locales de UI
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -36,6 +37,7 @@ const AdminCustomerManagementPage: React.FC = () => {
     const [changeTierModalOpened, { open: openChangeTierModal, close: closeChangeTierModal }] = useDisclosure(false);
     const [assignRewardModalOpened, { open: openAssignRewardModal, close: closeAssignRewardModal }] = useDisclosure(false);
     const [detailsModalOpened, { open: openDetailsModal, close: closeDetailsModal }] = useDisclosure(false);
+    const [bulkAdjustModalOpened, { open: openBulkAdjustModal, close: closeBulkAdjustModal }] = useDisclosure(false); // Estado nuevo modal
     const [selectedCustomerDetails, setSelectedCustomerDetails] = useState<CustomerDetails | null>(null);
     const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
     const [errorDetails, setErrorDetails] = useState<string | null>(null);
@@ -45,7 +47,7 @@ const AdminCustomerManagementPage: React.FC = () => {
     const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
     const [isPerformingBulkAction, setIsPerformingBulkAction] = useState<boolean>(false);
 
-    // --- Handlers Modales Existentes (Código Completo) ---
+    // --- Handlers Modales Existentes ---
     const handleOpenAdjustPoints = useCallback((customer: Customer) => { setSelectedCustomer(customer); openAdjustModal(); }, [openAdjustModal]);
     const handleAdjustSuccess = useCallback(() => { refreshData(); closeAdjustModal(); setSelectedCustomer(null); }, [refreshData, closeAdjustModal]);
     const handleOpenChangeTier = useCallback((customer: Customer) => { setSelectedCustomer(customer); openChangeTierModal(); }, [openChangeTierModal]);
@@ -53,7 +55,7 @@ const AdminCustomerManagementPage: React.FC = () => {
     const handleOpenAssignReward = useCallback((customer: Customer) => { setSelectedCustomer(customer); openAssignRewardModal(); }, [openAssignRewardModal]);
     const handleAssignRewardSuccess = useCallback(() => { console.log('AssignRewardModal success callback triggered (no refresh implemented).'); closeAssignRewardModal(); setSelectedCustomer(null); }, [closeAssignRewardModal]);
 
-    // --- Handlers Acciones Fila (Código Completo) ---
+    // --- Handlers Acciones Fila ---
     const handleToggleFavorite = useCallback(async (customerId: string, _currentIsFavorite: boolean) => {
         setTogglingFavoriteId(customerId);
         try {
@@ -79,7 +81,6 @@ const AdminCustomerManagementPage: React.FC = () => {
         } finally { setTogglingActiveId(null); }
     }, [refreshData]);
 
-    // Handler Ver Detalles (Código Completo)
     const handleViewDetails = useCallback(async (customer: Customer) => {
         console.log(`Workspaceing details for customer: ${customer.id}`);
         setSelectedCustomerDetails(null); setErrorDetails(null); setLoadingDetails(true); openDetailsModal();
@@ -92,17 +93,14 @@ const AdminCustomerManagementPage: React.FC = () => {
         } finally { setLoadingDetails(false); }
     }, [openDetailsModal]);
 
-     // Handler Cerrar Modal Detalles (Código Completo)
-     const handleCloseDetailsModal = () => {
+    const handleCloseDetailsModal = () => {
          closeDetailsModal(); setSelectedCustomerDetails(null); setLoadingDetails(false); setErrorDetails(null);
      };
 
-    // Handler para Guardar Notas (Código Completo)
     const handleSaveNotes = useCallback(async (notes: string | null) => {
         if (!selectedCustomerDetails?.id) {
              console.error("Cannot save notes, customer details or ID are missing.");
              notifications.show({ title: 'Error Interno', message: 'No se puede guardar notas: falta información del cliente.', color: 'red' });
-             // Devolvemos una promesa rechazada para que el modal sepa que falló
              return Promise.reject(new Error("Missing customer ID"));
         }
         const customerId = selectedCustomerDetails.id;
@@ -114,23 +112,19 @@ const AdminCustomerManagementPage: React.FC = () => {
             // Refrescar detalles en el modal
             const response = await axiosInstance.get<CustomerDetails>(`/admin/customers/${customerId}/details`);
             setSelectedCustomerDetails(response.data);
-             // Devolver promesa resuelta para indicar éxito (opcional)
-             // return Promise.resolve();
         } catch (err: any) {
             console.error(`Error saving notes for customer ${customerId}:`, err);
             notifications.show({ title: 'Error al Guardar', message: `No se pudieron guardar las notas: ${err.response?.data?.message || err.message}`, color: 'red', icon: <IconX size={18} />, });
-            throw err; // Relanzar error para que el modal sepa que falló
+            throw err;
         } finally {
             setIsSavingNotes(false);
         }
-    }, [selectedCustomerDetails, setSelectedCustomerDetails]); // Dependencia añadida para re-fetch
+    }, [selectedCustomerDetails, setSelectedCustomerDetails]); // Dependencia corregida
 
-    // Handler para actualizar selección (Código Completo)
     const handleRowSelectionChange = useCallback((selectedIds: string[]) => {
         setSelectedRowIds(selectedIds);
     }, []);
 
-    // Handler para Acción Masiva Activar/Desactivar (Código Completo)
     const handleBulkToggleActive = useCallback(async (targetStatus: boolean) => {
         const actionText = targetStatus ? 'activar' : 'desactivar';
         const count = selectedRowIds.length;
@@ -146,63 +140,52 @@ const AdminCustomerManagementPage: React.FC = () => {
             console.error(`Error during bulk ${actionText}:`, err);
             notifications.show({ title: 'Error en Acción Masiva', message: `No se pudo ${actionText} a los clientes: ${err.response?.data?.message || err.message}`, color: 'red', icon: <IconX size={18} />, });
         } finally { setIsPerformingBulkAction(false); }
-    }, [selectedRowIds, refreshData, setSelectedRowIds]);
+    }, [selectedRowIds, refreshData, setSelectedRowIds]); // Dependencia corregida
 
-    // --- NUEVO: Handler para Borrado Masivo ---
     const handleBulkDelete = useCallback(() => {
         const count = selectedRowIds.length;
-        if (count === 0) {
-            notifications.show({ title: 'Acción Masiva', message: 'No hay clientes seleccionados.', color: 'yellow' });
-            return;
-        }
-        // Abrir modal de confirmación Mantine
+        if (count === 0) { notifications.show({ title: 'Acción Masiva', message: 'No hay clientes seleccionados.', color: 'yellow' }); return; }
         modals.openConfirmModal({
-            title: `Confirmar Eliminación Masiva`,
-            centered: true,
-            children: (
-                <Text size="sm">
-                    ¿Estás seguro de que quieres eliminar permanentemente a {count} cliente(s) seleccionado(s)?
-                    <Text c="red" fw={700} component="span"> Esta acción no se puede deshacer.</Text>
-                </Text>
-            ),
-            labels: { confirm: 'Eliminar Clientes', cancel: 'Cancelar' },
-            confirmProps: { color: 'red' },
-            zIndex: 1001,
+            title: `Confirmar Eliminación Masiva`, centered: true,
+            children: ( <Text size="sm"> ¿Estás seguro de que quieres eliminar permanentemente a {count} cliente(s) seleccionado(s)? <Text c="red" fw={700} component="span"> Esta acción no se puede deshacer.</Text> </Text> ),
+            labels: { confirm: 'Eliminar Clientes', cancel: 'Cancelar' }, confirmProps: { color: 'red' }, zIndex: 1001,
             onCancel: () => console.log('Bulk delete cancelled'),
-            onConfirm: async () => { // Async para poder usar await dentro
+            onConfirm: async () => {
                 console.log(`[ADM_CUST_PAGE] Confirmed bulk delete for ${count} customers`);
-                setIsPerformingBulkAction(true); // Iniciar carga
+                setIsPerformingBulkAction(true);
                 try {
-                    // Llamar al endpoint masivo del backend para borrar
-                    const response = await axiosInstance.delete('/admin/customers/bulk-delete', {
-                        data: { customerIds: selectedRowIds } // Pasar IDs en el body.data
-                    });
-                    // Notificación de éxito
-                    notifications.show({
-                        title: 'Acción Masiva Completada',
-                        message: `${response.data.count} cliente(s) eliminados correctamente.`,
-                        color: 'green',
-                        icon: <IconCheck size={18} />,
-                    });
-                    // Refrescar datos y limpiar selección
+                    const response = await axiosInstance.delete('/admin/customers/bulk-delete', { data: { customerIds: selectedRowIds } });
+                    notifications.show({ title: 'Acción Masiva Completada', message: `${response.data.count} cliente(s) eliminados correctamente.`, color: 'green', icon: <IconCheck size={18} />, });
                     refreshData();
                     setSelectedRowIds([]);
                 } catch (err: any) {
-                    // Notificación de error
                     console.error(`Error during bulk delete:`, err);
-                    notifications.show({
-                        title: 'Error en Acción Masiva',
-                        message: `No se pudo eliminar a los clientes: ${err.response?.data?.message || err.message}`,
-                        color: 'red',
-                        icon: <IconX size={18} />,
-                    });
-                } finally {
-                    setIsPerformingBulkAction(false); // Terminar carga
-                }
+                    notifications.show({ title: 'Error en Acción Masiva', message: `No se pudo eliminar a los clientes: ${err.response?.data?.message || err.message}`, color: 'red', icon: <IconX size={18} />, });
+                } finally { setIsPerformingBulkAction(false); }
             },
         });
-    }, [selectedRowIds, refreshData, setSelectedRowIds, modals]); // Dependencias
-    // -------------------------------------------
+    }, [selectedRowIds, refreshData, setSelectedRowIds, modals]);
+
+    // Handler para el submit del modal de ajuste masivo (con tipo corregido)
+    const handleBulkAdjustPointsSubmit = useCallback(async (values: { amount: number; reason?: string | undefined }) => { // Tipo corregido
+        const { amount, reason } = values;
+        const count = selectedRowIds.length;
+        if (count === 0) { notifications.show({ title: 'Acción Masiva', message: 'Error inesperado: No hay clientes seleccionados.', color: 'red' }); return Promise.reject(new Error("No customers selected")); }
+        console.log(`[ADM_CUST_PAGE] Requesting bulk points adjustment by ${amount} for ${count} customers. Reason: ${reason || 'N/A'}`);
+        setIsPerformingBulkAction(true);
+        closeBulkAdjustModal();
+        try {
+            const response = await axiosInstance.post('/admin/customers/bulk-adjust-points', { customerIds: selectedRowIds, amount: amount, reason: reason || null });
+            notifications.show({ title: 'Acción Masiva Completada', message: `${Math.abs(amount)} puntos ${amount > 0 ? 'añadidos' : 'restados'} a ${response.data.count} cliente(s) correctamente.`, color: 'green', icon: <IconCheck size={18} />, });
+            refreshData();
+            setSelectedRowIds([]);
+        } catch (err: any) {
+            console.error(`Error during bulk points adjustment:`, err);
+            notifications.show({ title: 'Error en Acción Masiva', message: `No se pudo ajustar los puntos: ${err.response?.data?.message || err.message}`, color: 'red', icon: <IconX size={18} />, });
+            // No relanzamos error aquí, la notificación es suficiente
+        } finally { setIsPerformingBulkAction(false); }
+    }, [selectedRowIds, refreshData, setSelectedRowIds, closeBulkAdjustModal]);
+    // ------------------------------------------------------------------
 
     // --- Renderizado principal ---
     return (
@@ -212,33 +195,23 @@ const AdminCustomerManagementPage: React.FC = () => {
                     <Title order={2}>Gestión de Clientes</Title>
                     <TextInput placeholder="Buscar por nombre o email..." leftSection={<IconSearch size={16} stroke={1.5} />} value={searchTerm} onChange={(event) => setSearchTerm(event.currentTarget.value)} radius="lg"/>
 
-                    {/* Panel Acciones Masivas (con botón Eliminar funcional) */}
+                    {/* Panel Acciones Masivas */}
                     {selectedRowIds.length > 0 && (
                         <Paper p="xs" mb="md" withBorder shadow="xs" >
                             <Group justify="space-between">
                                 <Text fw={500} size="sm">{selectedRowIds.length} cliente(s) seleccionado(s)</Text>
                                 <Group>
-                                    {/* Botón Eliminar Funcional */}
-                                    <Button
-                                        size="xs" color="red" variant="filled"
-                                        leftSection={<IconTrash size={14}/>}
-                                        onClick={handleBulkDelete} // Llama al nuevo handler
-                                        loading={isPerformingBulkAction}
-                                        disabled={isPerformingBulkAction}
-                                    >
-                                        Eliminar Seleccionados
-                                    </Button>
-                                    {/* Resto de botones */}
+                                    <Button size="xs" color="red" variant="filled" leftSection={<IconTrash size={14}/>} onClick={handleBulkDelete} loading={isPerformingBulkAction} disabled={isPerformingBulkAction} > Eliminar Seleccionados </Button>
                                     <Button size="xs" color="green" variant="outline" leftSection={<IconPlayerPlay size={14}/>} onClick={() => handleBulkToggleActive(true)} loading={isPerformingBulkAction} disabled={isPerformingBulkAction} > Activar </Button>
                                     <Button size="xs" color="red" variant="outline" leftSection={<IconPlayerStop size={14}/>} onClick={() => handleBulkToggleActive(false)} loading={isPerformingBulkAction} disabled={isPerformingBulkAction} > Desactivar </Button>
-                                    <Button size="xs" color="blue" variant="outline" disabled={isPerformingBulkAction}>Ajustar Puntos (Próx.)</Button>
+                                    <Button size="xs" color="blue" variant="outline" leftSection={<IconPlusMinus size={14}/>} onClick={openBulkAdjustModal} disabled={isPerformingBulkAction} > Ajustar Puntos </Button>
                                 </Group>
                             </Group>
                         </Paper>
                     )}
                     {/* Fin Panel */}
 
-                    {/* Resto del renderizado (tabla, modales, etc.) */}
+                    {/* Tabla */}
                     {loading && <Group justify="center" p="md"><Loader /></Group>}
                     {error && !loading && <Alert title="Error" color="red" icon={<IconAlertCircle />}>{error}</Alert>}
                     {!loading && !error && customers.length === 0 && (<Text c="dimmed" ta="center" p="md"> No se encontraron clientes{searchTerm ? ' para la búsqueda actual' : ''}. </Text> )}
@@ -259,6 +232,7 @@ const AdminCustomerManagementPage: React.FC = () => {
                             onRowSelectionChange={handleRowSelectionChange}
                         />
                     )}
+                    {/* Paginación */}
                     {!loading && !error && totalPages > 1 && (<Group justify="center" mt="md"><Pagination total={totalPages} value={activePage} onChange={setPage} /></Group>)}
                 </Stack>
             </Paper>
@@ -267,13 +241,12 @@ const AdminCustomerManagementPage: React.FC = () => {
             <AdjustPointsModal opened={adjustModalOpened} onClose={() => { closeAdjustModal(); setSelectedCustomer(null); }} customer={selectedCustomer} onSuccess={handleAdjustSuccess}/>
             <ChangeTierModal opened={changeTierModalOpened} onClose={() => { closeChangeTierModal(); setSelectedCustomer(null); }} customer={selectedCustomer} onSuccess={handleChangeTierSuccess}/>
             <AssignRewardModal opened={assignRewardModalOpened} onClose={() => { closeAssignRewardModal(); setSelectedCustomer(null); }} customer={selectedCustomer} onSuccess={handleAssignRewardSuccess}/>
-            <CustomerDetailsModal
-                 opened={detailsModalOpened}
-                 onClose={handleCloseDetailsModal}
-                 customerDetails={selectedCustomerDetails}
-                 isLoading={loadingDetails || isSavingNotes}
-                 error={errorDetails}
-                 onSaveNotes={handleSaveNotes}
+            <CustomerDetailsModal opened={detailsModalOpened} onClose={handleCloseDetailsModal} customerDetails={selectedCustomerDetails} isLoading={loadingDetails || isSavingNotes} error={errorDetails} onSaveNotes={handleSaveNotes}/>
+            <BulkAdjustPointsModal
+                 opened={bulkAdjustModalOpened}
+                 onClose={closeBulkAdjustModal}
+                 onSubmit={handleBulkAdjustPointsSubmit} // Tipo corregido
+                 numberOfCustomers={selectedRowIds.length}
              />
         </>
     );

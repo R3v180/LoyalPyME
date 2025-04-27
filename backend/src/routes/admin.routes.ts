@@ -1,5 +1,5 @@
 // File: backend/src/routes/admin.routes.ts
-// Version: 2.1.0 (Add route for bulk deleting customers)
+// Version: 2.2.0 (Add route for bulk adjusting customer points)
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
@@ -18,7 +18,8 @@ import {
     getCustomerDetailsHandler,
     updateCustomerNotesHandler,
     bulkUpdateCustomerStatusHandler,
-    bulkDeleteCustomersHandler // <-- Importar el nuevo handler
+    bulkDeleteCustomersHandler,
+    bulkAdjustPointsHandler // <-- Importar el nuevo handler
 } from '../customer/admin-customer.controller'; // Asegúrate que esta ruta es correcta
 
 const router = Router();
@@ -44,16 +45,23 @@ router.patch(
     bulkUpdateCustomerStatusHandler
 );
 
-// --- NUEVA RUTA ---
 // DELETE /customers/bulk-delete (Eliminar varios clientes)
 router.delete(
     '/customers/bulk-delete',
+    checkRole([UserRole.BUSINESS_ADMIN]),
+    bulkDeleteCustomersHandler
+);
+
+// --- NUEVA RUTA ---
+// POST /customers/bulk-adjust-points (Ajustar puntos a varios clientes)
+router.post(
+    '/customers/bulk-adjust-points',
     checkRole([UserRole.BUSINESS_ADMIN]),   // Solo admins
-    bulkDeleteCustomersHandler              // Nuevo handler a implementar
+    bulkAdjustPointsHandler                 // Nuevo handler a implementar
 );
 // --- FIN NUEVA RUTA ---
 
-// TODO: Añadir aquí futuras rutas para acciones masivas (bulk points, etc.)
+// TODO: Añadir aquí futuras rutas para otras acciones masivas si fueran necesarias
 
 
 export default router;
