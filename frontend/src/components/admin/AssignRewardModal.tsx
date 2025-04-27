@@ -1,5 +1,5 @@
 // filename: frontend/src/components/admin/AssignRewardModal.tsx
-// Version: 1.1.0 (Fix: Update Customer import path)
+// Version: 1.1.3 (Fix: Use correct field name 'pointsCost' instead of 'pointsRequired')
 
 import React, { useState, useEffect } from 'react';
 import { Modal, Select, Button, Group, Text, Loader, Alert } from '@mantine/core';
@@ -8,22 +8,23 @@ import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX, IconAlertCircle } from '@tabler/icons-react';
 
 // Importar Customer desde la ubicación correcta (el hook)
-import { Customer } from '../../hooks/useAdminCustomers'; // <-- Ruta actualizada
+import { Customer } from '../../hooks/useAdminCustomers';
 
 // Interfaz para las recompensas obtenidas de la API
 interface Reward {
     id: string;
     name: string;
-    pointsRequired: number;
+    // --- CORRECCIÓN: Usar pointsCost ---
+    pointsCost: number;
+    // --- FIN CORRECCIÓN ---
     description?: string | null;
-    // Añade otros campos si son necesarios para la lógica de asignación
 }
 
 interface AssignRewardModalProps {
     opened: boolean;
     onClose: () => void;
     customer: Customer | null;
-    onSuccess: () => void; // Callback (actualmente no refresca, ver nota)
+    onSuccess: () => void;
 }
 
 const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, customer, onSuccess }) => {
@@ -38,12 +39,14 @@ const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, 
         if (opened) {
             setLoadingRewards(true);
             setErrorRewards(null);
-            setSelectedRewardId(null); // Resetear selección
-            axiosInstance.get<Reward[]>('/rewards') // Asume endpoint /api/rewards para obtener todas las recompensas
+            setSelectedRewardId(null);
+            axiosInstance.get<Reward[]>('/rewards') // La API devuelve objetos con 'pointsCost'
                 .then(response => {
                     const availableRewards = response.data.map(reward => ({
                         value: reward.id,
-                        label: `${reward.name} (${reward.pointsRequired} pts)`
+                        // --- CORRECCIÓN: Usar reward.pointsCost ---
+                        label: `${reward.name} (${reward.pointsCost ?? 'N/A'} pts)`
+                        // --- FIN CORRECCIÓN ---
                     }));
                     setRewards(availableRewards);
                 })
@@ -54,15 +57,19 @@ const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, 
                 .finally(() => {
                     setLoadingRewards(false);
                 });
+        } else if (!opened) {
+             setSelectedRewardId(null);
+             setRewards([]);
+             setErrorRewards(null);
         }
     }, [opened]);
 
+    // handleAssign ya funcionaba y usa la ruta correcta /assign-reward
     const handleAssign = async () => {
         if (!customer || !selectedRewardId) return;
         setLoadingAssign(true);
         try {
-            // Endpoint para que el admin asigne una recompensa como regalo
-            await axiosInstance.post(`/admin/customers/${customer.id}/grant-reward`, {
+            await axiosInstance.post(`/admin/customers/${customer.id}/assign-reward`, {
                 rewardId: selectedRewardId
             });
             notifications.show({
@@ -71,8 +78,8 @@ const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, 
                 color: 'green',
                 icon: <IconCheck size={18} />,
             });
-            onSuccess(); // Llama al callback (actualmente no hace nada en la página)
-            onClose(); // Cierra el modal
+            onSuccess();
+            onClose();
         } catch (error: any) {
             console.error("Error assigning reward:", error);
             notifications.show({
@@ -104,18 +111,22 @@ const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, 
                     <Select
                         label="Selecciona una Recompensa"
                         placeholder="Elige una recompensa de la lista"
-                        data={rewards}
+                        data={rewards} // Debería mostrar la label corregida con pointsCost
                         value={selectedRewardId}
                         onChange={setSelectedRewardId}
                         searchable
                         nothingFoundMessage="No hay recompensas disponibles o no se encontraron."
                         required
-                        disabled={rewards.length === 0} // Deshabilitar si no hay recompensas
+                        disabled={rewards.length === 0 || loadingAssign}
                         mb="md"
                     />
                     <Group justify="flex-end" mt="lg">
                         <Button variant="default" onClick={onClose} disabled={loadingAssign}>Cancelar</Button>
-                        <Button onClick={handleAssign} loading={loadingAssign} disabled={!selectedRewardId}>
+                        <Button
+                            onClick={handleAssign}
+                            loading={loadingAssign}
+                            disabled={!selectedRewardId || loadingRewards}
+                        >
                             Asignar Recompensa
                         </Button>
                     </Group>
