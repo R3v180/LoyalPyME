@@ -150,7 +150,7 @@ To get the project up and running in your development environment:
 
 - Node.js (v18+ recommended, check project specifics)
 - yarn (v1.x recommended, check project specifics)
-- Accessible PostgreSQL database server
+- Accessible PostgreSQL database server running locally.
 
 ### Backend Setup
 
@@ -163,32 +163,55 @@ To get the project up and running in your development environment:
     ```bash
     yarn install
     ```
-3.  Create a `.env` file in the `backend/` root with:
-    ```env
-    DATABASE_URL="postgresql://your_user:your_password@host:port/your_db?schema=public"
-    JWT_SECRET="your_strong_random_jwt_secret_here"
-    # PORT=3000 (Optional, defaults to 3000)
+3.  **Create your local environment file:** Locate the `backend/.env.example` file provided in the repository. Copy it to a new file named `backend/.env`:
+    ```bash
+    cp .env.example .env
     ```
-4.  Run Prisma migrations:
+    _(See `backend/.env.example` for variable details and examples)._
+4.  **Configure your `.env` file:** Open the newly created `backend/.env` file and:
+    - Replace the `DATABASE_URL` placeholders (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`) with your **actual local PostgreSQL connection details**. _(Example based on your setup: `postgresql://postgres:Matrix2010%40@localhost:5432/loyalpymedb?schema=public` - Adjust user/password/db name if different!)_
+    - Replace the `JWT_SECRET` placeholder with a **strong, unique, random string** (at least 32 characters long). You can generate one using `openssl rand -hex 32` in your terminal or a reliable online generator. **Do not use the placeholder value!**
+    - Optionally, set the `PORT` if you need the backend to run on a port other than 3000.
+    - **Important:** Ensure your `.env` file is listed in your root `.gitignore` file to prevent accidentally committing secrets.
+5.  **Set up the database schema:** Run Prisma migrations:
     ```bash
     npx prisma migrate dev
     ```
-5.  Generate Prisma Client:
+    _(This will create the database if it doesn't exist and apply all schema changes.)_
+6.  **Generate Prisma Client:** (Usually done by `migrate dev`, but safe to run explicitly)
     ```bash
     npx prisma generate
     ```
-6.  (Optional) Hash password for a test customer:
-    ```bash
-    # Edit the script first if needed!
-    npx ts-node scripts/hash-customer-password.ts
-    ```
+7.  **Initial Data & Test Credentials (IMPORTANT - Action Required):**
+    To log in and test the application, you need initial data like a business and an admin user. The preferred method needs to be finalized for this project. **Choose ONE option below and follow its steps:**
+
+    - **[ ] Option A: Database Seeding (Recommended - Needs Setup/Confirmation)**
+
+      - Run the seed command: `npx prisma db seed`
+      - This command _should_ populate the database with essential initial data (e.g., a default business, an admin user, potentially default tiers).
+      - **Test Credentials (Example - Confirm/Change in `prisma/seed.ts`!):** `admin@loyalpyme.test` / `password123`
+      - _(Note: This requires a functional `prisma/seed.ts` script. If it doesn't exist or work, use Option B)._
+
+    - **[ ] Option B: Manual Registration (If no seed script)**
+      - After starting both backend and frontend (see "Running the Project"), open your browser to `http://localhost:5173/register-business`.
+      - Use the form to register your first business and administrator account. Use these credentials to log in.
+
+    _(Project Maintainer: Please confirm the intended setup flow (A or B), implement the seed script if choosing A, update the example credentials, and remove the non-applicable option from these instructions.)_
+
+8.  **(Optional) Specific Test Customer Setup:**
+    - For specific scenarios requiring a pre-defined customer, you might need to create one manually in your database (using pgAdmin or similar) and then use the provided script to hash their password:
+      ```bash
+      # Edit 'scripts/hash-customer-password.ts' with the correct email/password first!
+      npx ts-node scripts/hash-customer-password.ts
+      ```
 
 ### Frontend Setup
 
-1.  Navigate to the `frontend` folder:
+1.  Navigate to the `frontend` folder (from the project root):
     ```bash
-    cd ../frontend
+    cd frontend
     ```
+    _(If you were in `backend`, use `cd ../frontend`)_
 2.  Install dependencies:
     ```bash
     yarn install
@@ -196,26 +219,27 @@ To get the project up and running in your development environment:
 
 ## Running the Project ▶️
 
-1.  Ensure your PostgreSQL server is running.
-2.  **Start the backend** (from `backend` folder):
+1.  Ensure your PostgreSQL server is **running**.
+2.  **Start the backend** (from the `backend` folder):
 
     ```bash
-    # Recommended (stable):
+    # Recommended (stable, reflects production build):
     yarn build && node dist/index.js
 
-    # Alternative (currently unstable due to ts-node issues):
+    # Alternative for development (currently may have issues):
     # yarn dev
     ```
 
-    Backend runs on `http://localhost:3000` (or configured port).
+    _Note: `yarn dev` might not work reliably due to issues with `ts-node-dev`. Using `build && start` is the current stable method._
+    Backend runs on `http://localhost:3000` (or the `PORT` specified in `.env`).
 
-3.  **Start the frontend** (from `frontend` folder):
+3.  **Start the frontend** (from the `frontend` folder, in a separate terminal):
     ```bash
     yarn dev
     ```
     Frontend runs on `http://localhost:5173`.
 
-Access the application via `http://localhost:5173`.
+Access the application via `http://localhost:5173` in your browser. Log in using the credentials created or provided during the "Initial Data & Test Credentials" step.
 
 ## Contributions 🤝
 
@@ -236,164 +260,6 @@ See the [`LICENSE`](LICENSE) file for details. The AGPL v3 promotes collaboratio
 Copyright (c) 2024-2025 Olivier Hottelet
 
 ## Contact 📧
-
-- **Olivier Hottelet**
-- olivierhottelet1980@gmail.com
-
----
-
----
-
----
-
-# LoyalPyME 🇪🇸
-
-**LoyalPyME** es una plataforma web integral diseñada para empoderar a Pequeñas y Medianas Empresas (PyMEs) con un programa de fidelización de clientes digital, potente y fácil de gestionar.
-
-## Visión y Propósito
-
-En un mercado competitivo, la lealtad del cliente es un activo invaluable. LoyalPyME nace para proporcionar a las PyMEs las herramientas necesarias para:
-
-- **Fomentar la Repetición de Compra:** Implementando sistemas de puntos, niveles y recompensas atractivas.
-- **Construir Relaciones Sólidas:** Reconociendo y premiando la lealtad de sus clientes.
-- **Simplificar la Gestión:** Ofreciendo un panel de administración intuitivo y eficiente.
-- **Mejorar la Experiencia del Cliente:** Proporcionando un portal digital accesible y transparente.
-
-Nuestro objetivo es ser el aliado tecnológico que permita a cualquier PyME, independientemente de su sector (retail, hostelería, servicios, etc.), digitalizar y optimizar su estrategia de retención de clientes, sentando las bases para el crecimiento a largo plazo.
-
-![Captura del Dashboard de Administración de LoyalPyME](images/SC_LoyalPyME.png)
-
-## Fases de Evolución Funcional
-
-El desarrollo de LoyalPyME sigue una hoja de ruta por fases, priorizando la entrega de un núcleo de fidelización funcional y escalando hacia capacidades avanzadas y comunitarias.
-
-**Fase 1: Núcleo de Fidelización Web (Operativa y Casi Completa)**
-
-- **Gestión de Recompensas:** Creación, edición, eliminación y gestión del estado (activo/inactivo). **(Funcional)**
-- **Sistema de Puntos Transaccional:** Generación QR para asignación de puntos. **(Funcional)** Validación QR por cliente para sumar puntos. **(Funcional)**
-- **Sistema de Niveles (Tiers):** Definición, gestión de beneficios, configuración global (backend). **(Funcional)**
-- **Panel Cliente Esencial:** Visualización perfil (puntos, nivel), visualización recompensas/regalos, canjeo de ambos. **(Funcional)**
-- **Gestión de Clientes (Admin):**
-
-  - Listado de clientes con datos clave (puntos, nivel, etc.), ordenación. **(Funcional)**
-
-  * Búsqueda básica por nombre/email. **(Funcional)**
-  * Paginación (Lógica básica BE/FE presente). **(Funcional)**
-  * Acciones Individuales: Ajuste Puntos, Cambio Nivel, Asignar Regalo, Favorito, Activar/Desactivar. **(Funcional)**
-  * Modal Ver Detalles: Muestra información detallada y notas de admin. **(Funcional)**
-  * Notas Admin: Funcionalidad completa Ver/Editar/Guardar. **(Funcional)**
-  * Acciones Masivas: Selección múltiple, Activar/Desactivar, Eliminar (con confirmación), Ajustar Puntos (con modal input). **(Funcional)**
-
-- **_Tareas Restantes para Fase 1:_**
-  - Implementar **Filtros Completos** en Gestión Clientes Admin (UI + conexión BE para filtrar por Estado Activo, Favorito, etc.).
-  - **Optimizar/Mejorar Búsqueda y Paginación** (Revisar rendimiento backend, mejorar UI paginación si es necesario).
-  - **Limpieza General** (Revisar TODOs, eliminar logs de depuración, centralizar tipos, revisar consistencia).
-
-**Fases Futuras (Hacia un Ecosistema Completo):**
-
-- **Fase 2 (Expansión Web):** Reglas de puntos y recompensas más complejas, herramientas básicas de comunicación directa (email, publicaciones en portal), segmentación avanzada de clientes, potencialmente otras acciones masivas.
-- **Fase 3 (Plataforma Móvil):** Aplicaciones nativas para clientes y personal, notificaciones push, check-in basado en ubicación, tarjeta de fidelización digital en la app.
-- **Fase 4 (Inteligencia y CRM Ligero):** Módulos de análisis e informes sobre comportamiento y valor del cliente, funcionalidades de CRM ligero (historial completo más allá de notas?), automatización de marketing.
-- **Fase 5 (Ecosistemas Conectados y Potencial Social):** Programas de fidelización compartidos entre grupos de negocios, módulo de eventos, chat Cliente-Negocio y potencial chat comunitario/social, expansión a otros sectores y geografías.
-
-## Tecnologías Utilizadas
-
-**Frontend:**
-
-- React & TypeScript
-- Vite
-- Mantine UI (v7+) & Mantine Hooks
-- `@mantine/form` & `zod` (para validación)
-- `@mantine/notifications` (para feedback UI)
-- `@mantine/modals` (para modales confirmación/input)
-- Axios (para peticiones API)
-- React Router DOM (v6+)
-- qrcode.react, react-qr-reader (para QR)
-
-**Backend:**
-
-- Node.js, Express, TypeScript
-- Prisma (ORM), PostgreSQL (Base de Datos)
-- JWT (para autenticación) & bcryptjs (para hashing)
-- dotenv (para variables entorno)
-- node-cron (para tareas programadas)
-- uuid (para IDs únicos)
-- cors
-- `ts-node`, `ts-node-dev` (instalados para desarrollo)
-
-## Instalación y Configuración Local
-
-Para poner el proyecto en marcha en tu entorno de desarrollo:
-
-### Prerrequisitos
-
-- Node.js (v18+ recomendado, usando v20.9.0)
-- yarn (v1.22.19 usada)
-- Servidor de base de datos PostgreSQL accesible
-
-### Configuración del Backend
-
-1.  Clona repo y `cd LoyalPyME/backend`
-2.  `yarn install`
-3.  Crea `.env` con `DATABASE_URL`, `JWT_SECRET`
-4.  `npx prisma migrate dev`
-5.  `npx prisma generate` (si es necesario)
-6.  (Opcional) `npx ts-node scripts/hash-customer-password.ts` (editar antes)
-
-### Configuración del Frontend
-
-1.  `cd ../frontend`
-2.  `yarn install`
-
-## Ejecutar el Proyecto
-
-1.  Asegúrate de que PostgreSQL está corriendo.
-2.  **Inicia el backend** desde `backend` (en una terminal):
-
-    ```bash
-    # Método recomendado (estable):
-    yarn build && node dist/index.js
-
-    # Alternativa (actualmente inestable por problemas con ts-node):
-    # yarn dev
-    ```
-
-    El backend se ejecutará en `http://localhost:3000`.
-
-3.  **Inicia el frontend** desde `frontend` (en otra terminal):
-    ```bash
-    yarn dev
-    ```
-    El frontend se ejecutará en `http://localhost:5173`.
-
-Accede a `http://localhost:5173`.
-
-## Contribuciones
-
-¡Damos la bienvenida y animamos a las contribuciones a LoyalPyME! Si encuentras un error, tienes una idea para una nueva funcionalidad o quieres mejorar el código, por favor:
-
-1.  Haz un fork de este repositorio.
-2.  Clona tu fork localmente.
-3.  Crea una nueva rama para tu trabajo (`git checkout -b feature/nombre-funcionalidad` o `fix/descripcion-bug`).
-4.  Realiza tus cambios y asegúrate de que pasen las comprobaciones de linting (si hay).
-5.  Escribe mensajes de commit claros y descriptivos.
-6.  Empuja tu rama a tu fork en GitHub.
-7.  Abre una Pull Request (PR) desde tu rama hacia la rama `main` de este repositorio.
-8.  Describe los cambios propuestos en detalle en la PR.
-
-## Licencia
-
-Este proyecto está licenciado bajo los términos de la **Licencia Pública General Affero de GNU v3.0 (AGPL-3.0)**.
-
-Puedes encontrar el texto completo de la licencia en el archivo [`LICENSE`](LICENSE) en la raíz de este repositorio.
-
-La AGPL v3 es una licencia copyleft que garantiza que el código fuente del software, incluyendo cualquier modificación, esté disponible para los usuarios, especialmente cuando el software se utiliza para ofrecer a un servicio a través de una red. Esto promueve la colaboración y asegura que las mejoras realizadas permanezcan dentro del ecosistema del proyecto.
-
-Copyright (c) 2024 Olivier Hottelet
-
-## Contacto
-
-Para cualquier pregunta o consulta sobre el proyecto, puedes contactar a:
 
 - **Olivier Hottelet**
 - olivierhottelet1980@gmail.com

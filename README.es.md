@@ -45,7 +45,7 @@ La fase fundacional, centrada en construir el motor de fidelización principal y
 
 - **Plataforma Web Full-Stack:** Frontend (React/TS/Mantine) y Backend (Node/Express/TS/Prisma/PostgreSQL) operativos.
 - **Refactorización Mayor:** Refactorizado con éxito tanto el frontend (hooks, componentes) como el backend (servicios, controladores por módulo) para mejorar la estructura y separación de responsabilidades.
-- **Autenticación Segura:** Sistema basado en JWT implementado (Registro Admin/Cliente, Login, Recuperación Contraseña) con control de acceso basado en roles (`BUSINESS_ADMIN`, `CUSTOMER_FINAL`).
+- **Autenticación Segura:** Sistema basado en JWT con registro (Admin/Cliente), login, recuperación de contraseña y control de acceso basado en roles (`BUSINESS_ADMIN`, `CUSTOMER_FINAL`).
 - **Sistema de Niveles (Backend Completo):** CRUD Admin para Niveles (Tiers), configuración a nivel de negocio, cálculo automático de nivel basado en métricas (gasto, visitas, puntos) y tarea CRON para actualizaciones/descensos periódicos.
 - **Gestión de Recompensas:** CRUD completo para Administradores (Crear, Leer, Actualizar, Eliminar, Activar/Desactivar).
 - **Flujo de Puntos Principal:**
@@ -81,16 +81,16 @@ Esta fase se centra en refinar la funcionalidad central existente y abordar mejo
   - Añadir **Indexación Proactiva a Base de Datos**.
   - Asegurar uso consistente de `select` Prisma para **Optimización de Consultas**.
   - Mejorar **Logging** (estructurado, contextual).
-  - Reforzar **Gestión de Configuración** (`.env`).
+  - Reforzar **Gestión de Configuración** (`.env` validation).
   - (Opcional) Implementar **Rate Limiting** básico.
   - (Opcional) Introducir **Registro de Auditoría (`AuditLog`)** básico.
 - 💡 **Mejoras Experiencia Admin (Frontend):**
   - Enriquecer **Panel Principal Admin** (Métricas Clave, Feed Actividad).
   - Implementar **Búsqueda/Filtros de Clientes Avanzados** (Teléfono, Documento, Nivel).
   - Mejorar **Modal de Detalles del Cliente** (ej: acciones rápidas).
-  - Añadir **Exportación CSV** básica para clientes.
+  - Añadir **Exportación CSV** básica para lista de clientes.
   - Mostrar **Estadísticas de Uso** de Recompensas y Niveles.
-  - Añadir más descripciones/ayudas en **Configuración de Niveles**.
+  - Añadir más **descripciones/ayudas** en Configuración de Niveles.
   - Asegurar consistencia en **Notificaciones y Estados de Carga**.
   - Usar **Modales de Confirmación** para acciones críticas/destructivas.
 - **Calidad y Mantenimiento:**
@@ -152,7 +152,7 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 
 - Node.js (v18+ recomendado, revisa especificidades del proyecto)
 - yarn (v1.x recomendado, revisa especificidades del proyecto)
-- Servidor de base de datos PostgreSQL accesible
+- Servidor de base de datos PostgreSQL accesible y ejecutándose localmente.
 
 ### Configuración Backend
 
@@ -165,32 +165,55 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
     ```bash
     yarn install
     ```
-3.  Crea un archivo `.env` en la raíz de `backend/` con:
-    ```env
-    DATABASE_URL="postgresql://tu_usuario:tu_contraseña@host:puerto/tu_bd?schema=public"
-    JWT_SECRET="tu_secreto_jwt_fuerte_y_aleatorio_aqui"
-    # PORT=3000 (Opcional, por defecto es 3000)
+3.  **Crea tu archivo de entorno local:** Localiza el archivo `backend/.env.example` proporcionado en el repositorio. Cópialo a un nuevo archivo llamado `backend/.env`:
+    ```bash
+    cp .env.example .env
     ```
-4.  Ejecuta las migraciones de Prisma:
+    _(Consulta `backend/.env.example` para detalles y ejemplos de las variables)._
+4.  **Configura tu archivo `.env`:** Abre el archivo `backend/.env` recién creado y:
+    - Reemplaza los placeholders de `DATABASE_URL` (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`) con los detalles de **tu conexión local a PostgreSQL**. _(Ejemplo basado en tu configuración: `postgresql://postgres:Matrix2010%40@localhost:5432/loyalpymedb?schema=public` - ¡Ajusta usuario/contraseña/nombre de BD si son diferentes!)_
+    - Reemplaza el placeholder de `JWT_SECRET` con una **cadena de texto aleatoria, única y segura** (mínimo 32 caracteres). Puedes generar una con `openssl rand -hex 32` en tu terminal o un generador online fiable. **¡No uses el valor del placeholder!**
+    - Opcionalmente, define el `PORT` si necesitas que el backend se ejecute en un puerto distinto al 3000.
+    - **Importante:** Asegúrate de que tu archivo `.env` está listado en tu archivo `.gitignore` raíz para prevenir subir secretos accidentalmente.
+5.  **Configura el esquema de la base de datos:** Ejecuta las migraciones de Prisma:
     ```bash
     npx prisma migrate dev
     ```
-5.  Genera el Cliente Prisma:
+    _(Esto creará la base de datos si no existe y aplicará todos los cambios del esquema.)_
+6.  **Genera el Cliente Prisma:** (Normalmente lo hace `migrate dev`, pero es seguro ejecutarlo explícitamente)
     ```bash
     npx prisma generate
     ```
-6.  (Opcional) Hashea la contraseña para un cliente de prueba:
-    ```bash
-    # ¡Edita el script primero si es necesario!
-    npx ts-node scripts/hash-customer-password.ts
-    ```
+7.  **Datos Iniciales y Credenciales de Prueba (IMPORTANTE - Acción Requerida):**
+    Para iniciar sesión y probar la aplicación, necesitas datos iniciales como un negocio y un usuario administrador. El método preferido necesita ser finalizado para este proyecto. **Elige UNA opción abajo y sigue sus pasos:**
+
+    - **[ ] Opción A: Seed de Base de Datos (Recomendado - Requiere Configuración/Confirmación)**
+
+      - Ejecuta el comando seed: `npx prisma db seed`
+      - Este comando _debería_ poblar la base de datos con los datos iniciales esenciales (ej: negocio por defecto, usuario admin, quizás niveles por defecto).
+      - **Credenciales de Prueba (Ejemplo - ¡Confirmar/Cambiar en `prisma/seed.ts`!):** `admin@loyalpyme.test` / `password123`
+      - _(Nota: Requiere que exista y funcione un script `prisma/seed.ts`. Si no existe o no funciona, usa la Opción B)._
+
+    - **[ ] Opción B: Registro Manual (Si no hay script de seed)**
+      - Después de iniciar backend y frontend (ver "Ejecutar el Proyecto"), abre tu navegador en `http://localhost:5173/register-business`.
+      - Usa el formulario para registrar tu primer negocio y cuenta de administrador. Usa esas credenciales para iniciar sesión.
+
+    _(Mantenedor del Proyecto: Por favor, confirma cuál es el flujo de configuración deseado (A o B), implementa el script de seed si eliges A, actualiza las credenciales de ejemplo, y elimina la opción no aplicable de estas instrucciones.)_
+
+8.  **(Opcional) Configuración Cliente de Prueba Específico:**
+    - Para escenarios específicos que requieran un cliente predefinido, puede que necesites crearlo manualmente en tu base de datos (usando pgAdmin o similar) y luego usar el script proporcionado para hashear su contraseña:
+      ```bash
+      # ¡Edita 'scripts/hash-customer-password.ts' con el email/contraseña correctos primero!
+      npx ts-node scripts/hash-customer-password.ts
+      ```
 
 ### Configuración Frontend
 
-1.  Navega a la carpeta `frontend`:
+1.  Navega a la carpeta `frontend` (desde la raíz del proyecto):
     ```bash
-    cd ../frontend
+    cd frontend
     ```
+    _(Si estabas en `backend`, usa `cd ../frontend`)_
 2.  Instala las dependencias:
     ```bash
     yarn install
@@ -198,26 +221,27 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 
 ## Ejecutando el Proyecto ▶️
 
-1.  Asegúrate de que tu servidor PostgreSQL está en ejecución.
+1.  Asegúrate de que tu servidor PostgreSQL está **en ejecución**.
 2.  **Inicia el backend** (desde la carpeta `backend`):
 
     ```bash
-    # Método recomendado (estable):
+    # Método recomendado (estable, refleja build de producción):
     yarn build && node dist/index.js
 
-    # Alternativa (actualmente inestable por problemas con ts-node):
+    # Alternativa para desarrollo (actualmente puede tener problemas):
     # yarn dev
     ```
 
-    El backend se ejecutará en `http://localhost:3000` (o puerto configurado).
+    _Nota: `yarn dev` podría no funcionar de forma fiable debido a problemas con `ts-node-dev`. Usar `build && start` es el método estable actual._
+    El backend se ejecuta en `http://localhost:3000` (o el `PORT` especificado en `.env`).
 
-3.  **Inicia el frontend** (desde la carpeta `frontend`):
+3.  **Inicia el frontend** (desde la carpeta `frontend`, en otra terminal):
     ```bash
     yarn dev
     ```
-    El frontend se ejecutará en `http://localhost:5173`.
+    El frontend se ejecuta en `http://localhost:5173`.
 
-Accede a la aplicación vía `http://localhost:5173`.
+Accede a la aplicación vía `http://localhost:5173` en tu navegador. Inicia sesión usando las credenciales creadas o proporcionadas durante el paso "Datos Iniciales y Credenciales de Prueba".
 
 ## Contribuciones 🤝
 
@@ -231,9 +255,9 @@ Accede a la aplicación vía `http://localhost:5173`.
 
 ## Licencia 📜
 
-Este proyecto está licenciado bajo los términos de la **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+Este proyecto está licenciado bajo los términos de la **Licencia Pública General Affero de GNU v3.0 (AGPL-3.0)**.
 
-Puedes encontrar el texto completo de la licencia en el archivo [`LICENSE`](LICENSE) en la raíz de este repositorio. La AGPL v3 promueve la colaboración requiriendo que las modificaciones accesibles por red también sean de código abierto.
+Consulta el archivo [`LICENSE`](LICENSE) para detalles. La AGPL v3 promueve la colaboración requiriendo que las modificaciones accesibles por red también sean de código abierto.
 
 Copyright (c) 2024-2025 Olivier Hottelet
 
