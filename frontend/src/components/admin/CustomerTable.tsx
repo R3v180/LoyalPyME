@@ -1,15 +1,15 @@
 // filename: frontend/src/components/admin/CustomerTable.tsx
-// Version: 1.1.0 (Add toggle active action button with dynamic icon/state)
+// Version: 1.2.1 (Add row selection checkboxes - COMPLETE CODE)
 
 import React from 'react';
 import {
-    Table, Group, ActionIcon, Text, useMantineTheme, UnstyledButton, Center, rem
+    Table, Group, ActionIcon, Text, useMantineTheme, UnstyledButton, Center, rem,
+    Checkbox // Importar Checkbox
 } from '@mantine/core';
 import {
     IconAdjustments, IconGift, IconEye, IconStar,
     IconStairsUp, IconSelector, IconChevronDown, IconChevronUp,
-    IconEyeCheck, IconEyeOff // <-- Nuevos iconos importados
-    // IconToggleLeft ya no es necesario aquí
+    IconEyeCheck, IconEyeOff
 } from '@tabler/icons-react';
 import classes from '../../pages/admin/AdminCustomerManagementPage.module.css';
 
@@ -32,109 +32,143 @@ function Th({ children, reversed, sorted, onSort, sortKey, currentSortKey, disab
     return ( <Table.Th className={classes.th}> <UnstyledButton onClick={disabled ? undefined : onSort} className={classes.control} disabled={disabled}> <Group justify="space-between" gap={0} data-active-sort={isCurrent || undefined}> <Text fw={500} fz="sm" span>{children}</Text> {!disabled && ( <Center className={classes.icon}><Icon style={{ width: rem(16), height: rem(16), color: isCurrent ? 'var(--mantine-color-blue-filled)' : undefined }} stroke={1.5} /></Center> )} </Group> </UnstyledButton> </Table.Th> );
 }
 
-// --- Props del Componente CustomerTable ---
+// --- Props del Componente CustomerTable (actualizadas) ---
 interface CustomerTableProps {
     customers: Customer[];
     sortStatus: SortStatus;
     togglingFavoriteId: string | null;
-    togglingActiveId?: string | null; // <-- Nueva prop para estado de carga
+    togglingActiveId?: string | null;
+    selectedRows: string[]; // IDs de filas seleccionadas
     onSort: (column: SortStatus['column']) => void;
     onToggleFavorite: (customerId: string, currentIsFavorite: boolean) => void;
     onOpenAdjustPoints: (customer: Customer) => void;
     onOpenChangeTier: (customer: Customer) => void;
     onOpenAssignReward: (customer: Customer) => void;
     onViewDetails: (customer: Customer) => void;
-    onToggleActive: (customer: Customer) => void; // Prop existente
+    onToggleActive: (customer: Customer) => void;
+    onRowSelectionChange: (selectedIds: string[]) => void; // Callback de selección
 }
 
-// --- Componente CustomerTable ---
+// --- Componente CustomerTable (actualizado) ---
 const CustomerTable: React.FC<CustomerTableProps> = ({
     customers,
     sortStatus,
     togglingFavoriteId,
-    togglingActiveId, // <-- Recibir nueva prop
+    togglingActiveId,
+    selectedRows, // <-- Recibir prop
     onSort,
     onToggleFavorite,
     onOpenAdjustPoints,
     onOpenChangeTier,
     onOpenAssignReward,
     onViewDetails,
-    onToggleActive
+    onToggleActive,
+    onRowSelectionChange // <-- Recibir prop
 }) => {
     const theme = useMantineTheme();
 
-    // Mapeo de filas (modificamos el ActionIcon de activar/desactivar)
+    // --- Lógica de Selección (sin cambios) ---
+    const allVisibleSelected = customers.length > 0 && customers.every(customer => selectedRows.includes(customer.id));
+    const someVisibleSelected = customers.some(customer => selectedRows.includes(customer.id));
+    const indeterminate = someVisibleSelected && !allVisibleSelected;
+    const handleSelectAllClick = () => { /* ... (lógica como en v1.2.0) ... */
+        if (allVisibleSelected) {
+            const visibleIds = customers.map(c => c.id);
+            onRowSelectionChange(selectedRows.filter(id => !visibleIds.includes(id)));
+        } else {
+            const visibleIds = customers.map(c => c.id);
+            onRowSelectionChange(Array.from(new Set([...selectedRows, ...visibleIds])));
+        }
+    };
+    const handleRowCheckboxChange = (customerId: string, checked: boolean) => { /* ... (lógica como en v1.2.0) ... */
+        if (checked) {
+            onRowSelectionChange([...selectedRows, customerId]);
+        } else {
+            onRowSelectionChange(selectedRows.filter(id => id !== customerId));
+        }
+     };
+    // --- Fin Lógica de Selección ---
+
+
+    // Mapeo de filas (con Checkbox y ActionIcons COMPLETOS)
     const rows = customers.map((customer) => {
-        // Determinar icono, título y color según el estado isActive
-        const isActive = customer.isActive ?? false; // Asumir false si es undefined/null
+        const isActive = customer.isActive ?? false;
         const ToggleIcon = isActive ? IconEyeOff : IconEyeCheck;
         const toggleTitle = isActive ? "Desactivar Cliente" : "Activar Cliente";
         const toggleColor = isActive ? 'red' : 'green';
-        const isTogglingThis = togglingActiveId === customer.id;
+        const isTogglingThisActive = togglingActiveId === customer.id; // Renombrado para claridad
+        const isTogglingThisFavorite = togglingFavoriteId === customer.id; // Renombrado para claridad
+        const isSelected = selectedRows.includes(customer.id);
 
         return (
-            <Table.Tr key={customer.id}>
+            <Table.Tr key={customer.id} bg={isSelected ? theme.colors.blue[0] : undefined}>
+                {/* Checkbox */}
+                <Table.Td>
+                    <Checkbox
+                        aria-label={`Seleccionar fila ${customer.id}`}
+                        checked={isSelected}
+                        onChange={(event) => handleRowCheckboxChange(customer.id, event.currentTarget.checked)}
+                    />
+                </Table.Td>
+                {/* Favorito */}
                 <Table.Td>
                     <ActionIcon
                         variant="subtle"
                         onClick={() => onToggleFavorite(customer.id, customer.isFavorite ?? false)}
-                        loading={togglingFavoriteId === customer.id}
+                        loading={isTogglingThisFavorite}
                         disabled={!!togglingFavoriteId || !!togglingActiveId} // Deshabilitar si CUALQUIER toggle está activo
                         title={customer.isFavorite ? "Quitar de Favoritos" : "Marcar como Favorito"}
                     >
                         <IconStar size={18} stroke={1.5} color={customer.isFavorite ? theme.colors.yellow[6] : theme.colors.gray[4]} fill={customer.isFavorite ? theme.colors.yellow[6] : 'none'} />
                     </ActionIcon>
                 </Table.Td>
+                {/* Datos */}
                 <Table.Td>{customer.name || '-'}</Table.Td>
                 <Table.Td>{customer.email}</Table.Td>
                 <Table.Td ta="right">{customer.points}</Table.Td>
                 <Table.Td>{customer.currentTier?.name || 'Básico'}</Table.Td>
                 <Table.Td>{new Date(customer.createdAt).toLocaleDateString()}</Table.Td>
-                {/* Mostramos el estado textual */}
-                <Table.Td>
-                   <Text c={isActive ? 'green' : 'red'} fw={500}>
-                     {isActive ? 'Activo' : 'Inactivo'}
-                   </Text>
-                </Table.Td>
+                <Table.Td> <Text c={isActive ? 'green' : 'red'} fw={500}> {isActive ? 'Activo' : 'Inactivo'} </Text> </Table.Td>
+                {/* Acciones */}
                 <Table.Td>
                     <Group gap="xs" justify="flex-end" wrap="nowrap">
-                        <ActionIcon variant="subtle" color="gray" title="Ver Detalles" onClick={() => onViewDetails(customer)} disabled={isTogglingThis || !!togglingFavoriteId}>
+                         <ActionIcon variant="subtle" color="gray" title="Ver Detalles" onClick={() => onViewDetails(customer)} disabled={isTogglingThisActive || isTogglingThisFavorite}>
                             <IconEye size={16} stroke={1.5} />
                         </ActionIcon>
-                        <ActionIcon variant="subtle" color="blue" title="Ajustar Puntos" onClick={() => onOpenAdjustPoints(customer)} disabled={isTogglingThis || !!togglingFavoriteId}>
+                        <ActionIcon variant="subtle" color="blue" title="Ajustar Puntos" onClick={() => onOpenAdjustPoints(customer)} disabled={isTogglingThisActive || isTogglingThisFavorite}>
                             <IconAdjustments size={16} stroke={1.5} />
                         </ActionIcon>
-                        <ActionIcon variant="subtle" color="teal" title="Cambiar Nivel" onClick={() => onOpenChangeTier(customer)} disabled={isTogglingThis || !!togglingFavoriteId}>
+                        <ActionIcon variant="subtle" color="teal" title="Cambiar Nivel" onClick={() => onOpenChangeTier(customer)} disabled={isTogglingThisActive || isTogglingThisFavorite}>
                             <IconStairsUp size={16} stroke={1.5} />
                         </ActionIcon>
-                        <ActionIcon variant="subtle" color="grape" title="Asignar Recompensa" onClick={() => onOpenAssignReward(customer)} disabled={isTogglingThis || !!togglingFavoriteId}>
+                        <ActionIcon variant="subtle" color="grape" title="Asignar Recompensa" onClick={() => onOpenAssignReward(customer)} disabled={isTogglingThisActive || isTogglingThisFavorite}>
                             <IconGift size={16} stroke={1.5} />
                         </ActionIcon>
-                        {/* --- ActionIcon Modificado --- */}
                         <ActionIcon
                             variant="subtle"
-                            color={toggleColor} // Color dinámico
-                            title={toggleTitle}   // Título dinámico
-                            onClick={() => onToggleActive(customer)} // Llama al callback
-                            loading={isTogglingThis} // Estado de carga específico
+                            color={toggleColor}
+                            title={toggleTitle}
+                            onClick={() => onToggleActive(customer)}
+                            loading={isTogglingThisActive}
                             disabled={!!togglingFavoriteId || !!togglingActiveId} // Deshabilitar si otro toggle está activo
                         >
-                            <ToggleIcon size={16} stroke={1.5} /> {/* Icono dinámico */}
+                            <ToggleIcon size={16} stroke={1.5} />
                         </ActionIcon>
-                        {/* --- Fin ActionIcon Modificado --- */}
                     </Group>
                 </Table.Td>
             </Table.Tr>
         );
     });
 
-
-    // Renderizado de la tabla (sin cambios)
+    // Renderizado de la tabla (con cabecera de Checkbox)
     return (
         <Table.ScrollContainer minWidth={800}>
             <Table striped highlightOnHover withTableBorder verticalSpacing="sm" className={classes.table}>
                 <Table.Thead className={classes.thead}>
                     <Table.Tr>
+                        <Table.Th style={{ width: rem(40) }}>
+                            <Checkbox aria-label="Seleccionar todas las filas visibles" checked={allVisibleSelected} indeterminate={indeterminate} onChange={handleSelectAllClick} />
+                        </Table.Th>
                         <Th sorted={sortStatus.column === 'isFavorite'} reversed={sortStatus.direction === 'desc'} onSort={() => onSort('isFavorite')} sortKey="isFavorite" currentSortKey={sortStatus.column}><IconStar size={14} stroke={1.5}/></Th>
                         <Th sorted={sortStatus.column === 'name'} reversed={sortStatus.direction === 'desc'} onSort={() => onSort('name')} sortKey="name" currentSortKey={sortStatus.column}>Nombre</Th>
                         <Th sorted={sortStatus.column === 'email'} reversed={sortStatus.direction === 'desc'} onSort={() => onSort('email')} sortKey="email" currentSortKey={sortStatus.column}>Email</Th>
