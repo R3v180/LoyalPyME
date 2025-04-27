@@ -1,84 +1,57 @@
 // filename: frontend/src/pages/admin/AdminCustomerManagementPage.tsx
-// Version: 1.6.1 (Fix: Use imported SortStatus type in ThProps)
+// Version: 1.7.0 (Refactor: Use CustomerTable component)
 
 import React, { useState, useCallback } from 'react';
 import {
-    Paper, Title, Stack, TextInput, Table, Loader, Alert, Pagination, Group, Text, ActionIcon,
-    useMantineTheme, UnstyledButton, Center, rem
+    Paper, Title, Stack, TextInput, Loader, Alert, Pagination, Group, Text
+    // Ya no se necesitan: Table, ActionIcon, useMantineTheme, UnstyledButton, Center, rem
 } from '@mantine/core';
 import {
-    IconSearch, IconAlertCircle, IconAdjustments, IconGift, IconEye, IconStar, IconToggleLeft,
-    IconStairsUp, IconSelector, IconChevronDown, IconChevronUp, IconCheck, IconX
+    IconSearch, IconAlertCircle, IconCheck, IconX
+    // Ya no se necesitan iconos de tabla: IconAdjustments, IconGift, IconEye, IconStar, IconToggleLeft, IconStairsUp, IconSelector, IconChevronDown, IconChevronUp
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
-import axiosInstance from '../../services/axiosInstance';
+import axiosInstance from '../../services/axiosInstance'; // Necesario para toggleFavorite
 import AdjustPointsModal from '../../components/admin/AdjustPointsModal';
 import ChangeTierModal from '../../components/admin/ChangeTierModal';
 import AssignRewardModal from '../../components/admin/AssignRewardModal';
 import { notifications } from '@mantine/notifications';
-import classes from './AdminCustomerManagementPage.module.css';
+// Ya no necesitamos importar classes de CSS aquí si CustomerTable lo importa
+// import classes from './AdminCustomerManagementPage.module.css';
 
-// Importamos el hook y las interfaces necesarias
-import { useAdminCustomers, Customer, SortStatus } from '../../hooks/useAdminCustomers'; // SortStatus ahora se usará
+// Importamos el hook y el tipo Customer
+import { useAdminCustomers, Customer } from '../../hooks/useAdminCustomers'; // SortStatus ya no se importa aquí
+// Importamos el nuevo componente de tabla
+import CustomerTable from '../../components/admin/CustomerTable';
 
-// --- Componente Th ---
-// Interfaz ThProps modificada para usar SortStatus['column']
-interface ThProps {
-    children: React.ReactNode;
-    reversed: boolean;
-    sorted: boolean;
-    onSort(): void;
-    sortKey: SortStatus['column']; // <-- Tipo actualizado
-    currentSortKey: SortStatus['column']; // <-- Tipo actualizado
-    disabled?: boolean;
-}
-
-// Implementación de Th (sin cambios internos)
-function Th({ children, reversed, sorted, onSort, sortKey, currentSortKey, disabled }: ThProps) {
-    const Icon = sorted && currentSortKey === sortKey ? (reversed ? IconChevronUp : IconChevronDown) : IconSelector;
-    const isCurrent = sorted && currentSortKey === sortKey;
-    return (
-        <Table.Th className={classes.th}>
-            <UnstyledButton onClick={disabled ? undefined : onSort} className={classes.control} disabled={disabled}>
-                <Group justify="space-between" gap={0} data-active-sort={isCurrent || undefined}>
-                    <Text fw={500} fz="sm" span>{children}</Text>
-                    {!disabled && (
-                        <Center className={classes.icon}>
-                            <Icon style={{ width: rem(16), height: rem(16), color: isCurrent ? 'var(--mantine-color-blue-filled)' : undefined }} stroke={1.5} />
-                        </Center>
-                    )}
-                </Group>
-            </UnstyledButton>
-        </Table.Th>
-    );
-}
+// Ya no necesitamos definir Th ni ThProps aquí
 
 // --- COMPONENTE PRINCIPAL ---
 const AdminCustomerManagementPage: React.FC = () => {
-    const theme = useMantineTheme();
-
-    // Usamos el hook para obtener datos y manejadores
+    // Usamos el hook para obtener datos y manejadores principales
     const {
         customers, loading, error, activePage, totalPages, setPage,
         searchTerm, setSearchTerm, sortStatus, handleSort, refreshData
     } = useAdminCustomers();
 
-    // Estados locales de UI
+    // Estados locales de UI (modales, selección, estado de carga acción favorita)
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [adjustModalOpened, { open: openAdjustModal, close: closeAdjustModal }] = useDisclosure(false);
     const [changeTierModalOpened, { open: openChangeTierModal, close: closeChangeTierModal }] = useDisclosure(false);
     const [assignRewardModalOpened, { open: openAssignRewardModal, close: closeAssignRewardModal }] = useDisclosure(false);
     const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
 
-    // --- Handlers de Modales y Acciones ---
-    const handleOpenAdjustPoints = (customer: Customer) => { setSelectedCustomer(customer); openAdjustModal(); };
+    // --- Handlers de Modales y Acciones (pasados como props a CustomerTable) ---
+    const handleOpenAdjustPoints = useCallback((customer: Customer) => { setSelectedCustomer(customer); openAdjustModal(); }, []);
     const handleAdjustSuccess = useCallback(() => { refreshData(); }, [refreshData]);
-    const handleOpenChangeTier = (customer: Customer) => { setSelectedCustomer(customer); openChangeTierModal(); };
+
+    const handleOpenChangeTier = useCallback((customer: Customer) => { setSelectedCustomer(customer); openChangeTierModal(); }, []);
     const handleChangeTierSuccess = useCallback(() => { refreshData(); }, [refreshData]);
-    const handleOpenAssignReward = (customer: Customer) => { setSelectedCustomer(customer); openAssignRewardModal(); };
+
+    const handleOpenAssignReward = useCallback((customer: Customer) => { setSelectedCustomer(customer); openAssignRewardModal(); }, []);
     const handleAssignRewardSuccess = useCallback(() => { console.log('AssignRewardModal success callback triggered (no refresh implemented).'); }, []);
 
-    const handleToggleFavorite = async (customerId: string, currentIsFavorite: boolean) => {
+    const handleToggleFavorite = useCallback(async (customerId: string, currentIsFavorite: boolean) => {
         setTogglingFavoriteId(customerId);
         try {
             await axiosInstance.patch(`/admin/customers/${customerId}/toggle-favorite`);
@@ -89,65 +62,66 @@ const AdminCustomerManagementPage: React.FC = () => {
         } finally {
             setTogglingFavoriteId(null);
         }
-    };
+    }, [refreshData]); // Añadimos refreshData como dependencia
 
-    // --- Renderizado de filas (sin cambios) ---
-     const rows = customers.map((customer) => (
-        <Table.Tr key={customer.id}>
-            <Table.Td>
-                <ActionIcon variant="subtle" onClick={() => handleToggleFavorite(customer.id, customer.isFavorite ?? false)} loading={togglingFavoriteId === customer.id} disabled={!!togglingFavoriteId} title={customer.isFavorite ? "Quitar de Favoritos" : "Marcar como Favorito"} >
-                    <IconStar size={18} stroke={1.5} color={customer.isFavorite ? theme.colors.yellow[6] : theme.colors.gray[4]} fill={customer.isFavorite ? theme.colors.yellow[6] : 'none'} />
-                </ActionIcon>
-            </Table.Td>
-            <Table.Td>{customer.name || '-'}</Table.Td>
-            <Table.Td>{customer.email}</Table.Td>
-            <Table.Td ta="right">{customer.points}</Table.Td>
-            <Table.Td>{customer.currentTier?.name || 'Básico'}</Table.Td>
-            <Table.Td>{new Date(customer.createdAt).toLocaleDateString()}</Table.Td>
-            <Table.Td>{customer.isActive ? 'Activo' : 'Inactivo'}</Table.Td>
-            <Table.Td>
-                 <Group gap="xs" justify="flex-end" wrap="nowrap">
-                     <ActionIcon variant="subtle" color="gray" title="Ver Detalles"><IconEye size={16} stroke={1.5} /></ActionIcon>
-                     <ActionIcon variant="subtle" color="blue" title="Ajustar Puntos" onClick={() => handleOpenAdjustPoints(customer)}> <IconAdjustments size={16} stroke={1.5} /> </ActionIcon>
-                     <ActionIcon variant="subtle" color="teal" title="Cambiar Nivel" onClick={() => handleOpenChangeTier(customer)}> <IconStairsUp size={16} stroke={1.5} /> </ActionIcon>
-                     <ActionIcon variant="subtle" color="grape" title="Asignar Recompensa" onClick={() => handleOpenAssignReward(customer)}> <IconGift size={16} stroke={1.5} /> </ActionIcon>
-                     <ActionIcon variant="subtle" color="orange" title="Activar/Desactivar"><IconToggleLeft size={16} stroke={1.5} /></ActionIcon>
-                 </Group>
-            </Table.Td>
-        </Table.Tr>
-    ));
+    // --- Placeholders para acciones futuras de la tabla ---
+    const handleViewDetails = useCallback((customer: Customer) => {
+        console.log('TODO: Implement View Details for customer:', customer.id);
+        alert(`FUNCIONALIDAD PENDIENTE: Ver Detalles para ${customer.email}`);
+        // Aquí iría la lógica para abrir un modal de detalles o navegar a otra página
+    }, []);
 
-    // --- Renderizado principal (sin cambios) ---
+    const handleToggleActive = useCallback((customer: Customer) => {
+        console.log('TODO: Implement Toggle Active for customer:', customer.id);
+        alert(`FUNCIONALIDAD PENDIENTE: Activar/Desactivar a ${customer.email}`);
+        // Aquí iría la lógica para llamar a la API, mostrar notificación y refrescar
+        // const newStatus = !customer.isActive;
+        // try { ... await axiosInstance.patch(...); refreshData(); ... } catch { ... }
+    }, []); // Añadir refreshData como dependencia cuando se implemente
+
+    // --- Renderizado principal ---
+    // Ahora es mucho más limpio, la complejidad de la tabla está en CustomerTable
     return (
         <>
             <Paper shadow="sm" p="lg" withBorder radius="lg">
                 <Stack gap="lg">
                     <Title order={2}>Gestión de Clientes</Title>
                     <TextInput placeholder="Buscar por nombre o email..." leftSection={<IconSearch size={16} stroke={1.5} />} value={searchTerm} onChange={(event) => setSearchTerm(event.currentTarget.value)} radius="lg"/>
+                    {/* TODO: Añadir aquí el Checkbox/Switch para filtrar favoritos */}
+
+                    {/* Feedback de Carga/Error */}
                     {loading && <Group justify="center" p="md"><Loader /></Group>}
                     {error && !loading && <Alert title="Error" color="red" icon={<IconAlertCircle />}>{error}</Alert>}
-                    {!loading && !error && customers.length === 0 && (<Text c="dimmed" ta="center" p="md">No se encontraron clientes{searchTerm ? ' para la búsqueda actual' : ''}.</Text>)}
-                    {!loading && !error && customers.length > 0 && (
-                        <Table.ScrollContainer minWidth={800}>
-                            <Table striped highlightOnHover withTableBorder verticalSpacing="sm" className={classes.table}>
-                                <Table.Thead className={classes.thead}>
-                                    <Table.Tr>
-                                        {/* Th usa las props actualizadas y los handlers/estado del hook */}
-                                        <Th sorted={sortStatus.column === 'isFavorite'} reversed={sortStatus.direction === 'desc'} onSort={() => handleSort('isFavorite')} sortKey="isFavorite" currentSortKey={sortStatus.column}><IconStar size={14} stroke={1.5}/></Th>
-                                        <Th sorted={sortStatus.column === 'name'} reversed={sortStatus.direction === 'desc'} onSort={() => handleSort('name')} sortKey="name" currentSortKey={sortStatus.column}>Nombre</Th>
-                                        <Th sorted={sortStatus.column === 'email'} reversed={sortStatus.direction === 'desc'} onSort={() => handleSort('email')} sortKey="email" currentSortKey={sortStatus.column}>Email</Th>
-                                        <Th sorted={sortStatus.column === 'points'} reversed={sortStatus.direction === 'desc'} onSort={() => handleSort('points')} sortKey="points" currentSortKey={sortStatus.column}>Puntos</Th>
-                                        <Th sorted={sortStatus.column === 'currentTier.level'} reversed={sortStatus.direction === 'desc'} onSort={() => handleSort('currentTier.level')} sortKey="currentTier.level" currentSortKey={sortStatus.column}>Nivel</Th>
-                                        <Th sorted={sortStatus.column === 'createdAt'} reversed={sortStatus.direction === 'desc'} onSort={() => handleSort('createdAt')} sortKey="createdAt" currentSortKey={sortStatus.column}>Registrado</Th>
-                                        <Th sorted={sortStatus.column === 'isActive'} reversed={sortStatus.direction === 'desc'} onSort={() => handleSort('isActive')} sortKey="isActive" currentSortKey={sortStatus.column}>Estado</Th>
-                                        <Table.Th style={{ textAlign: 'right' }}>Acciones</Table.Th>
-                                    </Table.Tr>
-                                </Table.Thead>
-                                <Table.Tbody>{rows}</Table.Tbody>
-                            </Table>
-                        </Table.ScrollContainer>
+
+                    {/* Mensaje de Tabla Vacía */}
+                    {!loading && !error && customers.length === 0 && (
+                        <Text c="dimmed" ta="center" p="md">
+                            No se encontraron clientes{searchTerm ? ' para la búsqueda actual' : ''}.
+                        </Text>
                     )}
-                    {!loading && !error && totalPages > 1 && (<Group justify="center" mt="md"><Pagination total={totalPages} value={activePage} onChange={setPage} /></Group>)}
+
+                    {/* Renderizado de la Tabla (si hay datos y no hay carga/error) */}
+                    {!loading && !error && customers.length > 0 && (
+                        <CustomerTable
+                            customers={customers}
+                            sortStatus={sortStatus}
+                            togglingFavoriteId={togglingFavoriteId}
+                            onSort={handleSort}
+                            onToggleFavorite={handleToggleFavorite}
+                            onOpenAdjustPoints={handleOpenAdjustPoints}
+                            onOpenChangeTier={handleOpenChangeTier}
+                            onOpenAssignReward={handleOpenAssignReward}
+                            onViewDetails={handleViewDetails} // Pasamos el placeholder
+                            onToggleActive={handleToggleActive} // Pasamos el placeholder
+                        />
+                    )}
+
+                    {/* Paginación */}
+                    {!loading && !error && totalPages > 1 && (
+                        <Group justify="center" mt="md">
+                            <Pagination total={totalPages} value={activePage} onChange={setPage} />
+                        </Group>
+                    )}
                 </Stack>
             </Paper>
 
