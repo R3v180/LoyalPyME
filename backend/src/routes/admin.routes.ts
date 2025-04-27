@@ -1,5 +1,5 @@
-// File: backend/src/routes/admin.routes.ts
-// Version: 2.2.0 (Add route for bulk adjusting customer points)
+// filename: backend/src/routes/admin.routes.ts
+// Version: 2.3.0 (Add route for overview stats)
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
@@ -7,7 +7,7 @@ import { UserRole } from '@prisma/client';
 // Middlewares
 import { checkRole } from '../middleware/role.middleware';
 
-// Importar handlers desde la ubicación correcta
+// Importar handlers de gestión de clientes (existentes)
 import {
     getAdminCustomers,
     adjustCustomerPoints,
@@ -19,51 +19,48 @@ import {
     updateCustomerNotesHandler,
     bulkUpdateCustomerStatusHandler,
     bulkDeleteCustomersHandler,
-    bulkAdjustPointsHandler // <-- Importar el nuevo handler
+    bulkAdjustPointsHandler
 } from '../customer/admin-customer.controller'; // Asegúrate que esta ruta es correcta
+
+// --- NUEVA IMPORTACIÓN ---
+// Importar el nuevo handler para las estadísticas
+import { handleGetOverviewStats } from '../admin/admin-stats.controller';
+// --- FIN NUEVA IMPORTACIÓN ---
 
 const router = Router();
 
-// --- Rutas específicas de Admin relacionadas con Clientes ---
+// Middleware de Rol Admin aplicado a todas las rutas definidas aquí
+// (checkRole se aplica en cada ruta individualmente para claridad)
+const adminOnly = checkRole([UserRole.BUSINESS_ADMIN]);
 
-// --- Rutas para Clientes Individuales ---
-router.get('/customers', checkRole([UserRole.BUSINESS_ADMIN]), getAdminCustomers);
-router.get('/customers/:customerId/details', checkRole([UserRole.BUSINESS_ADMIN]), getCustomerDetailsHandler);
-router.patch('/customers/:customerId/notes', checkRole([UserRole.BUSINESS_ADMIN]), updateCustomerNotesHandler);
-router.post('/customers/:customerId/adjust-points', checkRole([UserRole.BUSINESS_ADMIN]), adjustCustomerPoints);
-router.put('/customers/:customerId/tier', checkRole([UserRole.BUSINESS_ADMIN]), changeCustomerTierHandler);
-router.post('/customers/:customerId/assign-reward', checkRole([UserRole.BUSINESS_ADMIN]), assignRewardHandler);
-router.patch('/customers/:customerId/toggle-favorite', checkRole([UserRole.BUSINESS_ADMIN]), toggleFavoriteHandler);
-router.patch('/customers/:customerId/toggle-active', checkRole([UserRole.BUSINESS_ADMIN]), toggleActiveStatusHandler);
-
-// --- Rutas para Acciones Masivas sobre Clientes ---
-
-// PATCH /customers/bulk-status (Activar/Desactivar varios clientes)
-router.patch(
-    '/customers/bulk-status',
-    checkRole([UserRole.BUSINESS_ADMIN]),
-    bulkUpdateCustomerStatusHandler
-);
-
-// DELETE /customers/bulk-delete (Eliminar varios clientes)
-router.delete(
-    '/customers/bulk-delete',
-    checkRole([UserRole.BUSINESS_ADMIN]),
-    bulkDeleteCustomersHandler
-);
-
-// --- NUEVA RUTA ---
-// POST /customers/bulk-adjust-points (Ajustar puntos a varios clientes)
-router.post(
-    '/customers/bulk-adjust-points',
-    checkRole([UserRole.BUSINESS_ADMIN]),   // Solo admins
-    bulkAdjustPointsHandler                 // Nuevo handler a implementar
+// --- NUEVA RUTA PARA ESTADÍSTICAS ---
+// GET /api/admin/stats/overview - Obtener estadísticas para el dashboard
+router.get(
+    '/stats/overview',        // Ruta relativa a /api/admin
+    adminOnly,                // Middleware para asegurar que es admin
+    handleGetOverviewStats    // Handler del controlador que creamos
 );
 // --- FIN NUEVA RUTA ---
 
-// TODO: Añadir aquí futuras rutas para otras acciones masivas si fueran necesarias
+
+// --- Rutas existentes específicas de Admin relacionadas con Clientes ---
+
+// --- Rutas para Clientes Individuales ---
+router.get('/customers', adminOnly, getAdminCustomers);
+router.get('/customers/:customerId/details', adminOnly, getCustomerDetailsHandler);
+router.patch('/customers/:customerId/notes', adminOnly, updateCustomerNotesHandler);
+router.post('/customers/:customerId/adjust-points', adminOnly, adjustCustomerPoints);
+router.put('/customers/:customerId/tier', adminOnly, changeCustomerTierHandler);
+router.post('/customers/:customerId/assign-reward', adminOnly, assignRewardHandler);
+router.patch('/customers/:customerId/toggle-favorite', adminOnly, toggleFavoriteHandler);
+router.patch('/customers/:customerId/toggle-active', adminOnly, toggleActiveStatusHandler);
+
+// --- Rutas para Acciones Masivas sobre Clientes ---
+router.patch('/customers/bulk-status', adminOnly, bulkUpdateCustomerStatusHandler);
+router.delete('/customers/bulk-delete', adminOnly, bulkDeleteCustomersHandler);
+router.post('/customers/bulk-adjust-points', adminOnly, bulkAdjustPointsHandler);
 
 
 export default router;
 
-// End of File
+// End of file: backend/src/routes/admin.routes.ts

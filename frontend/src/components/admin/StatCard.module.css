@@ -1,0 +1,19 @@
+/* filename: frontend/src/components/admin/StatCard.module.css */
+.card {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--mantine-color-body); /* Asegura fondo */
+  }
+  
+  .value {
+    font-size: var(--mantine-font-size-xl); /* Usa variable Mantine o rem(24px) */
+    font-weight: 700;
+    line-height: 1.3; 
+  }
+  
+  .label {
+    font-size: var(--mantine-font-size-xs);
+    line-height: var(--mantine-line-height-xs);
+    color: var(--mantine-color-dimmed);
+    text-transform: uppercase; /* Añadido para coincidir con diseño común */
+  }
