@@ -34,20 +34,33 @@ Our goal is to be the technological ally that enables any SME, regardless of its
 
 LoyalPyME's development follows a phased roadmap, prioritizing the delivery of a functional loyalty core and scaling towards advanced and community capabilities.
 
-**Phase 1: Solid Loyalty Core (WEB) - (Primarily Operational)**
+**Phase 1: Loyalty Core (Web) - (Operational & Near Completion)**
 
-- **Centralized Rewards Management:** Creation, editing, deletion, and status management (active/inactive) of redeemable rewards for points. **(Functional)**
-- **Transactional Points System:** Generation of unique QR codes per transaction (amount, ticket) for point assignment. **(Functional)** Validation of QR codes by the end customer through their web portal to earn points. **(Functional)**
-- **Configurable Tier System:** Definition of tiers with thresholds (points, spending, visits) and management of associated benefits per tier. Configuration of the global tier system logic and downgrade policies. **(Functional)**
-- **Essential Customer Portal:** User profile visualization (points, tier) and transaction history. Visualization of available rewards and gifts directly assigned by the business. Redemption of both categories. **(Functional)**
-- **Basic Customer Management (Admin):** Listing of registered customers for the business, with key data (points, tier, registration date, status). Manual adjustment of points, manual tier change, assignment of rewards as gifts, and marking/unmarking as "Favorite" for individual customers. **(Functional)**
-- _Upcoming in Phase 1:_ Full implementation of filters (e.g., Favorite, Active status), search by name/email, and real pagination in the Admin customer management. Development of a "View Details" customer modal (possibly including internal notes for Admin). Activate/Deactivate customer action.
+- **Centralized Rewards Management:** Creation, editing, deletion, and status management (active/inactive) of redeemable rewards. **(Functional)**
+- **Transactional Points System:** Generation of unique QR codes per transaction for point assignment. **(Functional)** Validation of QR codes by the end customer to earn points. **(Functional)**
+- **Configurable Tier System:** Definition of tiers with thresholds, management of associated benefits, configuration of global system logic and downgrade policies (via backend). **(Functional)**
+- **Essential Customer Portal:** User profile visualization (points, tier), visualization of available rewards and gifts, redemption of both categories. **(Functional)**
+- **Admin Customer Management:**
+
+  - Listing of registered customers with key data (points, tier, registration date, status), sorting. **(Functional)**
+
+  * Basic search by name/email. **(Functional)**
+  * Pagination (Basic UI/Backend logic present). **(Functional)**
+  * Individual Actions: Manual adjustment of points, manual tier change, assignment of rewards as gifts, marking/unmarking as "Favorite", Activate/Deactivate customer. **(Functional)**
+  * View Details Modal: Displays detailed customer information including admin notes. **(Functional)**
+  * Admin Notes: Ability to view, edit, and save internal notes per customer. **(Functional)**
+  * Bulk Actions: Select multiple customers, Bulk Activate/Deactivate, Bulk Delete (with confirmation), Bulk Adjust Points (with input modal). **(Functional)**
+
+- **_Remaining Tasks for Phase 1:_**
+  - Implement full UI and backend connection for **Filters** in Admin customer management (e.g., by Active status, Favorite status, Tier).
+  - **Optimize/Enhance Search & Pagination** (Review backend query performance, potentially improve frontend UI components).
+  - **General Cleanup** (Address TODOs, remove debug logs, centralize types, code consistency review).
 
 **Future Phases (Towards a Complete Ecosystem):**
 
-- **Phase 2 (Web Expansion):** More complex points and rewards rules, basic direct communication tools (email, portal publications), advanced customer segmentation, bulk actions in the Admin panel.
+- **Phase 2 (Web Expansion):** More complex points and rewards rules, basic direct communication tools (email, portal publications), advanced customer segmentation, potentially other bulk actions.
 - **Phase 3 (Mobile Platform):** Native mobile applications for customers and staff, push notifications, location-based check-in, digital loyalty card in the app.
-- **Phase 4 (Business Intelligence & Lightweight CRM):** Analytics and reporting modules on customer behavior and value, lightweight CRM functionalities (notes, full history), marketing automation.
+- **Phase 4 (Business Intelligence & Lightweight CRM):** Analytics and reporting modules on customer behavior and value, lightweight CRM functionalities (full history beyond notes?), marketing automation.
 - **Phase 5 (Connected Ecosystems & Social Potential):** Shared loyalty programs among groups of businesses, events module, Customer-Business chat, and potential community/social chat (e.g., anonymous activity map in specific sectors like nightlife), expansion to other sectors and geographies.
 
 ## Used Technologies
@@ -56,22 +69,24 @@ LoyalPyME's development follows a phased roadmap, prioritizing the delivery of a
 
 - React & TypeScript
 - Vite
-- Mantine UI (v7+)
-- Axios
+- Mantine UI (v7+) & Mantine Hooks
+- `@mantine/form` & `zod` (for form validation)
+- `@mantine/notifications` (for UI feedback)
+- `@mantine/modals` (for confirmation/input modals)
+- Axios (for API requests)
 - React Router DOM (v6+)
-- qrcode.react, react-qr-reader
-- Zod, Mantine Form, @mantine/notifications
+- qrcode.react, react-qr-reader (for QR code functionality)
 
 **Backend:**
 
 - Node.js, Express, TypeScript
-- Prisma, PostgreSQL
-- JWT for authentication
-- bcryptjs
-- dotenv
-- node-cron (for scheduled tasks, e.g., tier calculation)
-- uuid, date-fns
+- Prisma (ORM), PostgreSQL (Database)
+- JWT (for authentication) & bcryptjs (for hashing)
+- dotenv (for environment variables)
+- node-cron (for scheduled tasks)
+- uuid (for unique IDs)
 - cors
+- `ts-node`, `ts-node-dev` (installed for development)
 
 ## Installation and Local Setup
 
@@ -79,64 +94,72 @@ To get the project up and running in your development environment:
 
 ### Prerequisites
 
-- Node.js (v18+ recommended)
-- yarn
+- Node.js (v18+ recommended, currently using v20.9.0)
+- yarn (v1.22.19 used)
 - Accessible PostgreSQL database server
 
 ### Backend Setup
 
 1.  Clone the repository and navigate to the `backend` folder:
-        `bash
-    git clone [https://github.com/R3v180/LoyalPyME.git](https://github.com/R3v180/LoyalPyME.git)
-    cd LoyalPyME/backend
-    `
+    ```bash
+    git clone [https://github.com/R3v180/LoyalPyME.git](https://github.com/R3v180/LoyalPyME.git)
+    cd LoyalPyME/backend
+    ```
 2.  Install dependencies:
-        `bash
-    yarn install
-    `
+    ```bash
+    yarn install
+    ```
 3.  Create a `.env` file in the root of the `backend/` folder with the following variables:
-        `env
-    DATABASE_URL="postgresql://your_user:your_password@host:port/your_db?schema=public"
-    JWT_SECRET="a_long_and_secure_random_string"
-    # Other variables if needed
-    `
+    ```env
+    DATABASE_URL="postgresql://your_user:your_password@host:port/your_db?schema=public"
+    JWT_SECRET="a_long_and_secure_random_string"
+    # PORT=3000 (Optional, defaults to 3000)
+    ```
 4.  Run Prisma migrations to set up the database schema:
-        `bash
-    npx prisma migrate dev
-    `
-5.  (Optional) You can generate a test customer user by running the script:
-        `bash
-    npx ts-node scripts/hash-customer-password.ts
-    `
-        _(Edit `scripts/hash-customer-customer.ts` before running to configure the desired email and password)._
+    ```bash
+    npx prisma migrate dev
+    ```
+5.  Generate Prisma Client (usually done by migrate, but can run manually):
+    ```bash
+    npx prisma generate
+    ```
+6.  (Optional) Run the script to hash a password for a manually created test customer:
+    ```bash
+    # Edit the script first if needed!
+    npx ts-node scripts/hash-customer-password.ts
+    ```
 
 ### Frontend Setup
 
 1.  Navigate to the `frontend` folder:
-        `bash
-    cd ../frontend
-    `
+    ```bash
+    cd ../frontend
+    ```
 2.  Install dependencies:
-        `bash
-    yarn install
-    `
+    ```bash
+    yarn install
+    ```
 
 ## Running the Project
 
 1.  Ensure your PostgreSQL server is running.
-2.  Start the backend from the `backend` folder (in one terminal):
-        `bash
-    # For development with hot-reloading (may be unstable):
-    yarn dev
-    # Or for a more robust execution after building:
-    yarn build && node dist/index.js
-    `
-        The backend will run on `http://localhost:3000`.
-3.  Start the frontend from the `frontend` folder (in another terminal):
-        `bash
-    yarn dev
-    `
-        The frontend will run on `http://localhost:5173`.
+2.  **Start the backend** from the `backend` folder (in one terminal):
+
+    ```bash
+    # Recommended method (stable):
+    yarn build && node dist/index.js
+
+    # Alternative (currently unstable due to ts-node issues):
+    # yarn dev
+    ```
+
+    The backend will run on `http://localhost:3000`.
+
+3.  **Start the frontend** from the `frontend` folder (in another terminal):
+    ```bash
+    yarn dev
+    ```
+    The frontend will run on `http://localhost:5173`.
 
 Access the application through `http://localhost:5173` in your browser.
 
@@ -172,43 +195,7 @@ For any questions or inquiries about the project, you can contact:
 
 ---
 
-## Simple Start: Subscription and Connection
-
-Getting started with LoyalPyME is designed to be quick and easy:
-
-1.  **Register:** Complete the form in just 2 minutes. No complicated paperwork.
-2.  **Configure:** Personalize with your brand and set your loyalty rules.
-3.  **Connect:** Integrate with your current system and start building loyalty.
-
 ---
-
-## LoyalPyME: Your Strategic Partner
-
-We are more than just software; we are your ally in transforming customer loyalty into sustainable growth and exploring new ways to connect in your market.
-
----
-
-## Contact: Request a Personalized Demo
-
-Ready to see LoyalPyME in action for your business?
-
-### Schedule a Meeting
-
-Call 900-123-456 or write to contacto@loyalpyme.com
-
-### Receive Your Demo
-
-Adapted specifically to your business needs.
-
-### Start Growing
-
-Fast implementation and results from the first month.
-
----
-
-## Questions and Next Steps
-
-Got questions? We're here to answer them. Let's discuss how LoyalPyME can benefit your business and plan the next steps together.
 
 ---
 
@@ -233,21 +220,34 @@ Nuestro objetivo es ser el aliado tecnológico que permita a cualquier PyME, ind
 
 El desarrollo de LoyalPyME sigue una hoja de ruta por fases, priorizando la entrega de un núcleo de fidelización funcional y escalando hacia capacidades avanzadas y comunitarias.
 
-**Fase 1: Núcleo de Fidelización Web (Operativa Principalmente)**
+**Fase 1: Núcleo de Fidelización Web (Operativa y Casi Completa)**
 
-- **Gestión de Recompensas:** Creación, edición, eliminación y gestión del estado (activo/inactivo) de recompensas canjeables por puntos. **(Funcional)**
-- **Sistema de Puntos Transaccional:** Generación de códigos QR únicos por transacción (importe, ticket) para asignación de puntos. **(Funcional)** Validación de códigos QR por el cliente final a través de su portal web para sumar puntos. **(Funcional)**
-- **Sistema de Niveles (Tiers):** Definición de niveles con umbrales (puntos, gasto, visitas) y gestión de beneficios por nivel. Configuración de la lógica de cálculo y descenso de nivel. **(Funcional)**
-- **Panel Cliente Esencial:** Visualización del perfil de usuario (puntos, nivel) e historial de transacciones. Visualización de recompensas disponibles y regalos asignados directamente por el negocio. Canjeo de ambas categorías. **(Funcional)**
-- **Gestión de Clientes (Admin):** Listado de clientes registrados en el negocio, con datos clave (puntos, nivel, fecha registro, estado). Ajuste manual de puntos, cambio manual de nivel, asignación de recompensas como regalo, y marcar/desmarcar como "Favorito" para clientes individuales. **(Funcional)**
-- _Próximo en Fase 1:_ Implementación completa de filtros (ej: Favoritos, Activos), búsqueda por nombre/email y paginación real en la gestión de clientes Admin. Desarrollo del modal "Ver Detalles" de cliente (posiblemente incluyendo notas internas para Admin). Acción Activar/Desactivar cliente.
+- **Gestión de Recompensas:** Creación, edición, eliminación y gestión del estado (activo/inactivo). **(Funcional)**
+- **Sistema de Puntos Transaccional:** Generación QR para asignación de puntos. **(Funcional)** Validación QR por cliente para sumar puntos. **(Funcional)**
+- **Sistema de Niveles (Tiers):** Definición, gestión de beneficios, configuración global (backend). **(Funcional)**
+- **Panel Cliente Esencial:** Visualización perfil (puntos, nivel), visualización recompensas/regalos, canjeo de ambos. **(Funcional)**
+- **Gestión de Clientes (Admin):**
+
+  - Listado de clientes con datos clave (puntos, nivel, etc.), ordenación. **(Funcional)**
+
+  * Búsqueda básica por nombre/email. **(Funcional)**
+  * Paginación (Lógica básica BE/FE presente). **(Funcional)**
+  * Acciones Individuales: Ajuste Puntos, Cambio Nivel, Asignar Regalo, Favorito, Activar/Desactivar. **(Funcional)**
+  * Modal Ver Detalles: Muestra información detallada y notas de admin. **(Funcional)**
+  * Notas Admin: Funcionalidad completa Ver/Editar/Guardar. **(Funcional)**
+  * Acciones Masivas: Selección múltiple, Activar/Desactivar, Eliminar (con confirmación), Ajustar Puntos (con modal input). **(Funcional)**
+
+- **_Tareas Restantes para Fase 1:_**
+  - Implementar **Filtros Completos** en Gestión Clientes Admin (UI + conexión BE para filtrar por Estado Activo, Favorito, etc.).
+  - **Optimizar/Mejorar Búsqueda y Paginación** (Revisar rendimiento backend, mejorar UI paginación si es necesario).
+  - **Limpieza General** (Revisar TODOs, eliminar logs de depuración, centralizar tipos, revisar consistencia).
 
 **Fases Futuras (Hacia un Ecosistema Completo):**
 
-- **Fase 2 (Expansión Web):** Reglas de puntos y recompensas más complejas, herramientas básicas de comunicación directa (email, publicaciones en portal), segmentación avanzada de clientes, acciones masivas en panel Admin.
+- **Fase 2 (Expansión Web):** Reglas de puntos y recompensas más complejas, herramientas básicas de comunicación directa (email, publicaciones en portal), segmentación avanzada de clientes, potencialmente otras acciones masivas.
 - **Fase 3 (Plataforma Móvil):** Aplicaciones nativas para clientes y personal, notificaciones push, check-in basado en ubicación, tarjeta de fidelización digital en la app.
-- **Fase 4 (Inteligencia y CRM Ligero):** Módulos de análisis e informes sobre comportamiento y valor del cliente, funcionalidades de CRM ligero (notas, historial completo), automatización de marketing.
-- **Fase 5 (Ecosistemas Conectados y Potencial Social):** Programas de fidelización compartidos entre grupos de negocios, módulo de eventos, chat Cliente-Negocio y potencial chat comunitario/social (ej: mapa de actividad anónima en sectores específicos como el ocio nocturno), expansión a otros sectores y geografías.
+- **Fase 4 (Inteligencia y CRM Ligero):** Módulos de análisis e informes sobre comportamiento y valor del cliente, funcionalidades de CRM ligero (historial completo más allá de notas?), automatización de marketing.
+- **Fase 5 (Ecosistemas Conectados y Potencial Social):** Programas de fidelización compartidos entre grupos de negocios, módulo de eventos, chat Cliente-Negocio y potencial chat comunitario/social, expansión a otros sectores y geografías.
 
 ## Tecnologías Utilizadas
 
@@ -255,22 +255,24 @@ El desarrollo de LoyalPyME sigue una hoja de ruta por fases, priorizando la entr
 
 - React & TypeScript
 - Vite
-- Mantine UI (v7+)
-- Axios
+- Mantine UI (v7+) & Mantine Hooks
+- `@mantine/form` & `zod` (para validación)
+- `@mantine/notifications` (para feedback UI)
+- `@mantine/modals` (para modales confirmación/input)
+- Axios (para peticiones API)
 - React Router DOM (v6+)
-- qrcode.react, react-qr-reader
-- Zod, Mantine Form, @mantine/notifications
+- qrcode.react, react-qr-reader (para QR)
 
 **Backend:**
 
 - Node.js, Express, TypeScript
-- Prisma, PostgreSQL
-- JWT para autenticación
-- bcryptjs
-- dotenv
-- node-cron (para tareas programadas, ej. cálculo de tiers)
-- uuid, date-fns
+- Prisma (ORM), PostgreSQL (Base de Datos)
+- JWT (para autenticación) & bcryptjs (para hashing)
+- dotenv (para variables entorno)
+- node-cron (para tareas programadas)
+- uuid (para IDs únicos)
 - cors
+- `ts-node`, `ts-node-dev` (instalados para desarrollo)
 
 ## Instalación y Configuración Local
 
@@ -278,66 +280,46 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 
 ### Prerrequisitos
 
-- Node.js (v18+ recomendado)
-- yarn
+- Node.js (v18+ recomendado, usando v20.9.0)
+- yarn (v1.22.19 usada)
 - Servidor de base de datos PostgreSQL accesible
 
 ### Configuración del Backend
 
-1.  Clona el repositorio y navega a la carpeta `backend`:
-        `bash
-    git clone [https://github.com/R3v180/LoyalPyME.git](https://github.com/R3v180/LoyalPyME.git)
-    cd LoyalPyME/backend
-    `
-2.  Instala las dependencias:
-        `bash
-    yarn install
-    `
-3.  Crea un archivo `.env` en la raíz de la carpeta `backend/` con las siguientes variables:
-        `env
-    DATABASE_URL="postgresql://your_user:your_password@host:port/your_db?schema=public"
-    JWT_SECRET="una_cadena_aleatoria_larga_y_segura"
-    # Otras variables si son necesarias
-    `
-4.  Ejecuta las migraciones de Prisma para configurar el esquema de la base de datos:
-        `bash
-    npx prisma migrate dev
-    `
-5.  (Opcional) Puedes generar un usuario cliente de prueba ejecutando el script:
-        `bash
-    npx ts-node scripts/hash-customer-password.ts
-    `
-        _(Edita `scripts/hash-customer-customer.ts` antes de ejecutarlo para configurar el email y la contraseña deseados)._
+1.  Clona repo y `cd LoyalPyME/backend`
+2.  `yarn install`
+3.  Crea `.env` con `DATABASE_URL`, `JWT_SECRET`
+4.  `npx prisma migrate dev`
+5.  `npx prisma generate` (si es necesario)
+6.  (Opcional) `npx ts-node scripts/hash-customer-password.ts` (editar antes)
 
 ### Configuración del Frontend
 
-1.  Navega a la carpeta `frontend`:
-        `bash
-    cd ../frontend
-    `
-2.  Instala las dependencias:
-        `bash
-    yarn install
-    `
+1.  `cd ../frontend`
+2.  `yarn install`
 
 ## Ejecutar el Proyecto
 
-1.  Asegúrate de que tu servidor PostgreSQL está en ejecución.
-2.  Inicia el backend desde la carpeta `backend` (en una terminal):
-        `bash
-    # Para desarrollo con recarga en caliente (puede ser inestable):
-    yarn dev
-    # O para una ejecución más robusta después de compilar:
-    yarn build && node dist/index.js
-    `
-        El backend se ejecutará en `http://localhost:3000`.
-3.  Inicia el frontend desde la carpeta `frontend` (en otra terminal):
-        `bash
-    yarn dev
-    `
-        El frontend se ejecutará en `http://localhost:5173`.
+1.  Asegúrate de que PostgreSQL está corriendo.
+2.  **Inicia el backend** desde `backend` (en una terminal):
 
-Accede a la aplicación a través de `http://localhost:5173` en tu navegador.
+    ```bash
+    # Método recomendado (estable):
+    yarn build && node dist/index.js
+
+    # Alternativa (actualmente inestable por problemas con ts-node):
+    # yarn dev
+    ```
+
+    El backend se ejecutará en `http://localhost:3000`.
+
+3.  **Inicia el frontend** desde `frontend` (en otra terminal):
+    ```bash
+    yarn dev
+    ```
+    El frontend se ejecutará en `http://localhost:5173`.
+
+Accede a `http://localhost:5173`.
 
 ## Contribuciones
 
@@ -368,5 +350,3 @@ Para cualquier pregunta o consulta sobre el proyecto, puedes contactar a:
 
 - **Olivier Hottelet**
 - olivierhottelet1980@gmail.com
-
----
