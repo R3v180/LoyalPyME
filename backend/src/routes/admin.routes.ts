@@ -1,5 +1,5 @@
 // File: backend/src/routes/admin.routes.ts
-// Version: 1.7.0 (Add route for toggle active status)
+// Version: 1.8.2 (Restore checkRole for details route)
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
@@ -14,26 +14,33 @@ import {
     changeCustomerTierHandler,
     assignRewardHandler,
     toggleFavoriteHandler,
-    toggleActiveStatusHandler // <-- Importar el nuevo handler
-} from '../customer/admin-customer.controller'; // Ruta actualizada
+    toggleActiveStatusHandler,
+    getCustomerDetailsHandler
+} from '../customer/admin-customer.controller'; // Asegúrate que esta ruta es correcta
 
 const router = Router();
 
 // --- Rutas específicas de Admin relacionadas con Clientes ---
-// Nota: checkRole se asegura que solo BUSINESS_ADMIN accede a estas rutas
 
-// GET /customers
+// GET /customers (Lista)
 router.get(
     '/customers',
     checkRole([UserRole.BUSINESS_ADMIN]),
     getAdminCustomers
 );
 
+// GET /customers/:customerId/details (Detalles de un cliente)
+router.get(
+    '/customers/:customerId/details',
+    checkRole([UserRole.BUSINESS_ADMIN]), // <-- Middleware DESCOMENTADO de nuevo
+    getCustomerDetailsHandler
+);
+
 // POST /customers/:customerId/adjust-points
 router.post(
     '/customers/:customerId/adjust-points',
     checkRole([UserRole.BUSINESS_ADMIN]),
-    adjustCustomerPoints // Ojo: tu versión tenía adjustCustomerPoints, asegúrate que el nombre es correcto
+    adjustCustomerPoints
 );
 
 // PUT /customers/:customerId/tier
@@ -57,14 +64,12 @@ router.patch(
     toggleFavoriteHandler
 );
 
-// --- NUEVA RUTA ---
 // PATCH /customers/:customerId/toggle-active
 router.patch(
-    '/customers/:customerId/toggle-active',      // Método PATCH para actualizar parcialmente
-    checkRole([UserRole.BUSINESS_ADMIN]),         // Solo admins
-    toggleActiveStatusHandler                     // Nuevo handler a implementar
+    '/customers/:customerId/toggle-active',
+    checkRole([UserRole.BUSINESS_ADMIN]),
+    toggleActiveStatusHandler
 );
-// --- FIN NUEVA RUTA ---
 
 
 export default router;

@@ -1,5 +1,5 @@
 // filename: backend/src/admin/admin-customer.service.ts
-// Version: 1.2.1 (Fix: Remove non-existent minPoints from Tier select in details)
+// Version: 1.2.2 (Include adminNotes in details selector)
 
 // Contiene la lógica para las operaciones de administrador sobre clientes
 
@@ -31,7 +31,7 @@ const customerDetailsSelector = Prisma.validator<Prisma.UserSelect>()({
     isFavorite: true,
     tierAchievedAt: true,
     // lastActivityAt: true,
-    // adminNotes: true,
+    adminNotes: true,    // <-- Campo añadido/descomentado
     businessId: true,
     role: true,
     currentTier: {
@@ -39,13 +39,13 @@ const customerDetailsSelector = Prisma.validator<Prisma.UserSelect>()({
             id: true,
             name: true,
             level: true,
-            // minPoints: true, // <-- CAMPO ELIMINADO PORQUE NO EXISTE
             description: true
         }
     }
 });
 
 // Creamos un tipo basado en el selector para usarlo como tipo de retorno
+// Este tipo ahora incluirá 'adminNotes?' gracias al selector actualizado
 export type CustomerDetails = Prisma.UserGetPayload<{ select: typeof customerDetailsSelector }>;
 // --- Fin Selector y Tipo ---
 
@@ -96,7 +96,7 @@ export const getCustomersForBusiness = async ( businessId: string, options: GetC
     }
 };
 
-// getCustomerDetailsById (sin cambios funcionales, solo la definición del selector)
+// getCustomerDetailsById (sin cambios funcionales, solo usa el selector actualizado)
 export const getCustomerDetailsById = async (customerId: string, adminBusinessId: string): Promise<CustomerDetails | null> => {
     console.log(`[ADM_CUST_SVC] Getting details for customer ${customerId} by admin from business ${adminBusinessId}`);
     try {
@@ -106,7 +106,7 @@ export const getCustomerDetailsById = async (customerId: string, adminBusinessId
                 businessId: adminBusinessId,
                 role: UserRole.CUSTOMER_FINAL
             },
-            select: customerDetailsSelector // Usa el selector corregido
+            select: customerDetailsSelector // Usa el selector actualizado (que incluye adminNotes)
         });
 
         if (!customerDetails) {
