@@ -1,36 +1,36 @@
 // File: frontend/src/main.tsx
-// Version: 1.1.0 (Add Mantine Notifications Provider)
+// Version: 1.2.1 (Remove unused React import)
 
+// import React from 'react'; // <-- Importación eliminada
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-// Importaciones de Mantine Core
+// Mantine Core
 import '@mantine/core/styles.css';
 import { MantineProvider } from '@mantine/core';
-// --- NUEVO: Importar Notifications ---
+// Mantine Notifications
 import { Notifications } from '@mantine/notifications';
-// --- FIN NUEVO ---
-// Importar CSS de Notificaciones (¡Importante!)
 import '@mantine/notifications/styles.css';
+// Mantine Modals
+import { ModalsProvider } from '@mantine/modals';
 
-// Importar el tema personalizado
+// Tema Personalizado
 import { theme } from './theme';
 
-// Importaciones de React Router
+// React Router
 import { BrowserRouter } from 'react-router-dom';
 
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  // <React.StrictMode> // StrictMode comentado
+  // <React.StrictMode>
   <MantineProvider theme={theme}>
-     {/* --- NUEVO: Añadir el componente Notifications --- */}
-     {/* Debe estar dentro de MantineProvider */}
-     <Notifications position="top-right" zIndex={1000} />
-     {/* --- FIN NUEVO --- */}
-     <BrowserRouter>
-       <App />
-     </BrowserRouter>
+    <BrowserRouter>
+      <ModalsProvider>
+        <Notifications position="top-right" zIndex={1000} />
+        <App />
+      </ModalsProvider>
+    </BrowserRouter>
   </MantineProvider>
   // </React.StrictMode>,
 );

@@ -13,6 +13,7 @@
     "@mantine/core": "^7.17.4",
     "@mantine/form": "^7.17.4",
     "@mantine/hooks": "^7.17.4",
+    "@mantine/modals": "^7.17.5",
     "@mantine/notifications": "^7.17.4",
     "@tabler/icons-react": "^3.31.0",
     "@types/qrcode.react": "^3.0.0",

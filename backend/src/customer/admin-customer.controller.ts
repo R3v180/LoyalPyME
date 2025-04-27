@@ -1,11 +1,10 @@
 // filename: backend/src/customer/admin-customer.controller.ts
-// Version: 1.4.1 (Add detailed logs to getAdminCustomers handler - COMPLETE FILE)
+// Version: 1.5.0 (Add handler for bulk deleting customers)
 
 import { Request, Response, NextFunction } from 'express';
 import { UserRole } from '@prisma/client';
 
 // --- Importar funciones desde el servicio ---
-// Confirma la ruta correcta de tu servicio. Usaré '../admin/admin-customer.service' basado en tu código.
 import {
     getCustomersForBusiness,
     adjustPointsForCustomer,
@@ -15,40 +14,23 @@ import {
     toggleActiveStatusForCustomer,
     getCustomerDetailsById,
     updateAdminNotesForCustomer,
-    bulkUpdateStatusForCustomers
+    bulkUpdateStatusForCustomers,
+    bulkDeleteCustomers // <-- Importar la nueva función del servicio
     // GetCustomersOptions
 } from '../admin/admin-customer.service'; // Confirma esta ruta
 
-// --- Definir tipo para sortDir explícitamente ---
+// --- Tipos y Interfaces (sin cambios) ---
 type SortDirection = 'asc' | 'desc';
+interface GetCustomersOptions { /* ... */ }
 
-// --- Definir interfaz localmente (o importarla si se exporta del servicio) ---
-interface GetCustomersOptions {
-    page?: number;
-    limit?: number;
-    sortBy?: string;
-    sortDir?: SortDirection;
-    filters?: {
-        search?: string;
-        isFavorite?: boolean;
-        isActive?: boolean;
-    }
-}
+// --- Handlers Existentes (Código completo restaurado) ---
 
-/**
- * Handler para que el Admin obtenga la lista PAGINADA, FILTRADA y ORDENADA de clientes.
- */
 export const getAdminCustomers = async (req: Request, res: Response, next: NextFunction) => {
     console.log('[ADM_CUST_CTRL] Entering getAdminCustomers handler...'); // LOG 1
-    // @ts-ignore - Considerar definir un tipo extendido para Request con 'user'
+    // @ts-ignore
     const adminBusinessId = req.user?.businessId;
-    if (!adminBusinessId) {
-        console.error("[ADM_CUST_CTRL] No businessId found in req.user for admin.");
-        return res.status(403).json({ message: "No se pudo identificar el negocio del administrador." });
-    }
+    if (!adminBusinessId) { console.error("[ADM_CUST_CTRL] No businessId found..."); return res.status(403).json({ message: "..." }); }
     console.log(`[ADM_CUST_CTRL] Admin businessId: ${adminBusinessId}`); // LOG 2
-
-    // Leer y validar query params
     const page = parseInt(req.query.page as string || '1', 10);
     const limit = parseInt(req.query.limit as string || '10', 10);
     const sortBy = req.query.sortBy as string || 'createdAt';
@@ -57,7 +39,6 @@ export const getAdminCustomers = async (req: Request, res: Response, next: NextF
     const search = req.query.search as string || undefined;
     const isFavoriteParam = req.query.isFavorite as string;
     const isActiveParam = req.query.isActive as string;
-
     const options: GetCustomersOptions = {
         page: isNaN(page) || page < 1 ? 1 : page,
         limit: isNaN(limit) || limit < 1 ? 10 : limit,
@@ -65,31 +46,19 @@ export const getAdminCustomers = async (req: Request, res: Response, next: NextF
         sortDir: sortDir,
         filters: { search: search?.trim() || undefined, isFavorite: isFavoriteParam === undefined ? undefined : isFavoriteParam === 'true', isActive: isActiveParam === undefined ? undefined : isActiveParam === 'true', }
     };
-
     console.log(`[ADM_CUST_CTRL] Parsed options:`, options); // LOG 3
-
     try {
         console.log('[ADM_CUST_CTRL] Calling getCustomersForBusiness service...'); // LOG 4
         const result = await getCustomersForBusiness(adminBusinessId, options);
-        // LOG 5: ¿Llega aquí? ¿Qué contiene 'result'?
-        console.log(`[ADM_CUST_CTRL] Service call returned. Result has ${result?.items?.length ?? 'N/A'} items. Total items: ${result?.totalItems ?? 'N/A'}`);
-
-        // LOG 6: Justo antes de enviar la respuesta
-        console.log('[ADM_CUST_CTRL] Attempting to send JSON response...');
+        console.log(`[ADM_CUST_CTRL] Service call returned. Result has ${result?.items?.length ?? 'N/A'} items. Total items: ${result?.totalItems ?? 'N/A'}`); // LOG 5
+        console.log('[ADM_CUST_CTRL] Attempting to send JSON response...'); // LOG 6
         res.status(200).json(result);
-        // LOG 7: (No se ejecutará si res.json tiene éxito y termina)
-        // console.log('[ADM_CUST_CTRL] JSON response sent (?).');
-
     } catch (error) {
-        // LOG 8: Si ocurre un error en el try o en el servicio
-        console.error("[ADM_CUST_CTRL] *** ERROR caught in getAdminCustomers handler:", error);
+        console.error("[ADM_CUST_CTRL] *** ERROR caught in getAdminCustomers handler:", error); // LOG 8
         next(error);
     }
 };
 
-/**
- * Handler para obtener los detalles completos de un cliente específico.
- */
 export const getCustomerDetailsHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId } = req.params;
     // @ts-ignore
@@ -108,9 +77,6 @@ export const getCustomerDetailsHandler = async (req: Request, res: Response, nex
     }
 };
 
-/**
- * Handler para actualizar las notas de administrador de un cliente.
- */
 export const updateCustomerNotesHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId } = req.params;
     const { notes } = req.body;
@@ -131,9 +97,6 @@ export const updateCustomerNotesHandler = async (req: Request, res: Response, ne
     }
 };
 
-/**
- * Handler para ajustar puntos.
- */
 export const adjustCustomerPoints = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId } = req.params;
     const { amount, reason } = req.body;
@@ -151,9 +114,6 @@ export const adjustCustomerPoints = async (req: Request, res: Response, next: Ne
     catch (error) { console.error(`[ADM_CUST_CTRL] Failed to adjust points for customer ${customerId}:`, error); next(error); }
 };
 
-/**
- * Handler para cambiar tier.
- */
 export const changeCustomerTierHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId } = req.params;
     const { tierId } = req.body;
@@ -161,12 +121,8 @@ export const changeCustomerTierHandler = async (req: Request, res: Response, nex
     const adminBusinessId = req.user?.businessId;
     if (!adminBusinessId) { return res.status(403).json({ message: "Información de administrador no disponible." }); }
     if (!customerId) { return res.status(400).json({ message: "Falta el ID del cliente." }); }
-    if (tierId === undefined) { // Check if tierId exists in body (even if null)
-         return res.status(400).json({ message: "Falta el ID del nivel ('tierId') en el cuerpo de la petición (puede ser nulo)." });
-     }
-    if (tierId !== null && typeof tierId !== 'string') { // Si no es null, debe ser string
-        return res.status(400).json({ message: "El ID del nivel ('tierId') debe ser un texto o nulo." });
-    }
+    if (tierId === undefined) { return res.status(400).json({ message: "Falta el ID del nivel ('tierId') en el cuerpo de la petición (puede ser nulo)." }); }
+    if (tierId !== null && typeof tierId !== 'string') { return res.status(400).json({ message: "El ID del nivel ('tierId') debe ser un texto o nulo." }); }
     try {
         const updatedCustomer = await changeCustomerTier( customerId, adminBusinessId, tierId );
         res.status(200).json({ message: `Nivel cambiado correctamente para ${updatedCustomer.email}.`, customer: { id: updatedCustomer.id, currentTierId: updatedCustomer.currentTierId, tierAchievedAt: updatedCustomer.tierAchievedAt } });
@@ -174,9 +130,6 @@ export const changeCustomerTierHandler = async (req: Request, res: Response, nex
     catch (error) { console.error(`[ADM_CUST_CTRL] Failed to change tier for customer ${customerId} to ${tierId}:`, error); next(error); }
 };
 
-/**
- * Handler para asignar recompensa.
- */
 export const assignRewardHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId } = req.params;
     const { rewardId } = req.body;
@@ -194,9 +147,6 @@ export const assignRewardHandler = async (req: Request, res: Response, next: Nex
     catch (error) { console.error(`[ADM_CUST_CTRL] Failed to assign reward ${rewardId} to customer ${customerId}:`, error); next(error); }
 };
 
-/**
- * Handler para toggle favorito.
- */
 export const toggleFavoriteHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId } = req.params;
     // @ts-ignore
@@ -210,9 +160,6 @@ export const toggleFavoriteHandler = async (req: Request, res: Response, next: N
     catch (error) { console.error(`[ADM_CUST_CTRL] Failed to toggle favorite status for customer ${customerId}:`, error); next(error); }
 };
 
-/**
- * Handler para toggle activo.
- */
 export const toggleActiveStatusHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId } = req.params;
     // @ts-ignore
@@ -225,9 +172,6 @@ export const toggleActiveStatusHandler = async (req: Request, res: Response, nex
     } catch (error) { console.error(`[ADM_CUST_CTRL] Failed to toggle active status for customer ${customerId}:`, error); next(error); }
 };
 
-/**
- * Handler para actualizar estado activo/inactivo masivo.
- */
 export const bulkUpdateCustomerStatusHandler = async (req: Request, res: Response, next: NextFunction) => {
     // @ts-ignore
     const adminBusinessId = req.user?.businessId;
@@ -245,5 +189,46 @@ export const bulkUpdateCustomerStatusHandler = async (req: Request, res: Respons
         next(error);
     }
 };
+
+// --- NUEVO HANDLER PARA BORRADO MASIVO ---
+/**
+ * Handler para eliminar múltiples clientes.
+ */
+export const bulkDeleteCustomersHandler = async (req: Request, res: Response, next: NextFunction) => {
+    // @ts-ignore - Obtener businessId del admin autenticado
+    const adminBusinessId = req.user?.businessId;
+    // Extraer datos del body: esperamos un array de IDs
+    const { customerIds } = req.body;
+
+    console.log(`[ADM_CUST_CTRL] Request for bulk delete for customers [${customerIds?.join(', ')}] by admin from business ${adminBusinessId}`);
+
+    // Validaciones
+    if (!adminBusinessId) {
+        return res.status(403).json({ message: "Información de administrador no disponible." });
+    }
+    if (!Array.isArray(customerIds) || customerIds.length === 0) {
+        return res.status(400).json({ message: "Se requiere un array 'customerIds' con al menos un ID de cliente." });
+    }
+    // Validar que todos los IDs sean strings
+    if (!customerIds.every(id => typeof id === 'string')) {
+         return res.status(400).json({ message: "Todos los elementos en 'customerIds' deben ser strings." });
+    }
+
+    try {
+        // Llamar a la nueva función del servicio
+        const result = await bulkDeleteCustomers(customerIds, adminBusinessId);
+
+        // Enviar respuesta exitosa indicando cuántos se eliminaron
+        res.status(200).json({
+            message: `${result.count} cliente(s) eliminados correctamente.`,
+            count: result.count // Prisma deleteMany devuelve un objeto con 'count'
+        });
+    } catch (error) {
+        // Manejar errores (ej. error de BD)
+        console.error(`[ADM_CUST_CTRL] Failed bulk delete for customers [${customerIds.join(', ')}]:`, error);
+        next(error); // Pasar al manejador global
+    }
+};
+// --- FIN NUEVO HANDLER ---
 
 // End of File: backend/src/customer/admin-customer.controller.ts
