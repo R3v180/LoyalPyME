@@ -1,13 +1,55 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LoyalPyME</title>
-  </head>
+
+    <style>
+      body {
+        margin: 0; /* Asegura que no haya márgenes por defecto */
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; /* Fuente simple de sistema */
+      }
+      #initial-loader {
+        position: fixed; /* Posición fija para cubrir todo */
+        inset: 0; /* Equivalente a top: 0; right: 0; bottom: 0; left: 0; */
+        background-color: #f8f9fa; /* Un fondo claro simple (ajusta si prefieres oscuro) */
+        display: flex;
+        flex-direction: column; /* Apila texto y spinner */
+        align-items: center;
+        justify-content: center;
+        z-index: 9999; /* Asegura que esté por encima de todo */
+        color: #495057;
+        transition: opacity 0.5s ease-out; /* Transición suave al ocultar */
+      }
+      #initial-loader .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border-left-color: #09f; /* Color del spinner (puedes usar tu azul Mantine) */
+        margin-top: 20px;
+        animation: spin 1s ease infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      /* Estilo opcional para ocultar cuando se añade la clase 'hidden' */
+       #initial-loader.hidden {
+          opacity: 0;
+          pointer-events: none; /* No interferir con clics */
+       }
+    </style>
+    </head>
   <body>
+    <div id="initial-loader">
+      <p>Cargando LoyalPyME...</p>
+      <div class="spinner"></div>
+    </div>
     <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
