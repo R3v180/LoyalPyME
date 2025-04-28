@@ -1,24 +1,25 @@
-// File: frontend/src/pages/RegisterPage.tsx
-// Version: 1.2.1 (Remove unused imports)
+// filename: frontend/src/pages/RegisterPage.tsx
+// Version: 1.3.1 (Fix imports for businessService, Group, Alert, IconAlertCircle)
 
-// MODIFICADO: Quitado FormEvent de la importación
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // useEffect ya estaba
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import {
     Container, Paper, Title, Text, Stack, TextInput, PasswordInput,
-    Button, Select, Anchor
+    Button, Select, Anchor, Loader, Group // CORRECCIÓN: Añadido Group, Eliminado Alert
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-// MODIFICADO: Quitado IconAlertCircle de la importación
-import { IconCheck, IconX } from '@tabler/icons-react';
+import { IconCheck, IconX } from '@tabler/icons-react'; // CORRECCIÓN: Eliminado IconAlertCircle
 
-// Enums (sin cambios)
+// CORRECCIÓN: Ruta de importación corregida a ../services/
+import { getPublicBusinessList, BusinessOption } from '../services/businessService';
+
+// Enums
 enum DocumentType { DNI = 'DNI', NIE = 'NIE', PASSPORT = 'PASSPORT', OTHER = 'OTHER' }
 enum UserRole { BUSINESS_ADMIN = 'BUSINESS_ADMIN', CUSTOMER_FINAL = 'CUSTOMER_FINAL' }
 
-// Interface (sin cambios)
+// Interface
 interface RegisterFormValues {
     email: string;
     password: string;
@@ -36,39 +37,22 @@ const RegisterPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const documentTypeOptions = Object.values(DocumentType).map(value => ({ value, label: value }));
 
-    // useForm (sin cambios)
+    // Estados para la lista de negocios
+    const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
+    const [loadingBusinesses, setLoadingBusinesses] = useState<boolean>(true);
+    const [errorBusinesses, setErrorBusinesses] = useState<string | null>(null);
+
+    // useForm
     const form = useForm<RegisterFormValues>({
         initialValues: {
-            email: '',
-            password: '',
-            confirmPassword: '',
-            name: '',
-            phone: '',
-            documentType: null,
-            documentId: '',
-            businessId: '',
+            email: '', password: '', confirmPassword: '', name: '', phone: '',
+            documentType: null, documentId: '', businessId: '',
         },
         validate: {
-            email: (value) => {
-                if (!value) return 'El email es obligatorio.';
-                if (!/^\S+@\S+\.\S+$/.test(value)) return 'Formato de email inválido.';
-                return null;
-            },
-            password: (value) => {
-                if (!value) return 'La contraseña es obligatoria.';
-                if (value.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
-                return null;
-            },
-            confirmPassword: (value, values) => {
-                if (!value) return 'Confirma la contraseña.';
-                if (value !== values.password) return 'Las contraseñas no coinciden.';
-                return null;
-            },
-            phone: (value) => {
-                if (!value) return 'El teléfono es obligatorio.';
-                if (!/^\+\d{9,15}$/.test(value)) return 'Formato inválido (ej: +34666...).';
-                return null;
-            },
+            email: (value) => (!value ? 'El email es obligatorio.' : !/^\S+@\S+\.\S+$/.test(value) ? 'Formato de email inválido.' : null),
+            password: (value) => (!value ? 'La contraseña es obligatoria.' : value.length < 6 ? 'La contraseña debe tener al menos 6 caracteres.' : null),
+            confirmPassword: (value, values) => (!value ? 'Confirma la contraseña.' : value !== values.password ? 'Las contraseñas no coinciden.' : null),
+            phone: (value) => (!value ? 'El teléfono es obligatorio.' : !/^\+\d{9,15}$/.test(value) ? 'Formato inválido (ej: +34666...).' : null),
             documentType: (value) => (value ? null : 'Selecciona un tipo de documento.'),
             documentId: (value, values) => {
                  if (!value) return 'El número de documento es obligatorio.';
@@ -76,61 +60,70 @@ const RegisterPage: React.FC = () => {
                  if (values.documentType === DocumentType.NIE && !/^[XYZ]\d{7}[A-Z]$/i.test(value)) return 'Formato NIE inválido (letra, 7 números, letra).';
                  return null;
             },
-            businessId: (value) => (value ? null : 'El ID del negocio es obligatorio.'),
+            businessId: (value) => (value ? null : 'Debes seleccionar un negocio.'),
         },
     });
 
-    // handleSubmit (sin cambios)
+    // useEffect para cargar la lista de negocios
+    useEffect(() => {
+        const fetchBusinesses = async () => {
+            setLoadingBusinesses(true);
+            setErrorBusinesses(null);
+            try {
+                const data = await getPublicBusinessList();
+                setBusinesses(data);
+            } catch (err: any) {
+                console.error("Error fetching businesses for dropdown:", err);
+                setErrorBusinesses(err.message || "No se pudo cargar la lista de negocios.");
+            } finally {
+                setLoadingBusinesses(false);
+            }
+        };
+        fetchBusinesses();
+         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+
+    // handleSubmit
     const handleSubmit = async (values: RegisterFormValues) => {
         setIsLoading(true);
         const registrationData = {
-            email: values.email.trim(),
-            password: values.password,
-            name: values.name.trim() || undefined,
-            phone: values.phone.trim(),
-            documentId: values.documentId.trim().toUpperCase(),
-            documentType: values.documentType,
-            businessId: values.businessId.trim(),
-            role,
+            email: values.email.trim(), password: values.password, name: values.name.trim() || undefined,
+            phone: values.phone.trim(), documentId: values.documentId.trim().toUpperCase(), documentType: values.documentType,
+            businessId: values.businessId, role,
         };
-        console.log('Intentando registrar (con useForm):', registrationData);
+        console.log('Intentando registrar (con Select):', registrationData);
         try {
             const response = await axios.post('http://localhost:3000/auth/register', registrationData);
             console.log('Registration successful:', response.data);
             notifications.show({
-                title: '¡Registro Exitoso!',
-                message: 'Tu cuenta ha sido creada. Serás redirigido a la página de inicio de sesión.',
-                color: 'green',
-                icon: <IconCheck size={18} />,
-                autoClose: 4000,
+                title: '¡Registro Exitoso!', message: 'Tu cuenta ha sido creada. Serás redirigido a la página de inicio de sesión.',
+                color: 'green', icon: <IconCheck size={18} />, autoClose: 4000,
             });
-            setTimeout(() => {
-                navigate('/login', { state: { registrationSuccess: true } });
-            }, 1500);
+            setTimeout(() => { navigate('/login', { state: { registrationSuccess: true } }); }, 1500);
         } catch (err: any) {
             console.error('Error during registration:', err);
             const message = err.response?.data?.message || err.message || 'Error desconocido durante el registro.';
             notifications.show({
-                title: 'Error de Registro',
-                message: message,
-                color: 'red',
-                icon: <IconX size={18} />,
-                autoClose: 6000,
+                 title: 'Error de Registro', message: message, color: 'red', icon: <IconX size={18} />, autoClose: 6000,
             });
         } finally {
             setIsLoading(false);
         }
     };
 
-    // JSX (sin cambios)
+    // Mapeo de opciones para el Select
+    const businessSelectOptions = businesses.map(b => ({ value: b.id, label: b.name }));
+
     return (
         <Container size={480} my={40}>
              <Title ta="center" style={{ fontWeight: 900 }}> ¡Bienvenido a LoyalPyME! </Title>
              <Text c="dimmed" size="sm" ta="center" mt={5}> ¿Ya tienes cuenta?{' '} <Anchor size="sm" component={Link} to="/login"> Inicia sesión </Anchor> </Text>
              <Paper withBorder shadow="md" p={30} mt={30} radius="lg">
-                 <Title order={2} ta="center" mb="lg">Crea tu Cuenta</Title>
+                 <Title order={2} ta="center" mb="lg">Crea tu Cuenta de Cliente</Title>
                  <form onSubmit={form.onSubmit(handleSubmit)}>
                      <Stack>
+                         {/* Campos existentes sin cambios */}
                          <TextInput label="Email" placeholder="tu@email.com" required disabled={isLoading} {...form.getInputProps('email')} />
                          <PasswordInput label="Contraseña" placeholder="Tu contraseña" required disabled={isLoading} {...form.getInputProps('password')} />
                          <PasswordInput label="Confirmar Contraseña" placeholder="Repite tu contraseña" required disabled={isLoading} {...form.getInputProps('confirmPassword')} />
@@ -138,12 +131,28 @@ const RegisterPage: React.FC = () => {
                          <TextInput label="Teléfono (formato internacional)" placeholder="+346..." required disabled={isLoading} {...form.getInputProps('phone')} />
                          <Select label="Tipo de Documento" placeholder="Selecciona uno" data={documentTypeOptions} required disabled={isLoading} clearable={false} {...form.getInputProps('documentType')} />
                          <TextInput label="Número de Documento" placeholder="DNI, NIE, Pasaporte..." required disabled={isLoading} {...form.getInputProps('documentId')} />
-                         <TextInput label="ID del Negocio (Temporal)" placeholder="Pega el ID del negocio aquí" required disabled={isLoading} description="Necesario para asociar tu cuenta (ej: cafe-el-sol)" {...form.getInputProps('businessId')} />
+
+                         {/* Select para Negocio */}
+                         <Select
+                            label="Negocio al que Unirse"
+                            placeholder={loadingBusinesses ? "Cargando negocios..." : "Selecciona un negocio"}
+                            data={businessSelectOptions}
+                            required
+                            disabled={isLoading || loadingBusinesses || businesses.length === 0}
+                            searchable
+                            nothingFoundMessage={errorBusinesses ? "Error al cargar" : "No hay negocios disponibles"}
+                            clearable={false}
+                            error={errorBusinesses} // Muestra el error directamente en el campo
+                            {...form.getInputProps('businessId')}
+                         />
+                         {/* CORRECCIÓN: Usamos Group importado para centrar Loader */}
+                         {loadingBusinesses && <Group justify='center'><Loader size="xs" /></Group>}
+
                          <Button type="submit" loading={isLoading} fullWidth mt="xl" radius="lg"> Registrarse </Button>
                      </Stack>
                  </form>
              </Paper>
-         </Container>
+        </Container>
     );
 };
 

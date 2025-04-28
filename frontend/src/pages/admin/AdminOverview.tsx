@@ -1,7 +1,7 @@
 // filename: frontend/src/pages/admin/AdminOverview.tsx
-// Version: 1.2.1 (Pass 'color' prop to StatCard components)
+// Version: 1.3.2 (Fix trend calculation for zero previous value)
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
     Container, Title, Text, SimpleGrid, Card, Button, Group, Stack,
     Loader, Alert
@@ -12,22 +12,23 @@ import {
 } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
 
-// Importar el servicio y el tipo de datos
-import { getAdminDashboardStats, AdminOverviewStats } from '../../services/adminService'; // Ajusta la ruta si es necesario
-// Importar el nuevo componente StatCard
-import StatCard from '../../components/admin/StatCard'; // Ajusta la ruta si es necesario
+// Importar el servicio y el tipo de datos actualizado
+import { getAdminDashboardStats, AdminOverviewStats } from '../../services/adminService';
+// Importar el componente StatCard
+import StatCard from '../../components/admin/StatCard';
+
+// Definimos el tipo TrendDirection localmente
+type TrendDirection = 'up' | 'down' | 'neutral';
 
 function AdminOverview() {
-    // Estados existentes para nombre de admin y negocio
+    // Estados
     const [adminName, setAdminName] = useState<string | null>(null);
     const [businessName, setBusinessName] = useState<string | null>(null);
-
-    // Estados para Estadísticas
     const [statsData, setStatsData] = useState<AdminOverviewStats | null>(null);
     const [loadingStats, setLoadingStats] = useState<boolean>(true);
     const [errorStats, setErrorStats] = useState<string | null>(null);
 
-    // useEffect para cargar datos del admin/negocio (sin cambios)
+    // useEffect para cargar datos del admin/negocio
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
@@ -46,7 +47,7 @@ function AdminOverview() {
         }
     }, []);
 
-    // useEffect para cargar estadísticas (sin cambios en la lógica de fetch)
+    // useEffect para cargar estadísticas
     useEffect(() => {
         const fetchStats = async () => {
             setLoadingStats(true);
@@ -67,7 +68,50 @@ function AdminOverview() {
     }, []);
 
 
-    // Rutas conocidas (sin cambios)
+    // Función HELPER para Calcular Tendencia (Versión Corregida para Inf%)
+    const calculateTrend = useMemo(() => (current: number | null | undefined, previous: number | null | undefined): { trendValue: string | null, trendDirection: TrendDirection | null } => {
+        const currentVal = current ?? 0;
+        const previousVal = previous ?? 0;
+
+        if (previousVal === 0) {
+            if (currentVal > 0) {
+                // CAMBIO: En lugar de '+Inf%', devolvemos '-' pero mantenemos 'up'
+                return { trendValue: '-', trendDirection: 'up' };
+            }
+            // Si ambos son 0, N/A neutral
+            return { trendValue: 'N/A', trendDirection: 'neutral' };
+        }
+
+        // El resto del cálculo sigue igual...
+        const percentageChange = ((currentVal - previousVal) / previousVal) * 100;
+
+        // Comprobar si el resultado es inválido ANTES de formatear
+        if (isNaN(percentageChange) || !isFinite(percentageChange)) {
+             console.warn("Invalid percentageChange calculated:", { currentVal, previousVal, percentageChange });
+             return { trendValue: 'Error', trendDirection: 'neutral'}; // Indicar error
+        }
+
+        let direction: TrendDirection = 'neutral';
+        const threshold = 0.05; // Umbral pequeño para evitar flechas por cambios mínimos
+        if (percentageChange > threshold) {
+            direction = 'up';
+        } else if (percentageChange < -threshold) {
+            direction = 'down';
+        }
+
+        const formattedValue = `${percentageChange >= 0 ? '+' : ''}${percentageChange.toFixed(1)}%`;
+
+         // Si la dirección es neutral porque el cambio es muy pequeño o cero, mostrar "0.0%"
+        if (direction === 'neutral') {
+             return { trendValue: "0.0%", trendDirection: 'neutral' };
+        }
+
+
+        return { trendValue: formattedValue, trendDirection: direction };
+    }, []);
+
+
+    // Rutas conocidas
     const routes = {
         rewards: '/admin/dashboard/rewards',
         generateQr: '/admin/dashboard/generate-qr',
@@ -76,10 +120,27 @@ function AdminOverview() {
         customers: '/admin/dashboard/customers',
     };
 
+    // CÁLCULO DE TENDENCIAS
+    const newCustomersTrend = useMemo(() => {
+        if (!statsData) return { trendValue: null, trendDirection: null };
+        return calculateTrend(statsData.newCustomersLast7Days, statsData.newCustomersPrevious7Days);
+    }, [statsData, calculateTrend]);
+
+    const pointsIssuedTrend = useMemo(() => {
+        if (!statsData) return { trendValue: null, trendDirection: null };
+        return calculateTrend(statsData.pointsIssuedLast7Days, statsData.pointsIssuedPrevious7Days);
+    }, [statsData, calculateTrend]);
+
+    const rewardsRedeemedTrend = useMemo(() => {
+        if (!statsData) return { trendValue: null, trendDirection: null };
+        return calculateTrend(statsData.rewardsRedeemedLast7Days, statsData.rewardsRedeemedPrevious7Days);
+    }, [statsData, calculateTrend]);
+
+
     return (
         <Container size="lg" mt="md">
             <Stack gap="xl">
-                {/* Saludo e Intro (sin cambios) */}
+                {/* Saludo e Intro */}
                 <Title order={2}>¡Bienvenido, {adminName || 'Admin'}!</Title>
                 <Text fz="lg">
                     Estás en el panel de administración de <Text span fw={700}>{businessName || '...'}</Text>.
@@ -89,7 +150,7 @@ function AdminOverview() {
                     recompensas, clientes y genera códigos QR.
                 </Text>
 
-                {/* --- SECCIÓN Estadísticas Clave ACTUALIZADA --- */}
+                {/* Sección Estadísticas Clave */}
                 <Title order={3} mt="lg">Resumen Rápido</Title>
                 {loadingStats && (
                     <Group justify="center" p="lg"><Loader /></Group>
@@ -99,46 +160,48 @@ function AdminOverview() {
                         {errorStats}
                     </Alert>
                 )}
-                {!loadingStats && !errorStats && ( // Mostramos incluso si statsData es null (StatCard maneja el valor null)
+                 {!loadingStats && !errorStats && (
                     <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-                        {/* CORRECCIÓN: Añadido prop 'color' a cada StatCard */}
                         <StatCard
                             title="Clientes Activos"
-                            value={statsData?.totalActiveCustomers} // Usamos optional chaining por si statsData es null inicialmente
+                            value={statsData?.totalActiveCustomers}
                             icon={<IconUsers size={24} stroke={1.5} />}
                             loading={loadingStats}
-                            color="blue" // <--- AÑADIDO
+                            color="blue"
                         />
                         <StatCard
                             title="Nuevos (7d)"
                             value={statsData?.newCustomersLast7Days}
                             icon={<IconUserPlus size={24} stroke={1.5} />}
                             loading={loadingStats}
-                            color="teal" // <--- AÑADIDO
+                            color="teal"
+                            trendValue={newCustomersTrend.trendValue}
+                            trendDirection={newCustomersTrend.trendDirection}
                         />
                         <StatCard
                             title="Puntos Otorgados (7d)"
                             value={statsData?.pointsIssuedLast7Days}
                             icon={<IconTicket size={24} stroke={1.5} />}
                             loading={loadingStats}
-                            color="grape" // <--- AÑADIDO
+                            color="grape"
+                            trendValue={pointsIssuedTrend.trendValue}
+                            trendDirection={pointsIssuedTrend.trendDirection}
                         />
                         <StatCard
                             title="Canjes (7d)"
                             value={statsData?.rewardsRedeemedLast7Days}
                             icon={<IconGift size={24} stroke={1.5} />}
                             loading={loadingStats}
-                            color="orange" // <--- AÑADIDO
+                            color="orange"
+                            trendValue={rewardsRedeemedTrend.trendValue}
+                            trendDirection={rewardsRedeemedTrend.trendDirection}
                         />
                     </SimpleGrid>
                 )}
-                {/* --- FIN SECCIÓN ACTUALIZADA --- */}
 
-
-                {/* Sección Accesos Rápidos (sin cambios) */}
+                {/* Sección Accesos Rápidos */}
                 <Title order={3} mt="lg">Accesos Rápidos</Title>
                 <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-                    {/* ... (resto de las Card de Accesos Rápidos idénticas a tu versión) ... */}
                      {/* Tarjeta Recompensas */}
                      <Card shadow="sm" padding="lg" radius="md" withBorder>
                         <Group justify="space-between" mt="md" mb="xs">
