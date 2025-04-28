@@ -28,10 +28,10 @@ En un mercado competitivo, la lealtad del cliente es crucial. LoyalPyME nace par
 
 Nuestro objetivo es permitir a cualquier PyME (minorista, hostelería, servicios, etc.) digitalizar y optimizar su estrategia de retención de clientes, evolucionando la plataforma hacia capacidades integradas de comunicación, CRM, presencia móvil y, potencialmente, ecosistemas de fidelización compartidos.
 
-<div style="display: flex; justify-content: center; align-items: flex-start; gap: 15px;">
-  <img src="images/SC_LoyalPyME.png" alt="Panel Admin LoyalPyME - Vista Escritorio" style="width: 55%; max-width: 450px; height: auto;">
-  <img src="images/SC_LoyalPyME_PHONE.png" alt="Panel Admin LoyalPyME - Vista Móvil" style="width: 35%; max-width: 220px; height: auto;">
-</div>
+|                                    Admin Dashboard (Desktop)                                    |                                       Admin Dashboard (Mobile)                                       |
+| :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
+| <img src="images/SC_LoyalPyME.png" alt="LoyalPyME Admin Dashboard - Desktop View" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="LoyalPyME Admin Dashboard - Mobile View" width="100%"> |
+
 _(Nota: La captura de pantalla podría necesitar actualizarse para reflejar la interfaz más reciente)_
 
 ## Estado del Proyecto y Hoja de Ruta 🗺️
