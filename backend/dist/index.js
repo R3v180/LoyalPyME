@@ -1,6 +1,6 @@
 "use strict";
 // filename: backend/src/index.ts
-// Version: 1.2.0 (Add public business routes)
+// Version: 1.3.0 (Apply auth middleware individually, mount authRouter under /api)
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -8,20 +8,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const cors_1 = __importDefault(require("cors"));
+const client_1 = require("@prisma/client"); // Import UserRole
 // Middleware
 const auth_middleware_1 = require("./middleware/auth.middleware");
+const role_middleware_1 = require("./middleware/role.middleware"); // Import checkRole
 // Routers
-const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
-const protected_routes_1 = __importDefault(require("./routes/protected.routes"));
-const rewards_routes_1 = __importDefault(require("./routes/rewards.routes"));
-const points_routes_1 = __importDefault(require("./routes/points.routes"));
-const customer_routes_1 = __importDefault(require("./routes/customer.routes"));
-const tiers_routes_1 = __importDefault(require("./routes/tiers.routes"));
-const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
-const businesses_routes_1 = __importDefault(require("./routes/businesses.routes")); // <-- NUEVA IMPORTACIÓN
-// Cron Job
+const auth_routes_1 = __importDefault(require("./routes/auth.routes")); // Contiene /login, /register, /forgot-password, etc.
+const protected_routes_1 = __importDefault(require("./routes/protected.routes")); // Contiene /profile
+const rewards_routes_1 = __importDefault(require("./routes/rewards.routes")); // Gestión Recompensas (Admin)
+const points_routes_1 = __importDefault(require("./routes/points.routes")); // Puntos y QR (Cliente/Admin)
+const customer_routes_1 = __importDefault(require("./routes/customer.routes")); // Acciones Cliente (ver recompensas, canjear regalo)
+const tiers_routes_1 = __importDefault(require("./routes/tiers.routes")); // Gestión Niveles (Admin)
+const admin_routes_1 = __importDefault(require("./routes/admin.routes")); // Acciones Admin sobre clientes, stats
+const businesses_routes_1 = __importDefault(require("./routes/businesses.routes")); // Contiene /public-list
+// Cron Job Logic
 const node_cron_1 = __importDefault(require("node-cron"));
-const tier_logic_service_1 = require("./tiers/tier-logic.service");
+const tier_logic_service_1 = require("./tiers/tier-logic.service"); // Asegúrate que la ruta es correcta
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
@@ -33,35 +35,32 @@ app.use((req, res, next) => {
     next();
 });
 // --- Rutas Públicas ---
-// Montamos las rutas de autenticación (existente)
-app.use('/auth', auth_routes_1.default);
-// --- NUEVO: Montamos las rutas públicas de negocios ---
-// Lo montamos aquí ANTES de aplicar la autenticación global a /api
-// La ruta final será GET /public/businesses/public-list
-app.use('/public/businesses', businesses_routes_1.default);
-// --- FIN NUEVO ---
+// Rutas que NO requieren token JWT
+// Montamos authRouter bajo /api/auth para que funcione con el proxy y axiosInstance del frontend
+// Se monta ANTES de aplicar authenticateToken a otras rutas /api
+app.use('/api/auth', auth_routes_1.default); // Rutas como /api/auth/login, /api/auth/register ahora
+// Montamos las rutas públicas de negocios
+app.use('/public/businesses', businesses_routes_1.default); // Ruta GET /public/businesses/public-list
 // --- Rutas Protegidas ---
-// Aplicar auth a TODO /api/* (se ejecutará DESPUÉS de los middlewares globales y rutas públicas)
-app.use('/api', auth_middleware_1.authenticateToken);
-// Montar los routers específicos PROTEGIDOS bajo /api
-app.use('/api/profile', protected_routes_1.default); // Rutas de perfil de usuario
-app.use('/api/rewards', rewards_routes_1.default); // Rutas para gestión de recompensas (Admin)
-app.use('/api/points', points_routes_1.default); // Rutas para puntos y QR (Cliente y Admin)
-app.use('/api/customer', customer_routes_1.default); // Rutas específicas del cliente (ver recompensas, canjear regalos)
-app.use('/api/tiers', tiers_routes_1.default); // Rutas para gestión de niveles (Admin)
-app.use('/api/admin', admin_routes_1.default); // Rutas para acciones de admin sobre clientes, etc.
-// NOTA: Si en el futuro añadimos rutas de negocio que SÍ requieran autenticación
-// (ej: /api/businesses/settings), se montarían aquí DENTRO del bloque /api.
+// Aplicar auth y roles a las rutas específicas bajo /api
+// Aplicamos authenticateToken (y checkRole si aplica) INDIVIDUALMENTE a cada router protegido:
+app.use('/api/profile', auth_middleware_1.authenticateToken, protected_routes_1.default); // Requiere token, cualquier rol logueado
+app.use('/api/rewards', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), rewards_routes_1.default); // Requiere token + rol Admin
+app.use('/api/points', auth_middleware_1.authenticateToken, points_routes_1.default); // Requiere token. Roles se chequean dentro de las rutas si es necesario
+app.use('/api/customer', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.CUSTOMER_FINAL]), customer_routes_1.default); // Requiere token + rol Cliente
+app.use('/api/tiers', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), tiers_routes_1.default); // Requiere token + rol Admin
+app.use('/api/admin', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), admin_routes_1.default); // Requiere token + rol Admin
 // --- Fin Rutas Protegidas ---
+// Ruta raíz básica
 app.get('/', (req, res) => {
     res.send('Welcome to LoyalPyME API!');
 });
-// Manejador de errores global (sin cambios)
+// Manejador de errores global
 app.use((err, req, res, next) => {
-    console.error('[GLOBAL ERROR HANDLER]', err.stack);
+    console.error('[GLOBAL ERROR HANDLER]', err.stack); // Loguear el stack completo
     res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
-// Cron Job (sin cambios)
+// Cron Job (Código Completo)
 node_cron_1.default.schedule('0 3 * * *', () => {
     const jobStartTime = new Date();
     console.log(`[CRON ${jobStartTime.toISOString()}] Running scheduled tier update/downgrade job...`);
@@ -74,9 +73,10 @@ node_cron_1.default.schedule('0 3 * * *', () => {
     });
 }, {
     scheduled: true,
-    // timezone: "Europe/Madrid" // Considera añadir timezone
+    // timezone: "Europe/Madrid" // Descomentar si quieres especificar zona horaria
 });
 console.log('Scheduled Tier update/downgrade job registered to run daily at 3:00 AM.');
+// Iniciar servidor
 app.listen(port, () => {
     console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
 });
