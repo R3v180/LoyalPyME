@@ -28,8 +28,11 @@ In today's competitive market, customer loyalty is crucial. LoyalPyME aims to be
 
 Our goal is to enable any SME (retail, hospitality, services, etc.) to digitize and optimize its customer retention strategy, evolving the platform towards integrated communication, CRM capabilities, a mobile presence, and potentially shared loyalty ecosystems.
 
-![Screenshot of the LoyalPyME Admin Dashboard](images/SC_LoyalPyME.png)
-_(Note: Screenshot might need updating to reflect the latest UI)_
+<p align="center">
+  <img src="images/SC_LoyalPyME.png" alt="LoyalPyME Admin Dashboard - Desktop View" width="55%">
+  &nbsp;&nbsp;&nbsp;&nbsp; <img src="images/SC_LoyalPyME_PHONE.png" alt="LoyalPyME Admin Dashboard - Mobile View" width="35%">
+</p>
+_(Note: Screenshots might need updating as the UI evolves)_
 
 ## Project Status & Roadmap 🗺️
 
@@ -53,7 +56,7 @@ The foundational phase, focused on building the core loyalty engine and undertak
   - Customer QR Code Validation (FE+BE) triggering point assignment, metric updates, and tier logic updates.
 - **User Panels:**
   - **Customer Dashboard:** View points, current tier level & name; view available rewards & assigned gifts; redeem rewards (points) and gifts.
-  - **Admin Panel:** Basic layout (Header, Sidebar), simple Overview page.
+  - **Admin Panel:** Basic layout (Header, Sidebar), Overview page with key stats & quick links.
 - **Admin Customer Management:**
   - Paginated and sortable customer list.
   - Basic search (name/email).
@@ -66,6 +69,7 @@ The foundational phase, focused on building the core loyalty engine and undertak
 
 This phase focuses on refining the existing core functionality and addressing key improvements identified.
 
+- **✨ [P1 COMPLETED] Enhance Admin Dashboard:** Implemented Stat Cards with colors and trend indicators.
 - **Customer Admin Functionality:**
   - Implement comprehensive **Filtering UI & Backend Logic** (by Active status, Favorite status, Tier).
   - **Optimize/Enhance Search & Pagination** (Analyze/improve DB performance, enhance UI/UX).
@@ -85,7 +89,7 @@ This phase focuses on refining the existing core functionality and addressing ke
   - (Optional) Implement basic **Rate Limiting**.
   - (Optional) Introduce basic **Audit Logging**.
 - 💡 **Admin Experience Enhancements (Frontend):**
-  - Enrich **Admin Dashboard** (Key Metrics, Activity Feed).
+  - (Related to P1) Enrich Admin Dashboard with **Activity Feed**.
   - Implement advanced **Customer Search/Filtering** (Phone, Document, Tier).
   - Improve **Customer Details Modal** (e.g., inline actions).
   - Add basic **CSV Export** for customer list.
@@ -112,9 +116,10 @@ _(High-level, subject to refinement)_
 - **Phase 3 (Mobile App & Advanced Analytics):**
   - Native Mobile App for Customers (view status, scan QR, redeem, notifications). Potential Admin companion app.
   - Enhanced CRM functionalities and Advanced Analytics/Reporting.
-- **Phase 4 (Ecosystems & Social Potential - Long Term):**
+- **Phase 4 (Ecosistemas y Potencial Social - Largo Plazo):**
   - Shared Loyalty Programs / Cross-Business Redemptions.
   - Social Features (sector-specific: activity maps, events, chat).
+  - 💡 (Potential Module) Event/Guest List Management.
 
 ---
 
@@ -237,11 +242,12 @@ To get the project up and running in your development environment:
 
 3.  **Start the frontend** (from the `frontend` folder, in a separate terminal):
     ```bash
-    yarn dev
+    # Use --host flag for testing on mobile via local network IP
+    yarn dev --host
     ```
-    Frontend runs on `http://localhost:5173`.
+    Vite will output `Local:` and `Network:` URLs. Use the `Network:` URL (e.g., `http://<YOUR_PC_IP>:5173`) on your mobile device browser (ensure PC firewall allows port 5173 and API port 3000). Frontend runs on port `5173`.
 
-Access the application via `http://localhost:5173` in your browser. Log in using the credentials created or provided during the "Initial Data & Test Credentials" step.
+Access the application via `http://localhost:5173` (on PC) or the `Network:` URL (on mobile). Log in using the credentials created or provided during the "Initial Data & Test Credentials" step.
 
 ## Contributions 🤝
 

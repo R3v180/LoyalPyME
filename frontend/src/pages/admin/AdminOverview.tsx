@@ -1,5 +1,5 @@
 // filename: frontend/src/pages/admin/AdminOverview.tsx
-// Version: 1.3.2 (Fix trend calculation for zero previous value)
+// Version: 1.3.3 (Shorten "Puntos Otorgados" title to prevent wrapping)
 
 import { useEffect, useState, useMemo } from 'react';
 import {
@@ -68,31 +68,27 @@ function AdminOverview() {
     }, []);
 
 
-    // Función HELPER para Calcular Tendencia (Versión Corregida para Inf%)
+    // Función HELPER para Calcular Tendencia
     const calculateTrend = useMemo(() => (current: number | null | undefined, previous: number | null | undefined): { trendValue: string | null, trendDirection: TrendDirection | null } => {
         const currentVal = current ?? 0;
         const previousVal = previous ?? 0;
 
         if (previousVal === 0) {
             if (currentVal > 0) {
-                // CAMBIO: En lugar de '+Inf%', devolvemos '-' pero mantenemos 'up'
                 return { trendValue: '-', trendDirection: 'up' };
             }
-            // Si ambos son 0, N/A neutral
             return { trendValue: 'N/A', trendDirection: 'neutral' };
         }
 
-        // El resto del cálculo sigue igual...
         const percentageChange = ((currentVal - previousVal) / previousVal) * 100;
 
-        // Comprobar si el resultado es inválido ANTES de formatear
         if (isNaN(percentageChange) || !isFinite(percentageChange)) {
              console.warn("Invalid percentageChange calculated:", { currentVal, previousVal, percentageChange });
-             return { trendValue: 'Error', trendDirection: 'neutral'}; // Indicar error
+             return { trendValue: 'Error', trendDirection: 'neutral'};
         }
 
         let direction: TrendDirection = 'neutral';
-        const threshold = 0.05; // Umbral pequeño para evitar flechas por cambios mínimos
+        const threshold = 0.05;
         if (percentageChange > threshold) {
             direction = 'up';
         } else if (percentageChange < -threshold) {
@@ -101,11 +97,9 @@ function AdminOverview() {
 
         const formattedValue = `${percentageChange >= 0 ? '+' : ''}${percentageChange.toFixed(1)}%`;
 
-         // Si la dirección es neutral porque el cambio es muy pequeño o cero, mostrar "0.0%"
         if (direction === 'neutral') {
              return { trendValue: "0.0%", trendDirection: 'neutral' };
         }
-
 
         return { trendValue: formattedValue, trendDirection: direction };
     }, []);
@@ -163,14 +157,14 @@ function AdminOverview() {
                  {!loadingStats && !errorStats && (
                     <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
                         <StatCard
-                            title="Clientes Activos"
+                            title="CLIENTES ACTIVOS" // Mantenido en mayúsculas como estaba antes
                             value={statsData?.totalActiveCustomers}
                             icon={<IconUsers size={24} stroke={1.5} />}
                             loading={loadingStats}
                             color="blue"
                         />
                         <StatCard
-                            title="Nuevos (7d)"
+                            title="NUEVOS (7D)" // Mantenido en mayúsculas
                             value={statsData?.newCustomersLast7Days}
                             icon={<IconUserPlus size={24} stroke={1.5} />}
                             loading={loadingStats}
@@ -179,7 +173,8 @@ function AdminOverview() {
                             trendDirection={newCustomersTrend.trendDirection}
                         />
                         <StatCard
-                            title="Puntos Otorgados (7d)"
+                            // *** CAMBIO AQUÍ ***
+                            title="PUNTOS (7D)" // Título acortado
                             value={statsData?.pointsIssuedLast7Days}
                             icon={<IconTicket size={24} stroke={1.5} />}
                             loading={loadingStats}
@@ -188,7 +183,7 @@ function AdminOverview() {
                             trendDirection={pointsIssuedTrend.trendDirection}
                         />
                         <StatCard
-                            title="Canjes (7d)"
+                            title="CANJES (7D)" // Mantenido en mayúsculas
                             value={statsData?.rewardsRedeemedLast7Days}
                             icon={<IconGift size={24} stroke={1.5} />}
                             loading={loadingStats}
@@ -202,8 +197,9 @@ function AdminOverview() {
                 {/* Sección Accesos Rápidos */}
                 <Title order={3} mt="lg">Accesos Rápidos</Title>
                 <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-                     {/* Tarjeta Recompensas */}
-                     <Card shadow="sm" padding="lg" radius="md" withBorder>
+                     {/* ... (Las 5 Cards de Accesos Rápidos van aquí, sin cambios) ... */}
+                      {/* Tarjeta Recompensas */}
+                      <Card shadow="sm" padding="lg" radius="md" withBorder>
                         <Group justify="space-between" mt="md" mb="xs">
                             <Text fw={500}>Recompensas</Text>
                             <IconGift size={24} stroke={1.5} />

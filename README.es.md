@@ -28,8 +28,11 @@ En un mercado competitivo, la lealtad del cliente es crucial. LoyalPyME nace par
 
 Nuestro objetivo es permitir a cualquier PyME (minorista, hostelería, servicios, etc.) digitalizar y optimizar su estrategia de retención de clientes, evolucionando la plataforma hacia capacidades integradas de comunicación, CRM, presencia móvil y, potencialmente, ecosistemas de fidelización compartidos.
 
-![Captura del Panel de Administración de LoyalPyME](images/SC_LoyalPyME.png)
-_(Nota: La captura de pantalla podría necesitar actualizarse para reflejar la interfaz más reciente)_
+<p align="center">
+  <img src="images/SC_LoyalPyME.png" alt="Panel Admin LoyalPyME - Vista Escritorio" width="55%">
+  &nbsp;&nbsp;&nbsp;&nbsp; <img src="images/SC_LoyalPyME_PHONE.png" alt="Panel Admin LoyalPyME - Vista Móvil" width="35%">
+</p>
+_(Nota: Las capturas podrían necesitar actualizarse a medida que evoluciona la interfaz)_
 
 ## Estado del Proyecto y Hoja de Ruta 🗺️
 
@@ -44,21 +47,16 @@ La fase fundacional, centrada en construir el motor de fidelización principal y
 **Logros Clave:**
 
 - **Plataforma Web Full-Stack:** Frontend (React/TS/Mantine) y Backend (Node/Express/TS/Prisma/PostgreSQL) operativos.
-- **Refactorización Mayor:** Refactorizado con éxito tanto el frontend (hooks, componentes) como el backend (servicios, controladores por módulo) para mejorar la estructura y separación de responsabilidades.
-- **Autenticación Segura:** Sistema basado en JWT con registro (Admin/Cliente), login, recuperación de contraseña y control de acceso basado en roles (`BUSINESS_ADMIN`, `CUSTOMER_FINAL`).
-- **Sistema de Niveles (Backend Completo):** CRUD Admin para Niveles (Tiers), configuración a nivel de negocio, cálculo automático de nivel basado en métricas (gasto, visitas, puntos) y tarea CRON para actualizaciones/descensos periódicos.
-- **Gestión de Recompensas:** CRUD completo para Administradores (Crear, Leer, Actualizar, Eliminar, Activar/Desactivar).
-- **Flujo de Puntos Principal:**
-  - Generación de Códigos QR por el Admin (FE+BE).
-  - Validación de Códigos QR por el Cliente (FE+BE) que dispara la asignación de puntos, actualización de métricas y lógica de actualización de nivel.
+- **Refactorización Mayor:** Refactorizado con éxito tanto el frontend (hooks, componentes) como el backend (servicios, controladores por módulo).
+- **Autenticación Segura:** Sistema JWT con registro (Admin/Cliente), login, recuperación contraseña, control de acceso por roles (`BUSINESS_ADMIN`, `CUSTOMER_FINAL`).
+- **Sistema de Niveles (Backend Completo):** CRUD Admin Tiers, config. negocio, cálculo automático, CRON job.
+- **Gestión de Recompensas:** CRUD Admin completo.
+- **Flujo de Puntos Principal:** Generación QR Admin (FE+BE), Validación QR Cliente (FE+BE) con asignación puntos/métricas/trigger nivel.
 - **Paneles de Usuario:**
-  - **Panel Cliente:** Visualización de puntos, nivel actual (nombre); ver recompensas disponibles y regalos asignados; canjear recompensas (por puntos) y regalos.
-  - **Panel Admin:** Layout básico (Header, Sidebar), página simple de Resumen (Overview).
-- **Gestión de Clientes (Admin):**
-  - Listado de clientes paginado y ordenable.
-  - Búsqueda básica (nombre/email).
-  - **Acciones Individuales:** Ver Detalles (incl. notas), Editar Notas Admin, Ajustar Puntos, Cambiar Nivel (manual), Marcar/Desmarcar Favorito, Activar/Desactivar, Asignar Recompensa como Regalo.
-  - **Acciones Masivas:** Selección múltiple, Activar/Desactivar Masivo, Eliminar Masivo (con confirmación), Ajustar Puntos Masivo (vía modal).
+  - **Panel Cliente:** Ver puntos/nivel; ver/canjear recompensas y regalos.
+  - **Panel Admin:** Layout básico, Overview con stats clave y accesos rápidos.
+- **Gestión de Clientes (Admin):** Listado paginado/ordenable/búsqueda; Acciones individuales (Ver/Editar Notas, Ajustar Puntos, Cambiar Nivel, Favorito, Activar/Desactivar, Asignar Regalo); Acciones Masivas (Activar/Desactivar, Eliminar, Ajustar Puntos).
+- **Entorno de Pruebas Móvil:** Configuración de Vite (proxy, host) y servicios FE para permitir pruebas en móvil vía IP local.
 
 ---
 
@@ -66,37 +64,38 @@ La fase fundacional, centrada en construir el motor de fidelización principal y
 
 Esta fase se centra en refinar la funcionalidad central existente y abordar mejoras clave identificadas.
 
+- **✨ [P1 COMPLETADA] Mejorar Dashboard Admin:** Implementadas Stat Cards con colores e indicadores de tendencia.
 - **Funcionalidad Admin Clientes:**
-  - Implementar **UI y Lógica Backend para Filtros Completos** (por estado Activo, Favorito, Nivel).
+  - Implementar **UI y Lógica Backend para Filtros Completos** (Activo, Favorito, Nivel).
   - **Optimizar/Mejorar Búsqueda y Paginación** (Analizar/mejorar rendimiento BD, mejorar UI/UX).
 - 💡 **Mejoras Experiencia Cliente (Frontend):**
-  - Mostrar **Progreso Hacia el Siguiente Nivel** (visual/numérico).
-  - Listar claramente los **Beneficios del Nivel Actual y del Siguiente**.
-  - (Opcional) Añadir **Historial Básico de Actividad** (puntos ganados/gastados).
-  - (Opcional) Refinar UI de tarjetas de Recompensas/Regalos para mayor claridad.
+  - Mostrar **Progreso Hacia el Siguiente Nivel**.
+  - Listar claramente los **Beneficios del Nivel Actual y Siguiente**.
+  - (Opcional) Añadir **Historial Básico de Actividad**.
+  - (Opcional) Refinar UI tarjetas Recompensas/Regalos.
 - 💡 **Mejoras Backend:**
-  - Reforzar **Validación de Entrada en API** (Controllers/Middleware).
-  - Utilizar **Códigos de Error HTTP más Específicos** (404, 409, etc.).
-  - Revisar uso de **Transacciones Prisma** en operaciones críticas.
-  - Añadir **Indexación Proactiva a Base de Datos**.
-  - Asegurar uso consistente de `select` Prisma para **Optimización de Consultas**.
-  - Mejorar **Logging** (estructurado, contextual).
-  - Reforzar **Gestión de Configuración** (`.env` validation).
-  - (Opcional) Implementar **Rate Limiting** básico.
-  - (Opcional) Introducir **Registro de Auditoría (`AuditLog`)** básico.
+  - Reforzar **Validación de Entrada API**.
+  - Utilizar **Códigos de Error HTTP Específicos**.
+  - Revisar **Transacciones Prisma**.
+  - Añadir **Indexación Proactiva BD**.
+  - Asegurar uso `select` Prisma (Optimización).
+  - Mejorar **Logging**.
+  - Reforzar **Gestión Configuración** (`.env`).
+  - (Opcional) Implementar **Rate Limiting**.
+  - (Opcional) Introducir **Registro Auditoría (`AuditLog`)**.
 - 💡 **Mejoras Experiencia Admin (Frontend):**
-  - Enriquecer **Panel Principal Admin** (Métricas Clave, Feed Actividad).
-  - Implementar **Búsqueda/Filtros de Clientes Avanzados** (Teléfono, Documento, Nivel).
-  - Mejorar **Modal de Detalles del Cliente** (ej: acciones rápidas).
-  - Añadir **Exportación CSV** básica para lista de clientes.
-  - Mostrar **Estadísticas de Uso** de Recompensas y Niveles.
-  - Añadir más **descripciones/ayudas** en Configuración de Niveles.
-  - Asegurar consistencia en **Notificaciones y Estados de Carga**.
-  - Usar **Modales de Confirmación** para acciones críticas/destructivas.
+  - (Relacionado con P1) Enriquecer Dashboard con **Feed de Actividad**.
+  - Implementar **Búsqueda/Filtros Clientes Avanzados**.
+  - Mejorar **Modal Detalles Cliente**.
+  - Añadir **Exportación CSV** básica.
+  - Mostrar **Estadísticas Uso** Recompensas/Niveles.
+  - Añadir **descripciones/ayudas** Config Niveles.
+  - Revisar **Notificaciones/Carga** Consistentes.
+  - Usar **Modales Confirmación**.
 - **Calidad y Mantenimiento:**
-  - Realizar **Limpieza General de Código** (eliminar código muerto, TODOs, `console.log`; centralizar tipos).
-  - **Introducir Pruebas Automatizadas (Unitarias, Integración, E2E):** Fundamental para asegurar estabilidad (**Alta Prioridad**).
-  - ⚙️ Solucionar problema persistente con `yarn dev` (`ts-node-dev`).
+  - Realizar **Limpieza General de Código**.
+  - **Introducir Pruebas Automatizadas** (**Alta Prioridad**).
+  - ⚙️ Solucionar problema `yarn dev`.
 
 ---
 
@@ -105,16 +104,17 @@ Esta fase se centra en refinar la funcionalidad central existente y abordar mejo
 _(Alto nivel, sujeto a refinamiento)_
 
 - **Fase 2 (Expansión Funcional - Post-Fase 1):**
-  - Reglas de Fidelización Avanzadas (ej: descuentos, más tipos de recompensa).
-  - Herramientas Básicas de Comunicación Web (ej: emails segmentados, anuncios en portal).
-  - Segmentación Avanzada de Clientes y Funcionalidades CRM Ligero.
-  - Implementación Audit Log en Backend.
+  - Reglas de Fidelización Avanzadas.
+  - Herramientas Básicas de Comunicación Web.
+  - Segmentación Avanzada y CRM Ligero.
+  - Implementación Audit Log Backend.
 - **Fase 3 (App Móvil y Análisis Avanzado):**
-  - Aplicación Móvil Nativa para Clientes (ver estado, escanear QR, canjear, notificaciones push). Posible app compañera para Admin.
-  - Funcionalidades CRM Completas y Analítica/Reportes Avanzados.
+  - Aplicación Móvil Nativa (Clientes/Admin).
+  - Funcionalidades CRM Completas y Analítica Avanzada.
 - **Fase 4 (Ecosistemas y Potencial Social - Largo Plazo):**
-  - Ecosistemas de Fidelización Compartidos / Canjes entre negocios.
-  - Funcionalidades Sociales (específico sector: mapas actividad, eventos, chat).
+  - Ecosistemas de Fidelización Compartidos.
+  - Funcionalidades Sociales (mapas actividad, eventos, chat).
+  - 💡 (Módulo Potencial) Gestión de Eventos/Listas de Invitados.
 
 ---
 
@@ -125,7 +125,7 @@ _(Alto nivel, sujeto a refinamiento)_
 - React & TypeScript
 - Vite (Herramienta de Construcción)
 - Mantine UI (v7+) & Mantine Hooks
-- `@mantine/form` & `zod` (Validación de Formularios)
+- `@mantine/form` & `zod` (Validación Formularios)
 - `@mantine/notifications` (Feedback UI)
 - `@mantine/modals` (Modales)
 - Axios (Peticiones API)
@@ -138,11 +138,11 @@ _(Alto nivel, sujeto a refinamiento)_
 - Prisma (ORM)
 - PostgreSQL (Base de Datos)
 - JWT (Autenticación) & bcryptjs (Hashing)
-- dotenv (Variables de Entorno)
-- node-cron (Tareas Programadas - Lógica de Niveles)
+- dotenv (Variables Entorno)
+- node-cron (Tareas Programadas)
 - uuid (IDs Únicos)
 - cors
-- `ts-node`, `ts-node-dev` (Dependencias de Desarrollo)
+- `ts-node`, `ts-node-dev` (Dependencias Desarrollo)
 
 ## Instalación y Configuración Local ⚙️
 
@@ -150,71 +150,69 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 
 ### Prerrequisitos
 
-- Node.js (v18+ recomendado, revisa especificidades del proyecto)
-- yarn (v1.x recomendado, revisa especificidades del proyecto)
+- Node.js (v18+ recomendado)
+- yarn (v1.x recomendado)
 - Servidor de base de datos PostgreSQL accesible y ejecutándose localmente.
 
 ### Configuración Backend
 
-1.  Clona el repositorio y navega a la carpeta `backend`:
+1.  Clona el repositorio y navega a `backend`:
     ```bash
     git clone [https://github.com/R3v180/LoyalPyME.git](https://github.com/R3v180/LoyalPyME.git)
     cd LoyalPyME/backend
     ```
-2.  Instala las dependencias:
+2.  Instala dependencias:
     ```bash
     yarn install
     ```
-3.  **Crea tu archivo de entorno local:** Localiza el archivo `backend/.env.example` proporcionado en el repositorio. Cópialo a un nuevo archivo llamado `backend/.env`:
+3.  **Crea tu archivo de entorno local:** Copia el archivo `backend/.env.example` a `backend/.env`:
     ```bash
     cp .env.example .env
     ```
-    _(Consulta `backend/.env.example` para detalles y ejemplos de las variables)._
-4.  **Configura tu archivo `.env`:** Abre el archivo `backend/.env` recién creado y:
-    - Reemplaza los placeholders de `DATABASE_URL` (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`) con los detalles de **tu conexión local a PostgreSQL**. _(Ejemplo: `postgresql://postgres:TU_CONTRASENA_BD@localhost:5432/loyalpymedb?schema=public` - ¡Ajusta usuario/contraseña/nombre de BD con tus datos locales!)_
-    - Reemplaza el placeholder de `JWT_SECRET` con una **cadena de texto aleatoria, única y segura** (mínimo 32 caracteres). Puedes generar una con `openssl rand -hex 32` en tu terminal o un generador online fiable. **¡No uses el valor del placeholder!**
-    - Opcionalmente, define el `PORT` si necesitas que el backend se ejecute en un puerto distinto al 3000.
-    - **Importante:** Asegúrate de que tu archivo `.env` está listado en tu archivo `.gitignore` raíz para prevenir subir secretos accidentalmente.
-5.  **Configura el esquema de la base de datos:** Ejecuta las migraciones de Prisma:
+    _(Consulta `backend/.env.example` para detalles de las variables)._
+4.  **Configura tu archivo `.env`:** Abre `backend/.env` y:
+    - Reemplaza los placeholders de `DATABASE_URL` con tus datos locales de PostgreSQL. _(Ej: `postgresql://postgres:TU_CONTRASENA_BD@localhost:5432/loyalpymedb?schema=public`)_.
+    - Reemplaza el placeholder de `JWT_SECRET` con una **cadena aleatoria segura** (mín. 32 chars, ej: `openssl rand -hex 32`). **¡No uses el placeholder!**
+    - Opcionalmente, ajusta `PORT`.
+    - **Importante:** Asegura que `.env` está en `.gitignore`.
+5.  **Configura el esquema BD:**
     ```bash
     npx prisma migrate dev
     ```
-    _(Esto creará la base de datos si no existe y aplicará todos los cambios del esquema.)_
-6.  **Genera el Cliente Prisma:** (Normalmente lo hace `migrate dev`, pero es seguro ejecutarlo explícitamente)
+6.  **Genera el Cliente Prisma:**
     ```bash
     npx prisma generate
     ```
-7.  **Datos Iniciales y Credenciales de Prueba (IMPORTANTE - Acción Requerida):**
-    Para iniciar sesión y probar la aplicación, necesitas datos iniciales como un negocio y un usuario administrador. El método preferido necesita ser finalizado para este proyecto. **Elige UNA opción abajo y sigue sus pasos:**
+7.  **Datos Iniciales y Credenciales (IMPORTANTE - Acción Requerida):**
+    Necesitas datos iniciales (negocio, admin) para probar. Elige **UNA** opción:
 
-    - **[ ] Opción A: Seed de Base de Datos (Recomendado - Requiere Configuración/Confirmación)**
+    - **[ ] Opción A: Seed (Recomendado - Requiere Implementación/Confirmación)**
 
-      - Ejecuta el comando seed: `npx prisma db seed`
-      - Este comando _debería_ poblar la base de datos con los datos iniciales esenciales (ej: negocio por defecto, usuario admin, quizás niveles por defecto).
-      - **Credenciales de Prueba (Ejemplo - ¡Confirmar/Cambiar en `prisma/seed.ts`!):** `admin@loyalpyme.test` / `password123`
-      - _(Nota: Requiere que exista y funcione un script `prisma/seed.ts`. Si no existe o no funciona, usa la Opción B)._
+      - Ejecuta: `npx prisma db seed`
+      - Debería crear datos por defecto.
+      - **Credenciales Ejemplo (¡Confirmar/Cambiar en `prisma/seed.ts`!):** `admin@loyalpyme.test` / `password123`
+      - _(Requiere script `prisma/seed.ts` funcional)._
 
-    - **[ ] Opción B: Registro Manual (Si no hay script de seed)**
-      - Después de iniciar backend y frontend (ver "Ejecutar el Proyecto"), abre tu navegador en `http://localhost:5173/register-business`.
-      - Usa el formulario para registrar tu primer negocio y cuenta de administrador. Usa esas credenciales para iniciar sesión.
+    - **[ ] Opción B: Registro Manual (Si no hay seed)**
+      - Tras arrancar todo, ve a `http://localhost:5173/register-business` en el navegador y registra tu primer negocio/admin. Usa esas credenciales.
 
-    _(Mantenedor del Proyecto: Por favor, confirma cuál es el flujo de configuración deseado (A o B), implementa el script de seed si eliges A, actualiza las credenciales de ejemplo, y elimina la opción no aplicable de estas instrucciones.)_
+    _(Mantenedor: Confirma flujo (A o B), implementa/actualiza seed si es A, y elimina la opción no aplicable)._
 
-8.  **(Opcional) Configuración Cliente de Prueba Específico:**
-    - Para escenarios específicos que requieran un cliente predefinido, puede que necesites crearlo manualmente en tu base de datos (usando pgAdmin o similar) y luego usar el script proporcionado para hashear su contraseña:
+8.  **(Opcional) Cliente Test Específico:**
+    - Crea cliente manualmente en BD y usa script para hashear contraseña:
       ```bash
-      # ¡Edita 'scripts/hash-customer-password.ts' con el email/contraseña correctos primero!
+      # Edita 'scripts/hash-customer-password.ts' primero
       npx ts-node scripts/hash-customer-password.ts
       ```
 
 ### Configuración Frontend
 
-1.  Navega a la carpeta `frontend` (desde la raíz del proyecto):
+1.  Navega a la carpeta `frontend`:
     ```bash
-    cd frontend
+    cd ../frontend
     ```
-    _(Si estabas en `backend`, usa `cd ../frontend`)_
-2.  Instala las dependencias:
+    _(O `cd frontend` desde la raíz)_.
+2.  Instala dependencias:
     ```bash
     yarn install
     ```
@@ -222,42 +220,43 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 ## Ejecutando el Proyecto ▶️
 
 1.  Asegúrate de que tu servidor PostgreSQL está **en ejecución**.
-2.  **Inicia el backend** (desde la carpeta `backend`):
+2.  **Inicia el backend** (desde `backend`):
 
     ```bash
-    # Método recomendado (estable, refleja build de producción):
+    # Recomendado (estable):
     yarn build && node dist/index.js
 
-    # Alternativa para desarrollo (actualmente puede tener problemas):
+    # Alternativa (puede fallar):
     # yarn dev
     ```
 
-    _Nota: `yarn dev` podría no funcionar de forma fiable debido a problemas con `ts-node-dev`. Usar `build && start` es el método estable actual._
-    El backend se ejecuta en `http://localhost:3000` (o el `PORT` especificado en `.env`).
+    _Nota: `yarn dev` puede ser inestable. `build && start` es más fiable ahora._
+    Backend corre en `http://localhost:3000` (o `PORT` de `.env`).
 
-3.  **Inicia el frontend** (desde la carpeta `frontend`, en otra terminal):
+3.  **Inicia el frontend** (desde `frontend`, en otra terminal):
     ```bash
-    yarn dev
+    # Usa --host para probar en móvil vía IP local
+    yarn dev --host
     ```
-    El frontend se ejecuta en `http://localhost:5173`.
+    Vite mostrará URLs `Local:` y `Network:`. Usa la `Network:` (ej: `http://<TU_IP_PC>:5173`) en el navegador del móvil (asegura firewall abierto en PC para puertos 5173 y 3000). Frontend corre en puerto `5173`.
 
-Accede a la aplicación vía `http://localhost:5173` en tu navegador. Inicia sesión usando las credenciales creadas o proporcionadas durante el paso "Datos Iniciales y Credenciales de Prueba".
+Accede a la aplicación vía `http://localhost:5173` (en PC) o la URL `Network:` (en móvil). Inicia sesión con las credenciales del paso "Datos Iniciales".
 
 ## Contribuciones 🤝
 
-¡Las contribuciones son bienvenidas! Por favor, sigue los procedimientos estándar de fork, branch, commit y Pull Request. Detalla tus cambios claramente en la descripción del PR.
+¡Las contribuciones son bienvenidas! Sigue el flujo estándar: Fork -> Branch -> Commit -> Push -> Pull Request. Describe bien tus cambios.
 
-1.  Haz un Fork del repositorio.
-2.  Crea una rama para tu feature/fix.
-3.  Haz commit de tus cambios.
-4.  Haz push a tu fork.
-5.  Abre un Pull Request hacia la rama `main` de este repositorio.
+1.  Haz Fork.
+2.  Crea rama feature/fix.
+3.  Haz Commit.
+4.  Haz Push a tu fork.
+5.  Abre Pull Request a `main`.
 
 ## Licencia 📜
 
-Este proyecto está licenciado bajo los términos de la **Licencia Pública General Affero de GNU v3.0 (AGPL-3.0)**.
+Licencia: **GNU Affero General Public License v3.0 (AGPL-3.0)**.
 
-Consulta el archivo [`LICENSE`](LICENSE) para detalles. La AGPL v3 promueve la colaboración requiriendo que las modificaciones accesibles por red también sean de código abierto.
+Ver archivo [`LICENSE`](LICENSE). AGPL v3 requiere que modificaciones accesibles por red sean también código abierto.
 
 Copyright (c) 2024-2025 Olivier Hottelet
 
