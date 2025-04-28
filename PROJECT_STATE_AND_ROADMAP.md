@@ -1,185 +1,118 @@
 # LoyalPyME - Estado del Proyecto y Hoja de Ruta 🧭
 
-**Versión:** 1.1.0 (Post-Refactor & Roadmap Expansion)
-**Fecha de Última Actualización:** 27 de Abril de 2025
+**Versión:** 1.3.0 (Roadmap Detallado Post-Fase 1 Core)
+**Fecha de Última Actualización:** 28 de Abril de 2025
 
 ---
 
 ## 1. Resumen del Proyecto 🎯
 
-LoyalPyME es una **plataforma web integral (Frontend + Backend)** diseñada para que las **Pequeñas y Medianas Empresas (PyMEs)** puedan gestionar de forma eficaz y sencilla sus programas de fidelización digital.
+LoyalPyME es una **plataforma web integral (Frontend + Backend)** diseñada para que las **Pequeñas y Medianas Empresas (PyMEs)** puedan gestionar de forma eficaz y sencilla sus propios programas de fidelización digital.
 
 - **Propósito Central:** Dotar a las PyMEs de una herramienta completa para crear, operar y gestionar programas de fidelización (puntos, niveles, recompensas), fidelizando clientes y ofreciéndoles beneficios tangibles por su lealtad a través de una experiencia digital simple.
 - **Objetivo Técnico:** Ser una solución **robusta, mantenible y escalable**.
-- **Visión de Evolución:** Expandirse más allá del núcleo de fidelización para incluir:
-  - Herramientas de **comunicación** directa (email, publicaciones, chat).
-  - Capacidades de **CRM ligero** y análisis avanzado.
-  - Una **aplicación móvil nativa**.
-  - Potencialmente: Ecosistemas de **fidelización compartida** y **funcionalidades sociales** (mapas de actividad, eventos) para sectores específicos (ej: ocio). _(Visión sujeta a refinamiento)_.
+- **Visión de Evolución:** Expandirse más allá del núcleo de fidelización para incluir herramientas de **comunicación**, **CRM ligero**, **análisis**, una **app móvil nativa**, y potencialmente **ecosistemas compartidos** y **funcionalidades sociales**. _(Visión sujeta a refinamiento)_.
 
 ---
 
 ## 2. Tecnologías Utilizadas 🛠️
 
-- **Frontend:**
-  - `React`, `TypeScript`, `Vite`
-  - `Mantine UI` (v7+) & Mantine Hooks (`@mantine/hooks`)
-  - Gestión de Formularios: `@mantine/form`, `zod`
-  - Notificaciones/Modales: `@mantine/notifications`, `@mantine/modals`
-  - Peticiones API: `axios` (con instancia interceptora)
-  - Routing: `react-router-dom` (v6+)
-  - QR: `qrcode.react`, `react-qr-reader`
-  - _Entorno Ejecución:_ `localhost:5173` (dev)
-- **Backend:**
-  - `Node.js`, `Express`, `TypeScript`
-  - ORM & Base de Datos: `Prisma`, `PostgreSQL`
-  - Autenticación: `jsonwebtoken` (JWT), `bcryptjs` (hashing)
-  - Variables de Entorno: `dotenv`
-  - Tareas Programadas: `node-cron`
-  - Otros: `uuid`, `cors`
-  - _Entorno Ejecución:_ `localhost:3000` (dev)
-  - _Nota:_ `ts-node`, `ts-node-dev` instalados, pero `yarn dev` presenta problemas actualmente (ver Flujo de Trabajo).
+- **Frontend:** `React`, `TypeScript`, `Vite`, `Mantine UI` (v7+), `@mantine/hooks`, `@mantine/form`, `zod`, `@mantine/notifications`, `@mantine/modals`, `axios`, `react-router-dom` (v6+), `qrcode.react`, `html5-qrcode`, (`vite-plugin-mkcert` para dev HTTPS).
+- **Backend:** `Node.js`, `Express`, `TypeScript`, `Prisma`, `PostgreSQL`, `jsonwebtoken`, `bcryptjs`, `dotenv`, `node-cron`, `uuid`, `cors`, `date-fns`.
+- **Entornos:** FE en `localhost:5173` (o IP local vía `https://` con `--host`), BE en `localhost:3000`.
 
 ---
 
 ## 3. Autenticación y Acceso 🔑
 
-- **Método:** Basado en **JWT (JSON Web Tokens)**.
-- **Almacenamiento FE:** Token y datos básicos de usuario en `localStorage`.
-- **Peticiones API Protegida:** `axiosInstance` (baseURL: `/api`) añade automáticamente cabecera `Authorization: Bearer <token>`.
-- **Validación BE:** Middleware `authenticateToken` valida el token en rutas `/api/*` y adjunta `req.user`.
-- **Control de Roles:** Enum `UserRole` y middleware `checkRole` protegen endpoints específicos (ej: solo `BUSINESS_ADMIN`).
-- **Rutas Públicas:** Endpoints bajo `/auth/*` (login, register, etc.) se acceden sin token usando `axios` base.
-- **Credenciales:** Se utilizan credenciales de prueba en entorno de desarrollo.
+- Basado en **JWT**. Token y datos básicos usuario en `localStorage`.
+- `axiosInstance` (FE) con `baseURL: '/api'` añade token automáticamente. Llamadas públicas usan `axios` base y URL completa o rutas relativas a `/public` vía proxy.
+- Middleware `authenticateToken` (BE) aplicado individualmente a rutas `/api/*` protegidas. Middleware `checkRole` para control fino.
+- Rutas `/api/auth/*` y `/public/*` son públicas (no requieren token).
 
 ---
 
-## 4. Estado Actual (Hitos Completados - Fase 1 Núcleo Operativo) ✅
+## 4. Estado Actual (Hitos Completados) ✅
 
-Se ha completado exitosamente una fase intensiva de **desarrollo del núcleo funcional** y una **refactorización significativa** tanto en frontend como en backend, estableciendo una base sólida y mantenible.
+Finalizada Fase 1 (Núcleo Operativo) y Refactorización Mayor. Implementadas Mejoras Clave y Corregidos Bugs Críticos.
 
-### Refactorización Completada:
-
-- **Backend:** Servicios y Controladores reorganizados por responsabilidad modular (`auth`, `customer` (lógica admin separada), `tiers` (config, crud, benefits, logic), `rewards`, `points`). Validaciones centralizadas en `utils`.
-- **Frontend:** Componentes principales refactorizados extrayendo lógica a Hooks (`useLayoutUserData`, `useAdminCustomers`, `useUserProfileData`, `useCustomerRewardsData`) y componentes reutilizables (`AppHeader`, `AdminNavbar`, `CustomerTable`, `UserInfoDisplay`, `RewardList`, `QrValidationSection`, etc.).
-
-### Funcionalidades Verificadas:
-
-- **Autenticación:** Registro (Admin/Cliente), Login (JWT), Recuperación de Contraseña.
-- **Sistema de Niveles (Tiers):**
-  - Gestión Admin (CRUD completo FE+BE).
-  - Configuración Global por Negocio (FE+BE).
-  - Lógica Backend (Cálculo automático, CRON para descensos).
-  - Gestión de Beneficios por Nivel (CRUD básico FE+BE).
-- **Gestión de Recompensas:** CRUD completo para Admin (FE+BE).
-- **Flujo de Puntos QR:** Generación QR (Admin FE+BE), Validación QR (Cliente FE+BE) con asignación de puntos, actualización de métricas de usuario y disparo de lógica de Tiers.
-- **Paneles Principales:**
-  - **Panel Cliente:** Información básica (puntos, nivel), lista y canje de Recompensas y Regalos (`GrantedReward`).
-  - **Panel Admin:** Layout general (Header, Sidebar), Logout, Dashboard Overview simple.
-- **Gestión de Clientes (Admin):**
-  - Listado paginado y ordenable.
-  - Búsqueda básica por nombre/email.
-  - **Acciones Individuales (FE+BE):**
-    - Ver Detalles (Modal con datos completos).
-    - Ver/Editar/Guardar Notas de Admin.
-    - Ajustar Puntos (Modal).
-    - Cambiar Nivel Manualmente (Modal).
-    - Marcar/Desmarcar Favorito.
-    - Activar/Desactivar Cliente.
-    - Asignar Recompensa como Regalo (Modal).
-  - **Acciones Masivas (FE+BE):**
-    - Selección múltiple de filas.
-    - Activar/Desactivar seleccionados.
-    - Eliminar seleccionados (con Modal de Confirmación).
-    - Ajustar Puntos a seleccionados (con Modal).
-
-### Flujo de Trabajo Backend (Temporal):
-
-- Se utiliza `yarn build && node dist/index.js` para ejecutar cambios debido a problemas persistentes con `yarn dev` (`ts-node-dev`).
+- **Plataforma Base:** Frontend + Backend operativos y refactorizados.
+- **Autenticación:** Flujo completo (Registro Negocio/Cliente, Login, Recuperación Pass) funcional.
+- **Registro Cliente:** Mejorado con desplegable de negocios disponibles (vía API pública).
+- **Sistema Niveles:** CRUD Admin Tiers, Configuración negocio, Lógica cálculo/CRON backend completa, Gestión Beneficios básica.
+- **Gestión Recompensas:** CRUD Admin completo.
+- **Flujo Puntos/QR:** Generación QR Admin, Validación QR Cliente (asigna puntos, actualiza métricas, trigger nivel), **Escáner QR funcional en móvil** (HTTPS + `html5-qrcode`).
+- **Paneles Usuario:** Panel Cliente (Info, Canjes), Panel Admin (Layout, Overview **con Stat Cards + Tendencias**).
+- **Gestión Clientes Admin:** Listado (Paginado, Ordenable, Búsqueda básica), Acciones Individuales (Detalles, Notas, Puntos, Nivel, Fav, Status, Regalo), Acciones Masivas (Status, Delete, Puntos).
+- **Entorno Dev:** Configurado y probado para **testing en móvil** vía IP local (Vite host+proxy, Firewall).
 
 ---
 
 ## 5. Hoja de Ruta y Tareas Pendientes 🗺️
 
-Tras completar el núcleo y la refactorización, el foco se centra en pulir la Fase 1 y planificar la expansión futura.
-
-### ⏳ Fase 1: Pulido y Mejoras (Foco Actual / Pendiente)
+### ⏳ Fase 1: Pulido y Mejoras Finales (Pendientes)
 
 - **Funcionalidad Admin Clientes:**
-  - Implementar **UI y Lógica Backend para Filtros Completos** (Activo, Favorito, Nivel). _(Pendiente FE+BE)_
-  - **Optimizar/Evaluar Búsqueda y Paginación** (Rendimiento DB/Índices?, UI/UX Paginación). _(Pendiente Análisis/Implementación)_
-- **💡 Mejoras Experiencia Cliente (Frontend - Sugerencias):**
-  - Mostrar **Progreso hacia el Siguiente Nivel** (visual/numérico). _(Idea Pendiente)_
-  - Listar claramente los **Beneficios del Nivel** actual y anticipar los del siguiente. _(Idea Pendiente)_
-  - (Opcional) Añadir un **Historial Básico de Actividad** (puntos ganados/gastados). _(Idea Pendiente - Req. BE)_
-  - (Opcional) Refinar UI de tarjetas de **Recompensas/Regalos** para mayor claridad. _(Idea Pendiente)_
-- **💡 Mejoras Backend (Sugerencias):**
-  - Reforzar **Validación de Entrada** en API (controllers/middleware, ej: `express-validator` o Zod BE). _(Idea Pendiente)_
-  - Usar **Errores HTTP más Específicos** (404, 409, etc.). _(Idea Pendiente)_
-  - Revisar uso de **Transacciones Prisma** en operaciones críticas. _(Idea Pendiente - Revisión)_
-  - Añadir **Indexación Proactiva** a la Base de Datos (relacionado con optimización paginación). _(Idea Pendiente)_
-  - Optimizar Consultas y uso de `select` para minimizar payloads. _(Idea Pendiente - Revisión)_
-  - Mejorar **Logging** (estructurado, contextual, ej: Winston/Pino). _(Idea Pendiente)_
-  - Reforzar **Gestión de Configuración** (`.env` validation). _(Idea Pendiente)_
-  - (Opcional) Implementar **Rate Limiting** básico en endpoints sensibles. _(Idea Pendiente)_
-  - (Opcional) Introducir **Registro de Auditoría (`AuditLog`)** básico. _(Idea Pendiente)_
-- **💡 Mejoras Experiencia Admin (Frontend - Sugerencias):**
-  - Enriquecer **Dashboard Admin** (`AdminOverview`) con Métricas Clave y/o Feed de Actividad. _(Idea Pendiente - Req. BE)_
-  - Implementar **Búsqueda/Filtrado de Clientes más avanzado** (Teléfono, Documento, Nivel). _(Idea Pendiente - Req. BE)_
-  - Mejorar **Modal de Detalles del Cliente** (ej: acciones rápidas inline). _(Idea Pendiente)_
-  - Añadir **Exportación CSV** básica para clientes. _(Idea Pendiente)_
-  - Mostrar **Estadísticas de Uso** de Recompensas y Niveles. _(Idea Pendiente - Req. BE)_
-  - Añadir más **descripciones/ayudas** en Configuración de Tiers. _(Idea Pendiente)_
-  - Revisar consistencia de **Notificaciones y Estados de Carga**. _(Idea Pendiente - Revisión)_
-  - Usar **Modales de Confirmación** para acciones críticas/destructivas. _(Idea Pendiente)_
+  - **Implementar Filtros Completos (UI + Backend):** Añadir controles (checkbox/select) en `AdminCustomerManagementPage` para filtrar por Estado (Activo/Inactivo), Favorito (Sí/No) y Nivel (Dropdown con Tiers existentes). Conectar con hook `useAdminCustomers` y modificar endpoint/servicio backend (`getCustomersForBusiness`) para aceptar y aplicar estos filtros en la consulta Prisma. _(Pendiente FE+BE)_
+  - **Optimizar/Evaluar Búsqueda y Paginación:** Analizar rendimiento actual con volumen de datos simulado. Considerar añadir índices `@@index` en `schema.prisma` para campos de búsqueda/ordenación comunes (`name`, `email`, `points`, `createdAt`, `isActive`, `isFavorite`). Evaluar si la paginación actual necesita pasar a ser server-side o si la UI (`Pagination` de Mantine) requiere mejoras. _(Pendiente Análisis/Implementación)_
 - **Calidad y Mantenimiento:**
-  - Realizar **Limpieza General** del código (eliminar código muerto/comentado, TODOs resueltos, `console.log`, centralizar tipos/interfaces en `src/types/`). _(Pendiente)_
-  - **Introducir Pruebas Automatizadas (Unitarias, Integración, E2E):** Fundamental para asegurar estabilidad y facilitar crecimiento futuro. _(Pendiente - Alta Prioridad)_
-  - ⚙️ Solucionar problema persistente con `yarn dev` (`ts-node-dev`). _(Pendiente - Prioridad DX)_
+  - **Introducir Pruebas Automatizadas:** **(Alta Prioridad)** Empezar a escribir tests para asegurar estabilidad y evitar regresiones.
+    - _Backend:_ Tests unitarios para lógica crítica (ej: `admin-stats.service`, `tier-logic.service`, `auth.service`) usando Jest/Vitest. Tests de integración para endpoints API clave (ej: login, stats, qr validation) usando Supertest.
+    - _Frontend:_ Tests unitarios para hooks con lógica compleja. Tests de componente para UI crítica (`StatCard`, `QrValidationSection`?) usando Vitest/React Testing Library. (Opcional) Tests E2E para flujos principales (login, scan QR) usando Cypress/Playwright. _(Pendiente)_
+  - **Limpieza General:** Revisión exhaustiva para eliminar `console.log`, código comentado obsoleto, TODOs resueltos. Centralizar tipos/interfaces compartidos (ej: `Customer`, `Reward`, `Tier`, `UserData`) en `frontend/src/types/`. Mejorar consistencia general del código. _(Pendiente)_
+  - ⚙️ **Solucionar `yarn dev` Backend:** Diagnosticar y arreglar el problema con `ts-node-dev` para habilitar hot-reloading eficiente en backend. _(Pendiente - Prioridad DX)_
+- **💡 Mejoras Sugeridas (A considerar Post-Fase 1 o si hay tiempo):**
+  - _Cliente FE:_ Progreso a siguiente Nivel (gamificación), Listado claro Beneficios (valor percibido), Historial Actividad (transparencia), UI Recompensas/Regalos (claridad), Validar QR desde archivo (conveniencia).
+  - _Admin FE:_ Feed Actividad Dashboard (pulso app), Filtros/Búsqueda Avanzada Clientes (segmentación), Mejorar Modal Detalles Cliente (eficiencia), Exportar CSV (utilidad externa), Stats Uso Recompensas/Niveles (insights), Ayudas Config. Tiers (usabilidad), Notificaciones/Carga consistentes (UX), Modales Confirmación (seguridad), Cierre Menú Móvil Admin (UX móvil).
+  - _Backend:_ Validación Entrada API robusta (seguridad), Errores HTTP específicos (DX/debug), Revisión Transacciones (integridad), Índices DB (rendimiento), Optimizar `select`s (rendimiento), Logging estructurado (monitorización/debug), Config `.env` validada (seguridad), Rate Limiting (seguridad), Audit Log (trazabilidad).
 
 ### 🚀 Hoja de Ruta Futura (Fases de Expansión - Tentativa)
 
-_(Objetivo Fase 2+: 3-6 semanas adicionales tras finalizar Fase 1)_
-
-- **Fase 2 (Expansión Funcional):**
-  - **Núcleo Fidelización:** Reglas avanzadas (ej: descuentos %), más tipos de recompensas.
-  - **Comunicación y Marketing:** Herramientas web básicas (email segmentado, publicaciones en portal).
-  - **Segmentación y CRM Ligero:** Segmentación avanzada de clientes, acciones masivas complejas, inicio de análisis básico (valor cliente, frecuencia).
-  - **(Backend)** Implementar Audit Log si no se hizo antes.
+- **Fase 2 (Internacionalización y Expansión Funcional):**
+  - **Internacionalización (i18n - ¡Próxima Tarea!):**
+    - Instalar y configurar `i18next` con `react-i18next` en el frontend.
+    - Crear archivos de traducción (`es.json`, `en.json`) en `public/locales/`.
+    - Refactorizar **todos** los componentes/páginas con texto visible para usar el hook `useTranslation` y la función `t()`.
+    - Añadir UI (ej: en Header) para permitir al usuario cambiar de idioma.
+  - **Fidelización Avanzada:** Implementar lógica para recompensas tipo `% descuento`. Explorar reglas de bonus (ej: puntos extra por cumpleaños, doble puntos en días específicos).
+  - **Comunicación Básica:** Herramienta admin para redactar y enviar emails simples (plantillas básicas?) a clientes filtrados (ej: por nivel). Sección simple de "Anuncios" en el portal cliente gestionada por el admin.
+  - **Segmentación y CRM Ligero:** Permitir al admin crear y guardar segmentos de clientes basados en criterios (puntos, nivel, fechas, actividad). Aplicar acciones masivas a segmentos. Añadir gráficos básicos al dashboard admin (ej: evolución nº clientes, distribución por nivel). Implementar `AuditLog` en backend si no se hizo.
 - **Fase 3 (App Móvil y Análisis Avanzado):**
-  - **Aplicación Móvil Nativa:** Desarrollo app Clientes (ver estado, escanear QR, canjear, notificaciones push). Posible versión Admin.
-  - **Análisis y CRM Avanzado:** Funcionalidades CRM más completas, reportes avanzados.
-- **Fase 4 (Ecosistemas y Social - Largo Plazo):**
-  - **Ecosistemas Compartidos:** Programas de fidelización entre negocios.
-  - **Funcionalidades Sociales:** Mapa de actividad, eventos, chat cliente-negocio, etc. (enfocado sectorialmente).
+  - **App Móvil Nativa (React Native?):** Desarrollo app enfocada en cliente (login, perfil, escanear QR, ver/canjear recompensas/regalos, notificaciones push). Evaluar versión simplificada para staff/admin (check-in rápido).
+  - **Análisis Avanzado / CRM Extendido:** Módulo de reportes en panel admin (valor cliente, efectividad recompensas, cohortes). Historial de interacciones más completo. Sistema de etiquetado de clientes. Explorar automatizaciones simples (email bienvenida/inactividad).
+- **Fase 4 (Ecosistemas, Social y Módulos Avanzados - Largo Plazo):**
+  - **Ecosistemas Compartidos:** Definir modelo de negocio/técnico para que varias PyMEs compartan o interconecten programas. APIs y paneles para gestionar asociaciones.
+  - **Funcionalidades Sociales:** Explorar mapa de actividad (anonimizada/opcional), calendario de eventos del negocio, posible chat cliente-negocio (evaluar WebSockets vs servicio externo). Enfocar en privacidad y valor real para usuario/negocio.
+  - **💡 Módulo Gestión Eventos/Listas:** (Integrado o app separada) Funcionalidad para crear eventos, gestionar listas de invitados, enviar invitaciones digitales con QR, check-in mediante escáner, estadísticas de asistencia.
 
 ---
 
 ## 6. Estructura del Código (Actualizada) 📁
 
-- **Backend (`backend/src/`):** `index.ts`, `prisma/`, `middleware/`, `utils/`, `routes/` (auth, customer, admin, points, rewards, tiers, protected), Módulos (`auth/`, `customer/`, `admin/`, `points/`, `rewards/`, `tiers/`).
-- **Frontend (`frontend/src/`):** `main.tsx`, `App.tsx`, `routes/index.tsx`, `services/axiosInstance.ts`, `theme.ts`, `hooks/` (useAdminCustomers, useCustomerRewardsData, etc.), `pages/` (Públicas, Cliente, Admin), `components/` (layout, PrivateRoute, admin, customer). _(Estructura detallada en el código)_.
+- **Backend (`backend/src/`):** `index.ts`, `prisma/`, `middleware/`, `utils/`, `routes/` (auth, businesses, customer, admin, points, rewards, tiers, protected), Módulos (`auth/`, `businesses/`, `customer/`, `admin/` (incl. `admin-stats.service/controller`), `points/`, `rewards/`, `tiers/`).
+- **Frontend (`frontend/src/`):** `main.tsx`, `App.tsx`, `i18n.ts` (próximo), `routes/index.tsx`, `services/` (axiosInstance, adminService, businessService), `theme.ts`, `hooks/`, `pages/` (Públicas, Cliente, Admin), `components/` (layout, PrivateRoute, admin (incl. `StatCard`), customer), `types/`.
 
 ---
 
 ## 7. Flujo de Trabajo Acordado 🤝
 
-1.  Proporcionar este archivo actualizado y `TROUBLESHOOTING_GUIDE.md` (si aplica) al inicio de la sesión.
-2.  Continuar con la implementación de las tareas restantes de la **Fase 1 (Pulido y Mejoras)** listadas en la Sección 5.
-3.  **IMPORTANTE:** Para modificar archivos existentes, **primero pasar el código completo actual del archivo**.
-4.  El asistente devolverá siempre el código **100% completo y limpio** del archivo modificado, con cabecera `// filename:` y `// Version:` actualizada. Un archivo por mensaje.
-5.  **Flujo Backend (Temporal):** Usar `yarn build && node dist/index.js` para probar cambios hasta resolver problema `yarn dev`.
+1.  Proporcionar este archivo actualizado y `TROUBLESHOOTING_GUIDE.md` (si aplica/se crea) al inicio.
+2.  Continuar con las tareas **Pendientes** (Sección 5). **Próxima Tarea: Internacionalización (i18n).**
+3.  Para modificar archivos: pasar código completo actual (salvo cambios rápidos seguidos).
+4.  Asistente devuelve código 100% completo y limpio, un archivo por mensaje.
+5.  Flujo Backend: Forzar recompilación limpia si hay dudas (`rm -rf dist && yarn build && node ...`).
+6.  Flujo Frontend: Usar `yarn dev --host` para pruebas en red local/móvil.
 
 ---
 
 ## 8. Información Adicional ℹ️
 
-- Backend usa `.env` para `DATABASE_URL`, `JWT_SECRET`.
-- Frontend usa `@mantine/modals`, requiere `ModalsProvider` en `main.tsx`.
-- Licencia del Proyecto: **AGPL v3.0**.
+- Backend usa `.env` (`DATABASE_URL`, `JWT_SECRET`). Recomendado `.env.example`.
+- Frontend usa `@mantine/modals` (requiere `ModalsProvider`), `html5-qrcode`.
+- Licencia: **AGPL v3.0**.
 
 ---
 
 ## 9. Próximo Paso 👉
 
-Elegir la siguiente tarea de la lista actualizada de **"Fase 1 - Pulido y Mejoras"** (Sección 5) para comenzar la implementación (ej: Filtros Clientes, Pruebas, Limpieza, etc.).
+Comenzar con la **Fase 2 - Internacionalización (i18n)**, instalando las librerías `i18next` y relacionadas en el frontend.

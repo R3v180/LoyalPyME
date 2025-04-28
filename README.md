@@ -32,7 +32,7 @@ Our goal is to enable any SME (retail, hospitality, services, etc.) to digitize 
 | :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
 | <img src="images/SC_LoyalPyME.png" alt="LoyalPyME Admin Dashboard - Desktop View" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="LoyalPyME Admin Dashboard - Mobile View" width="100%"> |
 
-_(Note: Screenshot might need updating to reflect the latest UI)_
+_(Note: Screenshots might need updating to reflect the latest UI)_
 
 ## Project Status & Roadmap 🗺️
 
@@ -72,25 +72,27 @@ LoyalPyME's development follows a phased approach, prioritizing the delivery of 
 **Frontend:**
 
 - React & TypeScript
-- Vite
+- Vite (Build Tool)
 - Mantine UI (v7+) & Mantine Hooks
-- `@mantine/form` & `zod` (for form validation)
-- `@mantine/notifications` (for UI feedback)
-- `@mantine/modals` (for confirmation/input modals)
-- Axios (for API requests)
+- `@mantine/form` & `zod` (Form Validation)
+- `@mantine/notifications` (UI Feedback)
+- `@mantine/modals` (Modals)
+- Axios (API Requests)
 - React Router DOM (v6+)
-- `qrcode.react`, `react-qr-reader` (for QR code functionality)
+- `qrcode.react`, `html5-qrcode` (QR Functionality) _(Updated library)_
+- `vite-plugin-mkcert` _(Added for HTTPS Dev)_
 
 **Backend:**
 
 - Node.js, Express, TypeScript
-- Prisma (ORM), PostgreSQL (Database)
-- JWT (for authentication) & bcryptjs (for hashing)
-- dotenv (for environment variables)
-- node-cron (for scheduled tasks)
-- uuid (for unique IDs)
+- Prisma (ORM)
+- PostgreSQL (Database)
+- JWT (Authentication) & bcryptjs (Hashing)
+- dotenv (Environment Variables)
+- node-cron (Scheduled Tasks - Tier Logic)
+- uuid (Unique IDs)
 - cors
-- `ts-node`, `ts-node-dev` (installed for development)
+- `ts-node`, `ts-node-dev` (Development Dependencies)
 
 ## Installation and Local Setup ⚙️
 
@@ -98,90 +100,71 @@ To get the project up and running in your development environment:
 
 ### Prerequisites
 
-- Node.js (v18+ recommended, check project specifics)
-- yarn (v1.x recommended, check project specifics)
-- Accessible PostgreSQL database server
+- Node.js (v18+ recommended)
+- yarn (v1.x recommended)
+- Accessible PostgreSQL database server running locally.
 
 ### Backend Setup
 
-1.  Clone the repository and navigate to the `backend` folder:
-    ```bash
-    git clone [https://github.com/R3v180/LoyalPyME.git](https://github.com/R3v180/LoyalPyME.git)
-    cd LoyalPyME/backend
-    ```
-2.  Install dependencies:
-    ```bash
-    yarn install
-    ```
-3.  Create a `.env` file in the `backend/` root with:
-    ```env
-    DATABASE_URL="postgresql://your_user:your_password@host:port/your_db?schema=public"
-    JWT_SECRET="your_strong_random_jwt_secret_here"
-    # PORT=3000 (Optional, defaults to 3000)
-    ```
-4.  Run Prisma migrations:
-    ```bash
-    npx prisma migrate dev
-    ```
-5.  Generate Prisma Client:
-    ```bash
-    npx prisma generate
-    ```
-6.  (Optional) Hash password for a test customer:
-    ```bash
-    # Edit the script first if needed!
-    npx ts-node scripts/hash-customer-password.ts
-    ```
+1.  Clone repo & `cd LoyalPyME/backend`
+2.  `yarn install`
+3.  Copy `backend/.env.example` to `backend/.env` (`cp .env.example .env`)
+4.  **Configure `.env`:** Fill in your local `DATABASE_URL` details and generate a strong, random `JWT_SECRET`. **Do not commit `.env`**.
+5.  Run migrations: `npx prisma migrate dev`
+6.  Generate client: `npx prisma generate`
+7.  **Initial Data:** Use **Option A (Seed)** `npx prisma db seed` (if `prisma/seed.ts` is implemented, using credentials like `admin@loyalpyme.test`/`password123` - **Confirm/Implement this!**) OR **Option B (Manual)** register via `/register-business` page after startup. _(Maintainer: Finalize and update this step)._
+8.  (Optional) `npx ts-node scripts/hash-customer-password.ts` for specific test users.
 
 ### Frontend Setup
 
-1.  Navigate to the `frontend` folder:
-    ```bash
-    cd ../frontend
-    ```
-2.  Install dependencies:
+1.  Navigate to `frontend` folder (`cd ../frontend`)
+2.  Install dependencies (including `vite-plugin-mkcert` if you added HTTPS):
     ```bash
     yarn install
+    # If you haven't added mkcert yet:
+    # yarn add -D vite-plugin-mkcert
     ```
 
 ## Running the Project ▶️
 
-1.  Ensure your PostgreSQL server is running.
-2.  **Start the backend** (from `backend` folder):
-
+1.  Ensure your PostgreSQL server is **running**.
+2.  **Start the Backend** (from `backend` folder):
     ```bash
     # Recommended (stable):
     yarn build && node dist/index.js
-
-    # Alternative (currently unstable due to ts-node issues):
+    # Alternative (unstable):
     # yarn dev
     ```
-
-    Backend runs on `http://localhost:3000` (or configured port).
-
-3.  **Start the frontend** (from `frontend` folder):
+    _(Backend runs on port 3000 or as configured)_
+3.  **Start the Frontend** (from `frontend` folder):
     ```bash
-    yarn dev
+    # Use --host for network access and HTTPS (if configured in vite.config.ts)
+    yarn dev --host
     ```
-    Frontend runs on `http://localhost:5173`.
+    _(Frontend runs on port 5173. Check terminal for `Network:` URL)_
 
-Access the application via `http://localhost:5173`.
+Access the application via `https://localhost:5173` (on PC, accept security warning) or the `Network:` URL (on Mobile, accept security warning). Log in using credentials from the Initial Data step.
+
+#### **Accessing from Mobile (Local Network)**
+
+To test the frontend on a mobile device connected to the same WiFi/Hotspot as your PC:
+
+1.  **Find PC's Local IP:** Use `ipconfig` (Win) or `ip addr show` / `ifconfig` (Mac/Linux). Find the IPv4 address of the active network connection (e.g., `192.168.X.Y`).
+2.  **Ensure Servers Running:** Backend (`node dist/index.js`) and Frontend (`yarn dev --host`) must be running.
+3.  **Check PC Firewall:** Allow incoming **TCP** connections on ports **5173** (Vite Frontend) and **3000** (Node Backend) for your **Private** network profile.
+4.  **Check Vite Config:** Ensure `frontend/vite.config.ts` includes `server: { host: true, https: true, proxy: { ... } }` as configured previously.
+5.  **Check Frontend Service URLs:** Ensure `axiosInstance` uses `baseURL: '/api'` and `businessService` uses `/public/...` (relative paths).
+6.  **Access on Mobile:** Open browser on mobile and navigate to `https://<YOUR_PC_IP>:5173` (e.g., `https://192.168.X.Y:5173`). **Accept the browser's security warning** about the self-signed certificate. The application should now load and API calls should work via the Vite proxy.
+
+---
 
 ## Contributions 🤝
 
-Contributions are welcome! Please follow standard fork, branch, commit, and Pull Request procedures. Detail your changes clearly in the PR description.
-
-1.  Fork the repository.
-2.  Create a feature/fix branch.
-3.  Commit your changes.
-4.  Push to your fork.
-5.  Open a Pull Request to the `main` branch of this repository.
+Contributions welcome! Fork -> Branch -> Commit -> Push -> Pull Request.
 
 ## License 📜
 
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
-
-See the [`LICENSE`](LICENSE) file for details. The AGPL v3 promotes collaboration by requiring network-accessible modifications to also be open source.
+Licensed under **AGPL-3.0**. See [`LICENSE`](LICENSE) file.
 
 Copyright (c) 2024-2025 Olivier Hottelet
 

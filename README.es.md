@@ -28,113 +28,59 @@ En un mercado competitivo, la lealtad del cliente es crucial. LoyalPyME nace par
 
 Nuestro objetivo es permitir a cualquier PyME (minorista, hostelería, servicios, etc.) digitalizar y optimizar su estrategia de retención de clientes, evolucionando la plataforma hacia capacidades integradas de comunicación, CRM, presencia móvil y, potencialmente, ecosistemas de fidelización compartidos.
 
-|                                    Admin Dashboard (Desktop)                                    |                                       Admin Dashboard (Mobile)                                       |
-| :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
-| <img src="images/SC_LoyalPyME.png" alt="LoyalPyME Admin Dashboard - Desktop View" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="LoyalPyME Admin Dashboard - Mobile View" width="100%"> |
+|                                   Panel de Admin (Escritorio)                                   |                                      Panel de Admin (Móvil)                                      |
+| :---------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------: |
+| <img src="images/SC_LoyalPyME.png" alt="Panel Admin LoyalPyME - Vista Escritorio" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="Panel Admin LoyalPyME - Vista Móvil" width="100%"> |
 
-_(Nota: La captura de pantalla podría necesitar actualizarse para reflejar la interfaz más reciente)_
+_(Nota: Las capturas podrían necesitar actualizarse a medida que evoluciona la interfaz)_
 
 ## Estado del Proyecto y Hoja de Ruta 🗺️
 
-El desarrollo de LoyalPyME sigue un enfoque por fases, asegurando una base sólida antes de expandir la funcionalidad.
+El desarrollo de LoyalPyME sigue un enfoque por fases, priorizando la entrega de un núcleo de fidelización funcional y escalando hacia capacidades avanzadas y comunitarias.
 
----
+**Fase 1: Núcleo de Fidelización Web (Operativa y Casi Completa)**
 
-### ✅ Fase 1: Núcleo Operativo y Refactorización (Completada)
-
-La fase fundacional, centrada en construir el motor de fidelización principal y llevar a cabo una refactorización significativa para la mantenibilidad y escalabilidad, está completada.
-
-**Logros Clave:**
-
-- **Plataforma Web Full-Stack:** Frontend (React/TS/Mantine) y Backend (Node/Express/TS/Prisma/PostgreSQL) operativos.
-- **Refactorización Mayor:** Refactorizado con éxito tanto el frontend (hooks, componentes) como el backend (servicios, controladores por módulo) para mejorar la estructura y separación de responsabilidades.
-- **Autenticación Segura:** Sistema basado en JWT con registro (Admin/Cliente), login, recuperación de contraseña y control de acceso basado en roles (`BUSINESS_ADMIN`, `CUSTOMER_FINAL`).
-- **Sistema de Niveles (Backend Completo):** CRUD Admin para Niveles (Tiers), configuración a nivel de negocio, cálculo automático de nivel basado en métricas (gasto, visitas, puntos) y tarea CRON para actualizaciones/descensos periódicos.
-- **Gestión de Recompensas:** CRUD completo para Administradores (Crear, Leer, Actualizar, Eliminar, Activar/Desactivar).
-- **Flujo de Puntos Principal:**
-  - Generación de Códigos QR por el Admin (FE+BE).
-  - Validación de Códigos QR por el Cliente (FE+BE) que dispara la asignación de puntos, actualización de métricas y lógica de actualización de nivel.
-- **Paneles de Usuario:**
-  - **Panel Cliente:** Visualización de puntos, nivel actual (nombre); ver recompensas disponibles y regalos asignados; canjear recompensas (por puntos) y regalos.
-  - **Panel Admin:** Layout básico (Header, Sidebar), página simple de Resumen (Overview).
+- **Gestión de Recompensas Centralizada:** Creación, edición, eliminación y gestión de estado (activo/inactivo) de recompensas canjeables. **(Funcional)**
+- **Sistema de Puntos Transaccional:** Generación de códigos QR únicos por transacción para asignación de puntos. **(Funcional)** Validación de códigos QR por el cliente final para ganar puntos. **(Funcional)**
+- **Sistema de Niveles Configurable:** Definición de niveles (tiers) con umbrales, gestión de beneficios asociados, configuración de lógica global del sistema y políticas de descenso (vía backend). **(Funcional)**
+- **Portal de Cliente Esencial:** Visualización del perfil de usuario (puntos, nivel), visualización de recompensas disponibles y regalos, canje de ambas categorías. **(Funcional)**
 - **Gestión de Clientes (Admin):**
-  - Listado de clientes paginado y ordenable.
-  - Búsqueda básica (nombre/email).
-  - **Acciones Individuales:** Ver Detalles (incl. notas), Editar Notas Admin, Ajustar Puntos, Cambiar Nivel (manual), Marcar/Desmarcar Favorito, Activar/Desactivar, Asignar Recompensa como Regalo.
-  - **Acciones Masivas:** Selección múltiple, Activar/Desactivar Masivo, Eliminar Masivo (con confirmación), Ajustar Puntos Masivo (vía modal).
 
----
+  - Listado de clientes registrados con datos clave (puntos, nivel, fecha registro, estado), ordenación. **(Funcional)**
 
-### ⏳ Fase 1: Pulido y Mejoras (Foco Actual / Pendiente)
+  * Búsqueda básica por nombre/email. **(Funcional)**
+  * Paginación (Lógica básica UI/Backend presente). **(Funcional)**
+  * Acciones Individuales: Ajuste manual de puntos, cambio manual de nivel, asignación de recompensas como regalos, marcar/desmarcar como "Favorito", Activar/Desactivar cliente. **(Funcional)**
+  * Modal Ver Detalles: Muestra información detallada del cliente incluyendo notas de admin. **(Funcional)**
+  * Notas Admin: Funcionalidad completa para ver, editar y guardar notas internas por cliente. **(Funcional)**
+  * Acciones Masivas: Seleccionar múltiples clientes, Activar/Desactivar Masivo, Eliminar Masivo (con confirmación), Ajustar Puntos Masivo (con modal input). **(Funcional)**
 
-Esta fase se centra en refinar la funcionalidad central existente y abordar mejoras clave identificadas.
+- **_Tareas Restantes para Fase 1:_**
+  - Implementar **Filtros Completos** en Gestión Clientes Admin (UI + conexión BE para filtrar por Estado Activo, Favorito, etc.).
+  - **Optimizar/Mejorar Búsqueda y Paginación** (Revisar rendimiento backend, mejorar UI paginación si es necesario).
+  * **Limpieza General** (Revisar TODOs, eliminar logs de depuración, centralizar tipos, revisar consistencia).
 
-- **Funcionalidad Admin Clientes:**
-  - Implementar **UI y Lógica Backend para Filtros Completos** (por estado Activo, Favorito, Nivel).
-  - **Optimizar/Mejorar Búsqueda y Paginación** (Analizar/mejorar rendimiento BD, mejorar UI/UX).
-- 💡 **Mejoras Experiencia Cliente (Frontend):**
-  - Mostrar **Progreso Hacia el Siguiente Nivel** (visual/numérico).
-  - Listar claramente los **Beneficios del Nivel Actual y del Siguiente**.
-  - (Opcional) Añadir **Historial Básico de Actividad** (puntos ganados/gastados).
-  - (Opcional) Refinar UI de tarjetas de Recompensas/Regalos para mayor claridad.
-- 💡 **Mejoras Backend:**
-  - Reforzar **Validación de Entrada en API** (Controllers/Middleware).
-  - Utilizar **Códigos de Error HTTP más Específicos** (404, 409, etc.).
-  - Revisar uso de **Transacciones Prisma** en operaciones críticas.
-  - Añadir **Indexación Proactiva a Base de Datos**.
-  - Asegurar uso consistente de `select` Prisma para **Optimización de Consultas**.
-  - Mejorar **Logging** (estructurado, contextual).
-  - Reforzar **Gestión de Configuración** (`.env` validation).
-  - (Opcional) Implementar **Rate Limiting** básico.
-  - (Opcional) Introducir **Registro de Auditoría (`AuditLog`)** básico.
-- 💡 **Mejoras Experiencia Admin (Frontend):**
-  - Enriquecer **Panel Principal Admin** (Métricas Clave, Feed Actividad).
-  - Implementar **Búsqueda/Filtros de Clientes Avanzados** (Teléfono, Documento, Nivel).
-  - Mejorar **Modal de Detalles del Cliente** (ej: acciones rápidas).
-  - Añadir **Exportación CSV** básica para lista de clientes.
-  - Mostrar **Estadísticas de Uso** de Recompensas y Niveles.
-  - Añadir más **descripciones/ayudas** en Configuración de Niveles.
-  - Asegurar consistencia en **Notificaciones y Estados de Carga**.
-  - Usar **Modales de Confirmación** para acciones críticas/destructivas.
-- **Calidad y Mantenimiento:**
-  - Realizar **Limpieza General de Código** (eliminar código muerto, TODOs, `console.log`; centralizar tipos).
-  - **Introducir Pruebas Automatizadas (Unitarias, Integración, E2E):** Fundamental para asegurar estabilidad (**Alta Prioridad**).
-  - ⚙️ Solucionar problema persistente con `yarn dev` (`ts-node-dev`).
+**Fases Futuras (Hacia un Ecosistema Completo):**
 
----
-
-### 🚀 Hoja de Ruta Futura (Plan de Evolución)
-
-_(Alto nivel, sujeto a refinamiento)_
-
-- **Fase 2 (Expansión Funcional - Post-Fase 1):**
-  - Reglas de Fidelización Avanzadas (ej: descuentos, más tipos de recompensa).
-  - Herramientas Básicas de Comunicación Web (ej: emails segmentados, anuncios en portal).
-  - Segmentación Avanzada de Clientes y Funcionalidades CRM Ligero.
-  - Implementación Audit Log en Backend.
-- **Fase 3 (App Móvil y Análisis Avanzado):**
-  - Aplicación Móvil Nativa para Clientes (ver estado, escanear QR, canjear, notificaciones push). Posible app compañera para Admin.
-  - Funcionalidades CRM Completas y Analítica/Reportes Avanzados.
-- **Fase 4 (Ecosistemas y Potencial Social - Largo Plazo):**
-  - Ecosistemas de Fidelización Compartidos / Canjes entre negocios.
-  - Funcionalidades Sociales (específico sector: mapas actividad, eventos, chat).
-  - 💡 (Módulo Potencial) Gestión de Eventos/Listas de Invitados.
-
----
+- **Fase 2 (Expansión Web):** Reglas de puntos y recompensas más complejas, herramientas básicas de comunicación directa (email, publicaciones en portal), segmentación avanzada de clientes, potencialmente otras acciones masivas.
+- **Fase 3 (Plataforma Móvil):** Aplicaciones nativas para clientes y personal, notificaciones push, check-in basado en ubicación, tarjeta de fidelización digital en la app.
+- **Fase 4 (Inteligencia de Negocio y CRM Ligero):** Módulos de análisis e informes sobre comportamiento y valor del cliente, funcionalidades de CRM ligero (historial completo más allá de notas?), automatización de marketing.
+- **Fase 5 (Ecosistemas Conectados y Potencial Social):** Programas de fidelización compartidos entre grupos de negocios, módulo de eventos, chat Cliente-Negocio y potencial chat comunitario/social (ej: mapa de actividad anónima en sectores específicos como ocio nocturno), expansión a otros sectores y geografías.
 
 ## Tecnologías Utilizadas 🛠️
 
 **Frontend:**
 
 - React & TypeScript
-- Vite (Herramienta de Construcción)
+- Vite (Herramienta Construcción)
 - Mantine UI (v7+) & Mantine Hooks
 - `@mantine/form` & `zod` (Validación Formularios)
 - `@mantine/notifications` (Feedback UI)
 - `@mantine/modals` (Modales)
 - Axios (Peticiones API)
 - React Router DOM (v6+)
-- `qrcode.react`, `react-qr-reader` (Funcionalidad QR)
+- `qrcode.react`, `html5-qrcode` (Funcionalidad QR) _(Librería actualizada)_
+- `vite-plugin-mkcert` _(Añadido para HTTPS Dev)_
 
 **Backend:**
 
@@ -143,7 +89,7 @@ _(Alto nivel, sujeto a refinamiento)_
 - PostgreSQL (Base de Datos)
 - JWT (Autenticación) & bcryptjs (Hashing)
 - dotenv (Variables Entorno)
-- node-cron (Tareas Programadas)
+- node-cron (Tareas Programadas - Lógica Niveles)
 - uuid (IDs Únicos)
 - cors
 - `ts-node`, `ts-node-dev` (Dependencias Desarrollo)
@@ -175,7 +121,12 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 ### Configuración Frontend
 
 1.  Navega a `frontend` (`cd ../frontend`)
-2.  `yarn install`
+2.  Instala dependencias (incluyendo `vite-plugin-mkcert` si añadiste HTTPS):
+    ```bash
+    yarn install
+    # Si no has añadido mkcert aún:
+    # yarn add -D vite-plugin-mkcert
+    ```
 
 ## Ejecutando el Proyecto ▶️
 
@@ -190,12 +141,25 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
     _(Backend corre en puerto 3000 o el de `.env`)_
 3.  **Inicia Frontend** (desde `frontend`):
     ```bash
-    # Usa --host para probar en móvil vía IP local
+    # Usa --host para acceso por red y HTTPS (si está configurado)
     yarn dev --host
     ```
-    _(Frontend corre en puerto 5173. Mira URL `Network:` en consola para acceso móvil - requiere firewall abierto en PC para 5173 y 3000)._
+    _(Frontend corre en puerto 5173. Revisa URL `Network:` en consola para acceso móvil - requiere firewall abierto en PC para puertos 5173 y 3000)._
 
-Accede vía `http://localhost:5173` (PC) o la URL `Network:` (Móvil). Usa credenciales del paso "Datos Iniciales".
+Accede vía `https://localhost:5173` (en PC, acepta advertencia seguridad) o la URL `Network:` (en Móvil, acepta advertencia seguridad). Usa credenciales del paso "Datos Iniciales".
+
+#### **Acceso desde Móvil (Red Local)**
+
+Para probar el frontend en un dispositivo móvil conectado a la misma red WiFi/Hotspot que tu PC:
+
+1.  **Encuentra IP Local del PC:** Usa `ipconfig` (Win) o `ip addr show` / `ifconfig` (Mac/Linux). Busca la dirección IPv4 de la conexión activa (ej: `192.168.X.Y`).
+2.  **Asegura Servidores Corriendo:** Backend (`node ...`) y Frontend (`yarn dev --host`).
+3.  **Verifica Firewall PC:** Permite conexiones **TCP** entrantes en puertos **5173** (Vite) y **3000** (Backend) para tu perfil de red **Privado**.
+4.  **Verifica Config Vite:** Asegura que `frontend/vite.config.ts` incluye `server: { host: true, https: true, proxy: { ... } }`.
+5.  **Verifica URLs Servicios FE:** Asegura que `axiosInstance` usa `baseURL: '/api'` y `businessService` usa `/public/...` (rutas relativas).
+6.  **Accede en Móvil:** Abre navegador en móvil y navega a `https://<TU_IP_PC>:5173` (ej: `https://192.168.X.Y:5173`). **Acepta la advertencia de seguridad** del navegador por el certificado auto-firmado. La app debería cargar y las llamadas API funcionar vía proxy.
+
+---
 
 ## Contribuciones 🤝
 
