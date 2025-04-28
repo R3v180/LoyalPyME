@@ -1,18 +1,20 @@
 // filename: frontend/src/pages/RegisterPage.tsx
-// Version: 1.3.1 (Fix imports for businessService, Group, Alert, IconAlertCircle)
+// Version: 1.4.0 (Use axiosInstance for register API call)
 
-import React, { useState, useEffect } from 'react'; // useEffect ya estaba
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+// CORRECCIÓN: Usar axiosInstance en lugar de axios base
+import axiosInstance from '../services/axiosInstance';
+import { AxiosError } from 'axios'; // Importar AxiosError
 import {
     Container, Paper, Title, Text, Stack, TextInput, PasswordInput,
-    Button, Select, Anchor, Loader, Group // CORRECCIÓN: Añadido Group, Eliminado Alert
+    Button, Select, Anchor, Loader, Group
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconCheck, IconX } from '@tabler/icons-react'; // CORRECCIÓN: Eliminado IconAlertCircle
+import { IconCheck, IconX } from '@tabler/icons-react';
 
-// CORRECCIÓN: Ruta de importación corregida a ../services/
+// Importar servicio y tipo para la lista de negocios
 import { getPublicBusinessList, BusinessOption } from '../services/businessService';
 
 // Enums
@@ -36,14 +38,12 @@ const RegisterPage: React.FC = () => {
     const role: UserRole = UserRole.CUSTOMER_FINAL;
     const [isLoading, setIsLoading] = useState(false);
     const documentTypeOptions = Object.values(DocumentType).map(value => ({ value, label: value }));
-
-    // Estados para la lista de negocios
     const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
     const [loadingBusinesses, setLoadingBusinesses] = useState<boolean>(true);
     const [errorBusinesses, setErrorBusinesses] = useState<string | null>(null);
 
-    // useForm
-    const form = useForm<RegisterFormValues>({
+    // useForm (sin cambios)
+    const form = useForm<RegisterFormValues>({ /* ... (igual que antes) ... */
         initialValues: {
             email: '', password: '', confirmPassword: '', name: '', phone: '',
             documentType: null, documentId: '', businessId: '',
@@ -62,29 +62,23 @@ const RegisterPage: React.FC = () => {
             },
             businessId: (value) => (value ? null : 'Debes seleccionar un negocio.'),
         },
-    });
+     });
 
-    // useEffect para cargar la lista de negocios
+    // useEffect para cargar negocios (sin cambios)
     useEffect(() => {
         const fetchBusinesses = async () => {
-            setLoadingBusinesses(true);
-            setErrorBusinesses(null);
+            setLoadingBusinesses(true); setErrorBusinesses(null);
             try {
-                const data = await getPublicBusinessList();
-                setBusinesses(data);
+                const data = await getPublicBusinessList(); setBusinesses(data);
             } catch (err: any) {
-                console.error("Error fetching businesses for dropdown:", err);
-                setErrorBusinesses(err.message || "No se pudo cargar la lista de negocios.");
-            } finally {
-                setLoadingBusinesses(false);
-            }
+                console.error("Error fetching businesses for dropdown:", err); setErrorBusinesses(err.message || "No se pudo cargar la lista de negocios.");
+            } finally { setLoadingBusinesses(false); }
         };
         fetchBusinesses();
          // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-
-    // handleSubmit
+    // handleSubmit MODIFICADO para usar axiosInstance
     const handleSubmit = async (values: RegisterFormValues) => {
         setIsLoading(true);
         const registrationData = {
@@ -92,18 +86,34 @@ const RegisterPage: React.FC = () => {
             phone: values.phone.trim(), documentId: values.documentId.trim().toUpperCase(), documentType: values.documentType,
             businessId: values.businessId, role,
         };
-        console.log('Intentando registrar (con Select):', registrationData);
+
+        // CORRECCIÓN: Usamos la ruta relativa y axiosInstance
+        const registerPath = '/auth/register'; // Ruta relativa a /api
+        console.log(`Intentando registrar (con Select y axiosInstance) a: ${registerPath}`, registrationData);
+
         try {
-            const response = await axios.post('http://localhost:3000/auth/register', registrationData);
+            // CORRECCIÓN: Usamos axiosInstance.post
+            const response = await axiosInstance.post(registerPath, registrationData);
             console.log('Registration successful:', response.data);
             notifications.show({
                 title: '¡Registro Exitoso!', message: 'Tu cuenta ha sido creada. Serás redirigido a la página de inicio de sesión.',
                 color: 'green', icon: <IconCheck size={18} />, autoClose: 4000,
             });
             setTimeout(() => { navigate('/login', { state: { registrationSuccess: true } }); }, 1500);
-        } catch (err: any) {
+        } catch (err: unknown) { // Reusamos el manejo de errores mejorado
             console.error('Error during registration:', err);
-            const message = err.response?.data?.message || err.message || 'Error desconocido durante el registro.';
+             let message = 'Error desconocido durante el registro.';
+             if (err instanceof AxiosError) {
+                if (err.response) {
+                    message = err.response.data?.message || `Error del servidor (${err.response.status})`;
+                } else if (err.request) {
+                    message = 'No se pudo conectar con el servidor.';
+                } else {
+                    message = 'Error al preparar la solicitud de registro.';
+                }
+            } else if (err instanceof Error) {
+                message = err.message;
+            }
             notifications.show({
                  title: 'Error de Registro', message: message, color: 'red', icon: <IconX size={18} />, autoClose: 6000,
             });
@@ -112,18 +122,20 @@ const RegisterPage: React.FC = () => {
         }
     };
 
-    // Mapeo de opciones para el Select
+    // Mapeo de opciones (sin cambios)
     const businessSelectOptions = businesses.map(b => ({ value: b.id, label: b.name }));
 
+    // JSX (sin cambios en la estructura)
     return (
         <Container size={480} my={40}>
              <Title ta="center" style={{ fontWeight: 900 }}> ¡Bienvenido a LoyalPyME! </Title>
+             {/* ... (Text y Paper igual) ... */}
              <Text c="dimmed" size="sm" ta="center" mt={5}> ¿Ya tienes cuenta?{' '} <Anchor size="sm" component={Link} to="/login"> Inicia sesión </Anchor> </Text>
              <Paper withBorder shadow="md" p={30} mt={30} radius="lg">
                  <Title order={2} ta="center" mb="lg">Crea tu Cuenta de Cliente</Title>
                  <form onSubmit={form.onSubmit(handleSubmit)}>
                      <Stack>
-                         {/* Campos existentes sin cambios */}
+                         {/* ... (Inputs de email a documentId igual) ... */}
                          <TextInput label="Email" placeholder="tu@email.com" required disabled={isLoading} {...form.getInputProps('email')} />
                          <PasswordInput label="Contraseña" placeholder="Tu contraseña" required disabled={isLoading} {...form.getInputProps('password')} />
                          <PasswordInput label="Confirmar Contraseña" placeholder="Repite tu contraseña" required disabled={isLoading} {...form.getInputProps('confirmPassword')} />
@@ -132,7 +144,7 @@ const RegisterPage: React.FC = () => {
                          <Select label="Tipo de Documento" placeholder="Selecciona uno" data={documentTypeOptions} required disabled={isLoading} clearable={false} {...form.getInputProps('documentType')} />
                          <TextInput label="Número de Documento" placeholder="DNI, NIE, Pasaporte..." required disabled={isLoading} {...form.getInputProps('documentId')} />
 
-                         {/* Select para Negocio */}
+                         {/* Select para Negocio (igual que antes) */}
                          <Select
                             label="Negocio al que Unirse"
                             placeholder={loadingBusinesses ? "Cargando negocios..." : "Selecciona un negocio"}
@@ -142,10 +154,9 @@ const RegisterPage: React.FC = () => {
                             searchable
                             nothingFoundMessage={errorBusinesses ? "Error al cargar" : "No hay negocios disponibles"}
                             clearable={false}
-                            error={errorBusinesses} // Muestra el error directamente en el campo
+                            error={errorBusinesses}
                             {...form.getInputProps('businessId')}
                          />
-                         {/* CORRECCIÓN: Usamos Group importado para centrar Loader */}
                          {loadingBusinesses && <Group justify='center'><Loader size="xs" /></Group>}
 
                          <Button type="submit" loading={isLoading} fullWidth mt="xl" radius="lg"> Registrarse </Button>
