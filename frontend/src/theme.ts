@@ -1,26 +1,32 @@
-// File: frontend/src/theme.ts
-// Version: 1.0.2 (Blue color, Larger default radius)
+// filename: frontend/src/theme.ts
+// Version: 1.0.3 (Clean up comments and commented code)
 
 import { createTheme } from '@mantine/core';
 
-// 1. Define custom colors if needed (optional for now, using Mantine's green)
-// ... (código comentado de myBrandColor) ...
-
-// 2. Create the theme object
+// Crear el objeto del tema
 export const theme = createTheme({
-  /* Put your mantine theme override here */
+  /* Aquí puedes añadir tus personalizaciones del tema de Mantine */
 
-  // --- CAMBIO: Volver a azul ---
+  // Color primario establecido a azul
   primaryColor: 'blue',
 
-  // --- CAMBIO: Añadir radio por defecto más grande ---
-  defaultRadius: 'lg', // 'xs', 'sm', 'md', 'lg', 'xl'
+  // Radio de borde por defecto para componentes
+  defaultRadius: 'lg', // Opciones: 'xs', 'sm', 'md', 'lg', 'xl'
 
-  // Set default font family
+  // Fuente por defecto
   fontFamily: 'Verdana, sans-serif',
 
-  // Add other theme overrides here later...
-  // ... (código comentado de components) ...
+  // Ejemplo de cómo personalizar componentes específicos (descomentar y ajustar si es necesario):
+  /*
+  components: {
+    Button: {
+      defaultProps: {
+        // Ejemplo: hacer todos los botones un poco más grandes por defecto
+        // size: 'md',
+      }
+    }
+  }
+  */
 });
 
 // End of File: frontend/src/theme.ts

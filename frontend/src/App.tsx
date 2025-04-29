@@ -1,24 +1,20 @@
-// File: frontend/src/App.tsx
-// Version: 1.0.1
+// filename: frontend/src/App.tsx
+// Version: 1.0.2 (Clean comments, fix encoding)
 
-// Importa nuestro componente que define las rutas
-import AppRoutes from './routes/index';
+import AppRoutes from './routes/index'; // Importa el componente que define las rutas
 
-// Opcional: Importar estilos globales si los tenemos (por ahora index.css esta comentado en main.tsx)
+// Opcional: Importar estilos globales si se usan activamente
 // import './index.css';
 
-
 function App() {
-  // El componente App ahora solo renderiza el componente AppRoutes,
-  // que se encargara de mostrar la pagina correcta segun la URL.
+  // Renderiza el componente AppRoutes que maneja las páginas según la URL
   return (
-    // Puedes envolver AppRoutes con otros componentes de layout aqui (ej: Header, Footer)
-    <div className="App"> {/* Puedes añadir clases CSS globales aqui */}
-      <AppRoutes /> {/* Renderiza las rutas de la aplicacion */}
+    <div className="App"> {/* Clase global opcional */}
+      <AppRoutes />
     </div>
   );
 }
 
-export default App; // Exporta el componente principal App
+export default App;
 
 // End of File: frontend/src/App.tsx
