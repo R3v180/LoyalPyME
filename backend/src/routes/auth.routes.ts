@@ -1,17 +1,16 @@
 // filename: backend/src/routes/auth.routes.ts
-// Version: 1.3.0 (Update imports after controller refactoring)
+// Version: 1.3.1 (Remove meta-comments)
 
 import { Router } from 'express';
 
-// --- CAMBIO: Importar handlers desde los controladores específicos ---
+// Importar handlers desde los controladores específicos
 import { login } from '../auth/auth.controller';
 import { register, registerBusinessHandler } from '../auth/registration.controller';
 import { forgotPasswordHandler, resetPasswordHandler } from '../auth/password-reset.controller';
-// --- FIN CAMBIO ---
 
 const router = Router();
 
-// --- Rutas de autenticación (sin cambios en las definiciones) ---
+// --- Rutas de autenticación ---
 
 // Registro (usa registration.controller)
 router.post('/register', register);

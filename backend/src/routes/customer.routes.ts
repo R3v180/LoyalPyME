@@ -1,7 +1,5 @@
 // filename: backend/src/routes/customer.routes.ts
-// --- INICIO DEL CÓDIGO CORREGIDO Y COMPLETO ---
-// File: backend/src/routes/customer.routes.ts
-// Version: 1.5.0 (Includes GET /tiers route - Moved from tiers.routes)
+// Version: 1.5.1 (Remove meta-comments)
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
@@ -44,24 +42,20 @@ router.get(
 // URL Final: POST /api/customer/granted-rewards/:grantedRewardId/redeem
 router.post(
     '/granted-rewards/:grantedRewardId/redeem',
-    checkRole([UserRole.CUSTOMER_FINAL]),
+    checkRole([UserRole.CUSTOMER_FINAL]), // Solo clientes
     redeemGrantedRewardHandler
 );
 
-// --- **RUTA AÑADIDA (Movida desde tiers.routes.ts)** ---
 // GET /tiers - Obtener los tiers disponibles para el cliente
 // URL Final: GET /api/customer/tiers
 router.get(
     '/tiers', // Ruta relativa al punto de montaje /api/customer
     checkRole([UserRole.CUSTOMER_FINAL]), // Solo clientes
-    getCustomerTiersHandler             // Handler que movimos a customer.controller
+    getCustomerTiersHandler           // Handler que movimos a customer.controller
 );
-// --- FIN RUTA AÑADIDA ---
-
 
 // Otras rutas de cliente irían aquí
 
 export default router;
 
 // End of File: backend/src/routes/customer.routes.ts
-// --- FIN DEL CÓDIGO CORREGIDO Y COMPLETO ---
