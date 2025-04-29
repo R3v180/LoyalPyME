@@ -1,10 +1,8 @@
-// File: frontend/src/components/admin/tiers/CreateTierModal.tsx
-// Version: 1.0.3 (Remove unused Mantine form field imports)
+// filename: frontend/src/components/admin/tiers/CreateTierModal.tsx
+// Version: 1.0.4 (Remove meta-comment)
 
 import React, { useState } from 'react';
-// --- CORRECCIÓN: Quitar imports de campos de formulario ---
-import { Modal, Button, Group } from '@mantine/core';
-// --- FIN CORRECCIÓN ---
+import { Modal, Button, Group } from '@mantine/core'; // Imports ya estaban limpios
 import { useForm, zodResolver } from '@mantine/form';
 import { z } from 'zod';
 import { notifications } from '@mantine/notifications';
@@ -13,7 +11,7 @@ import axiosInstance from '../../../services/axiosInstance';
 import TierForm from './TierForm'; // Importar el componente del formulario
 
 // Tipos
-interface Tier { id: string; name: string; level: number; /* ... */ }
+interface Tier { id: string; name: string; level: number; /* ... otros campos si los devuelve la API ... */ }
 const tierFormSchema = z.object({
     name: z.string().min(1, { message: 'El nombre es obligatorio' }),
     level: z.number().int().min(0, { message: 'El nivel debe ser 0 o mayor' }),
@@ -44,7 +42,7 @@ const CreateTierModal: React.FC<CreateTierModalProps> = ({ opened, onClose, onSu
     const handleSubmit = async (values: TierFormValues) => {
         setIsCreating(true);
         try {
-            const response = await axiosInstance.post<Tier>('/tiers/tiers', values);
+            const response = await axiosInstance.post<Tier>('/tiers/tiers', values); // Asume endpoint correcto
             notifications.show({
                  title: 'Nivel Creado',
                  message: `El nivel "${response.data.name}" se ha creado correctamente.`,
@@ -61,9 +59,9 @@ const CreateTierModal: React.FC<CreateTierModalProps> = ({ opened, onClose, onSu
                  message: err.response?.data?.message || "No se pudo crear el nivel.",
                  color: 'red',
                  icon: <IconAlertCircle size={18} />
-            });
+             });
         } finally {
-            setIsCreating(false);
+             setIsCreating(false);
         }
     };
 
@@ -81,9 +79,9 @@ const CreateTierModal: React.FC<CreateTierModalProps> = ({ opened, onClose, onSu
             overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
         >
             <form onSubmit={form.onSubmit(handleSubmit)}>
-                 <TierForm form={form} />
+                <TierForm form={form} />
                 <Group justify="flex-end" mt="lg">
-                    <Button variant="default" onClick={handleClose}>Cancelar</Button>
+                    <Button variant="default" onClick={handleClose} disabled={isCreating}>Cancelar</Button>
                     <Button type="submit" loading={isCreating} leftSection={<IconDeviceFloppy size={18} />}>
                         Crear Nivel
                     </Button>

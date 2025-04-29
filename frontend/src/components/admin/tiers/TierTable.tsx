@@ -1,13 +1,11 @@
-// File: frontend/src/components/admin/tiers/TierTable.tsx
-// Version: 1.1.1 (Provide complete function bodies and imports)
+// filename: frontend/src/components/admin/tiers/TierTable.tsx
+// Version: 1.1.2 (Fix encoding, remove meta-comments)
 
 import React from 'react';
-// --- CORRECCIÓN: Añadir Text a la importación ---
-import { Table, Group, ActionIcon, Badge, Text } from '@mantine/core';
+import { Table, Group, ActionIcon, Badge, Text } from '@mantine/core'; // Imports limpios
 import { IconPencil, IconTrash, IconListDetails } from '@tabler/icons-react';
-// --- FIN CORRECCIÓN ---
 
-// Tipos
+// Tipos definidos localmente (Considerar mover a /types/ si se reutilizan)
 enum BenefitType { POINTS_MULTIPLIER = 'POINTS_MULTIPLIER', EXCLUSIVE_REWARD_ACCESS = 'EXCLUSIVE_REWARD_ACCESS', CUSTOM_BENEFIT = 'CUSTOM_BENEFIT' }
 interface TierBenefit { id: string; type: BenefitType; value: string; description: string | null; isActive: boolean; }
 interface Tier { id: string; name: string; level: number; minValue: number; description: string | null; benefitsDescription: string | null; isActive: boolean; benefits: TierBenefit[]; }
@@ -22,15 +20,16 @@ interface TierTableProps {
 
 const TierTable: React.FC<TierTableProps> = ({ tiers, onEditClick, onDeleteClick, onManageBenefitsClick }) => {
 
-    // formatBenefitsSummary (IMPLEMENTACIÓN COMPLETA)
+    // Función interna para formatear resumen de beneficios
     const formatBenefitsSummary = (benefits: TierBenefit[]): string => {
-        if (!benefits || benefits.length === 0) return 'Ninguno';
+        if (!benefits || benefits.length === 0) return 'Ninguno'; // Corregido: Ninguno
         const activeBenefits = benefits.filter(b => b.isActive);
-        if (activeBenefits.length === 0) return 'Ninguno activo';
-        return `${activeBenefits.length} beneficio(s) activo(s)`;
+        if (activeBenefits.length === 0) return 'Ninguno activo'; // Corregido: Ninguno, activo
+        // Corregido: beneficio(s), activo(s)
+        return `${activeBenefits.length} beneficio${activeBenefits.length !== 1 ? 's' : ''} activo${activeBenefits.length !== 1 ? 's' : ''}`;
     };
 
-    // Crear filas de la tabla (IMPLEMENTACIÓN COMPLETA)
+    // Crear filas de la tabla
     const rows = tiers.map((tier) => (
         <Table.Tr key={tier.id}>
             <Table.Td>{tier.level}</Table.Td>
@@ -40,9 +39,9 @@ const TierTable: React.FC<TierTableProps> = ({ tiers, onEditClick, onDeleteClick
             <Table.Td><Badge color={tier.isActive ? 'green' : 'gray'} variant="light">{tier.isActive ? 'Activo' : 'Inactivo'}</Badge></Table.Td>
             <Table.Td>
                 <Group gap="xs" wrap="nowrap">
-                     <ActionIcon variant="subtle" color="teal" onClick={() => onManageBenefitsClick(tier)} title="Gestionar Beneficios">
-                         <IconListDetails size={16} />
-                     </ActionIcon>
+                    <ActionIcon variant="subtle" color="teal" onClick={() => onManageBenefitsClick(tier)} title="Gestionar Beneficios">
+                        <IconListDetails size={16} />
+                    </ActionIcon>
                     <ActionIcon variant="subtle" color="blue" onClick={() => onEditClick(tier.id)} title="Editar Nivel">
                         <IconPencil size={16} />
                     </ActionIcon>
@@ -54,33 +53,31 @@ const TierTable: React.FC<TierTableProps> = ({ tiers, onEditClick, onDeleteClick
         </Table.Tr>
     ));
 
-    // Renderizado de la tabla (IMPLEMENTACIÓN COMPLETA)
+    // Renderizado de la tabla
     return (
         <Table.ScrollContainer minWidth={600}>
-             <Table verticalSpacing="sm" striped highlightOnHover withTableBorder withColumnBorders>
-                 <Table.Thead>
-                     <Table.Tr>
-                         <Table.Th>Nivel (Orden)</Table.Th>
-                         <Table.Th>Nombre</Table.Th>
-                         <Table.Th>Umbral Mínimo</Table.Th>
-                         <Table.Th>Beneficios</Table.Th>
-                         <Table.Th>Estado</Table.Th>
-                         <Table.Th>Acciones</Table.Th>
-                     </Table.Tr>
-                 </Table.Thead>
-                 <Table.Tbody>
-                     {rows.length > 0 ? rows : (
-                          // --- CORRECCIÓN: Mensaje completo para tabla vacía ---
-                          <Table.Tr>
-                             <Table.Td colSpan={6}>
-                                 <Text c="dimmed" ta="center">No se encontraron niveles.</Text>
-                             </Table.Td>
-                         </Table.Tr>
-                          // --- FIN CORRECCIÓN ---
-                     )}
-                 </Table.Tbody>
-             </Table>
-         </Table.ScrollContainer>
+            <Table verticalSpacing="sm" striped highlightOnHover withTableBorder withColumnBorders>
+                <Table.Thead>
+                    <Table.Tr>
+                        <Table.Th>Nivel (Orden)</Table.Th>
+                        <Table.Th>Nombre</Table.Th>
+                        <Table.Th>Umbral Mínimo</Table.Th>
+                        <Table.Th>Beneficios</Table.Th>
+                        <Table.Th>Estado</Table.Th>
+                        <Table.Th>Acciones</Table.Th>
+                    </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                    {rows.length > 0 ? rows : (
+                        <Table.Tr>
+                            <Table.Td colSpan={6}>
+                                <Text c="dimmed" ta="center">No se encontraron niveles.</Text>
+                            </Table.Td>
+                        </Table.Tr>
+                    )}
+                </Table.Tbody>
+            </Table>
+        </Table.ScrollContainer>
     );
 };
 
