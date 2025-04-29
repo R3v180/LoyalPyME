@@ -1,20 +1,19 @@
 // filename: frontend/src/hooks/useQrScanner.ts
-// Version: 1.0.1 (Fix non-exported type imports from html5-qrcode)
+// Version: 1.0.3 (Remove incorrect QrDimensionFunction import again)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-// --- FIX: Remove non-exported types ---
-import { Html5Qrcode, Html5QrcodeResult /*, Html5QrcodeError, QrDimensions, QrDimensionFunction */ } from 'html5-qrcode';
+// --- FIX: Remove incorrect QrDimensionFunction import ---
+import { Html5Qrcode, Html5QrcodeResult } from 'html5-qrcode';
 // --- END FIX ---
 
-// --- FIX: Define types for qrbox inline ---
+// Tipos para qrbox (definidos localmente)
 type QrboxFunction = (viewfinderWidth: number, viewfinderHeight: number) => { width: number, height: number };
 type QrboxConfig = { width: number, height: number } | QrboxFunction;
-// --- END FIX ---
 
 // Configuración por defecto para el escáner
 const defaultQrScannerConfig = {
     fps: 10,
-    qrbox: { width: 250, height: 250 } as QrboxConfig, // Use the inline type alias
+    qrbox: { width: 250, height: 250 } as QrboxConfig,
 };
 
 // Opciones que acepta el hook
@@ -22,16 +21,14 @@ interface UseQrScannerOptions {
     qrcodeRegionId: string;
     config?: {
         fps?: number;
-        qrbox?: QrboxConfig; // Use the inline type alias
+        qrbox?: QrboxConfig;
         aspectRatio?: number;
         disableFlip?: boolean;
     };
     verbose?: boolean;
     enabled?: boolean;
     onScanSuccess: (decodedText: string, decodedResult: Html5QrcodeResult) => void;
-    // --- FIX: Use 'any' or 'Error' for the error type ---
-    onScanError?: (errorMessage: string, error: any) => void; // Use 'any' as specific type isn't exported
-    // --- END FIX ---
+    onScanError?: (errorMessage: string, error: any) => void;
 }
 
 // Valor de retorno del hook
@@ -61,9 +58,7 @@ export const useQrScanner = ({
     const clearScannerError = useCallback(() => setScannerError(null), []);
 
     useEffect(() => {
-        if (!enabled) {
-            return; // Early exit if not enabled
-        }
+        if (!enabled) { return; }
 
         const element = document.getElementById(qrcodeRegionId);
         if (!element) {
@@ -83,7 +78,6 @@ export const useQrScanner = ({
 
         const scannerInstance = new Html5Qrcode(qrcodeRegionId, { verbose: verbose });
         html5QrCodeRef.current = scannerInstance;
-
         const scannerConfig = { ...defaultQrScannerConfig, ...config };
 
         const successCallback = (decodedText: string, decodedResult: Html5QrcodeResult) => {
@@ -95,26 +89,19 @@ export const useQrScanner = ({
             }
         };
 
-        // --- FIX: Use 'any' for the error parameter type ---
         const errorCallback = (errorMessage: string, error: any) => {
-        // --- END FIX ---
             if (optionsRef.current.onScanError) {
                 optionsRef.current.onScanError(errorMessage, error);
             }
         };
 
-        scannerInstance.start(
-            { facingMode: "environment" },
-            scannerConfig,
-            successCallback,
-            errorCallback
-        ).then(() => {
-            console.log("[useQrScanner] Scanner started successfully.");
-        }).catch((err) => {
+        scannerInstance.start( { facingMode: "environment" }, scannerConfig, successCallback, errorCallback )
+        .then(() => { console.log("[useQrScanner] Scanner started successfully."); })
+        .catch((err) => {
             console.error("[useQrScanner] Unable to start scanning.", err);
             setScannerError(`No se pudo iniciar la cámara: ${err?.message || err}`);
             if (html5QrCodeRef.current) {
-                try { html5QrCodeRef.current.clear(); } catch(e){ console.warn("Error clearing scanner after start failure", e); }
+                try { html5QrCodeRef.current.clear(); } catch(e){ /* ignore */ }
                 html5QrCodeRef.current = null;
             }
         });
@@ -127,23 +114,14 @@ export const useQrScanner = ({
             if (scanner) {
                 html5QrCodeRef.current = null;
                 scanner.stop()
-                    .then(() => {
-                        console.log("[useQrScanner] Scanner stopped successfully.");
-                        return scanner.clear(); // Return promise for chaining
-                    })
-                    .then(() => {
-                        console.log("[useQrScanner] Scanner cleared successfully.");
-                    })
-                    .catch((err) => {
-                        console.warn("[useQrScanner] Error stopping/clearing scanner during cleanup:", err);
-                        // Attempt to clear even if stop failed
-                        try { scanner.clear(); } catch (e) { /* ignore */ }
-                    });
+                    .then(() => { console.log("[useQrScanner] Scanner stopped successfully."); return scanner.clear(); })
+                    .then(() => { console.log("[useQrScanner] Scanner cleared successfully."); })
+                    .catch((err) => { console.warn("[useQrScanner] Error stopping/clearing scanner during cleanup:", err); try { scanner.clear(); } catch (e) { /* ignore */ } });
             } else {
                  console.log("[useQrScanner] Cleanup: No active scanner instance found.");
             }
         };
-    }, [enabled, qrcodeRegionId, config, verbose]); // Keep dependencies
+    }, [enabled, qrcodeRegionId, config, verbose]); // Dependencias
 
     return { scannerError, clearScannerError };
 };
