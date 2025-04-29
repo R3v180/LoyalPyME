@@ -1,6 +1,6 @@
 # LoyalPyME - Estado del Proyecto y Hoja de Ruta 🧭
 
-**Versión:** 1.4.0 (Post-Cleanup & Refactoring)
+**Versión:** 1.6.1 (Backend Testing Setup & Frontend i18n Completed)
 **Fecha de Última Actualización:** 29 de Abril de 2025
 
 ---
@@ -17,103 +17,106 @@ LoyalPyME es una **plataforma web integral (Frontend + Backend)** diseñada para
 
 ## 2. Tecnologías Utilizadas 🛠️
 
-_(Sin cambios respecto a v1.3.0 - sección se mantiene igual)_
-
-- **Frontend:** `React`, `TypeScript`, `Vite`, `Mantine UI` (v7+), `@mantine/hooks`, `@mantine/form`, `zod`, `@mantine/notifications`, `@mantine/modals`, `axios`, `react-router-dom` (v6+), `qrcode.react`, `html5-qrcode`, (`vite-plugin-mkcert` para dev HTTPS).
-- **Backend:** `Node.js`, `Express`, `TypeScript`, `Prisma`, `PostgreSQL`, `jsonwebtoken`, `bcryptjs`, `dotenv`, `node-cron`, `uuid`, `cors`, `date-fns`.
+- **Frontend:** `React`, `TypeScript`, `Vite`, `Mantine UI` (v7+), `@mantine/hooks`, `@mantine/form`, `zod`, `@mantine/notifications`, `@mantine/modals`, `axios`, `react-router-dom` (v6+), `qrcode.react`, `html5-qrcode`, `i18next`, `react-i18next`, `i18next-http-backend`, `i18next-browser-languagedetector`, `react-country-flag`, (`vite-plugin-mkcert` para dev HTTPS).
+- **Backend:** `Node.js`, `Express`, `TypeScript`, `Prisma`, `PostgreSQL`, `jsonwebtoken`, `bcryptjs`, `dotenv`, `node-cron`, `uuid`, `cors`, `date-fns`, `vitest`, `@vitest/coverage-v8`, `supertest`.
 - **Entornos:** FE en `localhost:5173` (o IP local vía `https://` con `--host`), BE en `localhost:3000`.
 
 ---
 
 ## 3. Autenticación y Acceso 🔑
 
-_(Sin cambios respecto a v1.3.0 - sección se mantiene igual)_
-
 - Basado en **JWT**. Token y datos básicos usuario en `localStorage`.
-- `axiosInstance` (FE) con `baseURL: '/api'` añade token automáticamente. Llamadas públicas usan `axios` base y URL completa o rutas relativas a `/public` vía proxy.
+- `axiosInstance` (FE) con `baseURL: '/api'` añade token automáticamente. Llamadas públicas usan `axios` base o `axiosInstance` según contexto.
 - Middleware `authenticateToken` (BE) aplicado individualmente a rutas `/api/*` protegidas. Middleware `checkRole` para control fino.
-- Rutas `/api/auth/*` y `/public/*` son públicas (no requieren token).
+- Rutas `/api/auth/*` y `/public/*` son públicas.
 
 ---
 
 ## 4. Estado Actual (Hitos Completados) ✅
 
-**¡Fase 1 (Núcleo Operativo) COMPLETADA (excepto Pruebas)!** Se realizó limpieza de código y refactorización.
+**Fase 1 (Núcleo Operativo) COMPLETADA.**
+**Fase 1 Pulido:** Completado (Filtros, Opt. Básica, Limpieza, Workaround DX).
+**Fase 2 (Funcionalidades Iniciales):** Internacionalización (i18n) completada. Testing backend iniciado.
 
 - **Plataforma Base:** Frontend + Backend operativos y refactorizados.
-- **Autenticación:** Flujo completo (Registro Negocio/Cliente, Login, Recuperación Pass) funcional. _(Servicios/Controladores refactorizados)_
-- **Registro Cliente:** Mejorado con desplegable de negocios disponibles.
+- **Autenticación:** Flujo completo funcional y refactorizado.
+- **Registro Cliente:** Mejorado con desplegable de negocios.
 - **Sistema Niveles:** CRUD Admin Tiers, Configuración negocio, Lógica cálculo/CRON backend completa, Gestión Beneficios básica. _(Código limpio/refactorizado)_
-
-* **Gestión Recompensas:** CRUD Admin completo. _(Código limpio)_
-* **Flujo Puntos/QR:** Generación QR Admin, Validación QR Cliente (asigna puntos, actualiza métricas, trigger nivel), Escáner QR funcional en móvil (usando `html5-qrcode`). _(Código limpio, hook `useQrScanner` extraído)_
-* **Paneles Usuario:** Panel Cliente (Info, Canjes), Panel Admin (Layout, Overview con Stat Cards + Tendencias). _(Código limpio, hooks `useAdminOverviewStats`, `useAdminRewards`, `useLayoutUserData` refactorizados/limpios)_
-* **Gestión Clientes Admin:** Listado (Paginado, Ordenable, Búsqueda, **Filtros: DONE**), Acciones Individuales, Modal Detalles (Notas Editables), Acciones Masivas. _(Código limpio, Servicios/Controladores refactorizados, hook `useAdminCustomersData` limpio)_
-* **Entorno Dev:** Configurado para testing móvil. **Workaround Backend DX aplicado** (Dos terminales).
+- **Gestión Recompensas:** CRUD Admin completo. _(Código limpio)_
+- **Flujo Puntos/QR:** Generación QR Admin, Validación QR Cliente, Escáner QR funcional (`html5-qrcode`). _(Código limpio)_
+- **Paneles Usuario:** Panel Cliente (Info, Canjes), Panel Admin (Layout, Overview). _(Código limpio)_
+- **Gestión Clientes Admin:** Listado (Paginado, Ordenable, Búsqueda, Filtros Completos), Acciones Individuales, Modal Detalles (Notas Editables), Acciones Masivas. _(Código limpio)_
+- **Entorno Dev:** Configurado para testing móvil. Workaround Backend DX aplicado.
+- **Testing Backend (Setup Inicial):**
+  - Añadidas dependencias: `vitest`, `supertest`.
+  - Configurados scripts `test`.
+  - Creados tests unitarios iniciales (Auth helpers, Tier logic helpers). **(18 tests OK)**
+  - Creados tests de integración iniciales (Auth, Points, Rewards, Tiers). **(34 tests OK)**
+  - Refactorizados servicios/controladores para testabilidad (DI).
+- **Internacionalización (i18n) Frontend:** **¡COMPLETADA!**
+  - Añadidas dependencias (`i18next`, `react-i18next`, plugins).
+  - Creado y configurado `i18n.ts`.
+  * Integrado en `main.tsx` con `React.Suspense`.
+  * Creados archivos `es/translation.json` y `en/translation.json` con claves para toda la UI.
+  * Refactorizadas **todas** las páginas y componentes relevantes para usar `useTranslation`.
+  * Implementado selector de idioma con banderas en `AppHeader`.
+  * Refactorizado layout para mostrar cabecera en páginas públicas (`PublicLayout`).
 
 ---
 
 ## 5. Hoja de Ruta y Tareas Pendientes 🗺️
 
-### ✅ Fase 1: Pulido y Mejoras Finales (COMPLETADA - Excepto Tests)
+### ✅ Fase 1: Pulido y Mejoras Finales (COMPLETADA)
 
-- **Funcionalidad Admin Clientes:**
-  - ~~Implementar Filtros Completos (UI + Backend)~~ **DONE**
-  - ~~Optimizar/Evaluar Búsqueda y Paginación~~ **DONE (Básico)** _(Optimización profunda pendiente si es necesario)_
-- **Calidad y Mantenimiento:**
-  - **Introducir Pruebas Automatizadas:** **(Alta Prioridad - PENDIENTE)**
-    - _Backend:_ Tests unitarios (Jest/Vitest), Tests de integración (Supertest).
-    - _Frontend:_ Tests unitarios (Vitest/RTL), Tests de componente (Vitest/RTL), (Opcional) Tests E2E (Cypress/Playwright).
-  - ~~Limpieza General (Logs, Comments, Encoding, Refactors)~~ **DONE**
-  - ~~⚙️ Solucionar `yarn dev` Backend~~ **Workaround Aplicado (Dos Terminales)** _(Fix real de `ts-node` sigue pendiente/descartado por ahora)_
-- **💡 Mejoras Sugeridas Fase 1 (Postpuestas/Opcionales):**
-  - _(Mantenidas de la versión anterior, a reevaluar)_
+### ✅ Fase 2 (Internacionalización y Expansión Funcional): Parcialmente Completada
 
-### 🚀 Hoja de Ruta Futura (Fases de Expansión - Próximos Pasos)
+- **Internacionalización (i18n):** ~~Implementación completa.~~ **HECHO**
+- **Introducir Pruebas Automatizadas:** **EN PROGRESO (Backend Básico OK)**
+  - _Backend:_ Tests unitarios y de integración. _(Pendiente: Mayor cobertura, casos complejos, errores específicos)_.
+  - _Frontend:_ Tests unitarios, de componente, E2E. **(Pendiente)**
+- **Fidelización Avanzada:** Recompensas % descuento, reglas de bonus. _(Pendiente)_
+- **Comunicación Básica:** Emails Admin -> Cliente, Anuncios. _(Pendiente)_
+- **Segmentación y CRM Ligero:** Segmentos guardados, gráficos básicos, Audit Log. _(Pendiente)_
+- **Mejoras Técnicas Pendientes:** Validación Robusta (Zod BE?), Documentación API (Swagger?), Deployment, Logging/Monitoring Avanzado (Sentry?), Optimización DB (Índices?), Tipado Centralizado (paquete `common`?). _(Pendiente)_
+- **💡 Mejoras UX Cliente Pendientes:**
+  - **Mostrar Beneficios del Nivel Actual en Dashboard Cliente.** _(Pendiente - REQUERIDO AHORA)_
+  - Mostrar progreso visual al siguiente nivel (gamificación). _(Opcional)_
+  - Mejorar claridad/UI de sección Recompensas/Regalos. _(Opcional)_
+  - Historial de actividad de puntos/canjes. _(Opcional)_
 
-- **Fase 2 (Internacionalización y Expansión Funcional):**
-  - **Internacionalización (i18n - ¡Próxima Tarea Prioritaria Funcional!):**
-    - Instalar y configurar `i18next` / `react-i18next`.
-    - Crear archivos de traducción (`es.json`, `en.json`).
-    - Refactorizar componentes/páginas con texto para usar `useTranslation`.
-    * Añadir UI para cambio de idioma. _(PENDIENTE)_
-  - **Fidelización Avanzada:** Recompensas % descuento, reglas de bonus. _(PENDIENTE)_
-  - **Comunicación Básica:** Emails Admin -> Cliente, Anuncios. _(PENDIENTE)_
-  - **Segmentación y CRM Ligero:** Segmentos guardados, gráficos básicos, Audit Log. _(PENDIENTE)_
-  - **Mejoras Técnicas Pendientes:** Validación Robusta (Zod BE?), Documentación API (Swagger?), Deployment, Logging/Monitoring Avanzado (Sentry?), Optimización DB (Índices?), Tipado Centralizado (paquete `common`?). _(PENDIENTE)_
-- **Fase 3 (App Móvil y Análisis Avanzado):** _(PENDIENTE)_
-- **Fase 4+ (Ecosistemas, Social, Módulos - Largo Plazo):** _(PENDIENTE)_
+### ⏳ Fases Futuras (3+)
+
+- **Fase 3 (App Móvil y Análisis Avanzado):** _(Pendiente)_
+- **Fase 4+ (Ecosistemas, Social, Módulos - Largo Plazo):** _(Pendiente)_
 
 ---
 
 ## 6. Estructura del Código (Actualizada) 📁
 
-- **Backend (`backend/src/`):** `index.ts`, `prisma/`, `middleware/`, `utils/`, `routes/` (auth, businesses, customer, admin, points, rewards, tiers, protected), Módulos (`auth/` (auth, registration, password-reset), `businesses/`, `customer/`, `admin/` (admin-stats, admin-customer-list, admin-customer-individual, admin-customer-bulk), `points/`, `rewards/`, `tiers/` (tiers, tier-benefit, tier-config, tier-logic, tier-logic.helpers)).
-- **Frontend (`frontend/src/`):** `main.tsx`, `App.tsx`, `routes/index.tsx`, `services/` (axiosInstance, adminService, businessService), `theme.ts`, `hooks/` (useAdminCustomersData, useCustomerProfile, useCustomerRewardsData, useLayoutUserData, useAdminOverviewStats, useAdminRewards, useQrScanner), `pages/` (Públicas, Cliente, Admin (incl. `tiers/`)), `components/` (layout, PrivateRoute, admin (incl. `tiers/`), customer, AddRewardForm, GenerateQrCode), `types/`.
+- **Backend (`backend/src/`):** `index.ts`, `prisma/`, `middleware/`, `utils/`, `routes/`, Módulos (`auth/` (auth, registration, password-reset), `businesses/`, `customer/`, `admin/` (admin-stats, admin-customer-list, admin-customer-individual, admin-customer-bulk), `points/`, `rewards/`, `tiers/` (tiers, tier-benefit, tier-config, tier-logic, tier-logic.helpers)). **`tests/`** (integration). **`__tests__`** dentro de algunos módulos.
+- **Frontend (`frontend/src/`):** `main.tsx`, `App.tsx`, `i18n.ts`, `routes/index.tsx`, `services/`, `theme.ts`, `hooks/`, `pages/` (Públicas, Cliente, Admin), `components/` (layout (incl. **PublicLayout**), PrivateRoute, admin, customer), `types/`. **`public/locales/`** (es, en).
 
 ---
 
 ## 7. Flujo de Trabajo Acordado 🤝
 
-1.  Proporcionar `PROJECT_STATE_AND_ROADMAP.md` actualizado al inicio.
-2.  Continuar con las tareas **Pendientes** (Sección 5). **Próxima Tarea Recomendada: Pruebas Automatizadas (Técnica) o Internacionalización (Funcional).**
+1.  Proporcionar `PROJECT_STATE_AND_ROADMAP.md` actualizado.
+2.  Continuar con las tareas **Pendientes** (Sección 5). **Próxima Tarea Recomendada:** Implementar **Mostrar Beneficios del Nivel Actual en Dashboard Cliente** O añadir más cobertura de tests Backend/Frontend O empezar siguiente funcionalidad (ej: Fidelización Avanzada).
 3.  Para modificar archivos: pasar código completo actual.
-4.  Asistente devuelve código 100% completo y limpio, un archivo por mensaje (si hay cambios).
-5.  **Flujo Backend Dev:** Usar **dos terminales**: `npx tsc --watch` y `npx nodemon dist/index.js`.
-6.  Flujo Frontend Dev: `yarn dev --host` para pruebas en red local/móvil.
+4.  Asistente devuelve código 100% completo y limpio, un archivo por mensaje (JSON sin comentarios).
+5.  Flujo Backend Dev: Usar dos terminales (`tsc --watch` y `nodemon dist/index.js`) + opcional `yarn test:watch`.
+6.  Flujo Frontend Dev: `yarn dev --host`.
 
 ---
 
 ## 8. Información Adicional ℹ️
 
-_(Sin cambios respecto a v1.3.0 - sección se mantiene igual)_
-
-- Backend usa `.env` (`DATABASE_URL`, `JWT_SECRET`). Recomendado `.env.example`.
-- Frontend usa `@mantine/*`, `html5-qrcode`.
+- Backend usa `.env`.
+- Frontend usa `@mantine/*`, `html5-qrcode`, `react-i18next`, `react-country-flag`.
 - Licencia: **AGPL v3.0**.
 
 ---
 
 ## 9. Próximo Paso 👉
 
-Decidir si abordar **Pruebas Automatizadas** o **Internacionalización (i18n)**.
+Decidir si implementar **Mostrar Beneficios del Nivel Actual en Dashboard Cliente**, continuar mejorando las **pruebas del backend/empezar las del frontend** o si iniciar la siguiente **funcionalidad de la Fase 2** (ej: Fidelización Avanzada).

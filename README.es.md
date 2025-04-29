@@ -36,14 +36,18 @@ _(Nota: Las capturas podrían necesitar actualizarse)_
 
 ## Estado del Proyecto y Hoja de Ruta 🗺️
 
-Actualmente, el proyecto ha **completado la Fase 1 (Núcleo Funcional)**, incluyendo la gestión de negocios, usuarios, autenticación, niveles, recompensas, puntos, códigos QR (con escáner móvil funcional), paneles de administración y cliente, y gestión completa de clientes por parte del admin (listado, detalles, acciones individuales y masivas, filtros).
+Actualmente, el proyecto ha **completado la Fase 1 (Núcleo Funcional y Pulido)**, incluyendo la gestión de negocios, usuarios, autenticación, niveles, recompensas, puntos, códigos QR (con escáner móvil funcional), paneles de administración y cliente, y gestión completa de clientes (CRUD, filtros, acciones masivas).
 
-Además, se ha realizado una **limpieza y refactorización general del código** tanto en frontend como en backend para mejorar la mantenibilidad.
+Se ha realizado una **limpieza y refactorización general del código**.
 
-**Próximos Pasos Inmediatos:**
+Se ha **completado la Internacionalización (i18n)** del frontend, soportando Español e Inglés con selector de idioma.
 
-1.  **(Técnico - Alta Prioridad):** Implementar **Pruebas Automatizadas**.
-2.  **(Funcional - Fase 2):** Comenzar con la **Internacionalización (i18n)**.
+Se ha **iniciado la implementación de Pruebas Automatizadas** en el backend (configuración y tests iniciales unitarios/integración).
+
+**Próximos Pasos:**
+
+1.  **(Técnico):** Continuar ampliando la cobertura de **Pruebas Automatizadas** (Backend y Frontend).
+2.  **(Funcional - Fase 2):** Empezar con las siguientes funcionalidades de expansión (ej: Fidelización Avanzada, Comunicación Básica).
 
 Para una hoja de ruta más detallada, consulta [`PROJECT_STATE_AND_ROADMAP.md`](PROJECT_STATE_AND_ROADMAP.md).
 
@@ -55,24 +59,25 @@ Para una hoja de ruta más detallada, consulta [`PROJECT_STATE_AND_ROADMAP.md`](
 - Vite (Herramienta Construcción)
 - Mantine UI (v7+) & Mantine Hooks
 - `@mantine/form` & `zod` (Validación Formularios)
-- `@mantine/notifications` (Feedback UI)
-- `@mantine/modals` (Modales)
+- `@mantine/notifications` & `@mantine/modals`
 - Axios (Peticiones API)
 - React Router DOM (v6+)
 - `qrcode.react`, `html5-qrcode` (Funcionalidad QR)
+- `i18next`, `react-i18next` (Internacionalización)
+- `i18next-http-backend`, `i18next-browser-languagedetector`
+- `react-country-flag` (Selector Idioma)
 - `vite-plugin-mkcert` (Para HTTPS Dev)
 
 **Backend:**
 
 - Node.js, Express, TypeScript
-- Prisma (ORM)
-- PostgreSQL (Base de Datos)
+- Prisma (ORM) & PostgreSQL (Base de Datos)
 - JWT (Autenticación) & bcryptjs (Hashing)
 - dotenv (Variables Entorno)
-- node-cron (Tareas Programadas - Lógica Niveles)
+- node-cron (Tareas Programadas)
 - uuid (IDs Únicos)
 - cors, `date-fns`
-- `ts-node`, `ts-node-dev` (Dependencias Desarrollo - _Uso limitado por inestabilidad_)
+- `vitest`, `supertest` (Testing)
 
 ## Instalación y Configuración Local ⚙️
 
@@ -83,21 +88,17 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 - Node.js (v18 o v20 recomendado)
 - yarn (v1.x recomendado)
 - Servidor de base de datos PostgreSQL accesible y ejecutándose localmente.
-- (Opcional pero recomendado para gestionar versiones de Node) NVM o similar.
+- (Opcional) NVM o similar.
 
 ### Configuración Backend
 
 1.  Clona repo y `cd LoyalPyME/backend`
 2.  `yarn install`
-3.  Copia `backend/.env.example` a `backend/.env` (`cp .env.example .env`)
-4.  **Configura `.env`:** Rellena `DATABASE_URL` con tus datos locales y genera un `JWT_SECRET` seguro y aleatorio. **No subas `.env` a Git**.
+3.  Copia `backend/.env.example` a `backend/.env`
+4.  **Configura `.env`:** Rellena `DATABASE_URL` y `JWT_SECRET`.
 5.  Ejecuta migraciones: `npx prisma migrate dev`
-6.  Genera cliente Prisma: `npx prisma generate`
-7.  **Datos Iniciales (IMPORTANTE):**
-    - **Opción A: Seed (Recomendado si está implementado):** Ejecuta `npx prisma db seed`. Revisa `prisma/seed.ts` para las credenciales de ejemplo.
-    - **Opción B: Registro Manual:** Si no hay seed, tras arrancar la app, ve a la ruta `/register-business` en el frontend y crea tu primer negocio y usuario administrador.
-      _(Confirma qué opción aplica a la versión actual)._
-8.  (Opcional) `npx ts-node scripts/hash-customer-password.ts` para clientes específicos (si es necesario).
+6.  Genera cliente Prisma: **`npx prisma generate`** (¡Importante!)
+7.  **Datos Iniciales:** Elige **Opción A (Seed):** `npx prisma db seed` (si está implementado) u **Opción B (Manual):** Registra desde `/register-business` en el frontend.
 
 ### Configuración Frontend
 
@@ -109,48 +110,37 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 1.  Asegúrate de que PostgreSQL está **en ejecución**.
 2.  **Inicia Backend** (desde `backend/`):
 
-    - **Método Estable (Recomendado para Desarrollo y Producción):**
+    - **Método Recomendado (Desarrollo con Hot-Reload - Requiere 2 Terminales):**
       ```bash
-      # Compila TS a JS
-      yarn build
-      # Ejecuta el JS compilado
-      node dist/index.js
-      ```
-      _(Necesitarás repetir `yarn build && node dist/index.js` tras cada cambio en el backend)._
-    - **Método con Hot-Reload (Solo Desarrollo - Requiere 2 Terminales):**
-
-      ```bash
-      # En Terminal 1 (compila y vigila cambios en src/):
+      # Terminal 1: Compilación continua
       npx tsc --watch
-
-      # En Terminal 2 (ejecuta y vigila cambios en dist/):
+      # Terminal 2: Ejecución y reinicio automático
       npx nodemon dist/index.js
       ```
-
-      _(Este método es el recomendado para desarrollo activo ya que reinicia automáticamente el servidor al guardar cambios en archivos `.ts`)._
-
-    - **Método `yarn dev` (NO RECOMENDADO ACTUALMENTE):**
-      Debido a inestabilidades con `ts-node-dev`, el comando `yarn dev` original no funciona de forma fiable en el entorno actual. Usar el método de dos terminales.
-      _(Backend corre en puerto 3000 o el configurado en `.env`)_
+    - **Método Alternativo (Estable, sin Hot-Reload):**
+      ```bash
+      yarn build && node dist/index.js
+      # (Repetir tras cada cambio)
+      ```
+    - **Método `yarn dev` (NO RECOMENDADO):** Inestable en el entorno actual.
+    - _(Backend corre en puerto 3000 o el configurado)_
 
 3.  **Inicia Frontend** (desde `frontend/`):
     ```bash
-    # Usa --host para acceso por red y HTTPS (requiere mkcert configurado)
+    # Usa --host para acceso por red y HTTPS
     yarn dev --host
     ```
-    _(Frontend corre en puerto 5173. Revisa la URL `Network:` en la consola para acceso desde otros dispositivos en la red local)._
+    _(Frontend corre en puerto 5173)_
 
-Accede vía `https://localhost:5173` (en PC, acepta advertencia seguridad) o la URL `Network:` (en Móvil, acepta advertencia seguridad).
+Accede vía `https://localhost:5173` (PC) o la URL de red (Móvil).
 
 #### **Acceso desde Móvil (Red Local)**
 
-Para probar el frontend en un dispositivo móvil en la misma red:
-
-1.  **Encuentra IP Local del PC:** Usa `ipconfig` (Win) o `ip addr show` / `ifconfig` (Mac/Linux). (ej: `192.168.X.Y`).
-2.  **Asegura Servidores Corriendo:** Backend (con el método de **dos terminales** o `node dist/index.js`) y Frontend (`yarn dev --host`).
-3.  **Verifica Firewall PC:** Permite conexiones **TCP** entrantes en puertos **5173** (Vite) y **3000** (Backend) para tu perfil de red **Privado**.
-4.  **Verifica Config Vite:** Asegura que `frontend/vite.config.ts` incluye `server: { host: true, https: true, proxy: { ... } }`.
-5.  **Accede en Móvil:** Abre navegador en móvil y navega a `https://<TU_IP_PC>:5173`. **Acepta la advertencia de seguridad**.
+1.  Encuentra IP Local del PC (`ipconfig` / `ifconfig`).
+2.  Asegura Servidores Corriendo (Backend y Frontend).
+3.  Verifica Firewall PC (Permitir TCP entrante en 5173 y 3000 para red Privada).
+4.  Verifica Config Vite (`server: { host: true, https: true, proxy: { ... } }`).
+5.  Accede en Móvil: `https://<TU_IP_PC>:5173`. Acepta advertencia de seguridad.
 
 ---
 

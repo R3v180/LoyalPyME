@@ -36,14 +36,18 @@ _(Note: Screenshots might need updating)_
 
 ## Project Status & Roadmap 🗺️
 
-Currently, the project has **completed Phase 1 (Core Functionality)**, including business/user management, authentication, tiers, rewards, points, QR codes (with functional mobile scanning), admin/customer dashboards, and comprehensive admin customer management (list, details, individual/bulk actions, filters).
+Currently, the project has **completed Phase 1 (Core Functionality and Polishing)**, including business/user management, authentication, tiers, rewards, points, QR codes (with functional mobile scanning), admin/customer dashboards, and comprehensive admin customer management (CRUD, filters, bulk actions).
 
-Additionally, a **general code cleanup and refactoring** has been performed on both the frontend and backend to improve maintainability.
+A **general code cleanup and refactoring** has also been performed.
 
-**Immediate Next Steps:**
+Frontend **Internationalization (i18n) has been completed**, supporting Spanish and English with a language switcher.
 
-1.  **(Technical - High Priority):** Implement **Automated Tests**.
-2.  **(Functional - Phase 2):** Begin implementing **Internationalization (i18n)**.
+**Backend Automated Testing has been initiated** (setup and initial unit/integration tests).
+
+**Next Steps:**
+
+1.  **(Technical):** Continue expanding **Automated Test** coverage (Backend and Frontend).
+2.  **(Functional - Phase 2):** Begin implementing the next expansion features (e.g., Advanced Loyalty, Basic Communication).
 
 For a more detailed roadmap, please refer to [`PROJECT_STATE_AND_ROADMAP.md`](PROJECT_STATE_AND_ROADMAP.md).
 
@@ -55,24 +59,25 @@ For a more detailed roadmap, please refer to [`PROJECT_STATE_AND_ROADMAP.md`](PR
 - Vite (Build Tool)
 - Mantine UI (v7+) & Mantine Hooks
 - `@mantine/form` & `zod` (Form Validation)
-- `@mantine/notifications` (UI Feedback)
-- `@mantine/modals` (Modals)
+- `@mantine/notifications` & `@mantine/modals`
 - Axios (API Requests)
 - React Router DOM (v6+)
 - `qrcode.react`, `html5-qrcode` (QR Functionality)
+- `i18next`, `react-i18next` (Internationalization)
+- `i18next-http-backend`, `i18next-browser-languagedetector`
+- `react-country-flag` (Language Switcher)
 - `vite-plugin-mkcert` (For HTTPS Dev)
 
 **Backend:**
 
 - Node.js, Express, TypeScript
-- Prisma (ORM)
-- PostgreSQL (Database)
+- Prisma (ORM) & PostgreSQL (Database)
 - JWT (Authentication) & bcryptjs (Hashing)
 - dotenv (Environment Variables)
-- node-cron (Scheduled Tasks - Tier Logic)
+- node-cron (Scheduled Tasks)
 - uuid (Unique IDs)
 - cors, `date-fns`
-- `ts-node`, `ts-node-dev` (Development Dependencies - _Limited use due to instability_)
+- `vitest`, `supertest` (Testing)
 
 ## Installation and Local Setup ⚙️
 
@@ -83,21 +88,17 @@ To get the project up and running in your development environment:
 - Node.js (v18 or v20 recommended)
 - yarn (v1.x recommended)
 - Accessible PostgreSQL database server running locally.
-- (Optional but recommended for managing Node versions) NVM or similar.
+- (Optional) NVM or similar.
 
 ### Backend Setup
 
 1.  Clone repo & `cd LoyalPyME/backend`
 2.  `yarn install`
-3.  Copy `backend/.env.example` to `backend/.env` (`cp .env.example .env`)
-4.  **Configure `.env`:** Fill in your local `DATABASE_URL` details and generate a strong, random `JWT_SECRET`. **Do not commit `.env`**.
+3.  Copy `backend/.env.example` to `backend/.env`
+4.  **Configure `.env`:** Fill in `DATABASE_URL` and `JWT_SECRET`.
 5.  Run migrations: `npx prisma migrate dev`
-6.  Generate Prisma client: `npx prisma generate`
-7.  **Initial Data (IMPORTANT):**
-    - **Option A: Seed (Recommended if implemented):** Run `npx prisma db seed`. Check `prisma/seed.ts` for example credentials.
-    - **Option B: Manual Registration:** If no seed exists, after starting the app, navigate to the `/register-business` route in the frontend and create your first business and admin user.
-      _(Confirm which option applies to the current version)._
-8.  (Optional) `npx ts-node scripts/hash-customer-password.ts` for specific test users (if needed).
+6.  Generate Prisma client: **`npx prisma generate`** (Important!)
+7.  **Initial Data:** Choose **Option A (Seed):** `npx prisma db seed` (if implemented) OR **Option B (Manual):** Register via `/register-business` frontend route.
 
 ### Frontend Setup
 
@@ -109,48 +110,37 @@ To get the project up and running in your development environment:
 1.  Ensure your PostgreSQL server is **running**.
 2.  **Start the Backend** (from `backend/` folder):
 
-    - **Stable Method (Recommended for Development & Production):**
+    - **Recommended Method (Development with Hot-Reload - Requires 2 Terminals):**
       ```bash
-      # Compile TS to JS
-      yarn build
-      # Run the compiled JS
-      node dist/index.js
-      ```
-      _(You will need to repeat `yarn build && node dist/index.js` after each backend code change)._
-    - **Hot-Reload Method (Development Only - Requires 2 Terminals):**
-
-      ```bash
-      # In Terminal 1 (compile and watch src/):
+      # Terminal 1: Continuous compilation
       npx tsc --watch
-
-      # In Terminal 2 (run and watch dist/):
+      # Terminal 2: Execution and auto-restart
       npx nodemon dist/index.js
       ```
-
-      _(This is the recommended method for active development as it automatically restarts the server when `.ts` files are saved)._
-
-    - **`yarn dev` Method (CURRENTLY NOT RECOMMENDED):**
-      Due to instabilities with `ts-node-dev`, the original `yarn dev` command does not work reliably in the current setup. Please use the two-terminal method.
-      _(Backend runs on port 3000 or as configured in `.env`)_
+    - **Alternative Method (Stable, No Hot-Reload):**
+      ```bash
+      yarn build && node dist/index.js
+      # (Repeat after each change)
+      ```
+    - **`yarn dev` Method (NOT RECOMMENDED):** Unstable in the current environment.
+    - _(Backend runs on port 3000 or as configured)_
 
 3.  **Start the Frontend** (from `frontend/` folder):
     ```bash
-    # Use --host for network access and HTTPS (requires mkcert setup)
+    # Use --host for network access and HTTPS
     yarn dev --host
     ```
-    _(Frontend runs on port 5173. Check the `Network:` URL in the console for access from other devices on the local network)._
+    _(Frontend runs on port 5173)_
 
-Access via `https://localhost:5173` (on PC, accept security warning) or the `Network:` URL (on Mobile, accept security warning).
+Access via `https://localhost:5173` (PC) or the network URL (Mobile).
 
 #### **Accessing from Mobile (Local Network)**
 
-To test the frontend on a mobile device on the same network:
-
-1.  **Find PC's Local IP:** Use `ipconfig` (Win) or `ip addr show` / `ifconfig` (Mac/Linux). (e.g., `192.168.X.Y`).
-2.  **Ensure Servers Running:** Backend (using the **two-terminal** method or `node dist/index.js`) and Frontend (`yarn dev --host`).
-3.  **Check PC Firewall:** Allow incoming **TCP** connections on ports **5173** (Vite) and **3000** (Backend) for your **Private** network profile.
-4.  **Check Vite Config:** Ensure `frontend/vite.config.ts` includes `server: { host: true, https: true, proxy: { ... } }`.
-5.  **Access on Mobile:** Open browser on mobile and navigate to `https://<YOUR_PC_IP>:5173`. **Accept the security warning**.
+1.  Find PC's Local IP (`ipconfig` / `ifconfig`).
+2.  Ensure Servers Running (Backend and Frontend).
+3.  Check PC Firewall (Allow incoming TCP on 5173 and 3000 for Private network).
+4.  Check Vite Config (`server: { host: true, https: true, proxy: { ... } }`).
+5.  Access on Mobile: `https://<YOUR_PC_IP>:5173`. Accept security warning.
 
 ---
 
