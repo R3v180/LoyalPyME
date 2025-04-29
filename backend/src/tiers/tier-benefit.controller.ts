@@ -1,36 +1,41 @@
 // filename: backend/src/tiers/tier-benefit.controller.ts
-// Contiene los handlers para las operaciones CRUD de TierBenefit
+// Version: 1.0.1 (Fix encoding, remove @ts-ignore)
 
-import { Request, Response } from 'express';
-import { Prisma } from '@prisma/client'; // Para tipos de error y DTOs
-import * as TierBenefitService from './tier-benefit.service'; // Importar servicio de beneficios
-import * as TierService from './tiers.service'; // Importar servicio de Tiers (para validaciones)
+import { Request, Response, NextFunction } from 'express'; // Add NextFunction
+import { Prisma } from '@prisma/client';
+import * as TierBenefitService from './tier-benefit.service';
+import * as TierService from './tiers.service';
 
 // --- Handlers para CRUD de TierBenefits (Admin) ---
 
 /**
- * Handler para crear un nuevo beneficio para un Tier especÃ­fico.
+ * Handler para crear un nuevo beneficio para un Tier específico.
  * POST /api/tiers/tiers/:tierId/benefits
  */
-export const createTierBenefitHandler = async (req: Request, res: Response) => {
-    // @ts-ignore
-    const businessId = req.user?.businessId; // Para verificar pertenencia del Tier
+export const createTierBenefitHandler = async (req: Request, res: Response, next: NextFunction) => { // Add next
+    // --- FIX: Check req.user ---
+    if (!req.user || !req.user.businessId) {
+        console.error("[TIER_BENEFIT_CTRL] Critical: User context missing in createTierBenefitHandler.");
+        return res.status(401).json({ message: 'ID de negocio no encontrado en el token.' });
+    }
+    const businessId = req.user.businessId;
+    // --- FIN FIX ---
+
     const { tierId } = req.params;
-    if (!businessId) return res.status(401).json({ message: 'ID de negocio no encontrado en el token.' });
     if (!tierId) return res.status(400).json({ message: 'Se requiere ID del Tier en la URL.' });
 
     const benefitData = req.body;
     console.log(`[TIER_BENEFIT_CTRL] Creating benefit for tier ${tierId}`);
 
-     // ValidaciÃ³n bÃ¡sica (mejorar con DTOs/Zod)
+     // Validación básica (mejorar con DTOs/Zod)
      if (!benefitData.type || !benefitData.value) {
          return res.status(400).json({ message: 'Tipo y valor son requeridos para el beneficio.' });
      }
-     // TODO: ValidaciÃ³n mÃ¡s profunda de 'type' y 'value' segÃºn el tipo
+     // TODO: Validación más profunda de 'type' y 'value' según el tipo
 
     try {
         // Verificar que el Tier pertenece al negocio antes de crear el beneficio
-        // Esta verificaciÃ³n podrÃ­a hacerse tambiÃ©n en el servicio, pero hacerla aquÃ­ es una capa extra.
+        // Esta verificación podría hacerse también en el servicio, pero hacerla aquí es una capa extra.
         const tier = await TierService.findTierById(tierId, businessId);
         if (!tier) {
              return res.status(404).json({ message: 'Tier no encontrado o no pertenece a este negocio.' });
@@ -44,24 +49,30 @@ export const createTierBenefitHandler = async (req: Request, res: Response) => {
     } catch (error: any) {
          console.error(`[TIER_BENEFIT_CTRL] Error creating benefit for tier ${tierId}:`, error);
          // Manejar error P2025 del servicio si el tierId no existe al hacer connect (ya cubierto por el check previo)
-        res.status(500).json({ message: error.message || 'Error interno al crear el beneficio.' });
+        // Devolver 500 para errores inesperados
+        next(new Error('Error interno al crear el beneficio.')); // Pasar a manejador global
     }
 };
 
 /**
- * Handler para obtener todos los beneficios de un Tier especÃ­fico.
+ * Handler para obtener todos los beneficios de un Tier específico.
  * GET /api/tiers/tiers/:tierId/benefits
  */
-export const getTierBenefitsHandler = async (req: Request, res: Response) => {
-    // @ts-ignore
-    const businessId = req.user?.businessId; // Para verificar pertenencia del Tier
+export const getTierBenefitsHandler = async (req: Request, res: Response, next: NextFunction) => { // Add next
+    // --- FIX: Check req.user ---
+     if (!req.user || !req.user.businessId) {
+        console.error("[TIER_BENEFIT_CTRL] Critical: User context missing in getTierBenefitsHandler.");
+        return res.status(401).json({ message: 'ID de negocio no encontrado en el token.' });
+    }
+    const businessId = req.user.businessId;
+    // --- FIN FIX ---
+
     const { tierId } = req.params;
-    if (!businessId) return res.status(401).json({ message: 'ID de negocio no encontrado en el token.' });
     if (!tierId) return res.status(400).json({ message: 'Se requiere ID del Tier.' });
      console.log(`[TIER_BENEFIT_CTRL] Getting benefits for tier ${tierId}`);
 
     try {
-        // Opcional: Verificar que el Tier pertenece al negocio (buena prÃ¡ctica)
+        // Opcional: Verificar que el Tier pertenece al negocio (buena práctica)
         const tier = await TierService.findTierById(tierId, businessId);
         if (!tier) {
              return res.status(404).json({ message: 'Tier no encontrado o no pertenece a este negocio.' });
@@ -72,7 +83,7 @@ export const getTierBenefitsHandler = async (req: Request, res: Response) => {
         res.status(200).json(benefits);
     } catch (error: any) {
         console.error(`[TIER_BENEFIT_CTRL] Error getting benefits for tier ${tierId}:`, error);
-        res.status(500).json({ message: error.message || 'Error interno al obtener los beneficios.' });
+        next(new Error('Error interno al obtener los beneficios.')); // Pasar a manejador global
     }
 };
 
@@ -80,19 +91,19 @@ export const getTierBenefitsHandler = async (req: Request, res: Response) => {
  * Handler para actualizar un beneficio de Tier existente.
  * PUT /api/tiers/benefits/:benefitId
  */
-export const updateTierBenefitHandler = async (req: Request, res: Response) => {
-    const { benefitId } = req.params; // Solo necesitamos el ID del beneficio
+export const updateTierBenefitHandler = async (req: Request, res: Response, next: NextFunction) => { // Add next
+    const { benefitId } = req.params;
      if (!benefitId) return res.status(400).json({ message: 'Se requiere ID del Beneficio.' });
 
     const updateData = req.body;
      console.log(`[TIER_BENEFIT_CTRL] Updating benefit ${benefitId}`);
-    // ValidaciÃ³n bÃ¡sica
+    // Validación básica
     if (Object.keys(updateData).length === 0) { return res.status(400).json({ message: 'Se requieren datos para actualizar.' }); }
     // TODO: Validar updateData con DTO/Zod si es necesario
 
-    // Opcional: Verificar que el beneficio pertenece a un tier del negocio logueado (mÃ¡s complejo, podrÃ­a hacerse en el servicio)
-    // const businessId = req.user?.businessId;
-    // const canAccess = await checkBenefitBelongsToBusiness(benefitId, businessId); // FunciÃ³n hipotÃ©tica
+    // Opcional: Verificar que el beneficio pertenece a un tier del negocio logueado (más complejo, podría hacerse en el servicio)
+    // const businessId = req.user?.businessId; // Necesitaría check de req.user
+    // const canAccess = await checkBenefitBelongsToBusiness(benefitId, businessId); // Función hipotética
     // if (!canAccess) return res.status(403).json({ message: 'Acceso denegado a este beneficio.' });
 
     try {
@@ -102,9 +113,9 @@ export const updateTierBenefitHandler = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error(`[TIER_BENEFIT_CTRL] Error updating benefit ${benefitId}:`, error);
         if (error instanceof Error && error.message.includes('no encontrado')) {
-            return res.status(404).json({ message: error.message });
+            return res.status(404).json({ message: error.message }); // Específico 404
         }
-        res.status(500).json({ message: error.message || 'Error interno al actualizar el beneficio.' });
+        next(new Error('Error interno al actualizar el beneficio.')); // Pasar a manejador global
     }
 };
 
@@ -112,22 +123,22 @@ export const updateTierBenefitHandler = async (req: Request, res: Response) => {
  * Handler para eliminar un beneficio de Tier existente.
  * DELETE /api/tiers/benefits/:benefitId
  */
-export const deleteTierBenefitHandler = async (req: Request, res: Response) => {
+export const deleteTierBenefitHandler = async (req: Request, res: Response, next: NextFunction) => { // Add next
     const { benefitId } = req.params;
     if (!benefitId) return res.status(400).json({ message: 'Se requiere ID del Beneficio.' });
      console.log(`[TIER_BENEFIT_CTRL] Deleting benefit ${benefitId}`);
 
-    // Opcional: Verificar pertenencia al negocio logueado antes de borrar
+    // Opcional: Verificar pertenencia al negocio logueado antes de borrar (requiere check de req.user)
     try {
         const deletedBenefit = await TierBenefitService.deleteTierBenefit(benefitId);
          console.log(`[TIER_BENEFIT_CTRL] Benefit ${benefitId} deleted successfully.`);
-        res.status(200).json({ message: 'Beneficio eliminado correctamente.', deletedBenefit }); // o res.sendStatus(204)
+        res.status(200).json({ message: 'Beneficio eliminado correctamente.', deletedBenefit }); // o res.sendStatus(204) // Corregido: correctamente
     } catch (error: any) {
         console.error(`[TIER_BENEFIT_CTRL] Error deleting benefit ${benefitId}:`, error);
         if (error instanceof Error && error.message.includes('no encontrado')) {
-            return res.status(404).json({ message: error.message });
+            return res.status(404).json({ message: error.message }); // Específico 404
         }
-        res.status(500).json({ message: error.message || 'Error interno al eliminar el beneficio.' });
+        next(new Error('Error interno al eliminar el beneficio.')); // Pasar a manejador global
     }
 };
 

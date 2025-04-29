@@ -1,5 +1,5 @@
-// File: backend/src/tiers/tier-benefit.service.ts
-// Version: 1.0.0 (Contains CRUD operations for TierBenefit model)
+// filename: backend/src/tiers/tier-benefit.service.ts
+// Version: 1.0.1 (Fix character encoding)
 
 import { PrismaClient, TierBenefit, Prisma } from '@prisma/client';
 // Importar el enum BenefitType si se necesita para validaciones o lógica futura
@@ -34,7 +34,7 @@ export const createTierBenefit = async (
         console.error(`[TierBenefit SVC] Error creating benefit for tier ${tierId}:`, error);
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
              // Este error ocurre si el tierId no existe al intentar conectar
-             throw new Error(`No se encontró el Nivel (Tier) con ID ${tierId} para asociar el beneficio.`);
+             throw new Error(`No se encontró el Nivel (Tier) con ID ${tierId} para asociar el beneficio.`); // Corregido: encontró
          }
         throw new Error('Error al crear el beneficio del nivel.');
     }
@@ -72,6 +72,7 @@ export const updateTierBenefit = async (
 ): Promise<TierBenefit> => {
     console.log(`[TierBenefit SVC] Updating benefit ID: ${benefitId}`, updateData);
     try {
+        // Usamos update directamente, Prisma lanzará P2025 si no lo encuentra
         const updatedBenefit = await prisma.tierBenefit.update({
             where: { id: benefitId },
             data: updateData,
@@ -81,8 +82,8 @@ export const updateTierBenefit = async (
     } catch (error) {
         console.error(`[TierBenefit SVC] Error updating benefit ${benefitId}:`, error);
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-             throw new Error(`Beneficio con ID ${benefitId} no encontrado.`);
-        }
+             throw new Error(`Beneficio con ID ${benefitId} no encontrado.`); // Corregido: encontró
+         }
         throw new Error('Error al actualizar el beneficio del nivel.');
     }
 };
@@ -96,6 +97,7 @@ export const updateTierBenefit = async (
 export const deleteTierBenefit = async (benefitId: string): Promise<TierBenefit> => {
     console.log(`[TierBenefit SVC] Deleting benefit ID: ${benefitId}`);
     try {
+         // Usamos delete directamente
         const deletedBenefit = await prisma.tierBenefit.delete({
             where: { id: benefitId },
         });
@@ -104,10 +106,10 @@ export const deleteTierBenefit = async (benefitId: string): Promise<TierBenefit>
     } catch (error) {
          console.error(`[TierBenefit SVC] Error deleting benefit ${benefitId}:`, error);
          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-             throw new Error(`Beneficio con ID ${benefitId} no encontrado.`);
+             throw new Error(`Beneficio con ID ${benefitId} no encontrado.`); // Corregido: encontró
          }
          throw new Error('Error al eliminar el beneficio del nivel.');
-     }
+       }
 };
 
 // End of File: backend/src/tiers/tier-benefit.service.ts

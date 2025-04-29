@@ -1,5 +1,5 @@
-// File: backend/src/tiers/tier-config.service.ts
-// Version: 1.0.0 (Handles getting/setting Tier configuration on Business model)
+// filename: backend/src/tiers/tier-config.service.ts
+// Version: 1.0.1 (Fix character encoding)
 
 import { PrismaClient, Business, Prisma } from '@prisma/client';
 // Importar los Enums relevantes si se usan en los tipos de datos
@@ -31,7 +31,7 @@ export const getBusinessTierConfig = async (businessId: string): Promise<Pick<Bu
     } catch (error) {
         console.error(`[TierConfig SVC] Error fetching tier config for business ${businessId}:`, error);
         // Lanzamos un error genérico para que lo maneje el controlador
-        throw new Error('Error al obtener la configuración de tiers del negocio.');
+        throw new Error('Error al obtener la configuración de tiers del negocio.'); // Corregido: configuración, genérico
     }
 };
 
@@ -48,7 +48,7 @@ export const updateBusinessTierConfig = async (
 ): Promise<Business> => { // Devuelve Business completo por defecto
     console.log(`[TierConfig SVC] Updating tier config for business: ${businessId}`, configData);
     try {
-        // Usamos update, que arrojará error si businessId no existe
+        // Usamos update, que arrojará error si businessId no existe // Corregido: arrojará
         const updatedBusiness = await prisma.business.update({
             where: { id: businessId },
             data: configData, // Prisma solo actualiza los campos presentes en configData
@@ -59,10 +59,10 @@ export const updateBusinessTierConfig = async (
         console.error(`[TierConfig SVC] Error updating tier config for business ${businessId}:`, error);
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             // Error específico si el businessId no existe
-             throw new Error(`Negocio con ID ${businessId} no encontrado.`);
-        }
+             throw new Error(`Negocio con ID ${businessId} no encontrado.`); // Corregido: específico
+         }
         // Otros posibles errores (ej: tipo de dato incorrecto para enums si no se valida antes)
-        throw new Error('Error al actualizar la configuración de tiers del negocio.');
+        throw new Error('Error al actualizar la configuración de tiers del negocio.'); // Corregido: configuración
     }
 };
 
