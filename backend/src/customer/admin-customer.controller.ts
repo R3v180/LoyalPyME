@@ -1,30 +1,30 @@
 // filename: backend/src/customer/admin-customer.controller.ts
-// Version: 1.7.0 (Read and pass all filter parameters to service)
+// Version: 1.7.1 (Update imports after service refactoring)
 
 import { Request, Response, NextFunction } from 'express';
 import { UserRole } from '@prisma/client';
-import { Prisma } from '@prisma/client'; // Importar Prisma para tipos de error si es necesario
+import { Prisma } from '@prisma/client';
 
-// --- Importar funciones desde el servicio ---
+// --- CAMBIO: Importar desde los nuevos archivos de servicio ---
+import { getCustomersForBusiness } from '../admin/admin-customer-list.service';
 import {
-    getCustomersForBusiness,
+    getCustomerDetailsById,
+    updateAdminNotesForCustomer,
     adjustPointsForCustomer,
     changeCustomerTier,
     assignRewardToCustomer,
     toggleFavoriteStatus,
-    toggleActiveStatusForCustomer,
-    getCustomerDetailsById,
-    updateAdminNotesForCustomer,
+    toggleActiveStatusForCustomer
+} from '../admin/admin-customer-individual.service';
+import {
     bulkUpdateStatusForCustomers,
     bulkDeleteCustomers,
     bulkAdjustPointsForCustomers
-    // Ya no necesitamos GetCustomersOptions aquí si la inferencia funciona
-} from '../admin/admin-customer.service'; // Confirma esta ruta
+} from '../admin/admin-customer-bulk.service';
+// --- FIN CAMBIO ---
 
-// --- Tipos y Interfaces ---
+// --- Tipos y Interfaces (Sin cambios) ---
 type SortDirection = 'asc' | 'desc';
-// Actualizamos la interfaz local para reflejar todos los filtros posibles
-// (Aunque podríamos inferirlo, es más claro tenerlo definido)
 interface ControllerGetCustomersOptions {
     page?: number;
     limit?: number;
@@ -34,11 +34,11 @@ interface ControllerGetCustomersOptions {
         search?: string;
         isFavorite?: boolean;
         isActive?: boolean;
-        tierId?: string; // <-- Añadido tierId
+        tierId?: string;
     }
 }
 
-// --- Handlers ---
+// --- Handlers (El código interno de los handlers no cambia) ---
 
 /**
  * Handler para que el Admin obtenga la lista PAGINADA, FILTRADA y ORDENADA de clientes.
@@ -53,25 +53,22 @@ export const getAdminCustomers = async (req: Request, res: Response, next: NextF
     }
     console.log(`[ADM_CUST_CTRL] Admin businessId: ${adminBusinessId}`);
 
-    // --- Leer TODOS los parámetros de la query ---
+    // Leer TODOS los parámetros de la query
     const page = parseInt(req.query.page as string || '1', 10);
     const limit = parseInt(req.query.limit as string || '10', 10);
     const sortBy = req.query.sortBy as string || 'createdAt';
     const sortDirInput = req.query.sortDir as string;
     const sortDir: SortDirection = sortDirInput === 'asc' ? 'asc' : 'desc';
     const search = req.query.search as string | undefined;
-    // Filtros específicos (isActive, isFavorite, tierId)
-    const isActiveParam = req.query.isActive as string | undefined; // 'true', 'false', o undefined
-    const isFavoriteParam = req.query.isFavorite as string | undefined; // 'true', 'false', o undefined
-    const tierIdParam = req.query.tierId as string | undefined; // ID del tier, 'NONE', o undefined
+    const isActiveParam = req.query.isActive as string | undefined;
+    const isFavoriteParam = req.query.isFavorite as string | undefined;
+    const tierIdParam = req.query.tierId as string | undefined;
 
-    // --- Construir objeto de filtros para el servicio ---
+    // Construir objeto de filtros para el servicio
     const filters: ControllerGetCustomersOptions['filters'] = {};
     if (search?.trim()) filters.search = search.trim();
-    // Convertir 'true'/'false' strings a boolean, mantener undefined si no viene
     if (isActiveParam !== undefined) filters.isActive = isActiveParam === 'true';
     if (isFavoriteParam !== undefined) filters.isFavorite = isFavoriteParam === 'true';
-    // Pasar tierId si existe y no es vacío (el servicio maneja 'NONE' si es necesario)
     if (tierIdParam?.trim()) filters.tierId = tierIdParam.trim();
 
     // Construir objeto de opciones completo
@@ -80,14 +77,13 @@ export const getAdminCustomers = async (req: Request, res: Response, next: NextF
         limit: isNaN(limit) || limit < 1 ? 10 : limit,
         sortBy: sortBy,
         sortDir: sortDir,
-        filters: filters // Pasar el objeto de filtros construido
+        filters: filters
     };
 
     console.log(`[ADM_CUST_CTRL] Parsed options being sent to service:`, options);
 
     try {
-        console.log('[ADM_CUST_CTRL] Calling getCustomersForBusiness service...');
-        // Llamar al servicio con las opciones completas
+        // Llamar al servicio (ahora importado de -list.service)
         const result = await getCustomersForBusiness(adminBusinessId, options);
         console.log(`[ADM_CUST_CTRL] Service call returned. Result has ${result?.items?.length ?? 'N/A'} items. Total items: ${result?.totalItems ?? 'N/A'}`);
         res.status(200).json(result);
@@ -96,8 +92,6 @@ export const getAdminCustomers = async (req: Request, res: Response, next: NextF
         next(error);
     }
 };
-
-// --- Resto de handlers SIN CAMBIOS ---
 
 /**
  * Handler para obtener los detalles completos de un cliente específico.
@@ -110,6 +104,7 @@ export const getCustomerDetailsHandler = async (req: Request, res: Response, nex
     if (!adminBusinessId) { return res.status(403).json({ message: "Información de administrador no disponible." }); }
     if (!customerId) { return res.status(400).json({ message: "Falta el ID del cliente." }); }
     try {
+        // Llamada al servicio (ahora importado de -individual.service)
         const customerDetails = await getCustomerDetailsById(customerId, adminBusinessId);
         if (!customerDetails) { return res.status(404).json({ message: "Cliente no encontrado o no pertenece a este negocio." }); }
         res.status(200).json(customerDetails);
@@ -134,6 +129,7 @@ export const updateCustomerNotesHandler = async (req: Request, res: Response, ne
     if (notes === undefined) { return res.status(400).json({ message: "Falta el campo 'notes' en el cuerpo de la petición." }); }
     if (notes !== null && typeof notes !== 'string') { return res.status(400).json({ message: "El campo 'notes' debe ser un texto o nulo." }); }
     try {
+         // Llamada al servicio (ahora importado de -individual.service)
         const updatedCustomer = await updateAdminNotesForCustomer(customerId, adminBusinessId, notes);
         res.status(200).json({ message: `Notas actualizadas correctamente para ${updatedCustomer.email}.`, });
     } catch (error) {
@@ -157,6 +153,7 @@ export const adjustCustomerPoints = async (req: Request, res: Response, next: Ne
     if (!customerId) { return res.status(400).json({ message: "Falta el ID del cliente." }); }
     if (typeof amount !== 'number' || amount === 0) { return res.status(400).json({ message: "La cantidad ('amount') debe ser un número distinto de cero." }); }
     try {
+        // Llamada al servicio (ahora importado de -individual.service)
         const updatedCustomer = await adjustPointsForCustomer( customerId, adminBusinessId, amount, reason );
         res.status(200).json({ message: `Puntos ajustados correctamente para ${updatedCustomer.email}.`, customer: { id: updatedCustomer.id, points: updatedCustomer.points } });
     }
@@ -176,6 +173,7 @@ export const changeCustomerTierHandler = async (req: Request, res: Response, nex
     if (tierId === undefined) { return res.status(400).json({ message: "Falta el ID del nivel ('tierId') en el cuerpo de la petición (puede ser nulo)." }); }
     if (tierId !== null && typeof tierId !== 'string') { return res.status(400).json({ message: "El ID del nivel ('tierId') debe ser un texto o nulo." }); }
     try {
+         // Llamada al servicio (ahora importado de -individual.service)
         const updatedCustomer = await changeCustomerTier( customerId, adminBusinessId, tierId );
         res.status(200).json({ message: `Nivel cambiado correctamente para ${updatedCustomer.email}.`, customer: { id: updatedCustomer.id, currentTierId: updatedCustomer.currentTierId, tierAchievedAt: updatedCustomer.tierAchievedAt } });
     }
@@ -196,6 +194,7 @@ export const assignRewardHandler = async (req: Request, res: Response, next: Nex
     if (!customerId) { return res.status(400).json({ message: "Falta el ID del cliente." }); }
     if (!rewardId || typeof rewardId !== 'string') { return res.status(400).json({ message: "Falta el ID de la recompensa ('rewardId') o no es válido." }); }
     try {
+        // Llamada al servicio (ahora importado de -individual.service)
         const grantedReward = await assignRewardToCustomer( customerId, adminBusinessId, rewardId, adminUserId );
         res.status(201).json({ message: `Recompensa asignada correctamente al cliente.`, grantedRewardId: grantedReward.id });
     }
@@ -212,6 +211,7 @@ export const toggleFavoriteHandler = async (req: Request, res: Response, next: N
     if (!adminBusinessId) { return res.status(403).json({ message: "Información de administrador no disponible." }); }
     if (!customerId) { return res.status(400).json({ message: "Falta el ID del cliente." }); }
     try {
+        // Llamada al servicio (ahora importado de -individual.service)
         const updatedCustomer = await toggleFavoriteStatus( customerId, adminBusinessId );
         res.status(200).json({ message: `Estado de favorito cambiado para ${updatedCustomer.email}. Nuevo estado: ${updatedCustomer.isFavorite}`, customer: { id: updatedCustomer.id, isFavorite: updatedCustomer.isFavorite } });
     }
@@ -228,6 +228,7 @@ export const toggleActiveStatusHandler = async (req: Request, res: Response, nex
     if (!adminBusinessId) { return res.status(403).json({ message: "Información de administrador no disponible." }); }
     if (!customerId) { return res.status(400).json({ message: "Falta el ID del cliente." }); }
     try {
+        // Llamada al servicio (ahora importado de -individual.service)
         const updatedCustomer = await toggleActiveStatusForCustomer(customerId, adminBusinessId);
         res.status(200).json({ message: `Estado cambiado para ${updatedCustomer.email}. Nuevo estado: ${updatedCustomer.isActive ? 'Activo' : 'Inactivo'}`, customer: { id: updatedCustomer.id, isActive: updatedCustomer.isActive } });
     } catch (error) { console.error(`[ADM_CUST_CTRL] Failed to toggle active status for customer ${customerId}:`, error); next(error); }
@@ -246,6 +247,7 @@ export const bulkUpdateCustomerStatusHandler = async (req: Request, res: Respons
     if (typeof isActive !== 'boolean') { return res.status(400).json({ message: "Se requiere el campo 'isActive' (true o false) para indicar el estado deseado." }); }
     if (!customerIds.every(id => typeof id === 'string')) { return res.status(400).json({ message: "Todos los elementos en 'customerIds' deben ser strings." }); }
     try {
+        // Llamada al servicio (ahora importado de -bulk.service)
         const result = await bulkUpdateStatusForCustomers(customerIds, adminBusinessId, isActive);
         res.status(200).json({ message: `Estado actualizado a ${isActive ? 'Activo' : 'Inactivo'} para ${result.count} cliente(s).`, count: result.count });
     } catch (error) {
@@ -266,6 +268,7 @@ export const bulkDeleteCustomersHandler = async (req: Request, res: Response, ne
     if (!Array.isArray(customerIds) || customerIds.length === 0) { return res.status(400).json({ message: "Se requiere un array 'customerIds' con al menos un ID de cliente." }); }
     if (!customerIds.every(id => typeof id === 'string')) { return res.status(400).json({ message: "Todos los elementos en 'customerIds' deben ser strings." }); }
     try {
+         // Llamada al servicio (ahora importado de -bulk.service)
         const result = await bulkDeleteCustomers(customerIds, adminBusinessId);
         res.status(200).json({ message: `${result.count} cliente(s) eliminados correctamente.`, count: result.count });
     } catch (error) {
@@ -288,33 +291,15 @@ export const bulkAdjustPointsHandler = async (req: Request, res: Response, next:
     console.log(`[ADM_CUST_CTRL] Request for bulk points adjustment by ${amount} for customers [${customerIds?.join(', ')}] by admin ${adminUserId} from business ${adminBusinessId}. Reason: ${reason || 'N/A'}`);
 
     // Validaciones
-    if (!adminBusinessId) { // No necesitamos adminUserId obligatoriamente aquí a menos que el servicio lo requiera
-        return res.status(403).json({ message: "Información de administrador no disponible." });
-    }
-    if (!Array.isArray(customerIds) || customerIds.length === 0) {
-        return res.status(400).json({ message: "Se requiere un array 'customerIds' con al menos un ID de cliente." });
-    }
-    if (typeof amount !== 'number' || amount === 0) {
-         return res.status(400).json({ message: "La cantidad ('amount') debe ser un número distinto de cero." });
-    }
-    if (reason !== undefined && reason !== null && typeof reason !== 'string') {
-         return res.status(400).json({ message: "La razón ('reason') debe ser un texto o nula/omitida." });
-    }
-    if (!customerIds.every(id => typeof id === 'string')) {
-         return res.status(400).json({ message: "Todos los elementos en 'customerIds' deben ser strings." });
-    }
+    if (!adminBusinessId) { return res.status(403).json({ message: "Información de administrador no disponible." }); }
+    if (!Array.isArray(customerIds) || customerIds.length === 0) { return res.status(400).json({ message: "Se requiere un array 'customerIds' con al menos un ID de cliente." }); }
+    if (typeof amount !== 'number' || amount === 0) { return res.status(400).json({ message: "La cantidad ('amount') debe ser un número distinto de cero." }); }
+    if (reason !== undefined && reason !== null && typeof reason !== 'string') { return res.status(400).json({ message: "La razón ('reason') debe ser un texto o nula/omitida." }); }
+    if (!customerIds.every(id => typeof id === 'string')) { return res.status(400).json({ message: "Todos los elementos en 'customerIds' deben ser strings." }); }
 
     try {
-        // Llamar a la nueva función del servicio
-        const result = await bulkAdjustPointsForCustomers(
-            customerIds,
-            adminBusinessId,
-            amount,
-            reason || null // Pasar null si no se proporciona razón
-            // Pasar adminUserId si el servicio lo necesita para algo (ej. log de auditoría)
-            // adminUserId
-        );
-
+        // Llamada al servicio (ahora importado de -bulk.service)
+        const result = await bulkAdjustPointsForCustomers( customerIds, adminBusinessId, amount, reason || null );
         // Enviar respuesta exitosa indicando cuántos se actualizaron
         const actionText = amount > 0 ? 'añadidos' : 'restados';
         res.status(200).json({
@@ -322,12 +307,9 @@ export const bulkAdjustPointsHandler = async (req: Request, res: Response, next:
             count: result.count
         });
     } catch (error) {
-        // Manejar errores
         console.error(`[ADM_CUST_CTRL] Failed bulk points adjustment for customers [${customerIds.join(', ')}]:`, error);
         next(error); // Pasar al manejador global
     }
 };
-// --- FIN NUEVO HANDLER ---
-
 
 // End of File: backend/src/customer/admin-customer.controller.ts

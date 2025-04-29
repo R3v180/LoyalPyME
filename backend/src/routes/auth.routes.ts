@@ -1,37 +1,30 @@
 // filename: backend/src/routes/auth.routes.ts
-// --- INICIO DEL CÓDIGO COMPLETO ---
-// File: backend/src/routes/auth.routes.ts
-// Version: 1.2.0 (Add register-business route)
+// Version: 1.3.0 (Update imports after controller refactoring)
 
 import { Router } from 'express';
-// *** CAMBIO: Importar el nuevo handler ***
-import {
-    register,
-    login,
-    forgotPasswordHandler,
-    resetPasswordHandler,
-    registerBusinessHandler // <-- Añadido
-} from '../auth/auth.controller';
+
+// --- CAMBIO: Importar handlers desde los controladores específicos ---
+import { login } from '../auth/auth.controller';
+import { register, registerBusinessHandler } from '../auth/registration.controller';
+import { forgotPasswordHandler, resetPasswordHandler } from '../auth/password-reset.controller';
+// --- FIN CAMBIO ---
 
 const router = Router();
 
-// --- Rutas de autenticación ---
+// --- Rutas de autenticación (sin cambios en las definiciones) ---
 
-// Registro de Cliente (existente)
-router.post('/register', register); // POST /auth/register
+// Registro (usa registration.controller)
+router.post('/register', register);
+router.post('/register-business', registerBusinessHandler);
 
-// Inicio de sesión (existente)
-router.post('/login', login);       // POST /auth/login
+// Inicio de sesión (usa auth.controller)
+router.post('/login', login);
 
-// *** NUEVO: Ruta para Registro de Negocio ***
-router.post('/register-business', registerBusinessHandler); // POST /auth/register-business
-
-// Reseteo de contraseña (existentes)
-router.post('/forgot-password', forgotPasswordHandler);         // POST /auth/forgot-password
-router.post('/reset-password/:token', resetPasswordHandler); // POST /auth/reset-password/:token
+// Reseteo de contraseña (usa password-reset.controller)
+router.post('/forgot-password', forgotPasswordHandler);
+router.post('/reset-password/:token', resetPasswordHandler);
 
 
 export default router;
 
 // End of File: backend/src/routes/auth.routes.ts
-// --- FIN DEL CÓDIGO COMPLETO ---
