@@ -1,15 +1,17 @@
 // filename: frontend/src/pages/admin/AdminGenerateQr.tsx
-// Version: 1.0.1 (Clean up comments)
-
 import React from 'react';
 import GenerateQrCode from '../../components/GenerateQrCode';
 import { Paper, Stack, Title } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 
 const AdminGenerateQr: React.FC = () => {
+    const { t } = useTranslation();
+
     return (
         <Paper shadow="xs" p="lg" withBorder radius="lg">
             <Stack gap="md">
-                <Title order={2}>Generar QR de Puntos</Title>
+                {/* Usamos la clave del título de la tarjeta de acceso rápido que ya teníamos */}
+                <Title order={2}>{t('adminOverview.cardQrTitle')}</Title>
                 <GenerateQrCode />
             </Stack>
         </Paper>
@@ -17,5 +19,3 @@ const AdminGenerateQr: React.FC = () => {
 };
 
 export default AdminGenerateQr;
-
-// End of File: frontend/src/pages/admin/AdminGenerateQr.tsx

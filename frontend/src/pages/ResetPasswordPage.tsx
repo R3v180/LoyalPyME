@@ -1,120 +1,177 @@
 // filename: frontend/src/pages/ResetPasswordPage.tsx
-// Version: 1.0.1 (Fix encoding, URL, logs, comments, React import)
+// Version: 1.1.0 (Implement i18n using useTranslation)
 
-import { useState, useEffect, FormEvent } from 'react'; // Quitamos React
+import { useState, useEffect, FormEvent } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import axios from 'axios'; // Usar axios base para ruta pública
+import axios from 'axios';
 import {
     Container, Paper, Title, Text, Stack, PasswordInput, Button, Anchor
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX, IconAlertCircle } from '@tabler/icons-react';
+// --- NUEVO: Importar useTranslation ---
+import { useTranslation } from 'react-i18next';
+// --- FIN NUEVO ---
 
-// Usar variable de entorno para la URL base de la API
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const ResetPasswordPage: React.FC = () => {
-    const navigate = useNavigate();
-    const { token } = useParams<{ token: string }>(); // Obtener token de la URL
+    // --- NUEVO: Hook useTranslation ---
+    const { t } = useTranslation();
+    // --- FIN NUEVO ---
 
-    // Estados
+    const navigate = useNavigate();
+    const { token } = useParams<{ token: string }>();
+
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    // Verificar si el token existe al cargar
     useEffect(() => {
         if (!token) {
             console.error('No reset token found in URL parameters.');
+            // --- CAMBIO: Usar t() en notificación ---
             notifications.show({
-                title: 'Error',
-                message: 'Falta el token de reseteo. Por favor, usa el enlace enviado a tu email.',
+                title: t('resetPasswordPage.errorTitle'),
+                message: t('resetPasswordPage.errorMissingToken'),
                 color: 'red',
                 icon: <IconX size={18} />,
                 autoClose: false,
             });
-            // Podríamos redirigir, pero mostrar el error puede ser suficiente
-            // navigate('/login');
+            // --- FIN CAMBIO ---
         }
-    }, [token]); // Dependencia del token
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token]); // t() no necesita ser dependencia aquí generalmente
+
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        // Validación
-        if (!token) { // Doble check por si acaso
-            notifications.show({ title: 'Error', message: 'Falta el token de reseteo.', color: 'red', icon: <IconX size={18} /> });
+        if (!token) {
+             // --- CAMBIO: Usar t() en notificación ---
+             notifications.show({
+                title: t('resetPasswordPage.errorTitle'),
+                message: t('resetPasswordPage.errorMissingToken'),
+                color: 'red',
+                icon: <IconX size={18} />
+            });
+            // --- FIN CAMBIO ---
             return;
         }
         if (!password || !confirmPassword) {
-            notifications.show({ title: 'Campos Requeridos', message: 'Por favor, introduce y confirma la nueva contraseña.', color: 'orange', icon: <IconAlertCircle size={18}/> }); // Corregido: contraseña
+             // --- CAMBIO: Usar t() en notificación ---
+             notifications.show({
+                title: t('common.error'), // Usar clave común
+                message: t('resetPasswordPage.errorPasswordsRequired'),
+                color: 'orange',
+                icon: <IconAlertCircle size={18}/>
+            });
+             // --- FIN CAMBIO ---
             return;
         }
         if (password !== confirmPassword) {
-            notifications.show({ title: 'Error', message: 'Las contraseñas no coinciden.', color: 'orange', icon: <IconAlertCircle size={18}/> });
+             // --- CAMBIO: Usar t() en notificación ---
+             notifications.show({
+                title: t('common.error'),
+                message: t('resetPasswordPage.errorPasswordsDontMatch'),
+                color: 'orange',
+                icon: <IconAlertCircle size={18}/>
+            });
+             // --- FIN CAMBIO ---
             return;
         }
         if (password.length < 6) {
-            notifications.show({ title: 'Contraseña Débil', message: 'La nueva contraseña debe tener al menos 6 caracteres.', color: 'orange', icon: <IconAlertCircle size={18}/> }); // Corregido: Contraseña, contraseña
+             // --- CAMBIO: Usar t() en notificación ---
+            notifications.show({
+                title: t('resetPasswordPage.errorTitle'), // Título específico? O común?
+                message: t('resetPasswordPage.errorPasswordLength'),
+                color: 'orange',
+                icon: <IconAlertCircle size={18}/>
+            });
+            // --- FIN CAMBIO ---
             return;
         }
 
         setIsLoading(true);
 
         try {
-            // console.log(`Attempting password reset with token starting: ${token.substring(0, 5)}...`); // Log eliminado
-            // Construir URL completa para axios base
             const resetUrl = `${API_BASE_URL}/api/auth/reset-password/${token}`;
             await axios.post(resetUrl, { password });
 
-            // console.log('Password reset successful'); // Log eliminado
+            // --- CAMBIO: Usar t() en notificación ---
             notifications.show({
-                title: '¡Contraseña Cambiada!', // Corregido: Contraseña
-                message: 'Tu contraseña ha sido restablecida con éxito. Serás redirigido a Inicio de Sesión.', // Corregido: contraseña, éxito, Sesión
+                title: t('resetPasswordPage.successTitle'),
+                message: t('resetPasswordPage.successMessage'),
                 color: 'green', icon: <IconCheck size={18} />, autoClose: 5000,
             });
+            // --- FIN CAMBIO ---
 
-            // Redirigir a login tras éxito con un pequeño delay
             setTimeout(() => {
                 navigate('/login', { state: { passwordResetSuccess: true } });
             }, 2000);
-
         } catch (error: any) {
-            console.error('Error resetting password:', error); // Mantener log de error
-            const message = error.response?.data?.message || 'Error al restablecer la contraseña. El token podría ser inválido o haber expirado.'; // Corregido: contraseña, inválido
+            console.error('Error resetting password:', error);
+            const message = error.response?.data?.message || t('resetPasswordPage.errorInvalidToken');
+            // --- CAMBIO: Usar t() en notificación ---
             notifications.show({
-                title: 'Error al Restablecer', message: message, color: 'red',
-                icon: <IconX size={18} />, autoClose: 6000,
+                title: t('resetPasswordPage.errorTitle'),
+                message: message,
+                color: 'red',
+                icon: <IconX size={18} />,
+                autoClose: 6000,
             });
+            // --- FIN CAMBIO ---
         } finally {
             setIsLoading(false);
         }
     };
 
+    // --- JSX MODIFICADO ---
     return (
          <Container size={480} my={40}>
-             <Title ta="center" style={{ fontWeight: 900 }}> Establecer Nueva Contraseña </Title> {/* Corregido: Contraseña */}
-             <Text c="dimmed" size="sm" ta="center" mt={5}> Introduce tu nueva contraseña a continuación. </Text> {/* Corregido: contraseña */}
+             <Title ta="center" style={{ fontWeight: 900 }}>{t('resetPasswordPage.title')}</Title>
+             <Text c="dimmed" size="sm" ta="center" mt={5}>{t('resetPasswordPage.subtitle')}</Text>
 
              <Paper withBorder shadow="md" p={30} mt={30} radius="lg">
-                 {/* Mostrar formulario solo si hay token */}
                  {token ? (
                      <form onSubmit={handleSubmit}>
                          <Stack>
-                             <PasswordInput label="Nueva Contraseña" placeholder="Introduce tu nueva contraseña" value={password} onChange={(event) => setPassword(event.currentTarget.value)} required disabled={isLoading} />
-                             <PasswordInput label="Confirmar Nueva Contraseña" placeholder="Repite la nueva contraseña" value={confirmPassword} onChange={(event) => setConfirmPassword(event.currentTarget.value)} required disabled={isLoading} />
-                             <Button type="submit" loading={isLoading} fullWidth mt="xl" radius="lg"> Guardar Nueva Contraseña </Button>
+                             <PasswordInput
+                                 label={t('resetPasswordPage.passwordLabel')}
+                                 placeholder={t('resetPasswordPage.passwordPlaceholder')}
+                                 value={password}
+                                 onChange={(event) => setPassword(event.currentTarget.value)}
+                                 required
+                                 disabled={isLoading} />
+                             <PasswordInput
+                                 label={t('resetPasswordPage.confirmPasswordLabel')}
+                                 placeholder={t('resetPasswordPage.confirmPasswordPlaceholder')}
+                                 value={confirmPassword}
+                                 onChange={(event) => setConfirmPassword(event.currentTarget.value)}
+                                 required
+                                 disabled={isLoading} />
+                             <Button
+                                 type="submit"
+                                 loading={isLoading}
+                                 fullWidth
+                                 mt="xl"
+                                 radius="lg"
+                             >
+                                 {t('resetPasswordPage.buttonText')}
+                             </Button>
                          </Stack>
                      </form>
                   ) : (
-                      <Text color="red" ta="center">Token de reseteo inválido o no proporcionado en la URL.</Text> // Corregido: inválido
+                      <Text color="red" ta="center">{t('resetPasswordPage.errorMissingToken')}</Text>
                   )}
                   <Text ta="center" mt="md">
-                      <Anchor component={Link} to="/login" size="sm"> Volver a Inicio de Sesión </Anchor> {/* Corregido: Sesión */}
+                      <Anchor component={Link} to="/login" size="sm">{t('resetPasswordPage.loginLink')}</Anchor>
                   </Text>
-             </Paper>
+            </Paper>
          </Container>
     );
+    // --- FIN JSX MODIFICADO ---
 };
 
 export default ResetPasswordPage;

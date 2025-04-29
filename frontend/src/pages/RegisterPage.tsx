@@ -1,9 +1,9 @@
 // filename: frontend/src/pages/RegisterPage.tsx
-// Version: 1.4.1 (Fix encoding, remove logs, comments, React import)
+// Version: 1.5.0 (Implement i18n using useTranslation)
 
-import { useState, useEffect } from 'react'; // Quitamos React
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axiosInstance from '../services/axiosInstance'; // Usar instancia configurada
+import axiosInstance from '../services/axiosInstance';
 import { AxiosError } from 'axios';
 import {
     Container, Paper, Title, Text, Stack, TextInput, PasswordInput,
@@ -11,146 +11,167 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconCheck, IconX } from '@tabler/icons-react'; // Añadir IconAlertCircle si se usa
-
-// Importar servicio y tipo para la lista de negocios
+import { IconCheck, IconX } from '@tabler/icons-react';
 import { getPublicBusinessList, BusinessOption } from '../services/businessService';
+// --- NUEVO: Importar useTranslation ---
+import { useTranslation } from 'react-i18next';
+// --- FIN NUEVO ---
 
-// Enums (Considerar mover a /types/)
+
+// Enums (sin cambios)
 enum DocumentType { DNI = 'DNI', NIE = 'NIE', PASSPORT = 'PASSPORT', OTHER = 'OTHER' }
 enum UserRole { BUSINESS_ADMIN = 'BUSINESS_ADMIN', CUSTOMER_FINAL = 'CUSTOMER_FINAL' }
 
-// Interface para los valores del formulario
+// Interface FormValues (sin cambios)
 interface RegisterFormValues {
-    email: string;
-    password: string;
-    confirmPassword: string;
-    name: string;
-    phone: string;
-    documentType: DocumentType | null;
-    documentId: string;
-    businessId: string;
+    email: string; password: string; confirmPassword: string; name: string; phone: string;
+    documentType: DocumentType | null; documentId: string; businessId: string;
 }
 
 const RegisterPage: React.FC = () => {
+    // --- NUEVO: Hook useTranslation ---
+    const { t } = useTranslation();
+    // --- FIN NUEVO ---
+
     const navigate = useNavigate();
-    const role: UserRole = UserRole.CUSTOMER_FINAL; // Rol fijo para este formulario
-    const [isLoading, setIsLoading] = useState(false); // Estado de envío del formulario principal
+    const role: UserRole = UserRole.CUSTOMER_FINAL;
+    const [isLoading, setIsLoading] = useState(false);
     const documentTypeOptions = Object.values(DocumentType).map(value => ({ value, label: value }));
     const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
-    const [loadingBusinesses, setLoadingBusinesses] = useState<boolean>(true); // Estado de carga para el Select
-    const [errorBusinesses, setErrorBusinesses] = useState<string | null>(null); // Error al cargar negocios
+    const [loadingBusinesses, setLoadingBusinesses] = useState<boolean>(true);
+    const [errorBusinesses, setErrorBusinesses] = useState<string | null>(null);
 
-    // useForm
+    // useForm (actualizar mensajes de validación)
     const form = useForm<RegisterFormValues>({
         initialValues: {
             email: '', password: '', confirmPassword: '', name: '', phone: '',
             documentType: null, documentId: '', businessId: '',
         },
         validate: {
-            email: (value) => (!value ? 'El email es obligatorio.' : !/^\S+@\S+\.\S+$/.test(value) ? 'Formato de email inválido.' : null), // Corregido: inválido
-            password: (value) => (!value ? 'La contraseña es obligatoria.' : value.length < 6 ? 'La contraseña debe tener al menos 6 caracteres.' : null), // Corregido: contraseña, contraseña
-            confirmPassword: (value, values) => (!value ? 'Confirma la contraseña.' : value !== values.password ? 'Las contraseñas no coinciden.' : null), // Corregido: contraseña, contraseñas
-            phone: (value) => (!value ? 'El teléfono es obligatorio.' : !/^\+\d{9,15}$/.test(value) ? 'Formato inválido (ej: +34666...).' : null), // Corregido: teléfono, inválido
-            documentType: (value) => (value ? null : 'Selecciona un tipo de documento.'),
+            email: (value) => (!value ? t('common.requiredField') : !/^\S+@\S+\.\S+$/.test(value) ? t('registerPage.errorInvalidEmail', 'Formato de email inválido.') : null),
+            password: (value) => (!value ? t('common.requiredField') : value.length < 6 ? t('registerPage.errorPasswordLength', 'La contraseña debe tener al menos 6 caracteres.') : null),
+            confirmPassword: (value, values) => (!value ? t('registerPage.errorConfirmPassword', 'Confirma la contraseña.') : value !== values.password ? t('registerPage.errorPasswordsDontMatch') : null),
+            phone: (value) => (!value ? t('common.requiredField') : !/^\+\d{9,15}$/.test(value) ? t('registerPage.errorPhoneFormat', 'Formato inválido (ej: +346...).') : null),
+            documentType: (value) => (value ? null : t('registerPage.errorDocType', 'Selecciona un tipo de documento.')),
             documentId: (value, values) => {
-                 if (!value) return 'El número de documento es obligatorio.'; // Corregido: Número
-                 if (values.documentType === DocumentType.DNI && !/^\d{8}[A-Z]$/i.test(value)) return 'Formato DNI inválido (8 números y 1 letra).'; // Corregido: inválido, números
-                 if (values.documentType === DocumentType.NIE && !/^[XYZ]\d{7}[A-Z]$/i.test(value)) return 'Formato NIE inválido (letra, 7 números, letra).'; // Corregido: inválido, números
+                 if (!value) return t('common.requiredField');
+                 if (values.documentType === DocumentType.DNI && !/^\d{8}[A-Z]$/i.test(value)) return t('registerPage.errorDNIFormat', 'Formato DNI inválido (8 números y 1 letra).');
+                 if (values.documentType === DocumentType.NIE && !/^[XYZ]\d{7}[A-Z]$/i.test(value)) return t('registerPage.errorNIEFormat', 'Formato NIE inválido (letra, 7 números, letra).');
                  return null;
             },
-            businessId: (value) => (value ? null : 'Debes seleccionar un negocio.'),
+            businessId: (value) => (value ? null : t('registerPage.errorBusinessRequired', 'Debes seleccionar un negocio.')),
         },
        });
 
-    // useEffect para cargar negocios
+    // useEffect para cargar negocios (sin cambios)
     useEffect(() => {
         const fetchBusinesses = async () => {
             setLoadingBusinesses(true); setErrorBusinesses(null);
-            try {
-                const data = await getPublicBusinessList(); setBusinesses(data);
-            } catch (err: any) {
-                console.error("Error fetching businesses for dropdown:", err); setErrorBusinesses(err.message || "No se pudo cargar la lista de negocios.");
-            } finally { setLoadingBusinesses(false); }
+            try { const data = await getPublicBusinessList(); setBusinesses(data); }
+            catch (err: any) { console.error("Error fetching businesses:", err); setErrorBusinesses(t('registerPage.errorLoadingBusinesses')); } // Usar clave
+            finally { setLoadingBusinesses(false); }
         };
         fetchBusinesses();
-    }, []); // Ejecutar solo una vez al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Usar t en dependencias puede ser problemático si cambia frecuentemente, lo dejamos fuera por ahora
 
-    // handleSubmit
+    // handleSubmit (actualizar notificaciones)
     const handleSubmit = async (values: RegisterFormValues) => {
-        setIsLoading(true); // Activar loading principal
-        const registrationData = {
+        setIsLoading(true);
+        const registrationData = { /* ... (igual que antes) ... */
             email: values.email.trim(), password: values.password, name: values.name.trim() || undefined,
             phone: values.phone.trim(), documentId: values.documentId.trim().toUpperCase(), documentType: values.documentType,
             businessId: values.businessId, role,
-        };
-
-        const registerPath = '/auth/register'; // Ruta relativa a /api
-        // console.log(`Intentando registrar a: ${registerPath}`, registrationData); // Log eliminado
-
+         };
+        const registerPath = '/auth/register';
         try {
-            // Usamos axiosInstance porque /api/auth/register podría estar protegido o no, pero así funciona en ambos casos
             const response = await axiosInstance.post(registerPath, registrationData);
-            console.log('Registration successful:', response.data); // Mantener log de éxito
+            console.log('Registration successful:', response.data);
             notifications.show({
-                title: '¡Registro Exitoso!', message: 'Tu cuenta ha sido creada. Serás redirigido a la página de inicio de sesión.', // Corregido: sesión
+                title: t('common.success'),
+                message: t('registerPage.successMessage', 'Tu cuenta ha sido creada. Serás redirigido a la página de inicio de sesión.'),
                 color: 'green', icon: <IconCheck size={18} />, autoClose: 4000,
             });
-            setTimeout(() => { navigate('/login', { state: { registrationSuccess: true } }); }, 1500); // Redirigir tras notificación
+            setTimeout(() => { navigate('/login', { state: { registrationSuccess: true } }); }, 1500);
         } catch (err: unknown) {
-            console.error('Error during registration:', err); // Mantener log de error
-             let message = 'Error desconocido durante el registro.';
-             if (err instanceof AxiosError) {
-                 if (err.response) { message = err.response.data?.message || `Error del servidor (${err.response.status})`; }
-                 else if (err.request) { message = 'No se pudo conectar con el servidor.'; }
-                 else { message = 'Error al preparar la solicitud de registro.'; }
-             } else if (err instanceof Error) { message = err.message; }
+            console.error('Error during registration:', err);
+             let message = t('registerPage.errorRegistration'); // Usar clave genérica
+            if (err instanceof AxiosError && err.response?.data?.message) { message = err.response.data.message; }
+            else if (err instanceof Error) { message = err.message; }
              notifications.show({
-                  title: 'Error de Registro', message: message, color: 'red', icon: <IconX size={18} />, autoClose: 6000,
+                  title: t('common.error'), message: message, color: 'red', icon: <IconX size={18} />, autoClose: 6000,
              });
-        } finally {
-            setIsLoading(false); // Desactivar loading principal
-        }
+        } finally { setIsLoading(false); }
     };
 
-    // Mapeo de opciones para el Select
+    // Mapeo de opciones Select (sin cambios)
     const businessSelectOptions = businesses.map(b => ({ value: b.id, label: b.name }));
 
-    // JSX
+    // --- JSX Modificado ---
     return (
         <Container size={480} my={40}>
-             <Title ta="center" style={{ fontWeight: 900 }}> ¡Bienvenido a LoyalPyME! </Title>
-             <Text c="dimmed" size="sm" ta="center" mt={5}> ¿Ya tienes cuenta?{' '} <Anchor size="sm" component={Link} to="/login"> Inicia sesión </Anchor> </Text> {/* Corregido: sesión */}
+             {/* Textos traducidos */}
+             <Title ta="center" style={{ fontWeight: 900 }}>{t('registerPage.welcomeTitle', '¡Bienvenido a LoyalPyME!')}</Title>
+             <Text c="dimmed" size="sm" ta="center" mt={5}>
+                 {t('registerPage.subtitle')}{' '}
+                 <Anchor size="sm" component={Link} to="/login">{t('registerPage.loginLink')}</Anchor>
+             </Text>
              <Paper withBorder shadow="md" p={30} mt={30} radius="lg">
-                 <Title order={2} ta="center" mb="lg">Crea tu Cuenta de Cliente</Title>
+                 <Title order={2} ta="center" mb="lg">{t('registerPage.title')}</Title>
                  <form onSubmit={form.onSubmit(handleSubmit)}>
                      <Stack>
-                         <TextInput label="Email" placeholder="tu@email.com" required disabled={isLoading} {...form.getInputProps('email')} />
-                         <PasswordInput label="Contraseña" placeholder="Tu contraseña" required disabled={isLoading} {...form.getInputProps('password')} />
-                         <PasswordInput label="Confirmar Contraseña" placeholder="Repite tu contraseña" required disabled={isLoading} {...form.getInputProps('confirmPassword')} />
-                         <TextInput label="Nombre (Opcional)" placeholder="Tu nombre" disabled={isLoading} {...form.getInputProps('name')} />
-                         <TextInput label="Teléfono (formato internacional)" placeholder="+346..." required disabled={isLoading} {...form.getInputProps('phone')} />
-                         <Select label="Tipo de Documento" placeholder="Selecciona uno" data={documentTypeOptions} required disabled={isLoading} clearable={false} {...form.getInputProps('documentType')} />
-                         <TextInput label="Número de Documento" placeholder="DNI, NIE, Pasaporte..." required disabled={isLoading} {...form.getInputProps('documentId')} />
+                         {/* Inputs con labels y placeholders traducidos */}
+                         <TextInput
+                             label={t('registerPage.emailLabel')}
+                             placeholder={t('registerPage.emailPlaceholder')}
+                             required disabled={isLoading} {...form.getInputProps('email')} />
+                         <PasswordInput
+                             label={t('registerPage.passwordLabel')}
+                             placeholder={t('registerPage.passwordPlaceholder')}
+                             required disabled={isLoading} {...form.getInputProps('password')} />
+                         <PasswordInput
+                             label={t('registerPage.confirmPasswordLabel')}
+                             placeholder={t('registerPage.confirmPasswordPlaceholder')}
+                             required disabled={isLoading} {...form.getInputProps('confirmPassword')} />
+                         <TextInput
+                             label={t('registerPage.nameLabel')}
+                             placeholder={t('registerPage.namePlaceholder')}
+                             disabled={isLoading} {...form.getInputProps('name')} />
+                         <TextInput
+                             label={t('registerPage.phoneLabel')}
+                             placeholder={t('registerPage.phonePlaceholder')}
+                             required disabled={isLoading} {...form.getInputProps('phone')} />
                          <Select
-                             label="Negocio al que Unirse"
-                             placeholder={loadingBusinesses ? "Cargando negocios..." : "Selecciona un negocio"}
+                             label={t('registerPage.docTypeLabel')}
+                             placeholder={t('registerPage.docTypePlaceholder')}
+                             data={documentTypeOptions} required disabled={isLoading} clearable={false} {...form.getInputProps('documentType')} />
+                         <TextInput
+                             label={t('registerPage.docIdLabel')}
+                             placeholder={t('registerPage.docIdPlaceholder')}
+                             required disabled={isLoading} {...form.getInputProps('documentId')} />
+                         <Select
+                             label={t('registerPage.businessLabel')}
+                             placeholder={loadingBusinesses ? t('registerPage.businessSelectLoading') : t('registerPage.businessSelectPlaceholder')}
                              data={businessSelectOptions}
                              required
                              disabled={isLoading || loadingBusinesses || businesses.length === 0}
                              searchable
-                             nothingFoundMessage={errorBusinesses ? "Error al cargar" : "No hay negocios disponibles"}
+                             nothingFoundMessage={errorBusinesses ? t('registerPage.businessSelectError') : t('registerPage.businessSelectNotFound')}
                              clearable={false}
-                             error={errorBusinesses} // Mostrar error de carga aquí
+                             error={errorBusinesses}
                              {...form.getInputProps('businessId')}
                          />
                          {loadingBusinesses && <Group justify='center'><Loader size="xs" /></Group>}
-                         <Button type="submit" loading={isLoading} fullWidth mt="xl" radius="lg"> Registrarse </Button> {/* Corregido: Registrarse */}
-                     </Stack>
+                         {/* Botón traducido */}
+                         <Button type="submit" loading={isLoading} fullWidth mt="xl" radius="lg">
+                             {t('registerPage.registerButton')}
+                         </Button>
+                      </Stack>
                  </form>
              </Paper>
         </Container>
     );
+     // --- Fin JSX Modificado ---
 };
 
 export default RegisterPage;

@@ -1,11 +1,12 @@
 // filename: frontend/src/routes/index.tsx
-// Version: 1.6.5 (Fix encoding, remove meta-comments)
+// Version: 1.7.0 (Introduce PublicLayout for public routes)
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-// Layout y Protección
+// Layouts y Protección
 import PrivateRoute from '../components/PrivateRoute';
 import MainLayout from '../components/layout/MainLayout';
+import PublicLayout from '../components/layout/PublicLayout'; // <-- Importar nuevo layout
 
 // Páginas Públicas
 import LoginPage from '../pages/LoginPage';
@@ -25,58 +26,53 @@ import TierSettingsPage from '../pages/admin/tiers/TierSettingsPage';
 import TierManagementPage from '../pages/admin/tiers/TierManagementPage';
 import AdminCustomerManagementPage from '../pages/admin/AdminCustomerManagementPage';
 
+
 function AppRoutes() {
   return (
     <Routes>
-      {/* --- Rutas Públicas --- */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/register-business" element={<RegisterBusinessPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-      {/* Redirige la ruta raíz a login */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* --- Rutas Públicas (AHORA usan PublicLayout) --- */}
+      <Route element={<PublicLayout />}> {/* Envuelve rutas públicas */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register-business" element={<RegisterBusinessPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        {/* Redirige la ruta raíz a login */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
+      </Route>
+      {/* --- Fin Rutas Públicas --- */}
 
 
-      {/* --- Rutas Protegidas (envueltas por MainLayout) --- */}
+      {/* --- Rutas Protegidas (Siguen usando MainLayout) --- */}
       <Route
         element={
-          // Requiere estar logueado y tener uno de los roles especificados
           <PrivateRoute roles={['BUSINESS_ADMIN', 'CUSTOMER_FINAL']}>
             <MainLayout />
           </PrivateRoute>
         }
       >
-        {/* Las siguientes rutas son hijas de MainLayout y se renderizarán en su <Outlet /> */}
+        {/* Las rutas hijas se renderizan en el <Outlet /> de MainLayout */}
 
-        {/* --- Sección Admin --- */}
-        {/* Todas estas rutas anidadas requieren implícitamente el rol 'BUSINESS_ADMIN'
-            porque PrivateRoute las envuelve, pero también se podría añadir el check de rol específico aquí si fuera necesario */}
+        {/* Sección Admin */}
         <Route path="/admin/dashboard">
-            <Route index element={<AdminOverview />} /> {/* Ruta /admin/dashboard */}
-            <Route path="rewards" element={<AdminRewardsManagement />} /> {/* /admin/dashboard/rewards */}
-            <Route path="generate-qr" element={<AdminGenerateQr />} /> {/* /admin/dashboard/generate-qr */}
-            <Route path="tiers/settings" element={<TierSettingsPage />} /> {/* /admin/dashboard/tiers/settings */}
-            <Route path="tiers/manage" element={<TierManagementPage />} /> {/* /admin/dashboard/tiers/manage */}
-            <Route path="customers" element={<AdminCustomerManagementPage />} /> {/* /admin/dashboard/customers */}
-        </Route> {/* Fin Sección Admin */}
+            <Route index element={<AdminOverview />} />
+            <Route path="rewards" element={<AdminRewardsManagement />} />
+            <Route path="generate-qr" element={<AdminGenerateQr />} />
+            <Route path="tiers/settings" element={<TierSettingsPage />} />
+            <Route path="tiers/manage" element={<TierManagementPage />} />
+            <Route path="customers" element={<AdminCustomerManagementPage />} />
+        </Route>
 
-
-        {/* --- Sección Cliente --- */}
-         {/* Requiere rol 'CUSTOMER_FINAL' */}
+        {/* Sección Cliente */}
         <Route
           path="/customer/dashboard"
-          element={
-              // Podríamos añadir un PrivateRoute específico aquí si quisiéramos ser redundantes
-              // o si MainLayout pudiera ser accedido por otros roles sin sub-rutas definidas
-              <CustomerDashboardPage />
-            }
+          element={<CustomerDashboardPage />}
         />
 
-      </Route> {/* Fin Rutas Protegidas con MainLayout */}
+      </Route>
+      {/* --- Fin Rutas Protegidas --- */}
 
-
-      {/* TODO: Añadir pagina 404 al final */}
+      {/* TODO: Pagina 404 */}
       {/* <Route path="*" element={<NotFoundPage />} /> */}
 
     </Routes>

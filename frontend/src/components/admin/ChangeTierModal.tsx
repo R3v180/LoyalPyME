@@ -1,15 +1,11 @@
 // filename: frontend/src/components/admin/ChangeTierModal.tsx
-// Version: 1.1.2 (Fix encoding, import, comments)
-
 import React, { useState, useEffect } from 'react';
 import { Modal, Select, Button, Group, Text, Loader, Alert } from '@mantine/core';
 import axiosInstance from '../../services/axiosInstance';
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX, IconAlertCircle } from '@tabler/icons-react';
-
-// --- FIX: Importar Customer desde el hook correcto ---
 import { Customer } from '../../hooks/useAdminCustomersData';
-// --- FIN FIX ---
+import { useTranslation } from 'react-i18next'; // Importar hook
 
 // Interfaz para los Tiers/Niveles obtenidos de la API
 interface Tier {
@@ -26,6 +22,7 @@ interface ChangeTierModalProps {
 }
 
 const ChangeTierModal: React.FC<ChangeTierModalProps> = ({ opened, onClose, customer, onSuccess }) => {
+    const { t } = useTranslation(); // Hook de traducción
     const [tiers, setTiers] = useState<{ value: string; label: string }[]>([]);
     const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
     const [loadingTiers, setLoadingTiers] = useState(false);
@@ -37,68 +34,69 @@ const ChangeTierModal: React.FC<ChangeTierModalProps> = ({ opened, onClose, cust
         if (opened && customer) {
             setLoadingTiers(true);
             setErrorTiers(null);
-            // Establecer el valor inicial del select al nivel actual del cliente
-            setSelectedTierId(customer.currentTier?.id || null); // Si no tiene tier, es null
+            setSelectedTierId(customer.currentTier?.id || null);
 
-            // La llamada GET /tiers obtiene la lista de Tiers del negocio
-            axiosInstance.get<Tier[]>('/tiers') // Asume que /tiers devuelve la lista para el admin
+            axiosInstance.get<Tier[]>('/tiers')
                 .then(response => {
                     const sortedTiers = response.data.sort((a, b) => a.level - b.level);
-                    // Crear opciones, añadir "Sin Nivel" explícitamente
+                    // Usar t() para las opciones
                     const availableTiers = [
-                        { value: '', label: 'Quitar Nivel (Básico)'}, // Opción para poner a null
-                         ...sortedTiers.map(tier => ({
+                        { value: '', label: t('adminCustomersPage.changeTierOptionNone') },
+                        ...sortedTiers.map(tier => ({
                             value: tier.id,
-                            label: `${tier.name} (Nivel ${tier.level})`
+                            // Usar t() para el formato del nivel
+                            label: `${tier.name} (${t('adminCustomersPage.changeTierOptionLevel', 'Nivel {{level}}', { level: tier.level })})`
                         }))
                     ];
                     setTiers(availableTiers);
                 })
                 .catch(err => {
                     console.error("Error fetching tiers for modal:", err);
-                    setErrorTiers(`No se pudieron cargar los niveles: ${err.response?.data?.message || err.message}`);
+                    const apiError = err.response?.data?.message || err.message || t('common.errorUnknown');
+                    // Usar t() para el mensaje de error
+                    setErrorTiers(t('adminCustomersPage.changeTierErrorLoadingTiers', 'No se pudieron cargar los niveles: {{error}}', { error: apiError }));
                 })
                 .finally(() => {
                     setLoadingTiers(false);
                 });
         } else if (!opened) {
-             // Limpiar estado al cerrar
-             setSelectedTierId(null);
-             setTiers([]);
-             setErrorTiers(null);
+            setSelectedTierId(null);
+            setTiers([]);
+            setErrorTiers(null);
         }
-    }, [opened, customer]); // Depende de opened y customer
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [opened, customer]); // t() no necesita ser dependencia si las claves no cambian dinámicamente
 
     const handleChangeTier = async () => {
         if (!customer) return;
-        // Permitir enviar null si selectedTierId es '' (nuestra opción "Quitar Nivel")
         const tierIdToSend = selectedTierId === '' ? null : selectedTierId;
 
-        // Evitar llamada si no hay cambio real
         if (tierIdToSend === (customer.currentTier?.id || null)) {
-            notifications.show({title: "Sin Cambios", message: "El nivel seleccionado es el mismo que el actual.", color:'blue'});
+            notifications.show({
+                title: t('adminCustomersPage.changeTierNoChangeTitle', "Sin Cambios"), // Nueva clave
+                message: t('adminCustomersPage.changeTierNoChange'),
+                color:'blue'
+            });
             return;
         }
 
         setLoadingChange(true);
         try {
-            // La ruta PUT /admin/customers/:customerId/tier actualiza el tier
-            await axiosInstance.put(`/admin/customers/${customer.id}/tier`, {
-                tierId: tierIdToSend // Enviar null si se seleccionó "Quitar Nivel"
-            });
+            await axiosInstance.put(`/admin/customers/${customer.id}/tier`, { tierId: tierIdToSend });
             notifications.show({
-                title: 'Éxito', // Corregido: Éxito
-                message: `Nivel cambiado correctamente para ${customer.name || customer.email}.`, // Corregido: correctamente
+                title: t('common.success'),
+                message: t('adminCustomersPage.changeTierSuccess', { name: customer.name || customer.email }),
                 color: 'green',
                 icon: <IconCheck size={18} />,
             });
-            onSuccess(); // Refrescar datos en la página principal
-            onClose(); // Cerrar modal
+            onSuccess();
+            onClose();
         } catch (error: any) {
             console.error("Error changing tier:", error);
+            const apiError = error.response?.data?.message || error.message || t('common.errorUnknown');
             notifications.show({
-                title: 'Error',
-                message: `No se pudo cambiar el nivel: ${error.response?.data?.message || error.message}`,
+                title: t('common.error'),
+                message: t('adminCustomersPage.changeTierError', { error: apiError }),
                 color: 'red',
                 icon: <IconX size={18} />,
             });
@@ -107,56 +105,52 @@ const ChangeTierModal: React.FC<ChangeTierModalProps> = ({ opened, onClose, cust
         }
     };
 
+    const modalTitle = t('adminCustomersPage.changeTierModalTitle', {
+        name: customer?.name || customer?.email || t('common.customer', 'Cliente')
+    });
+    const currentTierName = customer?.currentTier?.name || t('customerDashboard.baseTier');
+
     return (
-        <Modal
-            opened={opened}
-            onClose={onClose}
-            title={`Cambiar Nivel Manualmente para ${customer?.name || customer?.email || 'Cliente'}`}
-            centered
-        >
-             {customer && <Text size="sm" mb="xs">Nivel actual: {customer.currentTier?.name || 'Básico'}</Text>}
+        <Modal opened={opened} onClose={onClose} title={modalTitle} centered>
+            {customer && <Text size="sm" mb="xs">{t('adminCustomersPage.changeTierCurrent', { tierName: currentTierName })}</Text>}
 
             {loadingTiers && <Group justify="center"><Loader /></Group>}
             {errorTiers && !loadingTiers && (
-                <Alert title="Error Cargando Niveles" color="red" icon={<IconAlertCircle />}>
+                // Usar t() para el título del Alert
+                <Alert title={t('adminCustomersPage.changeTierLoadingErrorTitle', 'Error Cargando Niveles')} color="red" icon={<IconAlertCircle />}>
                     {errorTiers}
                 </Alert>
             )}
             {!loadingTiers && !errorTiers && customer && (
                 <>
                     <Select
-                        label="Selecciona el Nuevo Nivel"
-                        placeholder="Elige un nivel de la lista"
+                        label={t('adminCustomersPage.changeTierSelectLabel')}
+                        placeholder={t('adminCustomersPage.changeTierSelectPlaceholder')}
                         data={tiers}
-                        value={selectedTierId ?? ''} // Usar '' si es null para que coincida con la opción "Quitar Nivel"
-                        onChange={(value) => setSelectedTierId(value)} // onChange devuelve string | null
+                        value={selectedTierId ?? ''}
+                        onChange={(value) => setSelectedTierId(value)}
                         searchable
-                        nothingFoundMessage="No hay niveles disponibles o no se encontraron."
-                        // No es estrictamente required si queremos permitir quitar el nivel
-                        // required
+                        nothingFoundMessage={t('adminCustomersPage.changeTierNotFound')}
                         disabled={loadingTiers || loadingChange}
                         mb="md"
                     />
                     <Group justify="flex-end" mt="lg">
-                        <Button variant="default" onClick={onClose} disabled={loadingChange}>Cancelar</Button>
+                        <Button variant="default" onClick={onClose} disabled={loadingChange}>{t('common.cancel')}</Button>
                         <Button
                             onClick={handleChangeTier}
                             loading={loadingChange}
-                            // Deshabilitar si no se ha cargado, o si el valor seleccionado es el mismo que el actual
                             disabled={loadingTiers || (selectedTierId ?? '') === (customer.currentTier?.id || '')}
                         >
-                            Cambiar Nivel
+                            {t('adminCustomersPage.changeTierButton')}
                         </Button>
                     </Group>
                 </>
             )}
-             {!loadingTiers && !errorTiers && !customer && (
-                 <Text c="dimmed">No se ha seleccionado ningún cliente.</Text> // Corregido: ningún
-             )}
+            {!loadingTiers && !errorTiers && !customer && (
+                <Text c="dimmed">{t('adminCustomersPage.noCustomerSelected')}</Text>
+            )}
         </Modal>
     );
 };
 
 export default ChangeTierModal;
-
-// End of File: frontend/src/components/admin/ChangeTierModal.tsx

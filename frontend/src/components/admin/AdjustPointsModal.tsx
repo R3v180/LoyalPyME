@@ -1,16 +1,12 @@
 // filename: frontend/src/components/admin/AdjustPointsModal.tsx
-// Version: 1.1.2 (Fix encoding, imports, comments)
-
 import React, { useState, useEffect } from 'react';
 import { Modal, TextInput, Button, Group, Text, NumberInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import axiosInstance from '../../services/axiosInstance';
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX } from '@tabler/icons-react';
-
-// --- FIX: Importar Customer desde el hook correcto ---
 import { Customer } from '../../hooks/useAdminCustomersData';
-// --- FIN FIX ---
+import { useTranslation } from 'react-i18next'; // Importar hook
 
 interface AdjustPointsModalProps {
     opened: boolean;
@@ -20,18 +16,23 @@ interface AdjustPointsModalProps {
 }
 
 const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({ opened, onClose, customer, onSuccess }) => {
+    const { t } = useTranslation(); // Hook de traducción
     const [loading, setLoading] = useState(false);
+
     const form = useForm({
         initialValues: { amount: 0, reason: '' },
-        validate: { amount: (value) => (value === 0 ? 'La cantidad no puede ser cero' : null), }
+        // Usar t() para el mensaje de validación
+        validate: {
+            amount: (value) => (value === 0 ? t('validation.cannotBeZero', 'La cantidad no puede ser cero') : null),
+        }
     });
 
-    // Resetear form cuando el modal se abre o el cliente cambia
     useEffect(() => {
         if (opened) {
              form.reset();
         }
-    }, [opened, customer, form]); // Añadir form a dependencias es más correcto
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [opened, customer]); // form no es necesario como dependencia si no cambia su referencia
 
     const handleSubmit = async (values: typeof form.values) => {
         if (!customer) return;
@@ -39,13 +40,12 @@ const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({ opened, onClose, 
         try {
             const payload = {
                 amount: values.amount,
-                reason: values.reason || null // Enviar null si está vacío
+                reason: values.reason || null
             };
-            // La llamada POST ya era correcta
             await axiosInstance.post(`/admin/customers/${customer.id}/adjust-points`, payload);
             notifications.show({
-                title: 'Éxito', // Corregido: Éxito
-                message: `Puntos ajustados correctamente para ${customer.name || customer.email}.`, // Corregido: correctamente
+                title: t('common.success'),
+                message: t('adminCustomersPage.adjustPointsSuccess', { name: customer.name || customer.email }),
                 color: 'green',
                 icon: <IconCheck size={18} />,
             });
@@ -53,9 +53,10 @@ const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({ opened, onClose, 
             onClose();
         } catch (error: any) {
             console.error("Error adjusting points:", error);
+            const apiError = error.response?.data?.message || error.message || t('common.errorUnknown');
             notifications.show({
-                title: 'Error',
-                message: `No se pudo ajustar los puntos: ${error.response?.data?.message || error.message}`,
+                title: t('common.error'),
+                message: t('adminCustomersPage.adjustPointsError', { error: apiError }),
                 color: 'red',
                 icon: <IconX size={18} />,
             });
@@ -64,36 +65,40 @@ const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({ opened, onClose, 
         }
     };
 
+    const modalTitle = t('adminCustomersPage.adjustPointsModalTitle', {
+        name: customer?.name || customer?.email || t('common.customer', 'Cliente')
+    });
+
     return (
-        <Modal opened={opened} onClose={onClose} title={`Ajustar Puntos para ${customer?.name || customer?.email || 'Cliente'}`} centered>
+        <Modal opened={opened} onClose={onClose} title={modalTitle} centered>
             {customer ? (
                 <form onSubmit={form.onSubmit(handleSubmit)}>
-                    <Text size="sm" mb="md">Puntos actuales: {customer.points}</Text>
+                    <Text size="sm" mb="md">
+                        {t('adminCustomersPage.adjustPointsCurrent', { points: customer.points })}
+                    </Text>
                     <NumberInput
-                        label="Cantidad a Añadir/Restar"
-                        placeholder="Ej: 50 (añadir) o -20 (restar)"
+                        label={t('adminCustomersPage.adjustPointsAmountLabel')}
+                        placeholder={t('adminCustomersPage.adjustPointsAmountPlaceholder')}
                         required
                         allowNegative
                         {...form.getInputProps('amount')}
                     />
                     <TextInput
-                        label="Razón (Opcional)" // Corregido: Razón
-                        placeholder="Ej: Corrección manual, Bonificación especial" // Corregido: Corrección, Bonificación
+                        label={t('adminCustomersPage.adjustPointsReasonLabel')}
+                        placeholder={t('adminCustomersPage.adjustPointsReasonPlaceholder')}
                         mt="md"
                         {...form.getInputProps('reason')}
                     />
                     <Group justify="flex-end" mt="lg">
-                        <Button variant="default" onClick={onClose} disabled={loading}>Cancelar</Button>
-                        <Button type="submit" loading={loading}>Ajustar Puntos</Button>
+                        <Button variant="default" onClick={onClose} disabled={loading}>{t('common.cancel')}</Button>
+                        <Button type="submit" loading={loading}>{t('adminCustomersPage.adjustPointsButton')}</Button>
                     </Group>
                 </form>
             ) : (
-                <Text c="dimmed">No se ha seleccionado ningún cliente.</Text> // Corregido: ningún
+                <Text c="dimmed">{t('adminCustomersPage.noCustomerSelected', 'No se ha seleccionado ningún cliente.')}</Text>
             )}
         </Modal>
     );
 };
 
 export default AdjustPointsModal;
-
-// End of File: frontend/src/components/admin/AdjustPointsModal.tsx

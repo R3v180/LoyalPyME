@@ -1,47 +1,47 @@
 // filename: frontend/src/components/admin/tiers/TierForm.tsx
-// Version: 1.0.1 (Fix character encoding)
-
 import React from 'react';
 import { TextInput, NumberInput, Textarea, Switch, Stack } from '@mantine/core';
 import { UseFormReturnType } from '@mantine/form';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next'; // Importar hook
 
 // --- Tipos ---
-// Esquema Zod
+// Esquema Zod (no necesita 't' aquí ya que los mensajes se definen en el componente padre)
 const tierFormSchema = z.object({
-    name: z.string().min(1, { message: 'El nombre es obligatorio' }),
-    level: z.number().int().min(0, { message: 'El nivel debe ser 0 o mayor' }),
-    minValue: z.number().min(0, { message: 'El valor mínimo debe ser 0 o mayor' }), // Corregido: mínimo
+    name: z.string().min(1),
+    level: z.number().int().min(0),
+    minValue: z.number().min(0),
     description: z.string().optional(),
     benefitsDescription: z.string().optional(),
     isActive: z.boolean(),
 });
-// Este tipo se infiere pero exportarlo puede ser útil si otros componentes lo necesitan
+
 export type TierFormValues = z.infer<typeof tierFormSchema>;
 // --- Fin Tipos ---
 
-
 // --- Props del Componente ---
 interface TierFormProps {
-    form: UseFormReturnType<TierFormValues>; // Recibe la instancia de useForm
-    disabled?: boolean; // Prop opcional para deshabilitar todo el form
+    form: UseFormReturnType<TierFormValues>;
+    disabled?: boolean;
 }
 // --- Fin Props ---
 
 const TierForm: React.FC<TierFormProps> = ({ form, disabled }) => {
+    const { t } = useTranslation(); // Hook de traducción
+
     return (
         <Stack gap="md">
             <TextInput
-                label="Nombre del Nivel"
-                placeholder="Ej: Oro"
+                label={t('component.tierForm.nameLabel')}
+                placeholder={t('component.tierForm.namePlaceholder')}
                 required
                 disabled={disabled}
                 {...form.getInputProps('name')}
             />
             <NumberInput
-                label="Nivel (Orden)"
-                placeholder="Ej: 3"
-                description="Número para ordenar los niveles (0 o mayor)." // Corregido: Número
+                label={t('component.tierForm.levelLabel')}
+                placeholder={t('component.tierForm.levelPlaceholder')}
+                description={t('component.tierForm.levelDescription')}
                 required
                 min={0}
                 step={1}
@@ -50,41 +50,39 @@ const TierForm: React.FC<TierFormProps> = ({ form, disabled }) => {
                 {...form.getInputProps('level')}
             />
             <NumberInput
-                label="Valor Mínimo para Alcanzar" // Corregido: Mínimo
-                placeholder="Ej: 1500"
-                description="Gasto (€), Visitas o Puntos necesarios (según config. negocio)." // Corregido: según
+                label={t('component.tierForm.minValueLabel')}
+                placeholder={t('component.tierForm.minValuePlaceholder')}
+                description={t('component.tierForm.minValueDescription')}
                 required
                 min={0}
-                decimalScale={2}
+                decimalScale={2} // Permite decimales para gasto, pero step=1 si es para visitas/puntos
+                // step={1} // Considera ajustar esto según la lógica de minValue
                 disabled={disabled}
                 {...form.getInputProps('minValue')}
             />
             <Textarea
-                label="Descripción (Opcional)" // Corregido: Descripción
-                placeholder="Breve descripción del nivel" // Corregido: descripción
+                label={t('component.tierForm.descriptionLabel')}
+                placeholder={t('component.tierForm.descriptionPlaceholder')}
                 rows={2}
                 disabled={disabled}
                 {...form.getInputProps('description')}
             />
             <Textarea
-                label="Resumen Beneficios (Opcional)" // Corregido: Resumen
-                placeholder="Texto resumen de los beneficios principales para el cliente"
+                label={t('component.tierForm.benefitsDescriptionLabel')}
+                placeholder={t('component.tierForm.benefitsDescriptionPlaceholder')}
                 rows={3}
                 disabled={disabled}
                 {...form.getInputProps('benefitsDescription')}
             />
             <Switch
-                label="Nivel Activo"
-                description="Si está inactivo, los clientes no podrán alcanzarlo ni ver sus beneficios." // Corregido: está, alcanzarlo
+                label={t('component.tierForm.activeLabel')}
+                description={t('component.tierForm.activeDescription')}
                 mt="sm"
                 disabled={disabled}
                 {...form.getInputProps('isActive', { type: 'checkbox' })}
             />
         </Stack>
-        // NOTA: No incluimos el botón de submit aquí, eso va en el Modal/Componente padre
     );
 };
 
 export default TierForm;
-
-// End of File: frontend/src/components/admin/tiers/TierForm.tsx

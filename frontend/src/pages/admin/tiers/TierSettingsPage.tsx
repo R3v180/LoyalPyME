@@ -1,19 +1,18 @@
 // filename: frontend/src/pages/admin/tiers/TierSettingsPage.tsx
-// Version: 1.1.8 (Remove Edit/Cancel buttons and isEditing state)
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Paper, Title, Stack, Switch, Select, NumberInput, Button, Loader, Alert, Group, LoadingOverlay, Text
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-// Remove IconPencil as it's no longer used
 import { IconAlertCircle, IconCheck, IconDeviceFloppy } from '@tabler/icons-react';
 import axiosInstance from '../../../services/axiosInstance';
+import { useTranslation } from 'react-i18next'; // Importar hook
 
-// Tipos/Enums (sin cambios)
+// Tipos/Enums
 enum TierCalculationBasis { SPEND = 'SPEND', VISITS = 'VISITS', POINTS_EARNED = 'POINTS_EARNED' }
 enum TierDowngradePolicy { NEVER = 'NEVER', PERIODIC_REVIEW = 'PERIODIC_REVIEW', AFTER_INACTIVITY = 'AFTER_INACTIVITY' }
+
 interface TierConfigData {
     tierSystemEnabled: boolean;
     tierCalculationBasis: TierCalculationBasis | null;
@@ -22,23 +21,11 @@ interface TierConfigData {
     inactivityPeriodMonths: number | null;
 }
 
-// Mapeo para labels (sin cambios)
-const basisLabels: Record<TierCalculationBasis, string> = {
-    [TierCalculationBasis.SPEND]: 'Gasto Acumulado (€)',
-    [TierCalculationBasis.VISITS]: 'Número de Visitas',
-    [TierCalculationBasis.POINTS_EARNED]: 'Puntos Históricos Ganados'
-};
-const policyLabels: Record<TierDowngradePolicy, string> = {
-    [TierDowngradePolicy.NEVER]: 'Nunca Bajar',
-    [TierDowngradePolicy.PERIODIC_REVIEW]: 'Revisión Periódica',
-    [TierDowngradePolicy.AFTER_INACTIVITY]: 'Tras Inactividad'
-};
-
 const TierSettingsPage: React.FC = () => {
-    const [isLoading, setIsLoading] = useState<boolean>(true); // Loading inicial
-    const [isSaving, setIsSaving] = useState<boolean>(false); // Guardando cambios
-    const [error, setError] = useState<string | null>(null); // Error de carga o guardado
-    // const [isEditing, setIsEditing] = useState<boolean>(false); // <-- ELIMINADO
+    const { t } = useTranslation(); // Hook de traducción
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [isSaving, setIsSaving] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
 
     const form = useForm<TierConfigData>({
         initialValues: {
@@ -48,15 +35,16 @@ const TierSettingsPage: React.FC = () => {
             tierDowngradePolicy: TierDowngradePolicy.NEVER,
             inactivityPeriodMonths: null,
         },
-        // Validación (sin cambios)
+        // Validación no necesita t() aquí directamente si los mensajes son genéricos o manejados por Mantine/Zod
         validate: (values) => ({
-            tierCalculationBasis: (!values.tierSystemEnabled || values.tierCalculationBasis) ? null : 'Debe seleccionar una base si el sistema está habilitado.',
-            tierCalculationPeriodMonths: (!values.tierSystemEnabled || !values.tierCalculationBasis || values.tierCalculationBasis === TierCalculationBasis.POINTS_EARNED) ? null : (values.tierCalculationPeriodMonths === null || values.tierCalculationPeriodMonths <= 0) ? 'Periodo debe ser > 0 para esta base' : null,
-            inactivityPeriodMonths: (!values.tierSystemEnabled || values.tierDowngradePolicy !== TierDowngradePolicy.AFTER_INACTIVITY) ? null : (values.inactivityPeriodMonths === null || values.inactivityPeriodMonths <= 0) ? 'Periodo debe ser > 0 para esta política' : null,
-        }),
-     });
+            // Lógica de validación se mantiene, los mensajes se pueden mejorar si es necesario
+             tierCalculationBasis: (!values.tierSystemEnabled || values.tierCalculationBasis) ? null : t('common.requiredField'), // Ejemplo genérico
+             tierCalculationPeriodMonths: (!values.tierSystemEnabled || !values.tierCalculationBasis || values.tierCalculationBasis === TierCalculationBasis.POINTS_EARNED) ? null : (values.tierCalculationPeriodMonths === null || values.tierCalculationPeriodMonths <= 0) ? t('validation.mustBePositive', 'Debe ser > 0') : null, // Clave nueva propuesta
+             inactivityPeriodMonths: (!values.tierSystemEnabled || values.tierDowngradePolicy !== TierDowngradePolicy.AFTER_INACTIVITY) ? null : (values.inactivityPeriodMonths === null || values.inactivityPeriodMonths <= 0) ? t('validation.mustBePositive', 'Debe ser > 0') : null, // Clave nueva propuesta
+         }),
+    });
 
-    // fetchConfig (sin cambios respecto a v1.1.7)
+    // fetchConfig (usar t() en mensajes de error)
     const fetchConfig = useCallback(async () => {
         setIsLoading(true);
         setError(null);
@@ -68,101 +56,113 @@ const TierSettingsPage: React.FC = () => {
                 tierCalculationPeriodMonths: response.data.tierCalculationPeriodMonths ?? null,
                 tierDowngradePolicy: response.data.tierDowngradePolicy ?? TierDowngradePolicy.NEVER,
                 inactivityPeriodMonths: response.data.inactivityPeriodMonths ?? null,
-             };
+            };
             form.setValues(fetchedConfig);
+            form.resetDirty(fetchedConfig); // Asegurar que el estado inicial no esté 'dirty'
             console.log("Config fetched and form set:", fetchedConfig);
         } catch (err: any) {
             console.error("Error fetching tier config:", err);
-            const message = err.response?.data?.message || "Error al cargar la configuración de Tiers.";
+            const message = err.response?.data?.message || t('adminTiersSettingsPage.errorLoading');
             setError(message);
-            notifications.show({ title: 'Error de Carga', message, color: 'red', icon: <IconAlertCircle size={18} /> });
+            notifications.show({ title: t('common.errorLoadingData'), message, color: 'red', icon: <IconAlertCircle size={18} /> });
         } finally {
             setIsLoading(false);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [t]); // Añadir t como dependencia
 
     useEffect(() => {
         fetchConfig();
     }, [fetchConfig]);
 
-    // handleSaveChanges (sin cambios en lógica interna)
+    // handleSaveChanges (usar t() en mensajes de notificación/error)
     const handleSaveChanges = async (values: TierConfigData) => {
         setIsSaving(true);
-        setError(null); // Limpiar error anterior al intentar guardar
-        const dataToSend = {
-             ...values,
+        setError(null);
+        const dataToSend = { /* ... lógica sin cambios ... */
+            ...values,
              tierCalculationPeriodMonths: values.tierCalculationPeriodMonths || null,
              inactivityPeriodMonths: values.inactivityPeriodMonths || null,
              tierCalculationBasis: values.tierSystemEnabled ? values.tierCalculationBasis : null,
-         };
-         if (dataToSend.tierCalculationBasis === TierCalculationBasis.POINTS_EARNED) {
-             dataToSend.tierCalculationPeriodMonths = null;
-         }
-         if (dataToSend.tierDowngradePolicy !== TierDowngradePolicy.AFTER_INACTIVITY) {
-             dataToSend.inactivityPeriodMonths = null;
-         }
+        };
+         if (dataToSend.tierCalculationBasis === TierCalculationBasis.POINTS_EARNED) { dataToSend.tierCalculationPeriodMonths = null; }
+         if (dataToSend.tierDowngradePolicy !== TierDowngradePolicy.AFTER_INACTIVITY) { dataToSend.inactivityPeriodMonths = null; }
+
         console.log("Saving config:", dataToSend);
         try {
             await axiosInstance.put('/tiers/config', dataToSend);
-            notifications.show({ title: 'Configuración Guardada', message: 'Los ajustes se han guardado correctamente.', color: 'green', icon: <IconCheck size={18} /> });
-            form.setValues(values); // Actualiza los valores base del formulario
-            form.reset(); // Resetea el estado 'dirty' con los nuevos valores base
-            // setIsEditing(false); // <-- ELIMINADO
+            notifications.show({
+                title: t('adminTiersSettingsPage.successSaving'), // Usar título específico
+                message: t('adminTiersSettingsPage.successSaving'), // Usar mismo texto como mensaje por ahora
+                color: 'green',
+                icon: <IconCheck size={18} />
+            });
+            form.setValues(values);
+            form.resetDirty(values); // Resetear dirty con los nuevos valores guardados
         } catch (err: any) {
             console.error("Error saving tier config:", err);
-            const message = err.response?.data?.message || "Error al guardar la configuración.";
-            setError(message); // Mostrar error en Alert dentro del form
-            notifications.show({ title: 'Error al Guardar', message, color: 'red', icon: <IconAlertCircle size={18} /> });
+            const message = err.response?.data?.message || t('adminTiersSettingsPage.errorSaving');
+            setError(message);
+            notifications.show({
+                title: t('adminCommon.saveError'), // Título genérico de error
+                message,
+                color: 'red',
+                icon: <IconAlertCircle size={18} />
+            });
         } finally {
             setIsSaving(false);
         }
     };
 
-    // Opciones para Selects (sin cambios)
-    const basisOptions = Object.values(TierCalculationBasis).map(value => ({ value, label: basisLabels[value] }));
-    const policyOptions = Object.values(TierDowngradePolicy).map(value => ({ value, label: policyLabels[value] }));
+    // Opciones para Selects (usando t())
+    const basisOptions = Object.values(TierCalculationBasis).map(value => ({
+        value,
+        label: t(`adminTiersSettingsPage.basisOption_${value}`)
+    }));
+    const policyOptions = Object.values(TierDowngradePolicy).map(value => ({
+        value,
+        label: t(`adminTiersSettingsPage.downgradePolicyOption_${value}`)
+    }));
 
     // Renderizado
     if (isLoading) {
         return <Group justify="center" mt="xl"><Loader /></Group>;
     }
-    // Error de carga inicial (sin cambios)
+    // Usar t() en título del Alert de error
     if (error && !isLoading && form.values.tierCalculationBasis === null && !form.values.tierSystemEnabled) {
-            return <Alert title="Error de Carga" color="red" icon={<IconAlertCircle />}>{error}</Alert>;
+        return <Alert title={t('common.errorLoadingData')} color="red" icon={<IconAlertCircle />}>{error}</Alert>;
     }
 
     return (
         <Paper shadow="sm" p="lg" withBorder radius="lg" style={{ position: 'relative' }}>
-            {/* Loading overlay solo para guardado */}
             <LoadingOverlay visible={isSaving} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
-            <Title order={2} mb="xl">Configuración del Sistema de Niveles (Tiers)</Title>
+            <Title order={2} mb="xl">{t('adminTiersSettingsPage.title')}</Title>
             <Text c="dimmed" size="sm" mb="lg">
-                Define aquí cómo funciona globalmente tu sistema de niveles. Los cambios se aplicarán a todos los clientes.
+                {t('adminTiersSettingsPage.description')}
             </Text>
 
             <form onSubmit={form.onSubmit(handleSaveChanges)}>
                 <Stack gap="lg">
-                    {/* Los campos ahora solo se deshabilitan si se está guardando */}
+                    {/* Usar t() para labels y descriptions */}
                     <Switch
-                        label="Habilitar Sistema de Tiers"
-                        description="Activa o desactiva el cálculo de niveles y sus beneficios."
+                        label={t('adminTiersSettingsPage.enableSystemLabel')}
+                        description={t('adminTiersSettingsPage.enableSystemDescription')}
                         disabled={isSaving}
                         {...form.getInputProps('tierSystemEnabled', { type: 'checkbox' })}
                     />
                     <Select
-                        label="Base para Calcular el Nivel"
-                        placeholder={!form.values.tierSystemEnabled ? "N/A (Sistema Deshabilitado)" : "Selecciona cómo se alcanza el nivel"}
+                        label={t('adminTiersSettingsPage.basisLabel')}
+                        placeholder={!form.values.tierSystemEnabled ? t('adminTiersSettingsPage.basisPlaceholderDisabled') : t('adminTiersSettingsPage.basisPlaceholder')}
                         data={basisOptions}
                         disabled={isSaving || !form.values.tierSystemEnabled}
                         clearable
-                        description="Métrica principal usada para determinar el nivel (Gasto, Visitas o Puntos Históricos)."
+                        description={t('adminTiersSettingsPage.basisDescription')}
                         {...form.getInputProps('tierCalculationBasis')}
                     />
                     <NumberInput
-                        label="Periodo de Cálculo (Meses)"
-                        placeholder={!form.values.tierCalculationBasis || form.values.tierCalculationBasis === TierCalculationBasis.POINTS_EARNED ? "N/A" : "Ej: 12"}
-                        description="Meses hacia atrás para calcular métrica (0/vacío = de por vida)."
+                        label={t('adminTiersSettingsPage.periodLabel')}
+                        placeholder={!form.values.tierCalculationBasis || form.values.tierCalculationBasis === TierCalculationBasis.POINTS_EARNED ? t('adminTiersSettingsPage.periodPlaceholderNA') : t('adminTiersSettingsPage.periodPlaceholder')}
+                        description={t('adminTiersSettingsPage.periodDescription')}
                         min={0}
                         step={1}
                         allowDecimal={false}
@@ -170,19 +170,19 @@ const TierSettingsPage: React.FC = () => {
                         {...form.getInputProps('tierCalculationPeriodMonths')}
                     />
                     <Select
-                        label="Política de Descenso de Nivel"
-                        placeholder="Selecciona cómo se bajan niveles"
+                        label={t('adminTiersSettingsPage.downgradePolicyLabel')}
+                        placeholder={t('adminTiersSettingsPage.downgradePolicyPlaceholder')}
                         data={policyOptions}
                         disabled={isSaving || !form.values.tierSystemEnabled}
                         clearable={false}
-                        description="Regla para bajar de nivel (Nunca, Revisión Periódica o Inactividad)."
+                        description={t('adminTiersSettingsPage.downgradePolicyDescription')}
                         {...form.getInputProps('tierDowngradePolicy')}
                     />
                     {form.values.tierDowngradePolicy === TierDowngradePolicy.AFTER_INACTIVITY && (
                         <NumberInput
-                            label="Meses de Inactividad para Descenso"
-                            placeholder="Ej: 6"
-                            description="Meses sin actividad para bajar de nivel."
+                            label={t('adminTiersSettingsPage.inactivityLabel')}
+                            placeholder={t('adminTiersSettingsPage.inactivityPlaceholder')}
+                            description={t('adminTiersSettingsPage.inactivityDescription')}
                             min={1}
                             step={1}
                             allowDecimal={false}
@@ -192,24 +192,22 @@ const TierSettingsPage: React.FC = () => {
                         />
                     )}
 
-                    {/* Mostrar error de guardado si existe */}
                     {error && (
-                        <Alert title="Error" color="red" icon={<IconAlertCircle size="1rem" />} mt="md" withCloseButton onClose={() => setError(null)}>
+                        <Alert title={t('common.error')} color="red" icon={<IconAlertCircle size="1rem" />} mt="md" withCloseButton onClose={() => setError(null)}>
                             {error}
                         </Alert>
-                     )}
+                    )}
 
-                    {/* Botón de Guardar (siempre visible, se habilita con cambios) */}
                     <Group justify="flex-end" mt="xl">
-                         <Button
+                        <Button
                             type="submit"
-                            disabled={!form.isDirty() || isSaving} // Solo se habilita si hay cambios y no se está guardando
+                            disabled={!form.isDirty() || isSaving}
                             loading={isSaving}
                             leftSection={<IconDeviceFloppy size={18} />}
                         >
-                            Guardar Cambios
+                            {t('adminTiersSettingsPage.saveButton')}
                         </Button>
-                     </Group>
+                    </Group>
                 </Stack>
             </form>
         </Paper>
@@ -217,5 +215,3 @@ const TierSettingsPage: React.FC = () => {
 };
 
 export default TierSettingsPage;
-
-// End of File: frontend/src/pages/admin/tiers/TierSettingsPage.tsx

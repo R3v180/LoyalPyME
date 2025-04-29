@@ -1,25 +1,27 @@
 // filename: frontend/src/components/customer/RewardList.tsx
-// Version: 1.0.0 (Initial extraction)
+// Version: 1.1.1 (Fix useTranslation destructuring)
 
 import React from 'react';
 import {
     SimpleGrid, Card, Button, Skeleton, Alert, Group, Text, Badge, ThemeIcon, Tooltip, Title
 } from '@mantine/core';
 import { IconGift, IconAlertCircle, IconInfoCircle } from '@tabler/icons-react';
+// --- CAMBIO: Importar i18n también ---
+import { useTranslation } from 'react-i18next';
+// --- FIN CAMBIO ---
 
-// Importamos el tipo DisplayReward (idealmente desde un archivo centralizado)
-// TODO: Mover DisplayReward a src/types/rewards.ts o similar
-import { DisplayReward } from '../../hooks/useCustomerRewardsData'; // Ajusta la ruta si es necesario
+import { DisplayReward } from '../../hooks/useCustomerRewardsData';
+
 
 interface RewardListProps {
     rewards: DisplayReward[];
-    userPoints: number | undefined; // Puntos del usuario para validar canje (puede ser undefined si userData es null)
-    redeemingRewardId: string | null; // ID del reward/gift en proceso de canje
-    loadingRewards: boolean; // Estado de carga de recompensas normales
-    loadingGrantedRewards: boolean; // Estado de carga de regalos
-    errorRewards: string | null; // Error al cargar recompensas/regalos
-    onRedeemPoints: (rewardId: string) => void; // Callback para canjear por puntos
-    onRedeemGift: (grantedRewardId: string, rewardName: string) => void; // Callback para canjear regalo
+    userPoints: number | undefined;
+    redeemingRewardId: string | null;
+    loadingRewards: boolean;
+    loadingGrantedRewards: boolean;
+    errorRewards: string | null;
+    onRedeemPoints: (rewardId: string) => void;
+    onRedeemGift: (grantedRewardId: string, rewardName: string) => void;
 }
 
 const RewardList: React.FC<RewardListProps> = ({
@@ -32,82 +34,87 @@ const RewardList: React.FC<RewardListProps> = ({
     onRedeemPoints,
     onRedeemGift
 }) => {
+    // --- CAMBIO: Obtener 't' y 'i18n' ---
+    const { t, i18n } = useTranslation();
+    // --- FIN CAMBIO ---
 
     const isLoading = loadingRewards || loadingGrantedRewards;
 
+    const formatDate = (dateString: string | undefined) => {
+        if (!dateString) return '?';
+        try {
+            // Ahora 'i18n' está disponible
+            return new Date(dateString).toLocaleDateString(i18n.language);
+        } catch { return '?'; }
+    };
+
     return (
         <>
-            <Title order={4} mb="md">Recompensas y Regalos</Title>
+            <Title order={4} mb="md">{t('customerDashboard.rewardsSectionTitle')}</Title>
 
             {isLoading ? (
-                // Esqueleto mientras carga
                 <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
                     {[1, 2, 3].map((i) => <Skeleton key={`sk-${i}`} height={180} />)}
                 </SimpleGrid>
             ) : errorRewards ? (
-                // Mensaje de error si falló la carga
-                <Alert icon={<IconAlertCircle size="1rem" />} title="Error de Recompensas" color="red" mt="lg">
-                    No se pudieron cargar las recompensas o regalos. {errorRewards}
+                <Alert icon={<IconAlertCircle size="1rem" />} title={t('common.error')} color="red" mt="lg">
+                   {t('customerDashboard.errorLoadingRewards', { error: errorRewards })}
                 </Alert>
             ) : rewards.length === 0 ? (
-                // Mensaje si no hay recompensas ni regalos
-                <Text>No hay recompensas ni regalos disponibles en este momento.</Text>
+                <Text>{t('customerDashboard.noRewardsAvailable')}</Text>
             ) : (
-                // Renderizar la lista
                 <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
                     {rewards.map((item) => (
                         <Card shadow="sm" padding="lg" radius="md" withBorder key={item.isGift ? `G-${item.grantedRewardId}` : `R-${item.id}`}>
                             {item.isGift ? (
                                 <>
-                                    {/* Card para Regalo */}
                                     <Group justify="space-between" mb="xs">
                                         <Title order={5}>{item.name}</Title>
                                         <ThemeIcon color="yellow" variant="light" radius="xl" size="lg">
-                                            <IconGift stroke={1.5} />
+                                             <IconGift stroke={1.5} />
                                         </ThemeIcon>
-                                    </Group>
+                                     </Group>
                                     {item.description && <Text size="sm" c="dimmed" mt="xs">{item.description}</Text>}
                                     <Group gap="xs" mt="md" justify='space-between'>
-                                        <Badge color="lime" variant='light' size="lg" radius="sm">Gratis</Badge>
-                                        <Tooltip multiline w={200} withArrow position="top" label={`Regalado por ${item.assignedByString} el ${new Date(item.assignedAt).toLocaleDateString()}`}>
-                                            <Group gap={4} style={{ cursor: 'help' }}>
+                                         <Badge color="lime" variant='light' size="lg" radius="sm">{t('customerDashboard.giftFree')}</Badge>
+                                        <Tooltip
+                                            multiline w={220} withArrow position="top"
+                                            label={t('customerDashboard.giftAssignedBy', { assigner: item.assignedByString, date: formatDate(item.assignedAt) })}
+                                        >
+                                             <Group gap={4} style={{ cursor: 'help' }}>
                                                 <IconInfoCircle size={16} stroke={1.5} style={{ display: 'block' }}/>
-                                                <Text size="xs" c="dimmed">Info</Text>
+                                                <Text size="xs" c="dimmed">{t('customerDashboard.giftInfo')}</Text>
                                             </Group>
-                                        </Tooltip>
+                                         </Tooltip>
                                     </Group>
-                                    <Button
+                                     <Button
                                         variant="filled" color="yellow" fullWidth mt="md" radius="md"
-                                        // Llama al callback onRedeemGift
                                         onClick={() => onRedeemGift(item.grantedRewardId!, item.name)}
-                                        // Estado de carga/deshabilitado
                                         disabled={redeemingRewardId === item.grantedRewardId || !!redeemingRewardId}
                                         loading={redeemingRewardId === item.grantedRewardId}
                                         leftSection={<IconGift size={16}/>}
-                                    >
-                                        Canjear Regalo
+                                     >
+                                        {t('customerDashboard.redeemGiftButton')}
                                     </Button>
-                                </>
+                                 </>
                             ) : (
                                 <>
-                                    {/* Card para Recompensa Normal */}
                                     <Title order={5}>{item.name}</Title>
-                                    {item.description && <Text size="sm" c="dimmed" mt="xs">{item.description}</Text>}
-                                    <Text fw={500} mt="md">{item.pointsCost} Puntos</Text>
-                                    <Button
+                                     {item.description && <Text size="sm" c="dimmed" mt="xs">{item.description}</Text>}
+                                     <Text fw={500} mt="md">{item.pointsCost} {t('customerDashboard.points')}</Text>
+                                     <Button
                                         variant="light" color="blue" fullWidth mt="md" radius="md"
-                                        // Llama al callback onRedeemPoints
                                         onClick={() => onRedeemPoints(item.id)}
-                                        // Estado de carga/deshabilitado (verifica puntos del usuario)
                                         disabled={typeof userPoints === 'undefined' || userPoints < item.pointsCost || redeemingRewardId === item.id || !!redeemingRewardId}
                                         loading={redeemingRewardId === item.id}
                                         leftSection={<IconGift size={16}/>}
-                                    >
-                                        {/* Mensaje dinámico del botón */}
-                                        {typeof userPoints !== 'undefined' && userPoints >= item.pointsCost ? 'Canjear Recompensa' : 'Puntos insuficientes'}
+                                     >
+                                        {typeof userPoints !== 'undefined' && userPoints >= item.pointsCost
+                                            ? t('customerDashboard.redeemRewardButton')
+                                            : t('customerDashboard.insufficientPoints')}
                                     </Button>
                                 </>
-                            )}
+                             )}
                         </Card>
                     ))}
                 </SimpleGrid>

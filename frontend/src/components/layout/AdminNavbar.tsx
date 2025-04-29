@@ -1,6 +1,4 @@
 // filename: frontend/src/components/layout/AdminNavbar.tsx
-// Version: 1.0.1 (Fix character encoding)
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { NavLink } from '@mantine/core';
@@ -12,22 +10,24 @@ import {
     IconStairsUp,
     IconSettings,
 } from '@tabler/icons-react';
+import { useTranslation } from 'react-i18next'; // Importar hook
 
-// Props que necesita el componente AdminNavbar
 interface AdminNavbarProps {
-    pathname: string; // Para determinar qué enlace está activo
+    pathname: string;
+    closeNavbar: () => void;
 }
 
-const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname }) => {
-    // Array de configuración para los enlaces de navegación
-    // Facilita añadir/quitar/modificar enlaces en el futuro
+const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname, closeNavbar }) => {
+    const { t } = useTranslation(); // Hook de traducción
+
+    // Usar t() para definir las etiquetas
     const navLinks = [
-        { to: "/admin/dashboard", label: "Dashboard", icon: IconGauge },
-        { to: "/admin/dashboard/rewards", label: "Recompensas", icon: IconGift },
-        { to: "/admin/dashboard/generate-qr", label: "Generar QR", icon: IconQrcode },
-        { to: "/admin/dashboard/customers", label: "Clientes", icon: IconUsers },
-        { to: "/admin/dashboard/tiers/manage", label: "Gestionar Niveles", icon: IconStairsUp },
-        { to: "/admin/dashboard/tiers/settings", label: "Config. Niveles", icon: IconSettings }, // Corregido: Config.
+        { to: "/admin/dashboard", label: t('adminCommon.dashboard'), icon: IconGauge },
+        { to: "/admin/dashboard/rewards", label: t('adminCommon.rewards'), icon: IconGift },
+        { to: "/admin/dashboard/generate-qr", label: t('adminCommon.generateQr'), icon: IconQrcode },
+        { to: "/admin/dashboard/customers", label: t('adminCommon.customers'), icon: IconUsers },
+        { to: "/admin/dashboard/tiers/manage", label: t('adminCommon.manageTiers'), icon: IconStairsUp },
+        { to: "/admin/dashboard/tiers/settings", label: t('adminCommon.tierSettings'), icon: IconSettings },
     ];
 
     return (
@@ -35,11 +35,12 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname }) => {
             {navLinks.map((link) => (
                 <NavLink
                     key={link.to}
-                    label={link.label}
+                    label={link.label} // La etiqueta ya viene traducida
                     leftSection={<link.icon size="1rem" stroke={1.5} />}
                     component={Link}
                     to={link.to}
-                    active={pathname === link.to} // Comprueba si la ruta actual coincide
+                    active={pathname.startsWith(link.to) && (pathname === link.to || pathname.startsWith(link.to + '/'))}
+                    onClick={closeNavbar}
                 />
             ))}
         </>
@@ -47,5 +48,3 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname }) => {
 };
 
 export default AdminNavbar;
-
-// End of File: frontend/src/components/layout/AdminNavbar.tsx

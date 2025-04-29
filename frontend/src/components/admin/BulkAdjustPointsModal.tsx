@@ -1,6 +1,4 @@
 // filename: frontend/src/components/admin/BulkAdjustPointsModal.tsx
-// Version: 1.0.3 (Fix encoding, remove meta-comments)
-
 import React, { useState, useEffect } from 'react';
 import {
     Modal, NumberInput, TextInput, Button, Group, Stack
@@ -8,15 +6,16 @@ import {
 import { useForm, zodResolver } from '@mantine/form';
 import { z } from 'zod';
 import { IconPlusMinus } from '@tabler/icons-react';
-
-// Esquema de validación con Zod
-const schema = z.object({
-  amount: z.number().refine(val => val !== 0, { message: 'La cantidad no puede ser cero' }),
-  reason: z.string().optional(),
-});
+import { useTranslation } from 'react-i18next'; // Importar hook
 
 // Tipo inferido del esquema
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof createValidationSchema>>;
+
+// Función para crear el esquema de validación (para poder usar t())
+const createValidationSchema = (t: Function) => z.object({
+  amount: z.number().refine(val => val !== 0, { message: t('validation.cannotBeZero', 'La cantidad no puede ser cero') }),
+  reason: z.string().optional(),
+});
 
 interface BulkAdjustPointsModalProps {
     opened: boolean;
@@ -31,38 +30,39 @@ const BulkAdjustPointsModal: React.FC<BulkAdjustPointsModalProps> = ({
     onSubmit,
     numberOfCustomers
 }) => {
+    const { t } = useTranslation(); // Hook de traducción
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const form = useForm<FormValues>({
         initialValues: { amount: 0, reason: '', },
-        validate: zodResolver(schema),
+        // Pasar t al crear el schema
+        validate: zodResolver(createValidationSchema(t)),
     });
 
-    // Resetear formulario cuando se abre el modal
     useEffect(() => {
         if (opened) {
             form.reset();
-            setIsSubmitting(false); // Asegurarse de resetear estado de envío también
+            setIsSubmitting(false);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [opened]); // No incluir form aquí para evitar bucles si la referencia cambia
+    }, [opened]);
 
     const handleSubmit = async (values: FormValues) => {
         setIsSubmitting(true);
         try {
-            await onSubmit(values); // Llama a la función onSubmit pasada por el padre
-            // El padre (AdminCustomerManagementPage) se encarga de las notificaciones y de cerrar el modal si onSubmit tiene éxito
+            await onSubmit(values);
+            // Notificaciones y cierre manejados por el padre
         } catch (error) {
             console.error("Error during bulk adjust points submission callback:", error);
-            // El padre ya debería mostrar notificación de error si onSubmit rechaza la promesa
+            // Notificación de error manejada por el padre
         } finally {
-            // No reseteamos isSubmitting aquí si el padre no cierra el modal en caso de error
-            // Lo hacemos en el useEffect al reabrir o al cerrar explícitamente.
+            // Decidimos si resetear isSubmitting aquí o dejarlo al padre/reapertura
             // setIsSubmitting(false);
         }
     };
 
-    const modalTitle = `Ajustar Puntos para ${numberOfCustomers} Cliente(s) Seleccionado(s)`;
+    // Usar t() para el título del modal
+    const modalTitle = t('adminCustomersPage.bulkAdjustPointsModalTitle', { count: numberOfCustomers });
 
     return (
         <Modal
@@ -74,8 +74,8 @@ const BulkAdjustPointsModal: React.FC<BulkAdjustPointsModalProps> = ({
             <form onSubmit={form.onSubmit(handleSubmit)}>
                 <Stack>
                     <NumberInput
-                        label="Cantidad a Añadir/Restar"
-                        placeholder="Ej: 50 (añadir) o -20 (restar)"
+                        label={t('adminCustomersPage.bulkAdjustPointsAmountLabel')}
+                        placeholder={t('adminCustomersPage.bulkAdjustPointsAmountPlaceholder')}
                         required
                         allowNegative
                         {...form.getInputProps('amount')}
@@ -83,23 +83,22 @@ const BulkAdjustPointsModal: React.FC<BulkAdjustPointsModalProps> = ({
                         data-autofocus // Enfocar este campo al abrir
                     />
                     <TextInput
-                        label="Razón (Opcional)" // Corregido: Razón
-                        placeholder="Ej: Bonificación masiva, Corrección general" // Corregido: Bonificación, Corrección
+                        label={t('adminCustomersPage.bulkAdjustPointsReasonLabel')}
+                        placeholder={t('adminCustomersPage.bulkAdjustPointsReasonPlaceholder')}
                         {...form.getInputProps('reason')}
                         disabled={isSubmitting}
                     />
                     <Group justify="flex-end" mt="lg">
                         <Button variant="default" onClick={onClose} disabled={isSubmitting}>
-                            Cancelar
+                            {t('common.cancel')}
                         </Button>
                         <Button
                             type="submit"
                             loading={isSubmitting}
                             leftSection={<IconPlusMinus size={16} />}
-                            // Deshabilitar si el form no es válido o amount es 0
                             disabled={!form.isValid() || form.values.amount === 0 || isSubmitting}
                         >
-                            Ajustar Puntos Masivamente
+                            {t('adminCustomersPage.bulkAdjustPointsButton')}
                         </Button>
                     </Group>
                 </Stack>
@@ -109,5 +108,3 @@ const BulkAdjustPointsModal: React.FC<BulkAdjustPointsModalProps> = ({
 };
 
 export default BulkAdjustPointsModal;
-
-// End of File: frontend/src/components/admin/BulkAdjustPointsModal.tsx

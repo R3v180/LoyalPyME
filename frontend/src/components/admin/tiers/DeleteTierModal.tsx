@@ -1,40 +1,40 @@
 // filename: frontend/src/components/admin/tiers/DeleteTierModal.tsx
-// Version: 1.0.1 (Fix character encoding)
-
 import React from 'react';
 import { Modal, Text, Button, Group } from '@mantine/core';
+import { useTranslation } from 'react-i18next'; // Importar hook
 
 // --- Props del Componente ---
 interface DeleteTierModalProps {
-    opened: boolean;            // Si el modal está abierto
-    onClose: () => void;        // Función para cerrar el modal
-    onConfirm: () => void;      // Función a llamar al confirmar la eliminación
-    tierName?: string | null;   // Nombre del tier a eliminar (opcional, para mostrar)
-    loading?: boolean;          // Estado de carga opcional para deshabilitar botones
+    opened: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    tierName?: string | null;
+    loading?: boolean;
 }
 // --- Fin Props ---
 
 const DeleteTierModal: React.FC<DeleteTierModalProps> = ({ opened, onClose, onConfirm, tierName, loading }) => {
+    const { t } = useTranslation(); // Hook de traducción
+
     return (
         <Modal
             opened={opened}
             onClose={onClose}
-            title="Confirmar Eliminación" // Corregido: Eliminación
+            title={t('adminTiersManagePage.deleteModalTitle')} // Usar t() para el título
             centered
             size="sm"
             overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
         >
+            {/* Usar t() para el mensaje, pasando el nombre del tier */}
             <Text size="sm">
-                ¿Estás seguro de que quieres eliminar el nivel {/* Corregido: Estás */}
-                {tierName ? ` "${tierName}"` : ' seleccionado'}?
-                Esta acción no se puede deshacer. {/* Corregido: acción */}
+                {t('adminTiersManagePage.deleteModalMessage', { name: tierName || '' })}
             </Text>
             <Group justify="flex-end" mt="lg">
                 <Button variant="default" onClick={onClose} disabled={loading}>
-                    Cancelar
+                    {t('common.cancel')}
                 </Button>
                 <Button color="red" onClick={onConfirm} loading={loading}>
-                    Eliminar Nivel
+                    {t('adminTiersManagePage.deleteModalConfirm')}
                 </Button>
             </Group>
         </Modal>
@@ -42,5 +42,3 @@ const DeleteTierModal: React.FC<DeleteTierModalProps> = ({ opened, onClose, onCo
 };
 
 export default DeleteTierModal;
-
-// End of File: frontend/src/components/admin/tiers/DeleteTierModal.tsx

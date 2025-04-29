@@ -1,17 +1,16 @@
 // filename: frontend/src/components/admin/tiers/EditTierModal.tsx
-// Version: 1.0.1 (Assume component path, fix encoding, clean comments)
-
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Group } from '@mantine/core';
 import { useForm, zodResolver } from '@mantine/form';
 import { z } from 'zod';
 import { notifications } from '@mantine/notifications';
 import { IconDeviceFloppy, IconCheck, IconAlertCircle } from '@tabler/icons-react';
-import axiosInstance from '../../../services/axiosInstance'; // Ajusta ruta si es necesario
-import TierForm from './TierForm'; // Reutilizamos el mismo formulario
+import axiosInstance from '../../../services/axiosInstance';
+import TierForm from './TierForm'; // Este componente también necesita i18n
+import { useTranslation } from 'react-i18next'; // Importar hook
 
 // --- Tipos ---
-interface Tier { // Tipo completo necesario para inicializar el form
+interface Tier {
     id: string;
     name: string;
     level: number;
@@ -21,28 +20,30 @@ interface Tier { // Tipo completo necesario para inicializar el form
     isActive: boolean;
 }
 
-// Esquema Zod (el mismo que para crear)
-const tierFormSchema = z.object({
-    name: z.string().min(1, { message: 'El nombre es obligatorio' }),
-    level: z.number().int().min(0, { message: 'El nivel debe ser 0 o mayor' }),
-    minValue: z.number().min(0, { message: 'El valor mínimo debe ser 0 o mayor' }), // Corregido: mínimo
+// Función para crear el esquema Zod, aceptando t
+const createTierFormSchema = (t: Function) => z.object({
+    name: z.string().min(1, { message: t('validation.nameRequired', 'El nombre es obligatorio') }),
+    level: z.number().int().min(0, { message: t('validation.levelMin0', 'El nivel debe ser 0 o mayor') }),
+    minValue: z.number().min(0, { message: t('validation.minValueMin0', 'El valor mínimo debe ser 0 o mayor') }),
     description: z.string().optional(),
     benefitsDescription: z.string().optional(),
     isActive: z.boolean(),
 });
-type TierFormValues = z.infer<typeof tierFormSchema>;
+
+type TierFormValues = z.infer<ReturnType<typeof createTierFormSchema>>;
 // --- Fin Tipos ---
 
 // --- Props del Componente ---
 interface EditTierModalProps {
     opened: boolean;
     onClose: () => void;
-    onSuccess: () => void; // Callback para refrescar la lista
-    tier: Tier | null;     // El Tier a editar (o null si no hay)
+    onSuccess: () => void;
+    tier: Tier | null;
 }
 // --- Fin Props ---
 
 const EditTierModal: React.FC<EditTierModalProps> = ({ opened, onClose, onSuccess, tier }) => {
+    const { t } = useTranslation(); // Hook de traducción
     const [isSaving, setIsSaving] = useState<boolean>(false);
 
     const form = useForm<TierFormValues>({
@@ -50,58 +51,52 @@ const EditTierModal: React.FC<EditTierModalProps> = ({ opened, onClose, onSucces
             name: '', level: 0, minValue: 0, description: '',
             benefitsDescription: '', isActive: true,
         },
-        validate: zodResolver(tierFormSchema),
+        validate: zodResolver(createTierFormSchema(t)), // Pasar t al resolver
     });
 
-    // Efecto para cargar datos del Tier cuando el modal se abre o el Tier cambia
     useEffect(() => {
         if (tier && opened) {
-            // Seteamos los valores del formulario con los datos del Tier
             form.setValues({
                 name: tier.name,
                 level: tier.level,
                 minValue: tier.minValue,
-                // Manejar posibles null para campos opcionales
                 description: tier.description ?? '',
                 benefitsDescription: tier.benefitsDescription ?? '',
                 isActive: tier.isActive,
             });
         } else if (!opened) {
-            // Si el modal se cierra, reseteamos el formulario
             form.reset();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tier, opened]);
 
-
     const handleSubmit = async (values: TierFormValues) => {
-        if (!tier) return; // Seguridad
-
+        if (!tier) return;
         setIsSaving(true);
         try {
             await axiosInstance.put(`/tiers/tiers/${tier.id}`, values);
             notifications.show({
-                 title: 'Nivel Actualizado',
-                 message: `El nivel "${values.name}" se ha actualizado correctamente.`,
-                 color: 'green',
-                 icon: <IconCheck size={18} />
+                title: t('adminTiersManagePage.updateSuccessTitle'),
+                message: t('adminTiersManagePage.updateSuccessMessage', { name: values.name }),
+                color: 'green',
+                icon: <IconCheck size={18} />
             });
-            onSuccess(); // Llamar al callback para refrescar la lista
-            onClose(); // Cerrar el modal
+            onSuccess();
+            onClose();
         } catch (err: any) {
-             console.error(`Error updating tier ${tier.id}:`, err);
-             notifications.show({
-                 title: 'Error al Actualizar',
-                 message: err.response?.data?.message || "No se pudo actualizar el nivel.",
-                 color: 'red',
-                 icon: <IconAlertCircle size={18} />
-             });
+            console.error(`Error updating tier ${tier.id}:`, err);
+            const apiError = err.response?.data?.message || t('adminTiersManagePage.updateErrorMessage');
+            notifications.show({
+                title: t('adminTiersManagePage.updateErrorTitle'),
+                message: apiError,
+                color: 'red',
+                icon: <IconAlertCircle size={18} />
+            });
         } finally {
-             setIsSaving(false);
+            setIsSaving(false);
         }
     };
 
-    // Función para manejar el cierre (no necesita reset explícito por el useEffect)
     const handleClose = () => {
         onClose();
     }
@@ -110,20 +105,19 @@ const EditTierModal: React.FC<EditTierModalProps> = ({ opened, onClose, onSucces
         <Modal
             opened={opened}
             onClose={handleClose}
-            title={`Editar Nivel: ${tier?.name || ''}`}
+            // Usar t() para el título
+            title={t('adminTiersManagePage.editModalTitle', { name: tier?.name || '' })}
             centered
             size="md"
             overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
         >
             <form onSubmit={form.onSubmit(handleSubmit)}>
-                {/* Renderizamos el mismo TierForm */}
+                {/* TierForm necesita i18n internamente */}
                 <TierForm form={form} />
-
-                {/* Botones de acción */}
                 <Group justify="flex-end" mt="lg">
-                    <Button variant="default" onClick={handleClose} disabled={isSaving}>Cancelar</Button>
+                    <Button variant="default" onClick={handleClose} disabled={isSaving}>{t('common.cancel')}</Button>
                     <Button type="submit" loading={isSaving} leftSection={<IconDeviceFloppy size={18} />}>
-                        Guardar Cambios
+                        {t('common.save')}
                     </Button>
                 </Group>
             </form>
@@ -132,5 +126,3 @@ const EditTierModal: React.FC<EditTierModalProps> = ({ opened, onClose, onSucces
 };
 
 export default EditTierModal;
-
-// End of File: frontend/src/components/admin/tiers/EditTierModal.tsx
