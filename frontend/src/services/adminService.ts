@@ -1,7 +1,7 @@
 // filename: frontend/src/services/adminService.ts
-// Version: 1.1.0 (Update AdminOverviewStats interface for trend data)
+// Version: 1.1.1 (Fix character encoding)
 
-import axiosInstance from './axiosInstance'; // Ajusta la ruta si es necesario
+import axiosInstance from './axiosInstance'; // Usar instancia configurada
 
 /**
  * Interface actualizada que define la estructura de los datos de estadísticas
@@ -9,13 +9,13 @@ import axiosInstance from './axiosInstance'; // Ajusta la ruta si es necesario
  * incluyendo datos del periodo anterior para calcular tendencias.
  */
 export interface AdminOverviewStats {
-  totalActiveCustomers: number;         // Valor puntual
-  newCustomersLast7Days: number;
-  newCustomersPrevious7Days: number; // <--- NUEVO
-  pointsIssuedLast7Days: number;
-  pointsIssuedPrevious7Days: number; // <--- NUEVO
-  rewardsRedeemedLast7Days: number;   // Nota: Solo cuenta regalos canjeados actualmente
-  rewardsRedeemedPrevious7Days: number;// <--- NUEVO
+    totalActiveCustomers: number;       // Valor puntual
+    newCustomersLast7Days: number;
+    newCustomersPrevious7Days: number; // Para tendencia
+    pointsIssuedLast7Days: number;
+    pointsIssuedPrevious7Days: number; // Para tendencia
+    rewardsRedeemedLast7Days: number;   // Nota: Solo cuenta regalos canjeados actualmente
+    rewardsRedeemedPrevious7Days: number;// Para tendencia
 }
 
 /**
@@ -27,20 +27,19 @@ export interface AdminOverviewStats {
 export const getAdminDashboardStats = async (): Promise<AdminOverviewStats> => {
   console.log('[AdminService] Fetching dashboard overview stats (including previous period)...');
   try {
-    // La petición GET sigue siendo la misma, pero ahora espera la nueva estructura de datos
+    // La petición GET sigue siendo la misma, espera la nueva estructura
     const response = await axiosInstance.get<AdminOverviewStats>('/admin/stats/overview');
 
-    // AxiosInstance ya está tipado con la NUEVA interfaz AdminOverviewStats,
-    // por lo que response.data contendrá (o debería contener) todos los campos.
+    // AxiosInstance ya está tipado con la interfaz AdminOverviewStats
     console.log('[AdminService] Stats received (with previous period):', response.data);
     return response.data;
 
   } catch (error: any) {
     console.error('[AdminService] Error fetching extended dashboard stats:', error);
     const errorMessage = error.response?.data?.message ||
-                         error.message ||
-                         'Error desconocido al obtener estadísticas extendidas.';
-    // Relanzamos para que el componente lo maneje
+                           error.message ||
+                           'Error desconocido al obtener estadísticas extendidas.'; // Corregido: estadísticas, desconocido
+    // Relanzamos para que el hook/componente que llama lo maneje
     throw new Error(errorMessage);
   }
 };

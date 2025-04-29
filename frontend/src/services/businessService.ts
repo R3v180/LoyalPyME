@@ -1,5 +1,5 @@
 // filename: frontend/src/services/businessService.ts
-// Version: 1.1.0 (Use relative URL for Vite proxy)
+// Version: 1.1.1 (Remove meta-comments, fix encoding)
 
 import axios from 'axios'; // Usamos axios base, NO axiosInstance, porque es una ruta pública
 
@@ -12,10 +12,9 @@ export interface BusinessOption {
   name: string;
 }
 
-// --- CAMBIO: Usar ruta relativa para que funcione con el proxy de Vite ---
-// El proxy definido en vite.config.ts para '/public' redirigirá esto a http://localhost:3000/public/...
+// Usar ruta relativa para que funcione con el proxy de Vite
+// El proxy definido en vite.config.ts para '/public' redirigirá esto
 const PUBLIC_BUSINESS_LIST_URL = '/public/businesses/public-list';
-// --- FIN CAMBIO ---
 
 
 /**
@@ -26,17 +25,18 @@ const PUBLIC_BUSINESS_LIST_URL = '/public/businesses/public-list';
 export const getPublicBusinessList = async (): Promise<BusinessOption[]> => {
   console.log('[BusinessService] Fetching public business list...');
   try {
-    // La llamada ahora usa la URL relativa PUBLIC_BUSINESS_LIST_URL
+    // La llamada ahora usa la URL relativa
     const response = await axios.get<BusinessOption[]>(PUBLIC_BUSINESS_LIST_URL);
 
     console.log(`[BusinessService] Received ${response.data?.length ?? 0} businesses.`);
-    return response.data || [];
+    return response.data || []; // Devolver array vacío si la data es null/undefined
 
   } catch (error: any) {
     console.error('[BusinessService] Error fetching public business list:', error);
     const errorMessage = error.response?.data?.message ||
-                         error.message ||
-                         'Error desconocido al obtener la lista de negocios.';
+                           error.message ||
+                           'Error desconocido al obtener la lista de negocios.'; // Corregido: desconocido
+    // Relanzar el error para que el componente que llama lo maneje (ej: en RegisterPage)
     throw new Error(errorMessage);
   }
 };
