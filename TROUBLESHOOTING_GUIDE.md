@@ -1,6 +1,6 @@
 # Guía Rápida de Troubleshooting - LoyalPyME
 
-**Fecha de Última Actualización:** 28 de Abril de 2025
+**Fecha de Última Actualización:** 29 de Abril de 2025
 
 ---
 
@@ -10,152 +10,137 @@ Esta guía recopila los problemas técnicos más comunes encontrados durante el 
 
 ## Problemas Comunes y Soluciones
 
-_(Las secciones 1-9 y 11-14 se mantienen con ajustes menores o sin cambios)_
-
 ### 1. Backend: Inestabilidad, Errores o `SyntaxError` con `yarn dev`
 
-- **Síntomas:** El servidor backend (`yarn dev`) se reinicia inesperadamente, muestra errores inconsistentes (`SyntaxError: Cannot use import statement outside a module`), o no refleja cambios correctamente.
-- **Causa Raíz:** Conflictos o inestabilidades potenciales con la combinación de `nodemon`, `ts-node` / `ts-node-dev` y el entorno de ejecución (Node.js v20 en Windows en este caso) respecto a la interpretación de módulos CommonJS vs ES Modules, incluso con `tsconfig.json` configurado para `commonjs`. Las configuraciones habituales (`--files`, `ts-node` en `tsconfig.json`, `ts-node-dev`) no resolvieron el problema.
-- **Solución Recomendada (Temporal):** Optar por el flujo de build y ejecución que **sí** funciona de forma estable:
-  1.  **Detén** el servidor backend (`Ctrl+C`).
-  2.  **(Opcional, si hay dudas) Elimina `dist`:** `rm -rf dist` (Linux/Mac/Git Bash) o `Remove-Item -Recurse -Force ./dist` (PowerShell).
-  3.  **Compila** el código TypeScript a JavaScript: `yarn build` (ejecuta `npx tsc`). Verifica que no haya errores de compilación.
-  4.  **Ejecuta** el código compilado: `node dist/index.js`.
-  5.  **Importante:** Repetir pasos (al menos 1, 3 y 4) después de cada cambio en el código `.ts` del backend.
+- **Síntomas:** El servidor backend (`yarn dev`) se reinicia inesperadamente, muestra `SyntaxError: Cannot use import statement outside a module`, o no refleja cambios.
+- **Causa Raíz:** Conflictos con `ts-node` / `ts-node-dev` y el manejo de módulos ES/CJS en Node v18/v20 en este entorno.
+- **Solución Recomendada (Workaround Estable):** Usar el método de **dos terminales**:
+  1.  **Terminal 1 (Compilación continua):** `cd backend && npx tsc --watch`
+  2.  **Terminal 2 (Ejecución y reinicio):** `cd backend && npx nodemon dist/index.js`
+  3.  Al guardar cambios en archivos `.ts`, `tsc --watch` recompilará a `dist/`, y `nodemon` reiniciará automáticamente el servidor `node` que lee desde `dist/`.
+- **Alternativa (Manual):** `yarn build && node dist/index.js` (requiere parar y repetir tras cada cambio).
 
 ### 2. Frontend -> Backend: Fallo de Login o Acceso a Rutas Públicas (Error 401 / Conexión)
 
-- **Síntomas:** Errores de "Credenciales inválidas" o "Error de red" en login/registro/recuperación contraseña. Consola del navegador muestra 401 o conexión rechazada para `/auth/...`.
-- **Causa Raíz:** Uso de `axiosInstance` (con `baseURL=/api` y token automático) para rutas que deberían ser públicas y no requieren token (ej: `/auth/login`, `/auth/register`). El middleware `authenticateToken` aplicado globalmente a `/api` en `index.ts` interceptaba estas llamadas y devolvía 401.
-- **Solución:**
-  1.  **Backend (`index.ts` v1.3.0):** Eliminar `app.use('/api', authenticateToken);`. Aplicar `authenticateToken` y `checkRole` _individualmente_ a cada router protegido montado bajo `/api` (ej: `/api/profile`, `/api/admin`, etc.). Montar `authRouter` en `/api/auth` (sin `authenticateToken` aplicado antes).
-  2.  **Frontend (`LoginPage.tsx` v1.3.0, `RegisterPage.tsx` v1.4.0):** Asegurarse de usar `axiosInstance` (importado desde `../services/axiosInstance`) para llamar a las rutas relativas `/auth/login` y `/auth/register`. El `baseURL='/api'` de `axiosInstance` construirá la URL correcta `/api/auth/...` que ahora es manejada correctamente por el backend.
-  3.  **Frontend (Rutas 100% Públicas):** Para llamadas que _nunca_ necesitan token y _no_ están bajo `/api` (como `GET /public/businesses/public-list`), seguir usando `axios` base con la URL relativa o completa según la configuración del proxy de Vite.
+- **Síntomas:** Errores de "Credenciales inválidas", "Error de red", 401, o conexión rechazada en login/registro/recuperación contraseña.
+- **Estado:** **RESUELTO** (Backend v1.3.0+, Frontend v1.3.0+)
+- **Causa Raíz Antigua:** Middleware `authenticateToken` aplicado globalmente a `/api`, interceptando llamadas públicas a `/api/auth/...`.
+- **Solución Aplicada:** Middleware `authenticateToken` y `checkRole` se aplican ahora individualmente solo a las rutas protegidas en `backend/src/index.ts`. `authRouter` se monta en `/api/auth` sin autenticación previa. Frontend usa `axiosInstance` con ruta relativa para `/auth/...`.
 
 ### 3. Backend: Error de Build `TS1192: Module ... has no default export`
 
-- **Síntomas:** `yarn build` falla con este error.
-- **Causa Raíz:** `import Nombre from '...'` cuando el módulo exportador no tiene `export default`.
-- **Solución:** Añadir `export default` en el origen o cambiar a `import { Nombre } from '...'` o `import * as Nombre from '...'`.
+- **Síntomas:** `yarn build` falla.
+- **Causa Raíz:** `import Nombre from '...'` cuando el módulo no tiene `export default`.
+- **Solución:** Cambiar a `import { Nombre } from '...'` o `import * as Nombre from '...'`.
 
 ### 4. PowerShell: Errores de Sintaxis o Parámetros al Usar `curl`
 
-- **Síntomas:** `curl` (alias de `Invoke-WebRequest`) no reconoce parámetros `-X`, `-H`, `-d` como el `curl` estándar. Error "No se puede enlazar el parámetro 'Headers'. No se puede convertir el valor ... al tipo ...IDictionary".
-- **Solución:** Usar el cmdlet nativo `Invoke-WebRequest` o `Invoke-RestMethod` con la sintaxis de parámetros de PowerShell:
-  - `-Method GET` / `-Method POST`
-  - `-Headers @{ "HeaderName" = "HeaderValue"; "OtherHeader" = "Value" }` (formato Hashtable para cabeceras)
-  - `-ContentType "application/json"`
-  - `-Body $jsonData` (donde `$jsonData` puede ser un string JSON o un objeto PowerShell convertido con `ConvertTo-Json`)
-  - `-Uri "http://..."`
+- **Síntomas:** `curl` (alias de `Invoke-WebRequest`) no reconoce parámetros `-X`, `-H`, `-d`. Error "No se puede enlazar el parámetro...".
+- **Solución:** Usar `Invoke-WebRequest` o `Invoke-RestMethod` con sintaxis PowerShell (`-Method`, `-Headers @{}`, `-Body`, `-ContentType`, `-Uri`).
 
 ### 5. PowerShell: Error de Parseo JSON con `Invoke-RestMethod -Body`
 
-- **Síntomas:** Falla `Invoke-RestMethod` con JSON complejo en `-Body`. Backend reporta JSON malformado.
-- **Solución:** Construir el cuerpo como hashtable PowerShell (`@{clave = 'valor'; objeto = @{ anidado = $true }}`) y pasarlo a `ConvertTo-Json -Depth N` (donde N es la profundidad necesaria) antes de asignarlo a `-Body`. Ejemplo: `-Body ($miHashtable | ConvertTo-Json -Depth 5)`.
+- **Síntomas:** Falla `Invoke-RestMethod` con JSON complejo. Backend reporta JSON malformado.
+- **Solución:** Construir cuerpo como hashtable PowerShell (`@{...}`) y pasar a `ConvertTo-Json -Depth N` antes de asignar a `-Body`.
 
-### 6. Backend: Cambios en Código Fuente (`.ts`) No Se Reflejan en Ejecución (`node dist/index.js`)
+### 6. Backend: Cambios en Código Fuente (`.ts`) No Se Reflejan en Ejecución
 
-- **Síntomas:** Modificas `.ts`, `yarn build` OK, pero la app se comporta igual que antes.
-- **Causa Raíz:** El proceso `node` sigue usando la versión anterior cargada en memoria o la carpeta `dist` no se actualizó correctamente.
-- **Solución Crítica:** Después de **cada** `yarn build` exitoso, **SIEMPRE DETENER** (`Ctrl+C`) y **REINICIAR** (`node dist/index.js`) el servidor backend. Si persiste, **forzar limpieza:** `rm -rf dist && yarn build && node dist/index.js`.
+- **Síntomas:** Modificas `.ts`, `yarn build` OK (o `tsc -w` compila), pero la app se comporta igual.
+- **Causa Raíz:** El proceso `node` (manejado por `nodemon` en Terminal 2) no se reinició o no leyó los cambios compilados en `dist/`.
+- **Solución (con método 2 terminales):** Asegúrate de que `nodemon` (Terminal 2) detecta los cambios en `dist/` y muestra "[nodemon] restarting due to changes...". Si no lo hace, verifica que `tsc --watch` (Terminal 1) está compilando sin errores. Como último recurso, para y reinicia `nodemon` (Terminal 2).
 
 ### 7. Frontend: Funcionalidad No Se Aplica o Elementos No Aparecen Tras Actualizar Código (`yarn dev`)
 
 - **Síntomas:** Botón no hace nada, elemento falta, estilo viejo, cambio en `vite.config.ts` no aplica.
-- **Causa Raíz:** `yarn dev` (Vite HMR) no detectó el cambio, caché del navegador, archivo no guardado/incorrecto, **cambio en `vite.config.ts` requiere reinicio**.
-- **Solución:** 1. Verificar/Reemplazar contenido archivo local. 2. Verificar terminal `yarn dev`. 3. Refresco forzado navegador (Ctrl+Shift+R). 4. **Reiniciar** `yarn dev` (`Ctrl+C` y `yarn dev --host`), especialmente tras cambios en `vite.config.ts`.
+- **Causa Raíz:** HMR falló, caché navegador, archivo no guardado, **cambio en `vite.config.ts` requiere reinicio**.
+- **Solución:** 1. Verificar código local. 2. Verificar terminal `yarn dev`. 3. Refresco forzado navegador (Ctrl+Shift+R). 4. **Reiniciar** `yarn dev` (`Ctrl+C` y `yarn dev --host`), especialmente tras cambios en `vite.config.ts`.
 
 ### 8. General: Mensajes de Éxito/Error en UI en Idioma Incorrecto
 
-- **Síntomas:** Notificaciones Mantine o alertas en inglés en lugar de español.
-- **Causa Raíz:** Mensajes generados en el **backend** (controladores/servicios) no traducidos.
-- **Solución:** Localizar y traducir el string en el archivo `.ts` del backend. Recompilar y reiniciar backend. _(Nota: Esto se solucionará de forma global al implementar i18n en frontend)_.
+- **Síntomas:** Notificaciones Mantine o alertas en inglés.
+- **Estado:** Parcialmente Mitigado (Codificación), Solución Pendiente (i18n).
+- **Causa Raíz:** Mensajes hardcodeados en inglés en el código (backend o frontend). Problemas de codificación de caracteres (ej: `Ã³`).
+- **Solución Aplicada Parcial:** Se corrigieron la mayoría de los problemas de codificación (`Ã³`, etc.) durante la limpieza.
+- **Solución Pendiente:** Implementar **internacionalización (i18n)** en el frontend para manejar todos los textos de UI de forma centralizada y traducible.
 
 ### 9. TypeScript: Errores Relacionados con Dependencias Circulares (`TS2303`, `TS2459`, etc.)
 
-- **Síntomas:** Errores de ciclo de importación entre archivos (ej. servicio importa de controlador y viceversa).
-- **Solución:** Mover la definición causante del ciclo (interfaz, tipo) a un **archivo separado e independiente** (`.dto.ts`, `.types.ts`) e importar desde allí en ambos archivos originales.
+- **Síntomas:** Errores de ciclo de importación entre archivos.
+- **Estado:** RESUELTO (Detectado y corregido en `tier-logic.service` / `tier-logic.helpers`).
+- **Solución Aplicada:** Mover la función causante del ciclo o rediseñar para que una de las partes devuelva datos en lugar de llamar a la otra.
 
-### 10. TypeScript: Error `TS2307: Cannot find module '...'` al Construir o en Editor
+### 10. TypeScript: Error `TS2307: Cannot find module '...'`
 
-- **Síntomas:** `yarn build` falla o VSCode muestra error, no encuentra un módulo importado.
-- **Causa Raíz:** Ruta incorrecta en `import` (`../`, `../../`, nombre archivo/carpeta). Suele pasar tras mover/renombrar archivos o por despiste al generar código.
-- **Solución:** Verificar y corregir la ruta en la sentencia `import` en el archivo que da el error. Comprobar la ubicación real y nombre exacto (mayús/minús) del archivo importado. _(Ej: Corregido en `LoginPage.tsx` y `RegisterPage.tsx`)_.
+- **Síntomas:** `yarn build` falla o editor muestra error, no encuentra módulo importado.
+- **Causa Raíz:** Ruta incorrecta en `import`.
+- **Solución:** Verificar y corregir la ruta relativa (`../`, `./`) y el nombre exacto del archivo/carpeta en la sentencia `import`.
 
 ### 11. TypeScript: Errores `TS2305` o similares con `@prisma/client`
 
-- **Síntomas:** TS no encuentra tipos/enums de Prisma (`UserRole`, `User`, etc.) o no reconoce campos nuevos tras una migración.
-- **Causa Raíz:** Prisma Client (`node_modules/@prisma/client`) no está sincronizado con `schema.prisma`. `npx prisma generate` falló o no se ejecutó tras `migrate`.
-- **Solución:**
-  1.  **DETENER** servidor backend.
-  2.  Ejecutar **`npx prisma generate`** en `backend/`. Verificar que no hay errores.
-  3.  Reiniciar servidor backend.
-  4.  (Opcional) Reiniciar servidor TS del editor (VSCode: Ctrl+Shift+P -> "TypeScript: Restart TS server").
+- **Síntomas:** TS no encuentra tipos/enums de Prisma o no reconoce campos nuevos tras migración.
+- **Causa Raíz:** Prisma Client no sincronizado con `schema.prisma`. `npx prisma generate` no se ejecutó o falló.
+- **Solución:** 1. DETENER backend. 2. Ejecutar `npx prisma generate`. 3. Reiniciar backend. 4. (Opcional) Reiniciar TS server del editor.
 
 ### 12. Backend: Nueva Ruta o Router Modificado Devuelve 404
 
-- **Síntomas:** Añades/modificas ruta (`.routes.ts`) o montas router (`index.ts`), compilas (`yarn build`), pero la petición da 404.
-- **Causa Raíz Principal:** No reiniciaste el servidor backend (`node dist/index.js`) después de compilar cambios que afectan al enrutamiento.
-- **Solución Crítica:** Tras **CUALQUIER** cambio en `index.ts` o archivos `.routes.ts`, y después de `yarn build`, **IMPRESCINDIBLE detener y reiniciar** el servidor backend. Si persiste, forzar limpieza (`rm -rf dist`).
+- **Síntomas:** Añades/modificas ruta (`.routes.ts`) o montas router (`index.ts`), compilas (`tsc -w`), pero la petición da 404.
+- **Causa Raíz:** El servidor `nodemon` (Terminal 2) no se reinició para cargar la nueva estructura de rutas desde `dist/`.
+- **Solución:** Asegúrate de que `nodemon` se reinicia tras la compilación de `tsc -w`. Si no, para (`Ctrl+C`) y reinicia `nodemon` manualmente en la Terminal 2.
 
 ### 13. Frontend: Errores de Tipado o Props con Mantine v7
 
-- **Síntomas:** Errores TS: props desconocidas (`height`, `weight`, `leftIcon`), componentes no exportados (`Navbar`, `Header`).
-- **Solución:** Consultar docs Mantine v7. Usar props nuevas (`fw`, `leftSection`) y componentes anidados (`AppShell.Navbar`).
+- **Síntomas:** Errores TS por props obsoletas (`height`, `weight`, `leftIcon`) o componentes renombrados/anidados (`Navbar`, `Header`).
+- **Solución:** Consultar docs Mantine v7. Usar props nuevas (`fw`, `leftSection`) y componentes anidados (`AppShell.Navbar`, `AppShell.Header`).
 
 ### 14. TypeScript: Advertencias Variables/Imports No Utilizadas (`TS6133`, `TS6196`)
 
 - **Síntomas:** Warnings sobre declaraciones no leídas.
-- **Solución:** Eliminar declaraciones o `import` innecesarios. Usar `_variable` si el parámetro es requerido por firma pero no usado. _(Ej: Corregido en `AdminOverview.tsx`)_.
-
----
-
-## **--- SECCIONES NUEVAS (Problemas Recientes) ---**
+- **Estado:** Mayormente Resuelto durante la limpieza general.
+- **Solución:** Eliminar declaraciones o `import` innecesarios.
 
 ### 15. Error al Escanear QR desde Dispositivo Móvil (`setPhotoOptions failed`)
 
-- **Síntomas:**
-  - App cargada en móvil vía IP local (`https://<IP_PC>:5173`) con certificado HTTPS autofirmado aceptado.
-  - Permiso de cámara solicitado por el navegador móvil y concedido por el usuario.
-  - Al abrir el modal de escaneo, la cámara no se activa o se activa brevemente y falla.
-  - Se muestra un mensaje de error genérico en la UI (ej: "Error al escanear...") o uno ligeramente más detallado pero inútil (ej: "...(e2: no details available)").
-  - La consola del navegador móvil (vista con depuración remota USB) muestra: `Uncaught (in promise) UnknownError: setPhotoOptions failed`, originado en la librería `react-qr-reader`.
-- **Diagnóstico:**
-  - Se descartaron problemas de permisos y HTTPS, ya que el prompt de permisos sí aparecía.
-  - Se probaron diferentes `constraints` (resolución, quitar `facingMode`) sin éxito.
-  - El error `setPhotoOptions failed` apunta a un fallo interno de la librería (o su dependencia `@zxing/library`) al intentar configurar la cámara usando APIs del navegador (`ImageCapture`) que pueden ser incompatibles con el dispositivo/navegador móvil específico. La versión usada (`react-qr-reader@3.0.0-beta-1`) era antigua.
-- **Causa Raíz:** Incompatibilidad o bug en `react-qr-reader@3.0.0-beta-1` al interactuar con la API de la cámara en el entorno móvil específico.
-- **Solución:** Reemplazar la librería de escaneo QR en el frontend.
-  1.  **Desinstalar:** `yarn remove react-qr-reader`.
-  2.  **Instalar:** `yarn add html5-qrcode`.
-  3.  **Refactorizar** el componente `frontend/src/components/customer/QrValidationSection.tsx` (Ver versión `2.1.2` o superior) para usar la API de `html5-qrcode`:
-      - Usar `useEffect` para crear una instancia de `Html5Qrcode` asociada a un `div` específico cuando el modal se abre.
-      - Llamar a `html5QrCode.start(...)` con los callbacks de éxito y error.
-      - Implementar la **limpieza** en el `return` del `useEffect`: llamar a `html5QrCode.stop()` y `html5QrCode.clear()` para liberar la cámara correctamente al cerrar/desmontar. Usar `useRef` para gestionar la instancia.
-  4.  **Ajustar Componente Padre** (`CustomerDashboardPage.tsx`) para manejar el estado del modal (`useDisclosure`) y pasarlo como props.
+- **Síntomas:** Cámara no inicia o falla en móvil con error `setPhotoOptions failed` en consola remota.
+- **Estado:** **RESUELTO**.
+- **Causa Raíz:** Incompatibilidad/bug en librería `react-qr-reader@3.0.0-beta-1`.
+- **Solución Aplicada:** Se reemplazó `react-qr-reader` por `html5-qrcode` en el frontend (`QrValidationSection.tsx` y hook `useQrScanner.ts`).
 
-### 16. Error TypeScript `Property 'constraints' is missing... required in type 'QrReaderProps'` (TS2741)
+### 16. Error TypeScript `Property 'constraints' is missing...`
 
-- **Síntomas:** Error de TS al intentar quitar la prop `constraints` del componente `QrReader`.
-- **Causa Raíz:** La definición de tipos de `react-qr-reader@3.0.0-beta-1` marca la prop `constraints` como obligatoria.
-- **Solución (Alternativa si no se cambia de librería):** En lugar de quitarla, pasar un objeto vacío: `constraints={{}}`. _(Nota: Esta solución se intentó pero no resolvió el error subyacente `setPhotoOptions failed`, llevando finalmente al cambio de librería del punto 15)_.
+- **Síntomas:** Error TS al quitar prop `constraints` de `QrReader`.
+- **Estado:** **RESUELTO** (Componente `QrReader` eliminado).
+- **Causa Raíz:** Tipos de `react-qr-reader`.
+- **Solución Aplicada:** Cambio de librería a `html5-qrcode`.
 
-### 17. Error TypeScript `'video' does not exist in type 'MediaTrackConstraints'` (TS2353)
+### 17. Error TypeScript `'video' does not exist in type 'MediaTrackConstraints'`
 
-- **Síntomas:** Error de TS al intentar usar `constraints={{ video: true }}` en `QrReader`.
-- **Causa Raíz:** La prop `constraints` de `react-qr-reader` espera un objeto `MediaTrackConstraints` (con `facingMode`, `width`, etc.), no un `MediaStreamConstraints` (que tiene `video` y `audio` a nivel superior).
-- **Solución (Alternativa si no se cambia de librería):** Pasar un objeto válido para `MediaTrackConstraints`, como `{}` (objeto vacío) o `{ facingMode: 'environment' }`. _(Nota: Esta solución se intentó pero no resolvió el error subyacente `setPhotoOptions failed`, llevando finalmente al cambio de librería del punto 15)_.
+- **Síntomas:** Error TS al usar `constraints={{ video: true }}`.
+- **Estado:** **RESUELTO** (Componente `QrReader` eliminado).
+- **Causa Raíz:** Tipos de `react-qr-reader`.
+- **Solución Aplicada:** Cambio de librería a `html5-qrcode`.
 
 ### 18. Error Git `Deletion of directory 'images' failed` en Windows durante `git pull`
 
-- **Síntomas:** Al hacer `git pull origin master` (después de borrar `images` en GitHub y tenerla localmente), falla con `Deletion of directory 'images' failed`.
-- **Causa Raíz:** Un programa en Windows (Explorador, VS Code, Visor Imágenes, Antivirus) tiene un bloqueo sobre la carpeta `images` o su contenido, impidiendo que Git la gestione durante el proceso de merge del `pull`.
+- **Síntomas:** Falla `git pull` al intentar borrar una carpeta bloqueada.
+- **Causa Raíz:** Programa Windows (Explorador, VSCode, etc.) bloqueando la carpeta.
+- **Solución:** Cerrar programas -> Abortar/resetear merge si es necesario (`git merge --abort` / `git reset --hard HEAD`) -> `git pull` -> Resolver conflictos (ej: `git add images && git commit`) -> `git push`.
+
+### 19. Backend: API no se conecta a la Base de Datos (`PrismaClientInitializationError: Can't reach database server at localhost:5432`)
+
+- **Síntomas:** Múltiples endpoints fallan con error 500. Logs del backend muestran `PrismaClientInitializationError`. Frontend puede mostrar "Server error during authentication".
+- **Causa Raíz:** El servidor PostgreSQL no está corriendo o no es accesible, o la `DATABASE_URL` en `.env` es incorrecta. Frecuente después de reinicios inesperados del sistema (ej: corte de luz).
 - **Solución:**
-  1.  Cerrar todos los programas que puedan estar usando la carpeta/archivos dentro de `images`.
-  2.  Si el `pull` anterior dejó un estado de merge conflictivo, abortarlo: `git merge --abort` (o `git reset --hard HEAD` si es necesario).
-  3.  Volver a intentar: `git pull origin master`.
-  4.  Si ahora da conflicto "deleted by them, added by us", resolver manteniendo la versión local: `git add images` seguido de `git commit`.
-  5.  Finalmente: `git push origin master`.
+  1.  Verificar que el servicio **PostgreSQL está en ejecución** (ver `services.msc` o Task Manager en Windows). Si no, iniciarlo.
+  2.  Si el servicio no inicia (ej: error "archivo no encontrado"), **reinstalar PostgreSQL** podría ser necesario.
+  3.  Verificar que la **`DATABASE_URL` en `backend/.env`** es correcta (host, puerto 5432, usuario, contraseña, nombre de la base de datos).
+  4.  **Si reinstalaste PostgreSQL o la base de datos está vacía:** Ejecutar `npx prisma migrate dev` en la carpeta `backend/` para recrear las tablas.
+
+### 20. Frontend: Formulario (ej: Configuración Tiers) parece vacío después de guardar con éxito
+
+- **Síntomas:** Guardas cambios en un formulario que usa Mantine Form (`useForm`), aparece la notificación de éxito, pero los campos se muestran vacíos o con valores por defecto, no los recién guardados. El botón "Guardar" se deshabilita correctamente.
+- **Estado:** **RESUELTO** (en `TierSettingsPage.tsx v1.1.7`).
+- **Causa Raíz:** Llamar a `form.reset()` inmediatamente después de `form.setValues()` dentro de la misma función (ej: `WorkspaceConfig`). `reset()` revierte a los `initialValues` conocidos _antes_ de la llamada a `setValues`, ocultando los datos recién establecidos.
+- **Solución Aplicada:** Usar `form.initialize(datos)` después de cargar los datos iniciales (`WorkspaceConfig`) y también después de guardar con éxito (`handleSaveChanges`) usando los datos recién guardados. `initialize` actualiza tanto los valores actuales como los `initialValues` usados para el estado `dirty`. Eliminar llamadas innecesarias a `WorkspaceConfig` dentro de `handleSaveChanges`.
 
 ---
 
