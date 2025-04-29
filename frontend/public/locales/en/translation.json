@@ -224,7 +224,7 @@
     "panelIntro": "You are in the administration panel for",
     "panelDescription": "From here you can manage your loyalty program: configure tiers, rewards, customers, and generate QR codes.",
     "quickSummaryTitle": "Quick Summary",
-    "statActiveCustomers": "ACTIVE CUSTOMERS",
+    "statActiveCustomers": "CUSTOMERS",
     "statNewCustomers": "NEW (7D)",
     "statPointsIssued": "POINTS (7D)",
     "statRedemptions": "REDEMPTIONS (7D)",
