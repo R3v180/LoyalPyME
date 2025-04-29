@@ -1,20 +1,22 @@
 // filename: frontend/src/components/customer/QrValidationSection.tsx
-// Version: 2.1.2 (Fix TS errors in useEffect cleanup)
+// Version: 2.2.0 (Refactored to use useQrScanner hook, cleaned)
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react'; // Quitamos useEffect, useRef
 import {
     Paper, Title, Group, TextInput, Button, Modal, Stack, Alert, Text, Box
 } from '@mantine/core';
 import { IconAlertCircle, IconScan, IconTicket } from '@tabler/icons-react';
-import { Html5Qrcode, Html5QrcodeResult } from 'html5-qrcode'; // Quitado Html5QrcodeError
+// Ya no necesitamos importar nada de html5-qrcode aquí
+// Importamos nuestro nuevo hook
+import { useQrScanner } from '../../hooks/useQrScanner'; // Ajusta la ruta si es necesario
 
-// Props
+// Props (sin cambios)
 interface QrValidationSectionProps {
-    onValidate: (token: string) => Promise<void>;
-    isValidating: boolean;
-    scannerOpened: boolean;
-    onOpenScanner: () => void;
-    onCloseScanner: () => void;
+    onValidate: (token: string) => Promise<void>; // Callback cuando se valida (manual o scan)
+    isValidating: boolean; // Estado de carga global
+    scannerOpened: boolean; // Si el modal del scanner está abierto
+    onOpenScanner: () => void; // Función para abrir el modal
+    onCloseScanner: () => void; // Función para cerrar el modal
 }
 
 const QrValidationSection: React.FC<QrValidationSectionProps> = ({
@@ -24,111 +26,111 @@ const QrValidationSection: React.FC<QrValidationSectionProps> = ({
     onOpenScanner,
     onCloseScanner
 }) => {
+    // Estado solo para el input manual
     const [qrTokenInput, setQrTokenInput] = useState('');
-    const [scannerError, setScannerError] = useState<string | null>(null);
-    const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+
+    // ID del div para el scanner
     const qrcodeRegionId = "html5qr-code-reader-region";
-    const initTimeoutRef = useRef<number | null>(null);
 
-    // Handler envío manual
-    const handleManualSubmit = () => { if (qrTokenInput.trim() && !isValidating) { onValidate(qrTokenInput.trim()); } };
-
-    // useEffect para controlar escáner
-    useEffect(() => {
-        let scannerInstance: Html5Qrcode | null = null; // Variable local para el scanner
-
-        if (scannerOpened) {
-            // @ts-ignore
-            initTimeoutRef.current = setTimeout(() => {
-                if (document.getElementById(qrcodeRegionId)) { // Solo inicializar si el div existe y no hay instancia
-                    console.log("Initializing Html5Qrcode...");
-                    // Crear instancia nueva CADA VEZ que se abre el modal (más seguro para limpieza)
-                    scannerInstance = new Html5Qrcode(qrcodeRegionId, false);
-                    html5QrCodeRef.current = scannerInstance; // Guardar ref si se necesita fuera del timeout
-
-                    const qrCodeSuccessCallback = (decodedText: string, decodedResult: Html5QrcodeResult) => {
-                         if (!isValidating && scannerOpened) {
-                            console.log(`Code matched = ${decodedText}`, decodedResult);
-                            setScannerError(null);
-                            // Intentar limpiar antes de cerrar (puede ser redundante con el cleanup del effect)
-                             try {
-                                 if (scannerInstance?.isScanning) {
-                                     scannerInstance.stop();
-                                     console.log("Scanner stopped on success.");
-                                 }
-                                 scannerInstance?.clear();
-                             } catch(e) { console.error("Minor error during cleanup after success:", e); }
-
-                            onValidate(decodedText);
-                            onCloseScanner();
-                         }
-                    };
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
-                    const qrCodeErrorCallback = (_errorMessage: string, _error: any) => { /* Log comentado */ };
-
-                    try {
-                         console.log("Attempting to start scanner...");
-                         scannerInstance.start( { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, qrCodeSuccessCallback, qrCodeErrorCallback )
-                           .then(() => { console.log("Html5Qrcode scanner started successfully."); })
-                           .catch((err) => { console.error("Unable to start scanning.", err); setScannerError(`No se pudo iniciar la cámara: ${err?.message || err}`); onCloseScanner(); });
-                    } catch (err: any) { console.error("Html5Qrcode constructor/start failed:", err); setScannerError(`No se pudo inicializar el escáner: ${err?.message || err}`); onCloseScanner(); }
-                } else { console.error(`Element ${qrcodeRegionId} not found.`); setScannerError("Error: Contenedor no encontrado."); }
-            }, 50);
+    // --- Hook useQrScanner ---
+    // Definimos el callback para cuando el scanner lee un código
+    const handleScanSuccess = useCallback((decodedText: string) => {
+        if (!isValidating) { // Doble check por si acaso
+             console.log(`[QrValidationSection] Scan successful: ${decodedText}`);
+            onValidate(decodedText); // Llama al validador principal
+            onCloseScanner(); // Cierra el modal después de escanear
         }
+    }, [isValidating, onValidate, onCloseScanner]);
 
-        // Función de Limpieza del useEffect
-        return () => {
-            if (initTimeoutRef.current) { clearTimeout(initTimeoutRef.current); }
-            console.log("Cleanup Effect Triggered. Attempting to clear scanner if exists...");
-            // Usamos la referencia guardada para limpiar
-            const scannerToClear = html5QrCodeRef.current;
-            if (scannerToClear) {
-                html5QrCodeRef.current = null; // Limpiar referencia inmediatamente
-                // --- CORRECCIÓN: Usar try/catch síncrono y llamar sin await ---
-                try {
-                    // Comprobar estado antes de parar puede evitar errores si ya paró
-                    if (typeof scannerToClear.getState === 'function' &&
-                        scannerToClear.getState() === /* Html5QrcodeScannerState.SCANNING */ 2) {
-                         console.log("Scanner state is SCANNING, calling stop...");
-                         scannerToClear.stop(); // Llamada síncrona (o que devuelve promesa que no esperamos)
-                         console.log("stop() called.");
-                    } else {
-                         console.log("Scanner state is not SCANNING, skipping stop().");
-                    }
-                    // Limpiar UI siempre
-                    console.log("Calling clear()...");
-                    scannerToClear.clear(); // Llamada síncrona
-                    console.log("Scanner clear() called.");
-                } catch (error: any) {
-                    console.error("Failed to stop/clear html5-qrcode scanner on cleanup.", error);
-                }
-                // ----------------------------------------------------------
-            } else {
-                 console.log("No active scanner instance found in ref during cleanup.");
-            }
-        };
-    // Depender solo de scannerOpened para controlar montaje/desmontaje del scanner
-    }, [scannerOpened, isValidating, onValidate, onCloseScanner]); // Añadir dependencias usadas en callbacks si es necesario
+    // Llamamos al hook, pasándole las opciones
+    const { scannerError, clearScannerError } = useQrScanner({
+        qrcodeRegionId: qrcodeRegionId,
+        enabled: scannerOpened, // El scanner se activa/desactiva según el estado del modal
+        onScanSuccess: handleScanSuccess,
+        // onScanError: (msg) => console.warn("Scanner error callback:", msg), // Opcional: manejar errores del scanner
+        config: { fps: 10, qrbox: { width: 250, height: 250 } } // Config específica
+    });
+    // --- Fin Hook ---
 
+    // Handler envío manual (sin cambios)
+    const handleManualSubmit = () => {
+        if (qrTokenInput.trim() && !isValidating) {
+            onValidate(qrTokenInput.trim());
+        }
+    };
 
-    // JSX (Sin cambios)
+    // Limpiar error del scanner al cerrar el modal manualmente
+    const handleCloseModal = () => {
+        clearScannerError();
+        onCloseScanner();
+    };
+
+    // El useEffect complejo ha sido eliminado y reemplazado por el hook useQrScanner
+
+    // JSX
     return (
         <>
             <Paper shadow="sm" p="lg" mb="xl" withBorder>
-               <Title order={4} mb="md">Validar Código QR</Title>
+                <Title order={4} mb="md">Validar Código QR</Title>
                 <Group align="flex-end">
-                    <TextInput label="Introduce el código del ticket/QR" placeholder="Pega el código aquí..." value={qrTokenInput} onChange={(event) => setQrTokenInput(event.currentTarget.value)} style={{ flexGrow: 1 }} disabled={isValidating} />
-                    <Button onClick={handleManualSubmit} leftSection={<IconTicket size={18} />} loading={isValidating && !scannerOpened} disabled={!qrTokenInput.trim() || isValidating} variant='outline'> Validar Código </Button>
-                    <Button onClick={onOpenScanner} leftSection={<IconScan size={18} />} disabled={isValidating} variant='gradient' gradient={{ from: 'blue', to: 'cyan', deg: 90 }}> Escanear QR </Button>
+                    <TextInput
+                        label="Introduce el código del ticket/QR" // Corregido: Introduce, código
+                        placeholder="Pega el código aquí..."
+                        value={qrTokenInput}
+                        onChange={(event) => setQrTokenInput(event.currentTarget.value)}
+                        style={{ flexGrow: 1 }}
+                        disabled={isValidating || scannerOpened} // Deshabilitar si valida o si el scanner está abierto
+                    />
+                    <Button
+                        onClick={handleManualSubmit}
+                        leftSection={<IconTicket size={18} />}
+                        loading={isValidating && !scannerOpened} // Loading solo si valida MANualmente
+                        disabled={!qrTokenInput.trim() || isValidating || scannerOpened}
+                        variant='outline'>
+                        Validar Código {/* Corregido: Código */}
+                    </Button>
+                    <Button
+                        onClick={onOpenScanner} // Abre el modal
+                        leftSection={<IconScan size={18} />}
+                        disabled={isValidating} // Deshabilitar solo si está validando
+                        variant='gradient'
+                        gradient={{ from: 'blue', to: 'cyan', deg: 90 }}
+                    >
+                        Escanear QR
+                    </Button>
                 </Group>
             </Paper>
-            <Modal opened={scannerOpened} onClose={onCloseScanner} title="Escanear Código QR" size="auto" centered>
+
+            {/* El Modal ahora es más simple */}
+            <Modal
+                opened={scannerOpened}
+                onClose={handleCloseModal} // Usar handler que limpia error
+                title="Escanear Código QR" // Corregido: Código
+                size="auto" // Ajustar tamaño automáticamente
+                centered
+            >
                 <Stack>
-                    <Text size="sm" ta="center" c="dimmed">Apunta la cámara al código QR</Text>
+                    <Text size="sm" ta="center" c="dimmed">Apunta la cámara al código QR</Text> {/* Corregido: cámara, código */}
+                    {/* Div donde el hook renderizará la vista de la cámara */}
                     <Box id={qrcodeRegionId} w="100%"></Box>
-                    {scannerError && ( <Alert icon={<IconAlertCircle size="1rem" />} title="Error de Escaneo" color="red" withCloseButton onClose={() => setScannerError(null)} mt="sm"> {scannerError} </Alert> )}
+                    {/* Mostrar error del hook si existe */}
+                    {scannerError && (
+                        <Alert
+                            icon={<IconAlertCircle size="1rem" />}
+                            title="Error de Escáner" // Corregido: Escáner
+                            color="red"
+                            withCloseButton
+                            onClose={clearScannerError} // Limpiar error al cerrar alerta
+                            mt="sm"
+                        >
+                            {scannerError}
+                        </Alert>
+                    )}
+                    {/* Indicador de validación (si se está validando DESPUÉS de escanear) */}
                     {isValidating && <Group justify='center'><Text>Validando...</Text></Group>}
-                    <Button variant="outline" onClick={onCloseScanner} disabled={isValidating}> Cancelar Escaneo </Button>
+                    <Button variant="outline" onClick={handleCloseModal} disabled={isValidating}>
+                        Cancelar Escaneo {/* Corregido: Escaneo */}
+                    </Button>
                 </Stack>
             </Modal>
         </>
@@ -136,3 +138,5 @@ const QrValidationSection: React.FC<QrValidationSectionProps> = ({
 };
 
 export default QrValidationSection;
+
+// End of File: frontend/src/components/customer/QrValidationSection.tsx

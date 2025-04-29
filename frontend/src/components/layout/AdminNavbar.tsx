@@ -1,5 +1,5 @@
 // filename: frontend/src/components/layout/AdminNavbar.tsx
-// Version: 1.0.0 (Initial component extraction)
+// Version: 1.0.1 (Fix character encoding)
 
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -27,7 +27,7 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname }) => {
         { to: "/admin/dashboard/generate-qr", label: "Generar QR", icon: IconQrcode },
         { to: "/admin/dashboard/customers", label: "Clientes", icon: IconUsers },
         { to: "/admin/dashboard/tiers/manage", label: "Gestionar Niveles", icon: IconStairsUp },
-        { to: "/admin/dashboard/tiers/settings", label: "Config. Niveles", icon: IconSettings },
+        { to: "/admin/dashboard/tiers/settings", label: "Config. Niveles", icon: IconSettings }, // Corregido: Config.
     ];
 
     return (
@@ -47,3 +47,5 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname }) => {
 };
 
 export default AdminNavbar;
+
+// End of File: frontend/src/components/layout/AdminNavbar.tsx

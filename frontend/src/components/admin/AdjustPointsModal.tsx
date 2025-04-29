@@ -1,5 +1,5 @@
 // filename: frontend/src/components/admin/AdjustPointsModal.tsx
-// Version: 1.1.1 (Fix: Use POST method to match backend route)
+// Version: 1.1.2 (Fix encoding, imports, comments)
 
 import React, { useState, useEffect } from 'react';
 import { Modal, TextInput, Button, Group, Text, NumberInput } from '@mantine/core';
@@ -8,8 +8,9 @@ import axiosInstance from '../../services/axiosInstance';
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX } from '@tabler/icons-react';
 
-// Importar Customer desde la ubicación correcta (el hook)
-import { Customer } from '../../hooks/useAdminCustomers'; // Ruta actualizada
+// --- FIX: Importar Customer desde el hook correcto ---
+import { Customer } from '../../hooks/useAdminCustomersData';
+// --- FIN FIX ---
 
 interface AdjustPointsModalProps {
     opened: boolean;
@@ -27,9 +28,10 @@ const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({ opened, onClose, 
 
     // Resetear form cuando el modal se abre o el cliente cambia
     useEffect(() => {
-        if (opened) { form.reset(); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [opened, customer]);
+        if (opened) {
+             form.reset();
+        }
+    }, [opened, customer, form]); // Añadir form a dependencias es más correcto
 
     const handleSubmit = async (values: typeof form.values) => {
         if (!customer) return;
@@ -37,14 +39,13 @@ const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({ opened, onClose, 
         try {
             const payload = {
                 amount: values.amount,
-                reason: values.reason || null
+                reason: values.reason || null // Enviar null si está vacío
             };
-            // --- CORRECCIÓN: Cambiar .patch a .post ---
+            // La llamada POST ya era correcta
             await axiosInstance.post(`/admin/customers/${customer.id}/adjust-points`, payload);
-            // --- FIN CORRECCIÓN ---
             notifications.show({
-                title: 'Éxito',
-                message: `Puntos ajustados correctamente para ${customer.name || customer.email}.`,
+                title: 'Éxito', // Corregido: Éxito
+                message: `Puntos ajustados correctamente para ${customer.name || customer.email}.`, // Corregido: correctamente
                 color: 'green',
                 icon: <IconCheck size={18} />,
             });
@@ -76,8 +77,8 @@ const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({ opened, onClose, 
                         {...form.getInputProps('amount')}
                     />
                     <TextInput
-                        label="Razón (Opcional)"
-                        placeholder="Ej: Corrección manual, Bonificación especial"
+                        label="Razón (Opcional)" // Corregido: Razón
+                        placeholder="Ej: Corrección manual, Bonificación especial" // Corregido: Corrección, Bonificación
                         mt="md"
                         {...form.getInputProps('reason')}
                     />
@@ -87,10 +88,12 @@ const AdjustPointsModal: React.FC<AdjustPointsModalProps> = ({ opened, onClose, 
                     </Group>
                 </form>
             ) : (
-                <Text c="dimmed">No se ha seleccionado ningún cliente.</Text>
+                <Text c="dimmed">No se ha seleccionado ningún cliente.</Text> // Corregido: ningún
             )}
         </Modal>
     );
 };
 
 export default AdjustPointsModal;
+
+// End of File: frontend/src/components/admin/AdjustPointsModal.tsx

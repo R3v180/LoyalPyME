@@ -1,5 +1,5 @@
 // filename: frontend/src/components/admin/ChangeTierModal.tsx
-// Version: 1.1.1 (Fix: Use PUT method and correct path for changing tier)
+// Version: 1.1.2 (Fix encoding, import, comments)
 
 import React, { useState, useEffect } from 'react';
 import { Modal, Select, Button, Group, Text, Loader, Alert } from '@mantine/core';
@@ -7,14 +7,15 @@ import axiosInstance from '../../services/axiosInstance';
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX, IconAlertCircle } from '@tabler/icons-react';
 
-// Importar Customer desde la ubicación correcta (el hook)
-import { Customer } from '../../hooks/useAdminCustomers'; // Ruta actualizada
+// --- FIX: Importar Customer desde el hook correcto ---
+import { Customer } from '../../hooks/useAdminCustomersData';
+// --- FIN FIX ---
 
 // Interfaz para los Tiers/Niveles obtenidos de la API
 interface Tier {
     id: string;
     name: string;
-    level: number;
+    level: number; // Útil para ordenar o mostrar
 }
 
 interface ChangeTierModalProps {
@@ -36,16 +37,21 @@ const ChangeTierModal: React.FC<ChangeTierModalProps> = ({ opened, onClose, cust
         if (opened && customer) {
             setLoadingTiers(true);
             setErrorTiers(null);
-            setSelectedTierId(customer.currentTier?.id || null);
+            // Establecer el valor inicial del select al nivel actual del cliente
+            setSelectedTierId(customer.currentTier?.id || null); // Si no tiene tier, es null
 
-            // La llamada GET /tiers ya debería funcionar por la corrección anterior
-            axiosInstance.get<Tier[]>('/tiers')
+            // La llamada GET /tiers obtiene la lista de Tiers del negocio
+            axiosInstance.get<Tier[]>('/tiers') // Asume que /tiers devuelve la lista para el admin
                 .then(response => {
                     const sortedTiers = response.data.sort((a, b) => a.level - b.level);
-                    const availableTiers = sortedTiers.map(tier => ({
-                        value: tier.id,
-                        label: `${tier.name} (Nivel ${tier.level})`
-                    }));
+                    // Crear opciones, añadir "Sin Nivel" explícitamente
+                    const availableTiers = [
+                        { value: '', label: 'Quitar Nivel (Básico)'}, // Opción para poner a null
+                         ...sortedTiers.map(tier => ({
+                            value: tier.id,
+                            label: `${tier.name} (Nivel ${tier.level})`
+                        }))
+                    ];
                     setTiers(availableTiers);
                 })
                 .catch(err => {
@@ -56,36 +62,45 @@ const ChangeTierModal: React.FC<ChangeTierModalProps> = ({ opened, onClose, cust
                     setLoadingTiers(false);
                 });
         } else if (!opened) {
+             // Limpiar estado al cerrar
              setSelectedTierId(null);
              setTiers([]);
-             setErrorTiers(null); // Limpiar error al cerrar
+             setErrorTiers(null);
         }
-    }, [opened, customer]);
+    }, [opened, customer]); // Depende de opened y customer
 
     const handleChangeTier = async () => {
-        if (!customer || !selectedTierId) return;
+        if (!customer) return;
+        // Permitir enviar null si selectedTierId es '' (nuestra opción "Quitar Nivel")
+        const tierIdToSend = selectedTierId === '' ? null : selectedTierId;
+
+        // Evitar llamada si no hay cambio real
+        if (tierIdToSend === (customer.currentTier?.id || null)) {
+            notifications.show({title: "Sin Cambios", message: "El nivel seleccionado es el mismo que el actual.", color:'blue'});
+            return;
+        }
+
         setLoadingChange(true);
         try {
-            // --- CORRECCIÓN: Cambiar método a PUT y ruta a /tier ---
+            // La ruta PUT /admin/customers/:customerId/tier actualiza el tier
             await axiosInstance.put(`/admin/customers/${customer.id}/tier`, {
-                tierId: selectedTierId // El backend espera 'tierId' en el body según definimos antes
+                tierId: tierIdToSend // Enviar null si se seleccionó "Quitar Nivel"
             });
-            // --- FIN CORRECCIÓN ---
             notifications.show({
-                title: 'Éxito',
-                message: `Nivel cambiado correctamente para ${customer.name || customer.email}.`,
+                title: 'Éxito', // Corregido: Éxito
+                message: `Nivel cambiado correctamente para ${customer.name || customer.email}.`, // Corregido: correctamente
                 color: 'green',
                 icon: <IconCheck size={18} />,
             });
-            onSuccess();
-            onClose();
+            onSuccess(); // Refrescar datos en la página principal
+            onClose(); // Cerrar modal
         } catch (error: any) {
             console.error("Error changing tier:", error);
             notifications.show({
                 title: 'Error',
                 message: `No se pudo cambiar el nivel: ${error.response?.data?.message || error.message}`,
                 color: 'red',
-                icon: <IconX size={18} />, // Mantener IconX para errores
+                icon: <IconX size={18} />,
             });
         } finally {
             setLoadingChange(false);
@@ -113,12 +128,13 @@ const ChangeTierModal: React.FC<ChangeTierModalProps> = ({ opened, onClose, cust
                         label="Selecciona el Nuevo Nivel"
                         placeholder="Elige un nivel de la lista"
                         data={tiers}
-                        value={selectedTierId}
-                        onChange={setSelectedTierId}
+                        value={selectedTierId ?? ''} // Usar '' si es null para que coincida con la opción "Quitar Nivel"
+                        onChange={(value) => setSelectedTierId(value)} // onChange devuelve string | null
                         searchable
                         nothingFoundMessage="No hay niveles disponibles o no se encontraron."
-                        required
-                        disabled={tiers.length === 0 || loadingChange} // Deshabilitar si carga o si no hay tiers
+                        // No es estrictamente required si queremos permitir quitar el nivel
+                        // required
+                        disabled={loadingTiers || loadingChange}
                         mb="md"
                     />
                     <Group justify="flex-end" mt="lg">
@@ -126,7 +142,8 @@ const ChangeTierModal: React.FC<ChangeTierModalProps> = ({ opened, onClose, cust
                         <Button
                             onClick={handleChangeTier}
                             loading={loadingChange}
-                            disabled={!selectedTierId || selectedTierId === (customer.currentTier?.id || null) || loadingTiers} // Deshabilitar si no se selecciona, es el mismo, o aún cargan tiers
+                            // Deshabilitar si no se ha cargado, o si el valor seleccionado es el mismo que el actual
+                            disabled={loadingTiers || (selectedTierId ?? '') === (customer.currentTier?.id || '')}
                         >
                             Cambiar Nivel
                         </Button>
@@ -134,10 +151,12 @@ const ChangeTierModal: React.FC<ChangeTierModalProps> = ({ opened, onClose, cust
                 </>
             )}
              {!loadingTiers && !errorTiers && !customer && (
-                 <Text c="dimmed">No se ha seleccionado ningún cliente.</Text>
+                 <Text c="dimmed">No se ha seleccionado ningún cliente.</Text> // Corregido: ningún
              )}
         </Modal>
     );
 };
 
 export default ChangeTierModal;
+
+// End of File: frontend/src/components/admin/ChangeTierModal.tsx

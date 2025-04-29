@@ -1,5 +1,5 @@
-// File: frontend/src/components/AddRewardForm.tsx
-// Version: 1.3.0 (Integrate Mantine Notifications)
+// filename: frontend/src/components/AddRewardForm.tsx
+// Version: 1.3.1 (Fix encoding, remove logs and meta-comments)
 
 import { useState, useEffect, FormEvent } from 'react';
 import axiosInstance from '../services/axiosInstance';
@@ -7,31 +7,27 @@ import axiosInstance from '../services/axiosInstance';
 // Mantine Imports
 import {
     TextInput, Textarea, NumberInput, Button, Stack, Group
-    // --- CAMBIO: Quitar Alert ---
-    // Alert
-    // --- FIN CAMBIO ---
 } from '@mantine/core';
-// --- CAMBIO: Importar notifications y iconos ---
+// Importar notifications y iconos
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconCheck, IconX } from '@tabler/icons-react'; // IconAlertCircle se quita si no hay validación con Alert
-// --- FIN CAMBIO ---
+import { IconAlertCircle, IconCheck, IconX } from '@tabler/icons-react';
 
 
-// Interfaz Reward (local, sin cambios)
+// Interfaz Reward (local)
 interface Reward {
     id: string; name: string; description?: string | null; pointsCost: number; isActive: boolean;
 }
 
-// Props del componente (sin cambios)
+// Props del componente
 interface RewardFormProps {
     mode: 'add' | 'edit';
     initialData?: Reward | null;
     rewardIdToUpdate?: string | null;
-    onSubmitSuccess: () => void;
-    onCancel: () => void;
+    onSubmitSuccess: () => void; // Callback en caso de éxito
+    onCancel: () => void; // Callback para cancelar
 }
 
-// Nombre del componente (mantenemos export como RewardForm)
+// Componente renombrado a RewardForm consistentemente
 const RewardForm: React.FC<RewardFormProps> = ({
     mode, initialData, rewardIdToUpdate, onSubmitSuccess, onCancel
 }) => {
@@ -41,98 +37,82 @@ const RewardForm: React.FC<RewardFormProps> = ({
     const [description, setDescription] = useState<string>('');
     const [pointsCost, setPointsCost] = useState<number | ''>('');
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    // --- CAMBIO: Quitar estado de error local ---
-    // const [error, setError] = useState<string | null>(null);
-    // --- FIN CAMBIO ---
 
-    // useEffect para popular formulario (sin cambios)
+    // Efecto para popular/resetear formulario
     useEffect(() => {
         if (mode === 'edit' && initialData) {
             setName(initialData.name || '');
             setDescription(initialData.description || '');
             setPointsCost(initialData.pointsCost !== null ? initialData.pointsCost : '');
         } else {
+            // Resetear para modo 'add' o si no hay initialData
             setName(''); setDescription(''); setPointsCost('');
         }
-        // setError(null); // Ya no usamos error local
     }, [mode, initialData]);
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        // setError(null); // Ya no usamos error local
 
-        // --- CAMBIO: Validación frontend con notificaciones ---
+        // Validación frontend
         if (!name.trim()) {
             notifications.show({
                 title: 'Campo Obligatorio',
                 message: 'El nombre de la recompensa no puede estar vacío.',
-                color: 'orange',
-                icon: <IconAlertCircle size={18} />,
+                color: 'orange', icon: <IconAlertCircle size={18} />,
             });
             return;
         }
         if (pointsCost === '' || pointsCost < 0) {
             notifications.show({
-                title: 'Campo Inválido',
-                message: 'El coste en puntos debe ser un número igual o mayor que cero.',
-                color: 'orange',
-                icon: <IconAlertCircle size={18} />,
+                title: 'Campo Inválido', // Corregido: Inválido
+                message: 'El coste en puntos debe ser un número igual o mayor que cero.', // Corregido: número
+                color: 'orange', icon: <IconAlertCircle size={18} />,
             });
             return;
         }
-        // --- FIN CAMBIO ---
 
         setIsSubmitting(true);
 
         const commonData = {
             name: name.trim(),
-            description: description.trim() || null,
-            pointsCost: Number(pointsCost),
+            description: description.trim() || null, // Enviar null si está vacío
+            pointsCost: Number(pointsCost), // Asegurar que es número
         };
 
         try {
             let successMessage = '';
             if (mode === 'add') {
-                console.log('Submitting ADD request:', commonData);
+                // console.log('Submitting ADD request:', commonData); // Log eliminado
                 await axiosInstance.post('/rewards', commonData);
-                console.log('Add successful');
-                successMessage = `Recompensa "${commonData.name}" añadida con éxito.`;
+                // console.log('Add successful'); // Log eliminado
+                successMessage = `Recompensa "${commonData.name}" añadida con éxito.`; // Corregido: éxito, añadida
             } else { // mode === 'edit'
                 if (!rewardIdToUpdate) throw new Error("Falta el ID de la recompensa para actualizar.");
-                console.log(`Submitting EDIT request for ${rewardIdToUpdate}:`, commonData);
+                // console.log(`Submitting EDIT request for ${rewardIdToUpdate}:`, commonData); // Log eliminado
                 await axiosInstance.patch(`/rewards/${rewardIdToUpdate}`, commonData);
-                console.log('Edit successful');
-                successMessage = `Recompensa "${commonData.name}" actualizada con éxito.`;
+                // console.log('Edit successful'); // Log eliminado
+                successMessage = `Recompensa "${commonData.name}" actualizada con éxito.`; // Corregido: éxito
             }
 
-            // --- CAMBIO: Notificación de Éxito ---
+            // Notificación de Éxito
             notifications.show({
-                title: 'Éxito',
+                title: 'Éxito', // Corregido: Éxito
                 message: successMessage,
-                color: 'green',
-                icon: <IconCheck size={18} />,
-                autoClose: 4000, // Cerrar automáticamente después de 4 segundos
+                color: 'green', icon: <IconCheck size={18} />, autoClose: 4000,
             });
-            // --- FIN CAMBIO ---
 
             onSubmitSuccess(); // Llama al callback del padre
 
         } catch (err: any) {
-            console.error(`Error ${mode === 'add' ? 'adding' : 'updating'} reward:`, err);
+            console.error(`Error ${mode === 'add' ? 'adding' : 'updating'} reward:`, err); // Mantener error log
             const actionText = mode === 'add' ? 'añadir' : 'actualizar';
             const errorMessage = `Error al ${actionText} la recompensa: ${err.response?.data?.message || err.message || 'Error desconocido'}`;
 
-            // --- CAMBIO: Notificación de Error ---
+            // Notificación de Error
             notifications.show({
-                title: 'Error',
-                message: errorMessage,
-                color: 'red',
-                icon: <IconX size={18} />,
-                autoClose: 6000, // Dar más tiempo para leer errores
+                title: 'Error', message: errorMessage, color: 'red',
+                icon: <IconX size={18} />, autoClose: 6000,
             });
-            // Ya no usamos setError(errorMessage);
-            // --- FIN CAMBIO ---
-
         } finally {
             setIsSubmitting(false);
         }
@@ -147,9 +127,7 @@ const RewardForm: React.FC<RewardFormProps> = ({
                 <Textarea label="Descripción (Opcional):" placeholder="Ej: Un café espresso o americano" value={description} onChange={(e) => setDescription(e.currentTarget.value)} rows={3} disabled={isSubmitting} radius="lg" />
                 <NumberInput label="Coste en Puntos:" placeholder="Ej: 100" value={pointsCost} onChange={(value) => setPointsCost(typeof value === 'number' ? value : '')} min={0} step={1} allowDecimal={false} required disabled={isSubmitting} radius="lg" />
 
-                {/* --- CAMBIO: Eliminar Alert de error --- */}
-                {/* {error && ( <Alert ... >{error}</Alert> )} */}
-                {/* --- FIN CAMBIO --- */}
+                {/* Alert de error local eliminada */}
 
                 <Group justify="flex-end" mt="md">
                     <Button variant="light" onClick={onCancel} disabled={isSubmitting} radius="lg"> Cancelar </Button>
@@ -162,4 +140,4 @@ const RewardForm: React.FC<RewardFormProps> = ({
 
 export default RewardForm;
 
-// End of File: frontend/src/components/AddRewardForm.tsx // (Nombre de archivo original, export como RewardForm)
+// End of File: frontend/src/components/AddRewardForm.tsx

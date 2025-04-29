@@ -1,5 +1,5 @@
 // filename: frontend/src/components/admin/AssignRewardModal.tsx
-// Version: 1.1.3 (Fix: Use correct field name 'pointsCost' instead of 'pointsRequired')
+// Version: 1.1.4 (Fix encoding, import, comments)
 
 import React, { useState, useEffect } from 'react';
 import { Modal, Select, Button, Group, Text, Loader, Alert } from '@mantine/core';
@@ -7,16 +7,15 @@ import axiosInstance from '../../services/axiosInstance';
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX, IconAlertCircle } from '@tabler/icons-react';
 
-// Importar Customer desde la ubicación correcta (el hook)
-import { Customer } from '../../hooks/useAdminCustomers';
+// --- FIX: Importar Customer desde el hook correcto ---
+import { Customer } from '../../hooks/useAdminCustomersData';
+// --- FIN FIX ---
 
 // Interfaz para las recompensas obtenidas de la API
 interface Reward {
     id: string;
     name: string;
-    // --- CORRECCIÓN: Usar pointsCost ---
-    pointsCost: number;
-    // --- FIN CORRECCIÓN ---
+    pointsCost: number; // Campo necesario para el label
     description?: string | null;
 }
 
@@ -24,7 +23,7 @@ interface AssignRewardModalProps {
     opened: boolean;
     onClose: () => void;
     customer: Customer | null;
-    onSuccess: () => void;
+    onSuccess: () => void; // Callback para indicar éxito (podría usarse para refetch si fuera necesario)
 }
 
 const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, customer, onSuccess }) => {
@@ -40,13 +39,13 @@ const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, 
             setLoadingRewards(true);
             setErrorRewards(null);
             setSelectedRewardId(null);
-            axiosInstance.get<Reward[]>('/rewards') // La API devuelve objetos con 'pointsCost'
+            // La API devuelve objetos Reward completos
+            axiosInstance.get<Reward[]>('/rewards')
                 .then(response => {
                     const availableRewards = response.data.map(reward => ({
                         value: reward.id,
-                        // --- CORRECCIÓN: Usar reward.pointsCost ---
+                        // Usar reward.pointsCost para el label
                         label: `${reward.name} (${reward.pointsCost ?? 'N/A'} pts)`
-                        // --- FIN CORRECCIÓN ---
                     }));
                     setRewards(availableRewards);
                 })
@@ -58,13 +57,14 @@ const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, 
                     setLoadingRewards(false);
                 });
         } else if (!opened) {
+             // Limpiar estado al cerrar
              setSelectedRewardId(null);
              setRewards([]);
              setErrorRewards(null);
         }
-    }, [opened]);
+    }, [opened]); // Dependencia solo de 'opened'
 
-    // handleAssign ya funcionaba y usa la ruta correcta /assign-reward
+    // Handler para asignar
     const handleAssign = async () => {
         if (!customer || !selectedRewardId) return;
         setLoadingAssign(true);
@@ -73,13 +73,13 @@ const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, 
                 rewardId: selectedRewardId
             });
             notifications.show({
-                title: 'Éxito',
-                message: `Recompensa asignada correctamente a ${customer.name || customer.email}.`,
+                title: 'Éxito', // Corregido: Éxito
+                message: `Recompensa asignada correctamente a ${customer.name || customer.email}.`, // Corregido: correctamente
                 color: 'green',
                 icon: <IconCheck size={18} />,
             });
-            onSuccess();
-            onClose();
+            onSuccess(); // Llamar callback de éxito
+            onClose(); // Cerrar modal
         } catch (error: any) {
             console.error("Error assigning reward:", error);
             notifications.show({
@@ -111,7 +111,7 @@ const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, 
                     <Select
                         label="Selecciona una Recompensa"
                         placeholder="Elige una recompensa de la lista"
-                        data={rewards} // Debería mostrar la label corregida con pointsCost
+                        data={rewards}
                         value={selectedRewardId}
                         onChange={setSelectedRewardId}
                         searchable
@@ -133,10 +133,12 @@ const AssignRewardModal: React.FC<AssignRewardModalProps> = ({ opened, onClose, 
                 </>
             )}
              {!loadingRewards && !errorRewards && !customer && (
-                 <Text c="dimmed">No se ha seleccionado ningún cliente.</Text>
+                 <Text c="dimmed">No se ha seleccionado ningún cliente.</Text> // Corregido: ningún
              )}
         </Modal>
     );
 };
 
 export default AssignRewardModal;
+
+// End of File: frontend/src/components/admin/AssignRewardModal.tsx

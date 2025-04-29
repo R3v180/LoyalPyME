@@ -1,5 +1,5 @@
 // filename: frontend/src/components/layout/AppHeader.tsx
-// Version: 1.0.1 (Fix: Remove incorrect Header import and wrapper)
+// Version: 1.0.2 (Fix encoding, clean comments)
 
 import React from 'react';
 import {
@@ -9,11 +9,10 @@ import {
     Text,
     Skeleton,
     Button,
-    // Header NO se importa directamente
 } from '@mantine/core';
 import { IconUserCircle, IconLogout } from '@tabler/icons-react';
 
-// Interfaz simplificada para los datos del usuario (duplicada de useLayoutUserData por ahora)
+// Interfaz simplificada para los datos del usuario
 // TODO: Mover a un archivo de tipos compartido (e.g., src/types/user.ts)
 interface LayoutUserData {
     name?: string | null;
@@ -39,10 +38,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     toggleNavbar,
     showAdminNavbar,
 }) => {
-    // Devolvemos directamente el Group que contiene todo el contenido del header
+    // Devuelve directamente el Group que contiene todo el contenido del header
     return (
         <Group h="100%" px="md" justify="space-between">
-            {/* Burger para el menú móvil (solo visible en 'sm' y activo si showAdminNavbar es true) */}
+            {/* Burger para el menú móvil */}
             <Burger
                 opened={navbarOpened}
                 onClick={toggleNavbar}
@@ -51,10 +50,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 disabled={!showAdminNavbar} // Deshabilitado si la navbar de admin no se muestra
             />
 
-            {/* Título de la Aplicación */}
             <Title order={4} style={{ flexGrow: 1 }}>LoyalPyME</Title>
 
-            {/* Grupo de Usuario y Logout */}
             <Group gap="xs">
                 {loadingUser ? (
                     // Esqueleto mientras cargan los datos del usuario
@@ -75,7 +72,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     size="sm"
                     leftSection={<IconLogout size={16}/>}
                 >
-                    Cerrar Sesión
+                    Cerrar Sesión {/* Corregido: Sesión */}
                 </Button>
             </Group>
         </Group>
@@ -83,3 +80,5 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 };
 
 export default AppHeader;
+
+// End of File: frontend/src/components/layout/AppHeader.tsx

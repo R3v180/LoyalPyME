@@ -1,5 +1,5 @@
 // filename: frontend/src/components/customer/UserInfoDisplay.tsx
-// Version: 1.0.0 (Initial extraction)
+// Version: 1.0.1 (Fix character encoding)
 
 import React from 'react';
 import {
@@ -45,7 +45,7 @@ const UserInfoDisplay: React.FC<UserInfoDisplayProps> = ({ userData, loadingUser
                             </Badge>
                         ) : (
                             <Badge color="gray" size="lg" variant="light">
-                                Básico
+                                Básico {/* Corregido: Básico */}
                             </Badge>
                         )}
                     </Group>
@@ -61,3 +61,5 @@ const UserInfoDisplay: React.FC<UserInfoDisplayProps> = ({ userData, loadingUser
 };
 
 export default UserInfoDisplay;
+
+// End of File: frontend/src/components/customer/UserInfoDisplay.tsx

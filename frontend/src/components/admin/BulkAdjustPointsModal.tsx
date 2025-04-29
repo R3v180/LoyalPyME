@@ -1,14 +1,12 @@
 // filename: frontend/src/components/admin/BulkAdjustPointsModal.tsx
-// Version: 1.0.2 (Fix: Remove further unused imports)
+// Version: 1.0.3 (Fix encoding, remove meta-comments)
 
-import React, { useState, useEffect } from 'react'; // useState, useEffect
+import React, { useState, useEffect } from 'react';
 import {
     Modal, NumberInput, TextInput, Button, Group, Stack
-    // Loader, Alert eliminados
 } from '@mantine/core';
 import { useForm, zodResolver } from '@mantine/form';
 import { z } from 'zod';
-// IconAlertCircle eliminado
 import { IconPlusMinus } from '@tabler/icons-react';
 
 // Esquema de validación con Zod
@@ -23,7 +21,7 @@ type FormValues = z.infer<typeof schema>;
 interface BulkAdjustPointsModalProps {
     opened: boolean;
     onClose: () => void;
-    onSubmit: (values: FormValues) => Promise<void>;
+    onSubmit: (values: FormValues) => Promise<void>; // La función que manejará la lógica de envío y notificaciones
     numberOfCustomers: number;
 }
 
@@ -44,20 +42,23 @@ const BulkAdjustPointsModal: React.FC<BulkAdjustPointsModalProps> = ({
     useEffect(() => {
         if (opened) {
             form.reset();
-            setIsSubmitting(false);
+            setIsSubmitting(false); // Asegurarse de resetear estado de envío también
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [opened]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [opened]); // No incluir form aquí para evitar bucles si la referencia cambia
 
     const handleSubmit = async (values: FormValues) => {
         setIsSubmitting(true);
         try {
-            await onSubmit(values);
+            await onSubmit(values); // Llama a la función onSubmit pasada por el padre
+            // El padre (AdminCustomerManagementPage) se encarga de las notificaciones y de cerrar el modal si onSubmit tiene éxito
         } catch (error) {
-            console.error("Error during bulk adjust points submission:", error);
-            // La notificación de error la muestra el padre
+            console.error("Error during bulk adjust points submission callback:", error);
+            // El padre ya debería mostrar notificación de error si onSubmit rechaza la promesa
         } finally {
-            setIsSubmitting(false);
+            // No reseteamos isSubmitting aquí si el padre no cierra el modal en caso de error
+            // Lo hacemos en el useEffect al reabrir o al cerrar explícitamente.
+            // setIsSubmitting(false);
         }
     };
 
@@ -66,7 +67,7 @@ const BulkAdjustPointsModal: React.FC<BulkAdjustPointsModalProps> = ({
     return (
         <Modal
             opened={opened}
-            onClose={onClose}
+            onClose={() => { if(!isSubmitting) onClose(); }} // Prevenir cierre si está enviando
             title={modalTitle}
             centered
         >
@@ -79,11 +80,11 @@ const BulkAdjustPointsModal: React.FC<BulkAdjustPointsModalProps> = ({
                         allowNegative
                         {...form.getInputProps('amount')}
                         disabled={isSubmitting}
-                        data-autofocus
+                        data-autofocus // Enfocar este campo al abrir
                     />
                     <TextInput
-                        label="Razón (Opcional)"
-                        placeholder="Ej: Bonificación masiva, Corrección general"
+                        label="Razón (Opcional)" // Corregido: Razón
+                        placeholder="Ej: Bonificación masiva, Corrección general" // Corregido: Bonificación, Corrección
                         {...form.getInputProps('reason')}
                         disabled={isSubmitting}
                     />
@@ -95,7 +96,8 @@ const BulkAdjustPointsModal: React.FC<BulkAdjustPointsModalProps> = ({
                             type="submit"
                             loading={isSubmitting}
                             leftSection={<IconPlusMinus size={16} />}
-                            disabled={!form.isValid() || form.values.amount === 0}
+                            // Deshabilitar si el form no es válido o amount es 0
+                            disabled={!form.isValid() || form.values.amount === 0 || isSubmitting}
                         >
                             Ajustar Puntos Masivamente
                         </Button>
@@ -107,3 +109,5 @@ const BulkAdjustPointsModal: React.FC<BulkAdjustPointsModalProps> = ({
 };
 
 export default BulkAdjustPointsModal;
+
+// End of File: frontend/src/components/admin/BulkAdjustPointsModal.tsx

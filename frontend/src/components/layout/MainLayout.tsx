@@ -1,30 +1,24 @@
 // filename: frontend/src/components/layout/MainLayout.tsx
-// Version: 1.3.0 (Refactor: Use AdminNavbar component)
+// Version: 1.3.1 (Clean up comments)
 
 import React from 'react';
-// Link ya no se usa directamente aquí
 import { Outlet, useLocation } from 'react-router-dom';
-import {
-    AppShell,
-    // NavLink ya no es necesario aquí
-} from '@mantine/core';
+import { AppShell } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-// Iconos de NavLink ya no son necesarios aquí
-// import { IconGauge, IconGift, IconQrcode, IconUsers, IconStairsUp, IconSettings } from '@tabler/icons-react';
 
-// Importamos el hook de datos y los componentes de layout extraídos
+// Importamos el hook de datos y los componentes de layout
 import { useLayoutUserData } from '../../hooks/useLayoutUserData';
 import AppHeader from './AppHeader';
-import AdminNavbar from './AdminNavbar'; // Importamos el nuevo componente Navbar
+import AdminNavbar from './AdminNavbar'; // Componente extraído para la navbar de admin
 
 const MainLayout: React.FC = () => {
     // Hook para datos de usuario y logout
     const { userData, loadingUser, handleLogout } = useLayoutUserData();
 
-    const location = useLocation(); // Necesitamos location para pasar el pathname
-    const [navbarOpened, { toggle: toggleNavbar }] = useDisclosure();
+    const location = useLocation(); // Necesario para determinar la ruta activa para la navbar
+    const [navbarOpened, { toggle: toggleNavbar }] = useDisclosure(); // Estado para la navbar móvil
 
-    // Lógica para mostrar la navbar de admin (sin cambios)
+    // Lógica para mostrar la navbar de admin solo en rutas de admin y si el usuario es admin
     const isAdminRoute = location.pathname.startsWith('/admin/dashboard');
     const showAdminNavbar = userData?.role === 'BUSINESS_ADMIN' && isAdminRoute;
 
@@ -32,13 +26,14 @@ const MainLayout: React.FC = () => {
         <AppShell
             header={{ height: 60 }}
             navbar={{
-                width: 250,
-                breakpoint: 'sm',
+                width: 250, // Ancho de la navbar
+                breakpoint: 'sm', // Punto a partir del cual se oculta en móvil
+                // Estado colapsado basado en el estado del Burger (móvil) y si debe mostrarse (desktop)
                 collapsed: { mobile: !navbarOpened, desktop: !showAdminNavbar }
             }}
-            padding="md"
+            padding="md" // Padding general del contenido principal
         >
-            {/* Header (Ya refactorizado) */}
+            {/* Cabecera de la aplicación */}
             <AppShell.Header>
                 <AppHeader
                     userData={userData}
@@ -46,27 +41,27 @@ const MainLayout: React.FC = () => {
                     handleLogout={handleLogout}
                     navbarOpened={navbarOpened}
                     toggleNavbar={toggleNavbar}
-                    showAdminNavbar={showAdminNavbar}
+                    showAdminNavbar={showAdminNavbar} // Pasar para habilitar/deshabilitar Burger
                 />
             </AppShell.Header>
 
-            {/* --- Navbar Refactorizada --- */}
-            {/* Renderiza condicionalmente la Navbar si el usuario es admin y está en ruta de admin */}
+            {/* Navbar lateral (condicional) */}
+            {/* Renderiza solo si el usuario es admin y está en una ruta de admin */}
             {showAdminNavbar && (
                 <AppShell.Navbar p="md">
-                    {/* Usamos el componente AdminNavbar y le pasamos el pathname actual */}
+                    {/* Usa el componente AdminNavbar pasándole la ruta actual */}
                     <AdminNavbar pathname={location.pathname} />
                 </AppShell.Navbar>
             )}
-            {/* --- Fin Navbar Refactorizada --- */}
 
-            {/* Contenido Principal (sin cambios) */}
+            {/* Contenido principal de la página actual (renderizado por React Router) */}
             <AppShell.Main>
-                <Outlet /> {/* Renderiza el componente hijo de la ruta */}
+                <Outlet /> {/* Aquí se renderiza el componente de la ruta hija */}
             </AppShell.Main>
         </AppShell>
     );
 };
 
 export default MainLayout;
-// --- FIN DEL CÓDIGO COMPLETO ---
+
+// End of File: frontend/src/components/layout/MainLayout.tsx

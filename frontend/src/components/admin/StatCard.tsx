@@ -1,13 +1,12 @@
 // filename: frontend/src/components/admin/StatCard.tsx
-// Version: 1.1.1 (Fix imports and theme access)
+// Version: 1.1.2 (Clean up comments)
 
 import React from 'react';
-// CORRECCIÓN: Añadido Stack y useMantineTheme a las importaciones
 import { Paper, Group, Text, ThemeIcon, Skeleton, MantineColor, useMantineTheme, Stack } from '@mantine/core';
 import { IconArrowUpRight, IconArrowDownRight } from '@tabler/icons-react';
 import classes from './StatCard.module.css';
 
-// Definimos el tipo para la dirección de la tendencia
+// Tipo para la dirección de la tendencia
 type TrendDirection = 'up' | 'down' | 'neutral';
 
 // Props que acepta nuestro componente StatCard
@@ -21,17 +20,15 @@ interface StatCardProps {
   trendDirection?: TrendDirection | null | undefined;
 }
 
-// Componente Funcional StatCard (Ahora llama useMantineTheme directamente)
 const StatCard: React.FC<StatCardProps> = ({
   title,
   value,
   icon,
   loading,
-  color = 'gray', // Color gris por defecto
+  color = 'gray', // Color gris por defecto si no se especifica
   trendValue,
   trendDirection,
 }) => {
-  // Hook para acceder al tema (colores, etc.)
   const theme = useMantineTheme();
 
   // Formateo del valor principal para mostrarlo
@@ -39,7 +36,7 @@ const StatCard: React.FC<StatCardProps> = ({
     ? '-'
     : typeof value === 'number' ? value.toLocaleString('es-ES') : value;
 
-  // Determinar icono y color de la tendencia (si existe)
+  // Determinar icono y color de la tendencia
   let TrendIcon = null;
   let trendColor: MantineColor = 'dimmed'; // Color por defecto
   if (trendDirection === 'up') {
@@ -50,15 +47,13 @@ const StatCard: React.FC<StatCardProps> = ({
     trendColor = 'red';
   }
 
-  // Renderizar la línea de tendencia solo si hay valor Y dirección
+  // Renderizar la línea de tendencia solo si hay valor Y dirección definidos
   const renderTrend = trendValue !== null && trendValue !== undefined && trendDirection;
 
   return (
     <Paper withBorder p="md" radius="md" className={classes.card}>
-      {/* Grupo Superior: Icono y Textos Principales */}
       <Group justify="space-between" wrap="nowrap" align="flex-start">
-        {/* Stack Izquierda: Título y Valor */}
-        {/* CORRECCIÓN: Usamos Stack importado */}
+        {/* Título y Valor */}
         <Stack gap={0}>
           <Text c="dimmed" tt="uppercase" fw={700} fz="xs" className={classes.label}>
             {title}
@@ -67,26 +62,25 @@ const StatCard: React.FC<StatCardProps> = ({
              <Skeleton height={28} mt={5} width={70} />
           ) : (
              <Text fw={700} fz="xl" className={classes.value} c={color}>
-                {displayValue}
+               {displayValue}
              </Text>
           )}
-        </Stack> {/* CORRECCIÓN: Fin de Stack */}
+        </Stack>
 
-         {/* Icono Principal (Derecha) */}
+        {/* Icono Principal */}
         {icon && !loading && (
           <ThemeIcon color={color} variant="light" size={38} radius="md">
             {icon}
           </ThemeIcon>
         )}
          {loading && (
-             <Skeleton height={38} width={38} radius="md" />
+            <Skeleton height={38} width={38} radius="md" />
          )}
       </Group>
 
-       {/* Grupo Inferior: Tendencia (Condicional) */}
+      {/* Tendencia */}
       {!loading && renderTrend && (
            <Group gap={4} mt={5} wrap="nowrap">
-               {/* CORRECCIÓN: Usamos un índice fijo [6] para el color del icono de tendencia */}
                {TrendIcon && <TrendIcon size={16} stroke={1.5} color={theme.colors[trendColor][6]} />}
                <Text c={trendColor} fz="xs" fw={500}>
                    {trendValue}
@@ -97,7 +91,6 @@ const StatCard: React.FC<StatCardProps> = ({
   );
 };
 
-// Ya no necesitamos el wrapper, exportamos StatCard directamente
 export default StatCard;
 
 // End of file: frontend/src/components/admin/StatCard.tsx
