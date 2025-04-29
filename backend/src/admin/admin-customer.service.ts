@@ -1,20 +1,22 @@
 // filename: backend/src/admin/admin-customer.service.ts
-// Version: 1.6.1 (Fix return type of getCustomersForBusiness - COMPLETE FILE)
+// Version: 1.7.0 (Add isActive, isFavorite, and tierId filters logic)
 
 import { PrismaClient, Prisma, UserRole, User, GrantedReward } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// --- Tipos y Selectores (Completos) ---
+// --- Tipos y Selectores ---
+// Actualizamos la interfaz de filtros para incluir tierId
 interface GetCustomersOptions {
     page?: number;
     limit?: number;
     sortBy?: string;
     sortDir?: 'asc' | 'desc';
     filters?: {
-      search?: string;
-      isFavorite?: boolean;
-      isActive?: boolean;
+        search?: string;
+        isFavorite?: boolean; // Ya estaba
+        isActive?: boolean;   // Ya estaba
+        tierId?: string;      // <-- NUEVO FILTRO AÑADIDO
     }
 }
 
@@ -46,53 +48,100 @@ export const getCustomersForBusiness = async (
     options: GetCustomersOptions = {}
 ): Promise<{ items: CustomerListItem[], totalPages: number, currentPage: number, totalItems: number }> => {
     const { page = 1, limit = 10, sortBy = 'createdAt', sortDir = 'desc', filters = {} } = options;
-    console.log(`[ADM_CUST_SVC] getCustomersForBusiness - Fetching: businessId=${businessId}, Page=${page}, Limit=${limit}, SortBy=${sortBy}, SortDir=${sortDir}, Filters=`, filters);
+    console.log(`[ADM_CUST_SVC] getCustomersForBusiness - Fetching: businessId=${businessId}, Page=${page}, Limit=${limit}, SortBy=${sortBy}, SortDir=${sortDir}, Filters=`, filters); // Log mejorado
     const allowedSortByFields = ['name', 'email', 'points', 'createdAt', 'isActive', 'isFavorite', 'currentTier.level'];
     const safeSortBy = allowedSortByFields.includes(sortBy) ? sortBy : 'createdAt';
     const safeSortDir = sortDir === 'asc' ? 'asc' : 'desc';
     const skip = (page - 1) * limit;
+
     try {
-        const whereClause: Prisma.UserWhereInput = { businessId: businessId, role: UserRole.CUSTOMER_FINAL };
-        if (filters.isFavorite !== undefined) { whereClause.isFavorite = filters.isFavorite; }
-        if (filters.isActive !== undefined) { whereClause.isActive = filters.isActive; }
-        // --- Código Restaurado ---
+        // --- Construcción de whereClause con todos los filtros ---
+        const whereClause: Prisma.UserWhereInput = {
+            businessId: businessId,
+            role: UserRole.CUSTOMER_FINAL
+        };
+
+        // Filtro de Búsqueda (Name/Email)
         if (filters.search && filters.search.trim() !== '') {
             const searchTerm = filters.search.trim();
             whereClause.OR = [
                 { name: { contains: searchTerm, mode: 'insensitive' } },
                 { email: { contains: searchTerm, mode: 'insensitive' } }
             ];
+            console.log(`[ADM_CUST_SVC] Applying search filter: ${searchTerm}`);
         }
-        // --- Fin Código Restaurado ---
+
+        // Filtro Favorito (isFavorite)
+        if (filters.isFavorite !== undefined) {
+            whereClause.isFavorite = filters.isFavorite;
+            console.log(`[ADM_CUST_SVC] Applying isFavorite filter: ${filters.isFavorite}`);
+        }
+
+        // Filtro Estado (isActive)
+        if (filters.isActive !== undefined) {
+            whereClause.isActive = filters.isActive;
+            console.log(`[ADM_CUST_SVC] Applying isActive filter: ${filters.isActive}`);
+        }
+
+        // --- NUEVO: Filtro Nivel (tierId) ---
+        // Asumimos que si tierId llega y no está vacío, es un ID válido de un Tier.
+        // Si el frontend envía "todos", NO debería enviar el parámetro tierId.
+        if (filters.tierId && filters.tierId.trim() !== '') {
+             // Si se quiere filtrar por "Sin Nivel" (Básico), podríamos usar un valor especial
+             // como 'NONE' o 'NULL' enviado desde el frontend.
+             if (filters.tierId === 'NONE') { // Ejemplo: Manejar explícitamente "Sin Nivel"
+                whereClause.currentTierId = null;
+                console.log(`[ADM_CUST_SVC] Applying tierId filter: NONE (null)`);
+             } else {
+                whereClause.currentTierId = filters.tierId;
+                console.log(`[ADM_CUST_SVC] Applying tierId filter: ${filters.tierId}`);
+             }
+        }
+        // --- FIN NUEVO ---
+
+        // --- Fin Construcción whereClause ---
+
+        // Ordenación (OrderBy)
         let orderByClause: Prisma.UserOrderByWithRelationInput | Prisma.UserOrderByWithRelationInput[];
-        // --- Código Restaurado ---
         if (safeSortBy === 'currentTier.level') {
             orderByClause = { currentTier: { level: safeSortDir } };
         } else {
             orderByClause = { [safeSortBy]: safeSortDir };
         }
-        // --- Fin Código Restaurado ---
-        const selectClause = customerListItemSelector; // Usar el selector definido
-        console.log('[ADM_CUST_SVC] getCustomersForBusiness - Clauses built:', { where: whereClause, orderBy: orderByClause });
 
-        console.log('[ADM_CUST_SVC] getCustomersForBusiness - Finding many customers...');
-        const customers = await prisma.user.findMany({ where: whereClause, select: selectClause, orderBy: orderByClause, skip: skip, take: limit, });
-        console.log(`[ADM_CUST_SVC] getCustomersForBusiness - findMany completed. Found ${customers?.length ?? 'N/A'} customers.`);
+        const selectClause = customerListItemSelector;
+        console.log('[ADM_CUST_SVC] getCustomersForBusiness - Final Clauses:', { where: whereClause, orderBy: orderByClause });
 
-        console.log('[ADM_CUST_SVC] getCustomersForBusiness - Counting total customers...');
-        const totalItems = await prisma.user.count({ where: whereClause, });
-        console.log(`[ADM_CUST_SVC] getCustomersForBusiness - count completed. Total items: ${totalItems ?? 'N/A'}`);
+        // --- Ejecutar Consultas (COUNT y FINDMANY) ---
+        // Usamos $transaction para asegurar que ambas consultas usen el mismo 'whereClause'
+        const [totalItems, customers] = await prisma.$transaction([
+            prisma.user.count({ where: whereClause }),
+            prisma.user.findMany({
+                where: whereClause,
+                select: selectClause,
+                orderBy: orderByClause,
+                skip: skip,
+                take: limit,
+            })
+        ]);
+        // --- Fin Consultas ---
 
-        console.log('[ADM_CUST_SVC] getCustomersForBusiness - Queries finished.');
+        console.log(`[ADM_CUST_SVC] getCustomersForBusiness - Found ${customers.length} customers on page ${page}. Total items matching filters: ${totalItems}`);
+
         const totalPages = Math.ceil(totalItems / limit);
         console.log(`[ADM_CUST_SVC] getCustomersForBusiness - Calculation done. Total pages: ${totalPages}`);
-        return { items: customers, totalPages: totalPages, currentPage: page, totalItems: totalItems }; // Sin 'as User[]'
+
+        return { items: customers, totalPages: totalPages, currentPage: page, totalItems: totalItems };
+
     } catch (error) {
-        console.error(`[ADM_CUST_SVC] *** ERROR within getCustomersForBusiness try/catch for business ${businessId}:`, error);
-        console.error(`[ADM_CUST_SVC] Error fetching customers for business ${businessId} with options:`, options, error);
+        console.error(`[ADM_CUST_SVC] *** ERROR in getCustomersForBusiness for business ${businessId}:`, error);
+        // Podríamos querer loguear las opciones también en caso de error
+        console.error(`[ADM_CUST_SVC] Options causing error:`, options);
         throw new Error('Error al obtener la lista de clientes desde la base de datos.');
     }
 };
+
+// --- Resto de funciones del servicio (getCustomerDetailsById, updateAdminNotesForCustomer, etc.) SIN CAMBIOS ---
 
 /**
  * Obtiene los detalles completos de un cliente específico por su ID.

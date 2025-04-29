@@ -1,6 +1,6 @@
 "use strict";
 // filename: backend/src/index.ts
-// Version: 1.3.0 (Apply auth middleware individually, mount authRouter under /api)
+// Version: 1.3.2 (Removed test console.log)
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };

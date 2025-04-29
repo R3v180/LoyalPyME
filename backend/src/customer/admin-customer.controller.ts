@@ -1,5 +1,5 @@
 // filename: backend/src/customer/admin-customer.controller.ts
-// Version: 1.6.0 (Add handler for bulk adjusting customer points - COMPLETE FILE)
+// Version: 1.7.0 (Read and pass all filter parameters to service)
 
 import { Request, Response, NextFunction } from 'express';
 import { UserRole } from '@prisma/client';
@@ -17,13 +17,15 @@ import {
     updateAdminNotesForCustomer,
     bulkUpdateStatusForCustomers,
     bulkDeleteCustomers,
-    bulkAdjustPointsForCustomers // <-- Importar la nueva función del servicio
-    // GetCustomersOptions
+    bulkAdjustPointsForCustomers
+    // Ya no necesitamos GetCustomersOptions aquí si la inferencia funciona
 } from '../admin/admin-customer.service'; // Confirma esta ruta
 
 // --- Tipos y Interfaces ---
 type SortDirection = 'asc' | 'desc';
-interface GetCustomersOptions {
+// Actualizamos la interfaz local para reflejar todos los filtros posibles
+// (Aunque podríamos inferirlo, es más claro tenerlo definido)
+interface ControllerGetCustomersOptions {
     page?: number;
     limit?: number;
     sortBy?: string;
@@ -32,6 +34,7 @@ interface GetCustomersOptions {
         search?: string;
         isFavorite?: boolean;
         isActive?: boolean;
+        tierId?: string; // <-- Añadido tierId
     }
 }
 
@@ -41,45 +44,60 @@ interface GetCustomersOptions {
  * Handler para que el Admin obtenga la lista PAGINADA, FILTRADA y ORDENADA de clientes.
  */
 export const getAdminCustomers = async (req: Request, res: Response, next: NextFunction) => {
-    console.log('[ADM_CUST_CTRL] Entering getAdminCustomers handler...'); // LOG 1
-    // @ts-ignore
+    console.log('[ADM_CUST_CTRL] Entering getAdminCustomers handler...');
+    // @ts-ignore - Asumiendo que auth.middleware ya cargó req.user
     const adminBusinessId = req.user?.businessId;
     if (!adminBusinessId) {
         console.error("[ADM_CUST_CTRL] No businessId found in req.user for admin.");
         return res.status(403).json({ message: "No se pudo identificar el negocio del administrador." });
     }
-    console.log(`[ADM_CUST_CTRL] Admin businessId: ${adminBusinessId}`); // LOG 2
+    console.log(`[ADM_CUST_CTRL] Admin businessId: ${adminBusinessId}`);
 
+    // --- Leer TODOS los parámetros de la query ---
     const page = parseInt(req.query.page as string || '1', 10);
     const limit = parseInt(req.query.limit as string || '10', 10);
     const sortBy = req.query.sortBy as string || 'createdAt';
     const sortDirInput = req.query.sortDir as string;
     const sortDir: SortDirection = sortDirInput === 'asc' ? 'asc' : 'desc';
-    const search = req.query.search as string || undefined;
-    const isFavoriteParam = req.query.isFavorite as string;
-    const isActiveParam = req.query.isActive as string;
+    const search = req.query.search as string | undefined;
+    // Filtros específicos (isActive, isFavorite, tierId)
+    const isActiveParam = req.query.isActive as string | undefined; // 'true', 'false', o undefined
+    const isFavoriteParam = req.query.isFavorite as string | undefined; // 'true', 'false', o undefined
+    const tierIdParam = req.query.tierId as string | undefined; // ID del tier, 'NONE', o undefined
 
-    const options: GetCustomersOptions = {
+    // --- Construir objeto de filtros para el servicio ---
+    const filters: ControllerGetCustomersOptions['filters'] = {};
+    if (search?.trim()) filters.search = search.trim();
+    // Convertir 'true'/'false' strings a boolean, mantener undefined si no viene
+    if (isActiveParam !== undefined) filters.isActive = isActiveParam === 'true';
+    if (isFavoriteParam !== undefined) filters.isFavorite = isFavoriteParam === 'true';
+    // Pasar tierId si existe y no es vacío (el servicio maneja 'NONE' si es necesario)
+    if (tierIdParam?.trim()) filters.tierId = tierIdParam.trim();
+
+    // Construir objeto de opciones completo
+    const options: ControllerGetCustomersOptions = {
         page: isNaN(page) || page < 1 ? 1 : page,
         limit: isNaN(limit) || limit < 1 ? 10 : limit,
         sortBy: sortBy,
         sortDir: sortDir,
-        filters: { search: search?.trim() || undefined, isFavorite: isFavoriteParam === undefined ? undefined : isFavoriteParam === 'true', isActive: isActiveParam === undefined ? undefined : isActiveParam === 'true', }
+        filters: filters // Pasar el objeto de filtros construido
     };
 
-    console.log(`[ADM_CUST_CTRL] Parsed options:`, options); // LOG 3
+    console.log(`[ADM_CUST_CTRL] Parsed options being sent to service:`, options);
 
     try {
-        console.log('[ADM_CUST_CTRL] Calling getCustomersForBusiness service...'); // LOG 4
+        console.log('[ADM_CUST_CTRL] Calling getCustomersForBusiness service...');
+        // Llamar al servicio con las opciones completas
         const result = await getCustomersForBusiness(adminBusinessId, options);
-        console.log(`[ADM_CUST_CTRL] Service call returned. Result has ${result?.items?.length ?? 'N/A'} items. Total items: ${result?.totalItems ?? 'N/A'}`); // LOG 5
-        console.log('[ADM_CUST_CTRL] Attempting to send JSON response...'); // LOG 6
+        console.log(`[ADM_CUST_CTRL] Service call returned. Result has ${result?.items?.length ?? 'N/A'} items. Total items: ${result?.totalItems ?? 'N/A'}`);
         res.status(200).json(result);
     } catch (error) {
-        console.error("[ADM_CUST_CTRL] *** ERROR caught in getAdminCustomers handler:", error); // LOG 8
+        console.error("[ADM_CUST_CTRL] *** ERROR caught in getAdminCustomers handler:", error);
         next(error);
     }
 };
+
+// --- Resto de handlers SIN CAMBIOS ---
 
 /**
  * Handler para obtener los detalles completos de un cliente específico.
@@ -256,7 +274,6 @@ export const bulkDeleteCustomersHandler = async (req: Request, res: Response, ne
     }
 };
 
-// --- NUEVO HANDLER PARA AJUSTE MASIVO DE PUNTOS ---
 /**
  * Handler para ajustar los puntos de múltiples clientes.
  */

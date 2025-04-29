@@ -1,5 +1,5 @@
 // filename: backend/src/index.ts
-// Version: 1.3.0 (Apply auth middleware individually, mount authRouter under /api)
+// Version: 1.3.2 (Removed test console.log)
 
 import express, { Express, Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
@@ -11,11 +11,11 @@ import { authenticateToken } from './middleware/auth.middleware';
 import { checkRole } from './middleware/role.middleware'; // Import checkRole
 
 // Routers
-import authRouter from './routes/auth.routes';           // Contiene /login, /register, /forgot-password, etc.
+import authRouter from './routes/auth.routes';          // Contiene /login, /register, /forgot-password, etc.
 import protectedRouter from './routes/protected.routes'; // Contiene /profile
 import rewardsRouter from './routes/rewards.routes';     // Gestión Recompensas (Admin)
 import pointsRouter from './routes/points.routes';       // Puntos y QR (Cliente/Admin)
-import customerRouter from './routes/customer.routes';    // Acciones Cliente (ver recompensas, canjear regalo)
+import customerRouter from './routes/customer.routes';   // Acciones Cliente (ver recompensas, canjear regalo)
 import tierRouter from './routes/tiers.routes';         // Gestión Niveles (Admin)
 import adminRouter from './routes/admin.routes';        // Acciones Admin sobre clientes, stats
 import businessRouter from './routes/businesses.routes'; // Contiene /public-list
