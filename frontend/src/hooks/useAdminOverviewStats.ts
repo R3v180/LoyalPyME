@@ -1,19 +1,14 @@
 // filename: frontend/src/hooks/useAdminOverviewStats.ts
-// Version: 1.0.0 (Hook to fetch admin overview stats and calculate trends)
+// Version: 1.0.1 (Add console.log inside calculateTrend for debugging)
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getAdminDashboardStats, AdminOverviewStats } from '../services/adminService'; // Importar servicio y tipo
+import { getAdminDashboardStats, AdminOverviewStats } from '../services/adminService';
 
-// Definir tipo para la dirección de la tendencia (puede moverse a types globales)
 type TrendDirection = 'up' | 'down' | 'neutral';
-
-// Definir la estructura de lo que devuelve una tendencia calculada
 interface TrendResult {
     trendValue: string | null;
     trendDirection: TrendDirection | null;
 }
-
-// Definir la estructura de lo que devuelve el hook
 interface UseAdminOverviewStatsReturn {
     statsData: AdminOverviewStats | null;
     loadingStats: boolean;
@@ -21,17 +16,14 @@ interface UseAdminOverviewStatsReturn {
     newCustomersTrend: TrendResult;
     pointsIssuedTrend: TrendResult;
     rewardsRedeemedTrend: TrendResult;
-    refetchStats: () => void; // Función para recargar
+    refetchStats: () => void;
 }
 
-// El hook personalizado
 export const useAdminOverviewStats = (): UseAdminOverviewStatsReturn => {
-    // Estados internos del hook
     const [statsData, setStatsData] = useState<AdminOverviewStats | null>(null);
     const [loadingStats, setLoadingStats] = useState<boolean>(true);
     const [errorStats, setErrorStats] = useState<string | null>(null);
 
-    // Función para obtener los datos de la API
     const fetchStats = useCallback(async () => {
         setLoadingStats(true);
         setErrorStats(null);
@@ -41,69 +33,81 @@ export const useAdminOverviewStats = (): UseAdminOverviewStatsReturn => {
             setStatsData(data);
         } catch (err: any) {
             console.error("[useAdminOverviewStats] Error fetching stats:", err);
-            setErrorStats(err.message || 'No se pudieron cargar las estadísticas.'); // Corregido: estadísticas
+            setErrorStats(err.message || 'No se pudieron cargar las estadísticas.');
         } finally {
             setLoadingStats(false);
             console.log("[useAdminOverviewStats] Stats fetch finished.");
         }
-    }, []); // Sin dependencias, solo se llama al montar o con refetch
+    }, []);
 
-    // Efecto para la carga inicial
     useEffect(() => {
         fetchStats();
     }, [fetchStats]);
 
-    // Función pura para calcular la tendencia (envuelta en useMemo para estabilidad)
     const calculateTrend = useMemo(() => {
-        return (current: number | null | undefined, previous: number | null | undefined): TrendResult => {
+        // Añadimos un identificador para saber qué métrica se está calculando
+        return (metricName: string, current: number | null | undefined, previous: number | null | undefined): TrendResult => {
             const currentVal = current ?? 0;
             const previousVal = previous ?? 0;
 
-            // Caso especial: si el valor anterior era 0
+            // --- DEBUG LOGGING ---
+            console.log(`[calculateTrend - ${metricName}] Inputs: current=${currentVal}, previous=${previousVal}`);
+            // --- FIN DEBUG LOGGING ---
+
             if (previousVal === 0) {
-                if (currentVal > 0) return { trendValue: '+', trendDirection: 'up' }; // Indica aumento desde cero
-                return { trendValue: 'N/A', trendDirection: 'neutral' }; // Sin cambios desde cero
+                if (currentVal > 0) {
+                    // --- DEBUG LOGGING ---
+                    console.log(`[calculateTrend - ${metricName}] Result: '+' (Previous was 0)`);
+                    // --- FIN DEBUG LOGGING ---
+                    return { trendValue: '+', trendDirection: 'up' };
+                }
+                // --- DEBUG LOGGING ---
+                 console.log(`[calculateTrend - ${metricName}] Result: 'N/A' (Both 0 or current <= 0)`);
+                 // --- FIN DEBUG LOGGING ---
+                return { trendValue: 'N/A', trendDirection: 'neutral' };
             }
 
             const percentageChange = ((currentVal - previousVal) / previousVal) * 100;
+            // --- DEBUG LOGGING ---
+            console.log(`[calculateTrend - ${metricName}] Percentage Change: ${percentageChange}`);
+            // --- FIN DEBUG LOGGING ---
 
-            // Validar resultado numérico
             if (isNaN(percentageChange) || !isFinite(percentageChange)) {
-                console.warn("Invalid percentageChange calculated:", { currentVal, previousVal, percentageChange });
+                 console.warn(`[calculateTrend - ${metricName}] Invalid percentageChange calculated.`);
                 return { trendValue: 'Error', trendDirection: 'neutral' };
             }
 
-            // Determinar dirección
             let direction: TrendDirection = 'neutral';
-            const threshold = 0.1; // Umbral pequeño para considerar cambio (ej: 0.1%)
+            const threshold = 0.1;
             if (percentageChange > threshold) direction = 'up';
             else if (percentageChange < -threshold) direction = 'down';
 
-            // Formatear valor
             const formattedValue = `${percentageChange >= 0 ? '+' : ''}${percentageChange.toFixed(1)}%`;
-
-            // Devolver resultado formateado
+            // --- DEBUG LOGGING ---
+            console.log(`[calculateTrend - ${metricName}] Result: value='${formattedValue}', direction='${direction}'`);
+            // --- FIN DEBUG LOGGING ---
             return { trendValue: formattedValue, trendDirection: direction };
         };
-    }, []); // Vacío porque la función en sí no depende de nada externo
+    }, []);
 
-    // Calcular las tendencias específicas usando useMemo para que solo se recalculen si statsData cambia
     const newCustomersTrend = useMemo(() => {
         if (!statsData) return { trendValue: null, trendDirection: null };
-        return calculateTrend(statsData.newCustomersLast7Days, statsData.newCustomersPrevious7Days);
+        // Pasar nombre de métrica para logs
+        return calculateTrend('NewCustomers', statsData.newCustomersLast7Days, statsData.newCustomersPrevious7Days);
     }, [statsData, calculateTrend]);
 
     const pointsIssuedTrend = useMemo(() => {
         if (!statsData) return { trendValue: null, trendDirection: null };
-        return calculateTrend(statsData.pointsIssuedLast7Days, statsData.pointsIssuedPrevious7Days);
+         // Pasar nombre de métrica para logs
+        return calculateTrend('PointsIssued', statsData.pointsIssuedLast7Days, statsData.pointsIssuedPrevious7Days);
     }, [statsData, calculateTrend]);
 
     const rewardsRedeemedTrend = useMemo(() => {
         if (!statsData) return { trendValue: null, trendDirection: null };
-        return calculateTrend(statsData.rewardsRedeemedLast7Days, statsData.rewardsRedeemedPrevious7Days);
+         // Pasar nombre de métrica para logs
+        return calculateTrend('RewardsRedeemed', statsData.rewardsRedeemedLast7Days, statsData.rewardsRedeemedPrevious7Days);
     }, [statsData, calculateTrend]);
 
-    // Retorno del hook
     return {
         statsData,
         loadingStats,
@@ -111,7 +115,7 @@ export const useAdminOverviewStats = (): UseAdminOverviewStatsReturn => {
         newCustomersTrend,
         pointsIssuedTrend,
         rewardsRedeemedTrend,
-        refetchStats: fetchStats // Exponer la función de fetch para recarga manual
+        refetchStats: fetchStats
     };
 };
 

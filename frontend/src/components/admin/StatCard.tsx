@@ -2,7 +2,7 @@
 import React from 'react';
 import { Paper, Group, Text, ThemeIcon, Skeleton, MantineColor, useMantineTheme, Stack } from '@mantine/core';
 import { IconArrowUpRight, IconArrowDownRight } from '@tabler/icons-react';
-import { useTranslation } from 'react-i18next'; // Importar hook
+import { useTranslation } from 'react-i18next';
 import classes from './StatCard.module.css';
 
 // Tipo para la dirección de la tendencia
@@ -10,12 +10,12 @@ type TrendDirection = 'up' | 'down' | 'neutral';
 
 // Props que acepta nuestro componente StatCard
 interface StatCardProps {
-  title: string; // El título ya viene traducido como prop
+  title: string;
   value: number | string | null | undefined;
   icon?: React.ReactNode;
   loading?: boolean;
   color?: MantineColor;
-  trendValue?: number | string | null | undefined;
+  trendValue?: string | null | undefined; // Aseguramos que trendValue siempre sea string o null/undefined
   trendDirection?: TrendDirection | null | undefined;
 }
 
@@ -25,19 +25,18 @@ const StatCard: React.FC<StatCardProps> = ({
   icon,
   loading,
   color = 'gray',
-  trendValue,
+  trendValue, // Recibe el string formateado o null/undefined desde el hook
   trendDirection,
 }) => {
-  const { t, i18n } = useTranslation(); // Hook de traducción
+  const { i18n } = useTranslation(); // Solo para i18n.language
   const theme = useMantineTheme();
 
-  // Formateo del valor principal usando el idioma actual de i18n
+  // Formateo del valor principal (sin cambios)
   const displayValue = loading || value === null || value === undefined
     ? '-'
-    // Usar i18n.language para el formateo local
     : typeof value === 'number' ? value.toLocaleString(i18n.language) : value;
 
-  // Determinar icono y color de la tendencia
+  // Determinar icono y color de la tendencia (sin cambios)
   let TrendIcon = null;
   let trendColor: MantineColor = 'dimmed';
   if (trendDirection === 'up') {
@@ -48,22 +47,10 @@ const StatCard: React.FC<StatCardProps> = ({
     trendColor = 'red';
   }
 
-  // Formateo del valor de la tendencia (usar t() para el error)
-  let displayTrendValue = trendValue;
-  if (typeof trendValue === 'number') {
-      if (!isNaN(trendValue) && isFinite(trendValue)) {
-          displayTrendValue = `${trendValue >= 0 ? '+' : ''}${trendValue.toFixed(1)}%`;
-      } else {
-          console.warn("Invalid trendValue number received:", trendValue);
-          displayTrendValue = t('common.error'); // Usar clave i18n para error
-      }
-  } else if (trendValue === null || trendValue === undefined) {
-      displayTrendValue = null; // No mostrar nada si es null/undefined
-  }
-  // Si es un string (como '+'), se muestra tal cual
-
-  // Renderizar la línea de tendencia solo si hay valor Y dirección definidos
-  const renderTrend = displayTrendValue !== null && trendDirection;
+  // **CORRECCIÓN:** No necesitamos formatear `trendValue` aquí, ya viene formateado.
+  // Simplemente comprobamos si existe para renderizar la sección de tendencia.
+  const displayTrendValue = trendValue; // Usamos directamente el valor recibido
+  const renderTrend = displayTrendValue !== null && displayTrendValue !== undefined && trendDirection;
 
   return (
     <Paper withBorder p="md" radius="md" className={classes.card}>
@@ -91,11 +78,12 @@ const StatCard: React.FC<StatCardProps> = ({
          )}
       </Group>
 
+      {/* Mostramos la tendencia si renderTrend es true */}
       {!loading && renderTrend && (
            <Group gap={4} mt={5} wrap="nowrap">
                {TrendIcon && <TrendIcon size={16} stroke={1.5} color={theme.colors[trendColor][6]} />}
                <Text c={trendColor} fz="xs" fw={500}>
-                   {displayTrendValue}
+                   {displayTrendValue} {/* Mostramos el string directamente */}
                </Text>
            </Group>
       )}
