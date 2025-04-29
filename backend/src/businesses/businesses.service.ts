@@ -1,5 +1,5 @@
 // filename: backend/src/businesses/businesses.service.ts
-// Version: 1.0.1 (Add missing exports)
+// Version: 1.0.2 (Remove obsolete comments)
 
 import { PrismaClient, Prisma } from '@prisma/client';
 
@@ -8,7 +8,6 @@ const prisma = new PrismaClient();
 /**
  * Define la estructura de datos devuelta para la lista pública de negocios.
  */
-// CORRECCIÓN: Añadido 'export'
 export interface PublicBusinessInfo {
   id: string;
   name: string;
@@ -22,7 +21,6 @@ export interface PublicBusinessInfo {
  * @returns Una promesa que resuelve con un array de objetos PublicBusinessInfo.
  * @throws Error si ocurre un problema al consultar la base de datos.
  */
-// CORRECCIÓN: Añadido 'export'
 export const findPublicBusinesses = async (): Promise<PublicBusinessInfo[]> => {
   console.log('[BusinessService] Buscando lista pública de negocios...');
   try {
