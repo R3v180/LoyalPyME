@@ -942,27 +942,6 @@
     loupe "^3.1.2"
     tinyrainbow "^1.2.0"
 
-"@zxing/browser@0.0.7":
-  version "0.0.7"
-  resolved "https://registry.yarnpkg.com/@zxing/browser/-/browser-0.0.7.tgz#5fa7680a867b660f48d3288fdf63e0174ad531c7"
-  integrity sha512-AepzMgDnD6EjxewqmXpHJsi4S3Gw9ilZJLIbTf6fWuWySEcHBodnGu3p7FWlgq1Sd5QyfPhTum5z3CBkkhMVng==
-  optionalDependencies:
-    "@zxing/text-encoding" "^0.9.0"
-
-"@zxing/library@^0.18.3":
-  version "0.18.6"
-  resolved "https://registry.yarnpkg.com/@zxing/library/-/library-0.18.6.tgz#717af8c6c1fd982865e21051afdd7b470ae6674c"
-  integrity sha512-bulZ9JHoLFd9W36pi+7e7DnEYNJhljYjZ1UTsKPOoLMU3qtC+REHITeCRNx40zTRJZx18W5TBRXt5pq2Uopjsw==
-  dependencies:
-    ts-custom-error "^3.0.0"
-  optionalDependencies:
-    "@zxing/text-encoding" "~0.9.0"
-
-"@zxing/text-encoding@^0.9.0", "@zxing/text-encoding@~0.9.0":
-  version "0.9.0"
-  resolved "https://registry.yarnpkg.com/@zxing/text-encoding/-/text-encoding-0.9.0.tgz#fb50ffabc6c7c66a0c96b4c03e3d9be74864b70b"
-  integrity sha512-U/4aVJ2mxI0aDNI8Uq0wEhMgY+u4CNtEb0om3+y3+niDAsoTCOB33UF0sxpzqzdqXLqmvc+vZyAt4O8pPdfkwA==
-
 acorn-jsx@^5.3.2:
   version "5.3.2"
   resolved "https://registry.yarnpkg.com/acorn-jsx/-/acorn-jsx-5.3.2.tgz#7ed5bb55908b3b2f1bc55c6af1653bada7f07937"
@@ -2163,15 +2142,6 @@ react-number-format@^5.4.3:
   resolved "https://registry.yarnpkg.com/react-number-format/-/react-number-format-5.4.4.tgz#d31f0e260609431500c8d3f81bbd3ae1fb7cacad"
   integrity sha512-wOmoNZoOpvMminhifQYiYSTCLUDOiUbBunrMrMjA+dV52sY+vck1S4UhR6PkgnoCquvvMSeJjErXZ4qSaWCliA==
 
-react-qr-reader@^3.0.0-beta-1:
-  version "3.0.0-beta-1"
-  resolved "https://registry.yarnpkg.com/react-qr-reader/-/react-qr-reader-3.0.0-beta-1.tgz#e04a20876409313439959d8e0ea6df3ba6e36d68"
-  integrity sha512-5HeFH9x/BlziRYQYGK2AeWS9WiKYZtGGMs9DXy3bcySTX3C9UJL9EwcPnWw8vlf7JP4FcrAlr1SnZ5nsWLQGyw==
-  dependencies:
-    "@zxing/browser" "0.0.7"
-    "@zxing/library" "^0.18.3"
-    rollup "^2.67.2"
-
 react-refresh@^0.17.0:
   version "0.17.0"
   resolved "https://registry.yarnpkg.com/react-refresh/-/react-refresh-0.17.0.tgz#b7e579c3657f23d04eccbe4ad2e58a8ed51e7e53"
@@ -2270,13 +2240,6 @@ reusify@^1.0.4:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/reusify/-/reusify-1.1.0.tgz#0fe13b9522e1473f51b558ee796e08f11f9b489f"
   integrity sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==
-
-rollup@^2.67.2:
-  version "2.79.2"
-  resolved "https://registry.yarnpkg.com/rollup/-/rollup-2.79.2.tgz#f150e4a5db4b121a21a747d762f701e5e9f49090"
-  integrity sha512-fS6iqSPZDs3dr/y7Od6y5nha8dW1YnbgtsyotCVvoFGKbERG++CVRFv1meyGDE1SNItQA8BrnCw7ScdAhRJ3XQ==
-  optionalDependencies:
-    fsevents "~2.3.2"
 
 rollup@^4.20.0:
   version "4.40.1"
@@ -2470,11 +2433,6 @@ ts-api-utils@^2.0.1:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/ts-api-utils/-/ts-api-utils-2.1.0.tgz#595f7094e46eed364c13fd23e75f9513d29baf91"
   integrity sha512-CUgTZL1irw8u29bzrOD/nH85jqyc74D6SshFgujOIA7osm2Rz7dYH77agkx7H4FBNxDq7Cjf+IjaX/8zwFW+ZQ==
-
-ts-custom-error@^3.0.0:
-  version "3.3.1"
-  resolved "https://registry.yarnpkg.com/ts-custom-error/-/ts-custom-error-3.3.1.tgz#8bd3c8fc6b8dc8e1cb329267c45200f1e17a65d1"
-  integrity sha512-5OX1tzOjxWEgsr/YEUWSuPrQ00deKLh6D7OTWcvNHm12/7QPyRh8SYpyWvA4IZv8H/+GQWQEh/kwo95Q9OVW1A==
 
 tslib@^2.0.0, tslib@^2.1.0:
   version "2.8.1"

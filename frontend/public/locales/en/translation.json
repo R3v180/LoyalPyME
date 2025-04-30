@@ -198,7 +198,14 @@
     "successRedeemGiftTitle": "Gift Redeemed!",
     "successRedeemGiftMessage": "You have redeemed \"{{rewardName}}\".",
     "errorLoadingProfileTitle": "Profile Error",
-    "errorLoadingProfileDefault": "Could not load user data."
+    "errorLoadingProfileDefault": "Could not load user data.",
+    "tierBenefitsTitle": "Benefits for Level: {{tierName}}",
+    "progressUnitVisits": "visits",
+    "progressLabel": "{{currentValue}} / {{targetValue}} {{unit}} to reach {{nextTierName}}",
+    "maxLevelReached": "Congratulations! You've reached the maximum level ({{currentTierName}}).",
+    "maxLevelReachedShort": "Maximum Level Reached!",
+    "nextTierBenefitsTitle": "Reaching {{tierName}} unlocks:",
+    "errorLoadingProgress": "Could not load tier data to show progress."
   },
   "adminCommon": {
     "dashboard": "Dashboard",
@@ -460,7 +467,7 @@
     "tooltipActivateCustomer": "Activate Customer",
     "tooltipFavorite": "Mark as Favorite",
     "tooltipUnfavorite": "Remove from Favorites",
-    "checkboxAriaLabel": "Select customer", 
+    "checkboxAriaLabel": "Select customer",
     "checkboxSelectAllAriaLabel": "Select all visible rows",
     "adjustPointsModalTitle": "Adjust Points for {{name}}",
     "adjustPointsCurrent": "Current points: {{points}}",

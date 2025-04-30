@@ -37,7 +37,7 @@
     "upcomingFeatureTitle": "Próximamente",
     "deleting": "Eliminando...",
     "customer": "Cliente",
-    "selected": "seleccionado" 
+    "selected": "seleccionado"
   },
   "validation": {
     "cannotBeZero": "La cantidad no puede ser cero.",
@@ -198,7 +198,14 @@
     "successRedeemGiftTitle": "¡Regalo Canjeado!",
     "successRedeemGiftMessage": "Has canjeado \"{{rewardName}}\".",
     "errorLoadingProfileTitle": "Error de Perfil",
-    "errorLoadingProfileDefault": "No se pudieron cargar los datos del usuario."
+    "errorLoadingProfileDefault": "No se pudieron cargar los datos del usuario.",
+    "tierBenefitsTitle": "Beneficios del Nivel: {{tierName}}",
+    "progressUnitVisits": "visitas",
+    "progressLabel": "{{currentValue}} / {{targetValue}} {{unit}} para alcanzar {{nextTierName}}",
+    "maxLevelReached": "¡Felicidades! Has alcanzado el nivel máximo ({currentTierName}).",
+    "maxLevelReachedShort": "¡Nivel Máximo Alcanzado!",
+    "nextTierBenefitsTitle": "Al alcanzar {{tierName}} tendrás:",
+    "errorLoadingProgress": "No se pudieron cargar los datos de niveles para mostrar el progreso."
   },
   "adminCommon": {
     "dashboard": "Dashboard",
@@ -217,7 +224,7 @@
     "deleteError": "Error al eliminar",
     "confirmDeleteTitle": "Confirmar Eliminación",
     "confirmDeleteMessage": "¿Estás seguro? Esta acción no se puede deshacer.",
-    "adminTitle": "LoyalPyME Admin" 
+    "adminTitle": "LoyalPyME Admin"
   },
   "adminOverview": {
     "welcome": "¡Bienvenido, {{name}}!",
@@ -246,7 +253,7 @@
     "cardCustomersButton": "Gestionar Clientes",
     "errorLoadingStats": "No se pudieron cargar las estadísticas.",
     "noStatsAvailable": "No hay datos estadísticos disponibles.",
-    "defaultBusinessName": "tu Negocio" 
+    "defaultBusinessName": "tu Negocio"
   },
   "adminRewardsPage": {
     "title": "Gestión de Recompensas",
@@ -295,7 +302,7 @@
       "successInstructions": "Pídele al cliente que escanee este código para obtener sus puntos.",
       "tokenRef": "Token (ref.):",
       "errorGeneric": "Error al generar QR: {{error}}",
-      "initialPrompt": "Introduce importe y número de ticket para generar los datos del QR." 
+      "initialPrompt": "Introduce importe y número de ticket para generar los datos del QR."
     },
     "tierForm": {
       "nameLabel": "Nombre del Nivel",
@@ -320,7 +327,7 @@
       "errorLoading": "Error al cargar los beneficios.",
       "noBenefits": "Este nivel no tiene beneficios definidos.",
       "addBenefitButton": "Añadir Beneficio",
-      "closeButton": "Cerrar", 
+      "closeButton": "Cerrar",
       "tableHeaderType": "Tipo",
       "tableHeaderValue": "Valor",
       "tableHeaderDescription": "Descripción",
@@ -347,7 +354,7 @@
       "benefitType_POINTS_MULTIPLIER": "Multiplicador de Puntos",
       "benefitType_EXCLUSIVE_REWARD_ACCESS": "Acceso a Recompensa Exclusiva",
       "benefitType_CUSTOM_BENEFIT": "Beneficio Personalizado",
-      "errorValueRequired": "El valor es obligatorio" 
+      "errorValueRequired": "El valor es obligatorio"
     }
   },
   "adminTiersManagePage": {
@@ -413,9 +420,9 @@
     "inactivityLabel": "Meses de Inactividad para Descenso",
     "inactivityPlaceholder": "Ej: 6",
     "inactivityDescription": "Meses sin actividad para bajar de nivel.",
-    "editButton": "Editar Configuración", 
+    "editButton": "Editar Configuración",
     "saveButton": "Guardar Cambios",
-    "cancelButton": "Cancelar", 
+    "cancelButton": "Cancelar",
     "errorLoading": "Error al cargar la configuración de Tiers.",
     "errorSaving": "Error al guardar la configuración.",
     "successSaving": "Los ajustes se han guardado correctamente."
@@ -459,9 +466,9 @@
     "tooltipDeactivateCustomer": "Desactivar Cliente",
     "tooltipActivateCustomer": "Activar Cliente",
     "tooltipFavorite": "Marcar como Favorito",
-    "tooltipUnfavorite": "Quitar de Favoritos", 
-    "checkboxAriaLabel": "Seleccionar fila {{id}}", 
-    "checkboxSelectAllAriaLabel": "Seleccionar todas las filas visibles", 
+    "tooltipUnfavorite": "Quitar de Favoritos",
+    "checkboxAriaLabel": "Seleccionar fila {{id}}",
+    "checkboxSelectAllAriaLabel": "Seleccionar todas las filas visibles",
     "adjustPointsModalTitle": "Ajustar Puntos para {{name}}",
     "adjustPointsCurrent": "Puntos actuales: {{points}}",
     "adjustPointsAmountLabel": "Cantidad a Añadir/Restar",
@@ -476,25 +483,25 @@
     "changeTierSelectLabel": "Selecciona el Nuevo Nivel",
     "changeTierSelectPlaceholder": "Elige un nivel de la lista",
     "changeTierOptionNone": "Quitar Nivel (Básico)",
-    "changeTierOptionLevel": "Nivel {{level}}", 
+    "changeTierOptionLevel": "Nivel {{level}}",
     "changeTierNotFound": "No hay niveles disponibles o no se encontraron.",
     "changeTierButton": "Cambiar Nivel",
     "changeTierNoChange": "El nivel seleccionado es el mismo que el actual.",
-    "changeTierNoChangeTitle": "Sin Cambios", 
+    "changeTierNoChangeTitle": "Sin Cambios",
     "changeTierSuccess": "Nivel cambiado correctamente para {{name}}.",
     "changeTierError": "No se pudo cambiar el nivel: {{error}}",
-    "changeTierErrorLoadingTiers": "No se pudieron cargar los niveles: {{error}}", 
-    "changeTierLoadingErrorTitle": "Error Cargando Niveles", 
+    "changeTierErrorLoadingTiers": "No se pudieron cargar los niveles: {{error}}",
+    "changeTierLoadingErrorTitle": "Error Cargando Niveles",
     "assignRewardModalTitle": "Asignar Recompensa como Regalo a {{name}}",
     "assignRewardSelectLabel": "Selecciona una Recompensa",
     "assignRewardSelectPlaceholder": "Elige una recompensa de la lista",
-    "assignRewardOptionPoints": "{{points}} pts", 
+    "assignRewardOptionPoints": "{{points}} pts",
     "assignRewardNotFound": "No hay recompensas disponibles o no se encontraron.",
     "assignRewardButton": "Asignar Recompensa",
     "assignRewardSuccess": "Recompensa asignada correctamente a {{name}}.",
     "assignRewardError": "No se pudo asignar la recompensa: {{error}}",
-    "assignRewardErrorLoading": "No se pudieron cargar las recompensas: {{error}}", 
-    "assignRewardLoadingErrorTitle": "Error Cargando Recompensas", 
+    "assignRewardErrorLoading": "No se pudieron cargar las recompensas: {{error}}",
+    "assignRewardLoadingErrorTitle": "Error Cargando Recompensas",
     "customerDetailsModalTitle": "Detalles de {{name}}",
     "customerDetailsLoadingError": "Error al Cargar Detalles",
     "customerDetailsPoints": "Puntos Actuales:",
@@ -509,7 +516,7 @@
     "customerDetailsNoDetails": "No se encontraron detalles para este cliente.",
     "customerDetailsNotesSaved": "Las notas del administrador se han guardado correctamente.",
     "customerDetailsNotesError": "No se pudieron guardar las notas: {{error}}",
-    "noCustomerSelected": "No se ha seleccionado ningún cliente.", 
+    "noCustomerSelected": "No se ha seleccionado ningún cliente.",
     "bulkActionNoneSelected": "No hay clientes seleccionados.",
     "bulkConfirmToggleActiveTitle": "Confirmar Activación/Desactivación Masiva",
     "bulkConfirmToggleActiveMessage": "¿Estás seguro de que quieres {{action}} a {{count}} cliente(s) seleccionado(s)?",

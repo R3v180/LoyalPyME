@@ -1,46 +1,30 @@
 // filename: frontend/src/hooks/useUserProfileData.ts
-// Version: 1.1.0 (Import and use UserData type with benefits from types/customer)
+// Version: 1.5.0 (Return setUserData function and use imported types)
 
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../services/axiosInstance';
 import { AxiosError } from 'axios';
-// --- MODIFICACIÓN: Importar tipos desde el archivo central ---
-import { UserData, UseProfileResult } from '../types/customer'; // Asume ruta correcta
-// --- FIN MODIFICACIÓN ---
+// Importar tipos desde el archivo central
+import { UserData, UseProfileResult } from '../types/customer'; // Asegúrate que la ruta es correcta
 
-// --- ELIMINADO: Definición local de UserData eliminada ---
-// export interface UserData { ... } // <- Eliminada
-// --- FIN ELIMINADO ---
-
-// Tipo de Retorno del Hook (ya no se define aquí si se importa de types/customer)
-// interface UseUserProfileDataReturn { ... } // <- Eliminada si UseProfileResult se importa
 
 /**
  * Hook para obtener y gestionar los datos del perfil del usuario logueado.
  */
-// --- MODIFICACIÓN: Usar tipo importado UseProfileResult ---
-export const useUserProfileData = (): UseProfileResult => {
-// --- FIN MODIFICACIÓN ---
-
-    // --- MODIFICACIÓN: Usar tipo importado UserData para el estado ---
-    const [userData, setUserData] = useState<UserData | null>(null);
-    // --- FIN MODIFICACIÓN ---
+export const useUserProfileData = (): UseProfileResult => { // <-- Usa tipo importado
+    const [userData, setUserData] = useState<UserData | null>(null); // <-- Usa tipo importado
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Función para obtener el perfil
     const fetchUserProfile = useCallback(async () => {
         console.log('[useUserProfileData] Fetching user profile...');
         setLoading(true);
         setError(null);
         try {
-            // --- MODIFICACIÓN: Usar tipo importado UserData en la llamada GET ---
-            const response = await axiosInstance.get<UserData>('/profile');
-            // --- FIN MODIFICACIÓN ---
+            const response = await axiosInstance.get<UserData>('/profile'); // <-- Usa tipo importado
             if (response.data) {
-                // El response.data ahora debería coincidir con la interfaz UserData actualizada
                 setUserData(response.data);
-                console.log('[useUserProfileData] User profile updated. Tier benefits:', response.data.currentTier?.benefits); // Log para verificar
+                console.log('[useUserProfileData] User profile updated.');
             } else {
                 console.warn('[useUserProfileData] No user data received from /profile endpoint.');
                 setUserData(null);
@@ -58,17 +42,18 @@ export const useUserProfileData = (): UseProfileResult => {
         }
     }, []);
 
-    // Efecto para la carga inicial
     useEffect(() => {
         fetchUserProfile();
     }, [fetchUserProfile]);
 
-    // Retornar estado y función de refresco
+    // Devolver también setUserData
+    // Asegúrate de que esta sección es idéntica en tu archivo:
     return {
         userData,
         loading,
         error,
-        refetch: fetchUserProfile
+        refetch: fetchUserProfile,
+        setUserData // <-- La propiedad que falta según el error
     };
 };
 

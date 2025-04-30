@@ -1,5 +1,5 @@
 // filename: backend/src/routes/customer.routes.ts
-// Version: 1.5.1 (Remove meta-comments)
+// Version: 1.6.0 (Add route for customer to get business config)
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
@@ -9,13 +9,15 @@ import { checkRole } from '../middleware/role.middleware';
 // ASUNCIÓN: authenticateToken se aplica ANTES en index.ts al montar en /api/customer
 
 // Importar los handlers necesarios de customer.controller.ts
-// (Asegúrate de que este archivo contiene los 4 handlers)
 import {
     getCustomerRewardsHandler,
     getPendingGrantedRewardsHandler,
     redeemGrantedRewardHandler,
-    getCustomerTiersHandler // <-- Handler movido desde tiers.controller
-} from '../customer/customer.controller'; // Importar desde el controlador de cliente
+    getCustomerTiersHandler,
+    // --- NUEVO: Importar el futuro handler ---
+    getCustomerBusinessConfigHandler // Aún no existe, lo crearemos después
+    // --- FIN NUEVO ---
+} from '../customer/customer.controller';
 
 
 const router = Router();
@@ -49,10 +51,21 @@ router.post(
 // GET /tiers - Obtener los tiers disponibles para el cliente
 // URL Final: GET /api/customer/tiers
 router.get(
-    '/tiers', // Ruta relativa al punto de montaje /api/customer
+    '/tiers',
     checkRole([UserRole.CUSTOMER_FINAL]), // Solo clientes
-    getCustomerTiersHandler           // Handler que movimos a customer.controller
+    getCustomerTiersHandler
 );
+
+// --- NUEVA RUTA ---
+// GET /business-config - Obtener configuración relevante del negocio para el cliente
+// URL Final: GET /api/customer/business-config
+router.get(
+    '/business-config',
+    checkRole([UserRole.CUSTOMER_FINAL]), // Solo clientes
+    getCustomerBusinessConfigHandler // Handler a crear
+);
+// --- FIN NUEVA RUTA ---
+
 
 // Otras rutas de cliente irían aquí
 
