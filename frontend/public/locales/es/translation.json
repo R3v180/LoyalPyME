@@ -203,7 +203,7 @@
     "progressUnitVisits": "visitas",
     "progressLabel": "{{currentValue}} / {{targetValue}} {{unit}} para alcanzar {{nextTierName}}",
     "maxLevelReached": "¡Felicidades! Has alcanzado el nivel máximo ({currentTierName}).",
-    "maxLevelReachedShort": "¡Nivel Máximo Alcanzado!",
+    "maxLevelReachedShort": "¡Nivel Máximo!",
     "nextTierBenefitsTitle": "Al alcanzar {{tierName}} tendrás:",
     "errorLoadingProgress": "No se pudieron cargar los datos de niveles para mostrar el progreso."
   },
@@ -542,5 +542,10 @@
     "bulkAdjustPointsSubtracted": "restados",
     "bulkAdjustPointsError": "No se pudo ajustar los puntos: {{error}}",
     "bulkAdjustPointsErrorNoneSelected": "Error inesperado: No hay clientes seleccionados."
+  },
+  "benefits": {
+    "pointsMultiplier": "Multiplicador x{{value}} Puntos",
+    "exclusiveRewardAccess": "Recompensa Exclusiva: {{value}}",
+    "customBenefit": "{{value}}"
   }
 }
