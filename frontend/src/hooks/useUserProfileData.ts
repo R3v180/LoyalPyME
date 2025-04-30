@@ -1,43 +1,32 @@
 // filename: frontend/src/hooks/useUserProfileData.ts
-// Version: 1.0.1 (Fix encoding, standardize return value names)
+// Version: 1.1.0 (Import and use UserData type with benefits from types/customer)
 
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../services/axiosInstance';
 import { AxiosError } from 'axios';
+// --- MODIFICACIÓN: Importar tipos desde el archivo central ---
+import { UserData, UseProfileResult } from '../types/customer'; // Asume ruta correcta
+// --- FIN MODIFICACIÓN ---
 
-// --- Interfaces ---
-// TODO: Mover UserData y UseProfileResult a src/types/customer.ts o similar
-export interface UserData {
-    id: string;
-    email: string;
-    name?: string | null;
-    points: number;
-    role: string;
-    currentTier?: {
-        id: string;
-        name: string;
-    } | null;
-    // Añadir businessId si se usa en algún sitio que llame a este hook
-    // businessId: string;
-}
+// --- ELIMINADO: Definición local de UserData eliminada ---
+// export interface UserData { ... } // <- Eliminada
+// --- FIN ELIMINADO ---
 
-// Tipo de Retorno del Hook (con nombres estandarizados)
-interface UseUserProfileDataReturn {
-    userData: UserData | null;
-    loading: boolean; // Nombre estandarizado
-    error: string | null; // Nombre estandarizado
-    refetch: () => Promise<void>; // Nombre estandarizado
-}
-// --- Fin Tipos ---
-
+// Tipo de Retorno del Hook (ya no se define aquí si se importa de types/customer)
+// interface UseUserProfileDataReturn { ... } // <- Eliminada si UseProfileResult se importa
 
 /**
  * Hook para obtener y gestionar los datos del perfil del usuario logueado.
  */
-export const useUserProfileData = (): UseUserProfileDataReturn => {
+// --- MODIFICACIÓN: Usar tipo importado UseProfileResult ---
+export const useUserProfileData = (): UseProfileResult => {
+// --- FIN MODIFICACIÓN ---
+
+    // --- MODIFICACIÓN: Usar tipo importado UserData para el estado ---
     const [userData, setUserData] = useState<UserData | null>(null);
-    const [loading, setLoading] = useState<boolean>(true); // Nombre estandarizado
-    const [error, setError] = useState<string | null>(null); // Nombre estandarizado
+    // --- FIN MODIFICACIÓN ---
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
 
     // Función para obtener el perfil
     const fetchUserProfile = useCallback(async () => {
@@ -45,43 +34,44 @@ export const useUserProfileData = (): UseUserProfileDataReturn => {
         setLoading(true);
         setError(null);
         try {
+            // --- MODIFICACIÓN: Usar tipo importado UserData en la llamada GET ---
             const response = await axiosInstance.get<UserData>('/profile');
+            // --- FIN MODIFICACIÓN ---
             if (response.data) {
+                // El response.data ahora debería coincidir con la interfaz UserData actualizada
                 setUserData(response.data);
-                console.log('[useUserProfileData] User profile updated.');
+                console.log('[useUserProfileData] User profile updated. Tier benefits:', response.data.currentTier?.benefits); // Log para verificar
             } else {
                 console.warn('[useUserProfileData] No user data received from /profile endpoint.');
-                setUserData(null); // Asegurarse que queda null si no hay datos
-                // Considerar lanzar error si se espera siempre data
-                // throw new Error("No se recibieron datos del usuario.");
+                setUserData(null);
             }
         } catch (err) {
             console.error("[useUserProfileData] Error fetching user profile:", err);
-            const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido.'; // Corregido: Ocurrió
+            const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
             let detailedError = `Error al cargar perfil: ${errorMsg}.`;
             if (err instanceof AxiosError && err.response) { detailedError += ` (Status: ${err.response.status})`; }
             setError(detailedError);
-            setUserData(null); // Limpiar datos en caso de error
+            setUserData(null);
         } finally {
             setLoading(false);
             console.log('[useUserProfileData] Fetch user profile finished.');
         }
-    }, []); // Sin dependencias
+    }, []);
 
     // Efecto para la carga inicial
     useEffect(() => {
         fetchUserProfile();
     }, [fetchUserProfile]);
 
-    // Retornar estado y función de refresco con nombres estandarizados
+    // Retornar estado y función de refresco
     return {
         userData,
-        loading, // Nombre estandarizado
-        error,   // Nombre estandarizado
-        refetch: fetchUserProfile // Nombre estandarizado
+        loading,
+        error,
+        refetch: fetchUserProfile
     };
 };
 
-export default useUserProfileData; // Exportar con el nombre correcto
+export default useUserProfileData;
 
 // End of File: frontend/src/hooks/useUserProfileData.ts

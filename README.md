@@ -37,11 +37,8 @@ _(Note: Screenshots might need updating)_
 ## Project Status & Roadmap 🗺️
 
 Currently, the project has **completed Phase 1 (Core Functionality and Polishing)**, including business/user management, authentication, tiers, rewards, points, QR codes (with functional mobile scanning), admin/customer dashboards, and comprehensive admin customer management (CRUD, filters, bulk actions).
-
 A **general code cleanup and refactoring** has also been performed.
-
 Frontend **Internationalization (i18n) has been completed**, supporting Spanish and English with a language switcher.
-
 **Backend Automated Testing has been initiated** (setup and initial unit/integration tests).
 
 **Next Steps:**
@@ -50,6 +47,24 @@ Frontend **Internationalization (i18n) has been completed**, supporting Spanish 
 2.  **(Functional - Phase 2):** Begin implementing the next expansion features (e.g., Advanced Loyalty, Basic Communication).
 
 For a more detailed roadmap, please refer to [`PROJECT_STATE_AND_ROADMAP.md`](PROJECT_STATE_AND_ROADMAP.md).
+
+---
+
+## API Documentation 📖
+
+The backend API is documented using the OpenAPI 3.0 standard. While the backend server is running (see "Running the Project" below), you can access the interactive **Swagger UI** documentation at:
+
+**`/api-docs`**
+
+For example, if the backend is running locally on port 3000, the documentation URL would be `http://localhost:3000/api-docs`.
+
+This interface allows you to:
+
+- Explore all available API endpoints.
+- View details about request parameters, request bodies, and response schemas.
+- Test the API endpoints directly from your browser (authentication might be required for protected routes).
+
+---
 
 ## Used Technologies 🛠️
 
@@ -78,6 +93,7 @@ For a more detailed roadmap, please refer to [`PROJECT_STATE_AND_ROADMAP.md`](PR
 - uuid (Unique IDs)
 - cors, `date-fns`
 - `vitest`, `supertest` (Testing)
+- `swagger-jsdoc`, `swagger-ui-express` (API Documentation)
 
 ## Installation and Local Setup ⚙️
 
@@ -132,7 +148,7 @@ To get the project up and running in your development environment:
     ```
     _(Frontend runs on port 5173)_
 
-Access via `https://localhost:5173` (PC) or the network URL (Mobile).
+Access via `https://localhost:5173` (PC) or the network URL (Mobile). Remember the **API documentation** is available at `/api-docs` on the backend server URL (e.g., `http://localhost:3000/api-docs`).
 
 #### **Accessing from Mobile (Local Network)**
 
@@ -151,7 +167,6 @@ Contributions welcome! Fork -> Branch -> Commit -> Push -> Pull Request.
 ## License 📜
 
 Licensed under **AGPL-3.0**. See [`LICENSE`](LICENSE) file.
-
 Copyright (c) 2024-2025 Olivier Hottelet
 
 ## Contact 📧

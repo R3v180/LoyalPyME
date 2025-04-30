@@ -37,11 +37,8 @@ _(Nota: Las capturas podrían necesitar actualizarse)_
 ## Estado del Proyecto y Hoja de Ruta 🗺️
 
 Actualmente, el proyecto ha **completado la Fase 1 (Núcleo Funcional y Pulido)**, incluyendo la gestión de negocios, usuarios, autenticación, niveles, recompensas, puntos, códigos QR (con escáner móvil funcional), paneles de administración y cliente, y gestión completa de clientes (CRUD, filtros, acciones masivas).
-
 Se ha realizado una **limpieza y refactorización general del código**.
-
 Se ha **completado la Internacionalización (i18n)** del frontend, soportando Español e Inglés con selector de idioma.
-
 Se ha **iniciado la implementación de Pruebas Automatizadas** en el backend (configuración y tests iniciales unitarios/integración).
 
 **Próximos Pasos:**
@@ -50,6 +47,24 @@ Se ha **iniciado la implementación de Pruebas Automatizadas** en el backend (co
 2.  **(Funcional - Fase 2):** Empezar con las siguientes funcionalidades de expansión (ej: Fidelización Avanzada, Comunicación Básica).
 
 Para una hoja de ruta más detallada, consulta [`PROJECT_STATE_AND_ROADMAP.md`](PROJECT_STATE_AND_ROADMAP.md).
+
+---
+
+## Documentación de la API 📖
+
+La API del backend está documentada usando el estándar OpenAPI 3.0. Mientras el servidor backend esté en ejecución (ver "Ejecutando el Proyecto" más abajo), puedes acceder a la documentación interactiva **Swagger UI** en:
+
+**`/api-docs`**
+
+Por ejemplo, si el backend se ejecuta localmente en el puerto 3000, la URL de la documentación sería `http://localhost:3000/api-docs`.
+
+Esta interfaz te permite:
+
+- Explorar todos los endpoints disponibles de la API.
+- Ver detalles sobre parámetros de solicitud, cuerpos de solicitud y esquemas de respuesta.
+- Probar los endpoints de la API directamente desde tu navegador (puede requerir autenticación para rutas protegidas).
+
+---
 
 ## Tecnologías Utilizadas 🛠️
 
@@ -78,6 +93,7 @@ Para una hoja de ruta más detallada, consulta [`PROJECT_STATE_AND_ROADMAP.md`](
 - uuid (IDs Únicos)
 - cors, `date-fns`
 - `vitest`, `supertest` (Testing)
+- `swagger-jsdoc`, `swagger-ui-express` (Documentación API)
 
 ## Instalación y Configuración Local ⚙️
 
@@ -132,7 +148,7 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
     ```
     _(Frontend corre en puerto 5173)_
 
-Accede vía `https://localhost:5173` (PC) o la URL de red (Móvil).
+Accede vía `https://localhost:5173` (PC) o la URL de red (Móvil). Recuerda que la **documentación de la API** está disponible en `/api-docs` en la URL del servidor backend (ej: `http://localhost:3000/api-docs`).
 
 #### **Acceso desde Móvil (Red Local)**
 
@@ -151,7 +167,6 @@ Accede vía `https://localhost:5173` (PC) o la URL de red (Móvil).
 ## Licencia 📜
 
 Licencia: **GNU Affero General Public License v3.0 (AGPL-3.0)**. Ver [`LICENSE`](LICENSE).
-
 Copyright (c) 2024-2025 Olivier Hottelet
 
 ## Contacto 📧
