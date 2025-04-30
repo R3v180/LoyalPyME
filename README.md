@@ -26,7 +26,7 @@ In today's competitive market, customer loyalty is crucial. LoyalPyME aims to be
 - **Simplify Program Management:** Offer an intuitive and feature-rich administration panel.
 - **Enhance Customer Experience:** Provide a clear, accessible digital portal for end customers.
 
-Our goal is to enable any SME (retail, hospitality, services, etc.) to digitize and optimize its customer retention strategy, evolving the platform towards integrated communication, CRM capabilities, a mobile presence, and potentially shared loyalty ecosystems.
+Our goal is to enable any SME (retail, hospitality, services, etc.) to digitize and optimize its customer retention strategy, evolving the platform towards integrated communication, CRM capabilities, business customization, a mobile presence, and potentially shared loyalty ecosystems.
 
 |                                    Admin Dashboard (Desktop)                                    |                                       Admin Dashboard (Mobile)                                       |
 | :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
@@ -36,35 +36,27 @@ _(Note: Screenshots might need updating)_
 
 ## Project Status & Roadmap 🗺️
 
-Currently, the project has **completed Phase 1 (Core Functionality and Polishing)**, including business/user management, authentication, tiers, rewards, points, QR codes (with functional mobile scanning), admin/customer dashboards, and comprehensive admin customer management (CRUD, filters, bulk actions).
-A **general code cleanup and refactoring** has also been performed.
-Frontend **Internationalization (i18n) has been completed**, supporting Spanish and English with a language switcher.
-**Backend Automated Testing has been initiated** (setup and initial unit/integration tests).
+Currently, the project has **completed Phase 1 (Core Functionality and Polishing)**.
+
+**Phase 2 (Initial Features & Enhancements) is IN PROGRESS:**
+
+- ✅ Frontend **Internationalization (i18n)** supports Spanish and English.
+- ✅ **Swagger API Documentation** is implemented and available at `/api-docs` on the backend server.
+- ✅ **Customer Dashboard UX Enhancements** are done:
+  - Integrated display of current tier benefits.
+  - Visual progress bar towards the next tier (or max level indicator).
+  - Integrated preview of next tier benefits.
+  - Instant tier update after QR code validation.
+- ⏳ **Backend Automated Testing** has been initiated (setup and basic unit/integration tests).
+- ⏳ **Frontend Automated Testing** is pending.
 
 **Next Steps:**
 
-1.  **(Technical):** Continue expanding **Automated Test** coverage (Backend and Frontend).
-2.  **(Functional - Phase 2):** Begin implementing the next expansion features (e.g., Advanced Loyalty, Basic Communication).
+1.  **(Functional - Phase 2):** Implement Business Customization (Logo, Theming).
+2.  **(Technical):** Continue expanding **Automated Test** coverage (Backend and Frontend).
+3.  **(Functional - Phase 2):** Begin implementing remaining Phase 2 features (e.g., Advanced Loyalty, Basic Communication, Points History).
 
 For a more detailed roadmap, please refer to [`PROJECT_STATE_AND_ROADMAP.md`](PROJECT_STATE_AND_ROADMAP.md).
-
----
-
-## API Documentation 📖
-
-The backend API is documented using the OpenAPI 3.0 standard. While the backend server is running (see "Running the Project" below), you can access the interactive **Swagger UI** documentation at:
-
-**`/api-docs`**
-
-For example, if the backend is running locally on port 3000, the documentation URL would be `http://localhost:3000/api-docs`.
-
-This interface allows you to:
-
-- Explore all available API endpoints.
-- View details about request parameters, request bodies, and response schemas.
-- Test the API endpoints directly from your browser (authentication might be required for protected routes).
-
----
 
 ## Used Technologies 🛠️
 
@@ -93,7 +85,7 @@ This interface allows you to:
 - uuid (Unique IDs)
 - cors, `date-fns`
 - `vitest`, `supertest` (Testing)
-- `swagger-jsdoc`, `swagger-ui-express` (API Documentation)
+- `swagger-jsdoc`, `swagger-ui-express` (API Docs)
 
 ## Installation and Local Setup ⚙️
 
@@ -138,7 +130,7 @@ To get the project up and running in your development environment:
       yarn build && node dist/index.js
       # (Repeat after each change)
       ```
-    - **`yarn dev` Method (NOT RECOMMENDED):** Unstable in the current environment.
+    - **`yarn dev` Method (NOT RECOMMENDED):** Historically unstable in this environment.
     - _(Backend runs on port 3000 or as configured)_
 
 3.  **Start the Frontend** (from `frontend/` folder):
@@ -148,7 +140,7 @@ To get the project up and running in your development environment:
     ```
     _(Frontend runs on port 5173)_
 
-Access via `https://localhost:5173` (PC) or the network URL (Mobile). Remember the **API documentation** is available at `/api-docs` on the backend server URL (e.g., `http://localhost:3000/api-docs`).
+Access via `https://localhost:5173` (PC) or the network URL (Mobile).
 
 #### **Accessing from Mobile (Local Network)**
 
@@ -166,7 +158,7 @@ Contributions welcome! Fork -> Branch -> Commit -> Push -> Pull Request.
 
 ## License 📜
 
-Licensed under **AGPL-3.0**. See [`LICENSE`](LICENSE) file.
+Licensed under **GNU Affero General Public License v3.0 (AGPL-3.0)**. See [`LICENSE`](LICENSE) file.
 Copyright (c) 2024-2025 Olivier Hottelet
 
 ## Contact 📧
