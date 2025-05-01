@@ -1,15 +1,18 @@
 // filename: backend/src/auth/registration.service.ts
-// Version: 1.0.1 (Fix encoding, cleanup comments)
+// Version: 1.1.0 (Call updateUserTier after customer creation - FULL CODE)
 
-// Contiene la lógica para el registro de clientes y negocios/admins
 import { PrismaClient, User, UserRole, DocumentType, Prisma, Business } from '@prisma/client';
 
 // Importar DTOs necesarios
 import { RegisterUserDto, RegisterBusinessDto } from './auth.dto';
 
 // Importar utilidades necesarias desde el servicio principal de auth
-// ASUNCIÓN: Estas funciones permanecerán o serán exportadas desde auth.service.ts
 import { hashPassword, findUserByEmail } from './auth.service';
+
+// --- NUEVO: Importar la función para actualizar el tier ---
+import { updateUserTier } from '../tiers/tier-logic.service'; // Ajusta la ruta si es necesario
+// --- FIN NUEVO ---
+
 
 const prisma = new PrismaClient();
 
@@ -20,7 +23,7 @@ export const createUser = async (userData: RegisterUserDto): Promise<User> => {
     if (!businessExists) {
         throw new Error(`Business with ID ${userData.businessId} not found.`);
     }
-    // Validaciones de unicidad de teléfono/documento (mantenerlas aquí para registro de cliente)
+    // Validaciones de unicidad de teléfono/documento
     if (userData.phone) {
         const existingPhone = await prisma.user.findUnique({ where: { phone: userData.phone }, select: { id: true } });
         if (existingPhone) throw new Error('El teléfono ya está registrado.');
@@ -38,9 +41,10 @@ export const createUser = async (userData: RegisterUserDto): Promise<User> => {
     console.log(`[REG SVC] Uniqueness checks passed for ${userData.email}. Hashing password...`);
 
     const hashedPassword = await hashPassword(userData.password);
+    let newUser: User | null = null; // Declarar fuera del try
 
     try {
-        return prisma.user.create({
+        newUser = await prisma.user.create({
             data: {
                 email: userData.email,
                 password: hashedPassword,
@@ -52,8 +56,24 @@ export const createUser = async (userData: RegisterUserDto): Promise<User> => {
                 business: {
                     connect: { id: userData.businessId }
                 }
+                // Los valores por defecto del schema se aplican aquí (points=0, etc)
             },
         });
+        console.log(`[REG SVC] Customer user created successfully with ID: ${newUser.id}`);
+
+        // --- NUEVO: Calcular y asignar tier inicial DESPUÉS de crear el usuario ---
+        try {
+             console.log(`[REG SVC] Attempting initial tier assignment for new user: ${newUser.id}`);
+             await updateUserTier(newUser.id); // Llama a la lógica de cálculo de tier
+             console.log(`[REG SVC] Initial tier assignment process completed for user: ${newUser.id}`);
+        } catch (tierError) {
+            // Loguear si falla la asignación inicial, pero no fallar el registro completo
+            console.error(`[REG SVC] WARNING: Failed to assign initial tier for user ${newUser.id}. Tier can be updated later. Error:`, tierError);
+        }
+        // --- FIN NUEVO ---
+
+        return newUser; // Devolver el usuario creado
+
     } catch (error) {
         // Capturar errores específicos de Prisma si es necesario, por si acaso
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -143,6 +163,7 @@ export const createBusinessAndAdmin = async (
                 }
             });
             console.log(`[REG SVC - TX] Admin user created with ID: ${adminUser.id} for business ${newBusiness.id}`);
+            // No calculamos tier para el admin
             return adminUser;
         });
 
