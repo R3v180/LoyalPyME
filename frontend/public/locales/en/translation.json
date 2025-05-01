@@ -205,7 +205,21 @@
     "maxLevelReached": "Congratulations! You've reached the maximum level ({{currentTierName}}).",
     "maxLevelReachedShort": "Max Level!",
     "nextTierBenefitsTitle": "Reaching {{tierName}} unlocks:",
-    "errorLoadingProgress": "Could not load tier data to show progress."
+    "errorLoadingProgress": "Could not load tier data to show progress.",
+    "tabSummary": "Summary",
+    "tabRewards": "Rewards",
+    "tabActivity": "My Activity",
+    "tabOffers": "Offers & News",
+    "tabProfile": "My Profile",
+    "summary": {
+        "pendingGifts_one": "You have {{count}} pending gift:",
+        "pendingGifts_other": "You have {{count}} pending gifts:",
+        "nextReward": "Next reward: {{name}} for {{points}} points.",
+        "viewAllButton": "View All Rewards & Gifts",
+        "noRewardsInfo": "Collect more points to get rewards.",
+        "giftsAndRewardsTitle": "Available Gifts & Rewards:",
+        "rewardsTitle": "Available Rewards:"
+    }
   },
   "adminCommon": {
     "dashboard": "Dashboard",

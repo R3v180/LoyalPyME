@@ -1,38 +1,40 @@
 // filename: frontend/src/components/layout/AppHeader.tsx
-// Version: 1.3.10 (Revert to react-country-flag, adjust layout)
+// Version: 1.4.2 (Fix closing tag, dividers, unused imports)
 
 import React from 'react';
+// --- FIX: Remove ActionIcon, Add Divider ---
 import {
-    Group,
-    Burger,
-    Title,
-    Text,
-    Skeleton,
-    Button,
-    Menu,
-    ActionIcon, // Re-añadido ActionIcon para el botón de bandera
-    } from '@mantine/core';
+    Group, Burger, Title, Text, Skeleton, Button, Menu, UnstyledButton, Box
+} from '@mantine/core';
+// --- FIX: Remove IconWorld ---
 import { IconUserCircle, IconLogout, IconChevronDown } from '@tabler/icons-react';
+import { useDisclosure } from '@mantine/hooks';
 import { useTranslation } from 'react-i18next';
-// --- Volver a importar ReactCountryFlag ---
 import ReactCountryFlag from 'react-country-flag';
-// -----------------------------------------
+import { Link, useNavigate } from 'react-router-dom';
+// --- FIX: Remove unused hook import ---
+// import useLayoutUserData from '../../hooks/useLayoutUserData';
+// --- END FIX ---
 
-
-// Interfaces (sin cambios)
-interface LayoutUserData {
-    name?: string | null;
-    email: string;
-    role: string;
-}
+// Interfaces
+interface LayoutUserData { name?: string | null; email: string; role: string; }
 interface AppHeaderProps {
     userData: LayoutUserData | null;
     loadingUser: boolean;
     handleLogout: () => void;
-    navbarOpened: boolean;
-    toggleNavbar: () => void;
-    showAdminNavbar: boolean;
+    navbarOpened?: boolean;
+    toggleNavbar?: () => void;
+    showAdminNavbar?: boolean;
 }
+
+// Logo Component
+const Logo = () => (
+    // --- FIX: Wrap Title in Link ---
+    <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Title order={4}>LoyalPyME</Title>
+    </Link>
+    // --- END FIX ---
+);
 
 const AppHeader: React.FC<AppHeaderProps> = ({
     userData,
@@ -40,79 +42,100 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     handleLogout,
     navbarOpened,
     toggleNavbar,
-    showAdminNavbar,
+    showAdminNavbar = false,
 }) => {
     const { i18n, t } = useTranslation();
+    const [mobileMenuOpened, { toggle: toggleMobileMenu, close: closeMobileMenu }] = useDisclosure(false);
+    const navigate = useNavigate();
 
+    // --- FIX: Call closeMobileMenu on language change ---
     const changeLanguage = (lang: string) => {
         i18n.changeLanguage(lang);
+        closeMobileMenu();
     };
+    // --- END FIX ---
 
-    // Usar códigos de país ISO
     const currentCountryCode = i18n.resolvedLanguage === 'es' ? 'ES' : 'GB';
+    const languages = [
+        { code: 'es', name: 'Español', country: 'ES' },
+        { code: 'en', name: 'English', country: 'GB' },
+    ];
 
-
-    const renderUserControls = () => {
-        // ... (sin cambios) ...
-        if (loadingUser) { return <Skeleton height={30} width={120} />; }
-        if (userData) {
-            return ( <Group gap="sm"> <Text size="sm" visibleFrom="xs"> <IconUserCircle size={18} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> {t('header.greeting', { name: userData.name || userData.email })} </Text> <Button onClick={handleLogout} variant="light" color="red" size="sm" leftSection={<IconLogout size={16}/>}> {t('header.logoutButton')} </Button> </Group> );
-        }
-        return null;
+    // --- FIX: Call closeMobileMenu on logout ---
+    const onLogoutClick = () => {
+        handleLogout();
+        closeMobileMenu();
+        navigate('/login', { replace: true });
     };
+    // --- END FIX ---
+
+    // Internal LogoutButton component
+    const LogoutButtonInternal = () => ( <Button onClick={onLogoutClick} variant="light" color="red" size="sm" leftSection={<IconLogout size={16}/>}>{t('header.logoutButton')}</Button> );
+
+    // Internal LanguageSwitcher for Desktop
+    const LanguageSwitcherDesktop = () => (
+        <Menu shadow="md" width={150} trigger="hover" openDelay={100} closeDelay={200}>
+            <Menu.Target>
+                <UnstyledButton style={{ display: 'flex', alignItems: 'center', padding: '5px', borderRadius: 'var(--mantine-radius-sm)'}}>
+                    <ReactCountryFlag countryCode={currentCountryCode} svg style={{ display: 'block', width: '1.4em', height: '1.4em' }} aria-label={currentCountryCode} />
+                    <IconChevronDown size={16} stroke={1.5} style={{ marginLeft: '4px', color: 'var(--mantine-color-dimmed)' }} />
+                </UnstyledButton>
+            </Menu.Target>
+            <Menu.Dropdown>
+                <Menu.Label>{t('header.languageLabel')}</Menu.Label>
+                {languages.map((lang) => ( <Menu.Item key={lang.code} leftSection={<ReactCountryFlag countryCode={lang.country} svg style={{ fontSize: '1.1em', display:'block' }} />} onClick={() => changeLanguage(lang.code)} disabled={i18n.resolvedLanguage === lang.code}>{lang.name}</Menu.Item> ))}
+            </Menu.Dropdown>
+        </Menu>
+    );
 
     return (
-        <Group h="100%" px="md" justify="space-between">
-            {/* Burger y Título */}
-            <Group>
-                <Burger opened={navbarOpened} onClick={toggleNavbar} hiddenFrom="sm" size="sm" style={{ visibility: showAdminNavbar ? 'visible' : 'hidden' }} />
-                 <Title order={4} >LoyalPyME</Title>
+        <Box component="header" h="100%" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} px={{ base: 'sm', sm: 'md' }}>
+            {/* Grupo Izquierda */}
+            <Group gap="xs">
+                {showAdminNavbar && toggleNavbar && ( <Burger opened={navbarOpened ?? false} onClick={toggleNavbar} hiddenFrom="sm" size="sm"/> )}
+                <Logo />
             </Group>
 
-            {/* Grupo Derecha: Controles Usuario + [Selector Bandera + Texto Idioma] */}
-            <Group gap="sm">
-                 {renderUserControls()}
-
-                 {/* --- Estructura Corregida: Menú de Bandera y Texto al lado --- */}
-                 <Group gap={5} align="center">
-                    <Menu shadow="md" width={150} trigger="hover" openDelay={100} closeDelay={200}>
-                        <Menu.Target>
-                            <ActionIcon variant="default" size="lg" aria-label="Seleccionar idioma">
-                                <ReactCountryFlag
-                                    countryCode={currentCountryCode}
-                                    svg
-                                    style={{ display: 'block', width: '1.3em', height: '1.3em' }}
-                                    aria-label={currentCountryCode}
-                                />
-                             </ActionIcon>
-                        </Menu.Target>
-
-                        <Menu.Dropdown>
-                            <Menu.Label>{t('header.languageLabel')}</Menu.Label>
-                            <Menu.Item
-                                leftSection={<ReactCountryFlag countryCode="ES" svg style={{ fontSize: '1.1em', display:'block' }} />}
-                                onClick={() => changeLanguage('es')}
-                                disabled={i18n.resolvedLanguage === 'es'}
-                            >
-                                Español
-                            </Menu.Item>
-                            <Menu.Item
-                                 leftSection={<ReactCountryFlag countryCode="GB" svg style={{ fontSize: '1.1em', display:'block' }}/>}
-                                 onClick={() => changeLanguage('en')}
-                                 disabled={i18n.resolvedLanguage === 'en'}
-                            >
-                                English
-                            </Menu.Item>
-                        </Menu.Dropdown>
-                    </Menu>
-                    {/* Texto al lado del menú */}
-                    <Text size="sm" visibleFrom="xs">{t('header.languageLabel')}</Text>
-                     <IconChevronDown size={14} stroke={1.5} style={{ marginLeft: '-8px', color: 'var(--mantine-color-dimmed)' }} />
-                 </Group>
-                 {/* --- FIN Estructura Corregida --- */}
-
-            </Group>
-        </Group>
+            {/* Grupo Derecha */}
+            {loadingUser ? (
+                <Skeleton height={30} width={120} />
+            ) : userData ? (
+                <Group gap="sm">
+                    {/* Controles Escritorio */}
+                    <Group visibleFrom="sm" gap="sm">
+                        <Text size="sm" truncate> <IconUserCircle size={18} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> {t('header.greeting', { name: userData.name || userData.email })} </Text>
+                        <LanguageSwitcherDesktop />
+                        <LogoutButtonInternal />
+                    </Group>
+                     {/* Menú Burger Móvil */}
+                     <Box hiddenFrom="sm">
+                         <Menu shadow="md" width={200} opened={mobileMenuOpened} onChange={toggleMobileMenu} position="bottom-end">
+                            <Menu.Target>
+                                 <Burger opened={mobileMenuOpened} onClick={toggleMobileMenu} aria-label="Toggle navigation" size="sm"/>
+                            </Menu.Target>
+                            {/* --- FIX: Add Dividers --- */}
+                            <Menu.Dropdown>
+                                <Menu.Label>{userData.name || userData.email}</Menu.Label>
+                                <Menu.Divider />
+                                <Menu.Label>{t('header.languageLabel')}</Menu.Label>
+                                {languages.map((lang) => (
+                                    <Menu.Item key={lang.code} leftSection={<ReactCountryFlag countryCode={lang.country} svg style={{ fontSize: '1.1em', display:'block' }} />} onClick={() => changeLanguage(lang.code)} disabled={i18n.resolvedLanguage === lang.code}>
+                                        {lang.name}
+                                    </Menu.Item>
+                                ))}
+                                <Menu.Divider />
+                                 <Menu.Item color="red" leftSection={<IconLogout size={14} />} onClick={onLogoutClick}>
+                                     {t('header.logoutButton')}
+                                 </Menu.Item>
+                            </Menu.Dropdown>
+                            {/* --- END FIX --- */}
+                        </Menu>
+                    </Box>
+                </Group>
+            ) : null }
+        {/* --- FIX: Add Closing Tag --- */}
+        </Box>
+        // --- END FIX ---
     );
 };
 

@@ -205,7 +205,21 @@
     "maxLevelReached": "¡Felicidades! Has alcanzado el nivel máximo ({currentTierName}).",
     "maxLevelReachedShort": "¡Nivel Máximo!",
     "nextTierBenefitsTitle": "Al alcanzar {{tierName}} tendrás:",
-    "errorLoadingProgress": "No se pudieron cargar los datos de niveles para mostrar el progreso."
+    "errorLoadingProgress": "No se pudieron cargar los datos de niveles para mostrar el progreso.",
+    "tabSummary": "Resumen",
+    "tabRewards": "Recompensas",
+    "tabActivity": "Mi Actividad",
+    "tabOffers": "Ofertas y Noticias",
+    "tabProfile": "Mi Perfil",
+    "summary": {
+        "pendingGifts_one": "Tienes {{count}} regalo pendiente:",
+        "pendingGifts_other": "Tienes {{count}} regalos pendientes:",
+        "nextReward": "Próxima recompensa: {{name}} por {{points}} puntos.",
+        "viewAllButton": "Ver Todas las Recompensas y Regalos",
+        "noRewardsInfo": "Acumula más puntos para conseguir recompensas.",
+        "giftsAndRewardsTitle": "Regalos y Recompensas Disponibles:",
+        "rewardsTitle": "Recompensas Disponibles:"
+    }
   },
   "adminCommon": {
     "dashboard": "Dashboard",
