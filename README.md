@@ -21,10 +21,10 @@
 
 In today's competitive market, customer loyalty is crucial. LoyalPyME aims to be the technological ally for SMEs, providing the tools to:
 
-- **Foster Repeat Business:** Implement engaging points, tiers, and rewards systems.
+- **Foster Repeat Business:** Implement engaging points, tiers, and rewards systems (now with images!).
 - **Build Stronger Relationships:** Recognize and reward customer loyalty effectively.
-- **Simplify Program Management:** Offer an intuitive and feature-rich administration panel.
-- **Enhance Customer Experience:** Provide a clear, accessible digital portal for end customers.
+- **Simplify Program Management:** Offer an intuitive and feature-rich administration panel (now including image management for rewards).
+- **Enhance Customer Experience:** Provide a clear, accessible digital portal for end customers (now displaying reward images).
 
 Our goal is to enable any SME (retail, hospitality, services, etc.) to digitize and optimize its customer retention strategy, evolving the platform towards integrated communication, CRM capabilities, business customization, a mobile presence, and potentially shared loyalty ecosystems.
 
@@ -32,7 +32,7 @@ Our goal is to enable any SME (retail, hospitality, services, etc.) to digitize 
 | :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
 | <img src="images/SC_LoyalPyME.png" alt="LoyalPyME Admin Dashboard - Desktop View" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="LoyalPyME Admin Dashboard - Mobile View" width="100%"> |
 
-_(Note: Screenshots might need updating)_
+_(Note: Screenshots might need updating to show new features like images)_
 
 ## Project Status & Roadmap 🗺️
 
@@ -41,20 +41,22 @@ Currently, the project has **completed Phase 1 (Core Functionality and Polishing
 **Phase 2 (Initial Features & Enhancements) is IN PROGRESS:**
 
 - ✅ Frontend **Internationalization (i18n)** supports Spanish and English.
-- ✅ **Swagger API Documentation** is implemented and available at `/api-docs` on the backend server.
-- ✅ **Customer Dashboard UX Enhancements** are done:
-  - Integrated display of current tier benefits.
-  - Visual progress bar towards the next tier (or max level indicator).
-  - Integrated preview of next tier benefits.
-  - Instant tier update after QR code validation.
-- ⏳ **Backend Automated Testing** has been initiated (setup and basic unit/integration tests).
+- ✅ **Swagger API Documentation** is implemented (`/api-docs`).
+- ✅ **Customer Dashboard UX Enhancements** are done (Tier benefits, progress bar, next tier preview).
+- ✅ **Reward Images** implemented:
+  - Admins can upload and crop (1:1) images for rewards.
+  - Images are stored using Cloudinary.
+  - Customers see the images in the reward list and dashboard summary.
+- ⏳ **Backend Automated Testing** has been initiated (basic coverage).
 - ⏳ **Frontend Automated Testing** is pending.
 
 **Next Steps:**
 
-1.  **(Functional - Phase 2):** Implement Business Customization (Logo, Theming).
-2.  **(Technical):** Continue expanding **Automated Test** coverage (Backend and Frontend).
-3.  **(Functional - Phase 2):** Begin implementing remaining Phase 2 features (e.g., Advanced Loyalty, Basic Communication, Points History).
+1.  **(Technical):** Fix `TierData` type and Mobile Popover Click bug.
+2.  **(Functional - Phase 2):** Implement Business Customization (Logo, Theming).
+3.  **(Visual - Phase 2):** Refine `RewardList` design.
+4.  **(Technical):** Continue expanding **Automated Test** coverage.
+5.  **(Functional - Phase 2):** Begin implementing features like Activity History, Advanced Loyalty, Basic Communication.
 
 For a more detailed roadmap, please refer to [`PROJECT_STATE_AND_ROADMAP.md`](PROJECT_STATE_AND_ROADMAP.md).
 
@@ -73,6 +75,7 @@ For a more detailed roadmap, please refer to [`PROJECT_STATE_AND_ROADMAP.md`](PR
 - `i18next`, `react-i18next` (Internationalization)
 - `i18next-http-backend`, `i18next-browser-languagedetector`
 - `react-country-flag` (Language Switcher)
+- **`react-image-crop`** (Image Cropping)
 - `vite-plugin-mkcert` (For HTTPS Dev)
 
 **Backend:**
@@ -84,6 +87,9 @@ For a more detailed roadmap, please refer to [`PROJECT_STATE_AND_ROADMAP.md`](PR
 - node-cron (Scheduled Tasks)
 - uuid (Unique IDs)
 - cors, `date-fns`
+- **`cloudinary`** (Image Storage)
+- **`multer`** (File Upload Handling)
+- **`streamifier`** (Stream Helper)
 - `vitest`, `supertest` (Testing)
 - `swagger-jsdoc`, `swagger-ui-express` (API Docs)
 
@@ -103,7 +109,7 @@ To get the project up and running in your development environment:
 1.  Clone repo & `cd LoyalPyME/backend`
 2.  `yarn install`
 3.  Copy `backend/.env.example` to `backend/.env`
-4.  **Configure `.env`:** Fill in `DATABASE_URL` and `JWT_SECRET`.
+4.  **Configure `.env`:** Fill in `DATABASE_URL`, `JWT_SECRET`, and **Cloudinary credentials** (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`).
 5.  Run migrations: `npx prisma migrate dev`
 6.  Generate Prisma client: **`npx prisma generate`** (Important!)
 7.  **Initial Data:** Choose **Option A (Seed):** `npx prisma db seed` (if implemented) OR **Option B (Manual):** Register via `/register-business` frontend route.

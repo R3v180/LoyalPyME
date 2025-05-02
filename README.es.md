@@ -15,48 +15,50 @@
 
 # LoyalPyME 🇪🇸
 
-**LoyalPyME** es una plataforma web integral full-stack (Frontend React + Backend Node.js) diseñada para facilitar a las Pequeñas y Medianas Empresas (PyMEs) la gestión de un programa de fidelización de clientes digital potente, robusto, mantenible y escalable[cite: 2].
+**LoyalPyME** es una plataforma web integral full-stack (Frontend React + Backend Node.js) diseñada para facilitar a las Pequeñas y Medianas Empresas (PyMEs) la gestión de un programa de fidelización de clientes digital potente, robusto, mantenible y escalable.
 
 ## Visión y Propósito ✨
 
-En un mercado competitivo, la lealtad del cliente es crucial[cite: 2]. LoyalPyME nace para ser el aliado tecnológico de las PyMEs, proporcionando las herramientas para:
+En un mercado competitivo, la lealtad del cliente es crucial. LoyalPyME nace para ser el aliado tecnológico de las PyMEs, proporcionando las herramientas para:
 
-- **Fomentar Compras Recurrentes:** Implementando sistemas atractivos de puntos, niveles y recompensas[cite: 2].
-- **Construir Relaciones Sólidas:** Reconociendo y premiando la fidelidad del cliente[cite: 2].
-- **Simplificar la Gestión:** Ofreciendo un panel de administración intuitivo y rico en funcionalidades[cite: 2].
-- **Mejorar la Experiencia del Cliente:** Proporcionando un portal digital claro y accesible para los clientes finales[cite: 2].
+- **Fomentar Compras Recurrentes:** Implementando sistemas atractivos de puntos, niveles y recompensas (¡ahora con imágenes!).
+- **Construir Relaciones Sólidas:** Reconociendo y premiando la fidelidad del cliente.
+- **Simplificar la Gestión:** Ofreciendo un panel de administración intuitivo (ahora con gestión de imágenes para recompensas).
+- **Mejorar la Experiencia del Cliente:** Proporcionando un portal digital claro y accesible (ahora mostrando imágenes de recompensas).
 
-Nuestro objetivo es permitir a cualquier PyME (minorista, hostelería, servicios, etc.) digitalizar y optimizar su estrategia de retención de clientes, evolucionando la plataforma hacia capacidades integradas de comunicación, CRM, personalización por negocio, presencia móvil y, potentially, ecosistemas de fidelización compartidos[cite: 2].
+Nuestro objetivo es permitir a cualquier PyME (minorista, hostelería, servicios, etc.) digitalizar y optimizar su estrategia de retención de clientes, evolucionando la plataforma hacia capacidades integradas de comunicación, CRM, personalización por negocio, presencia móvil y, potentially, ecosistemas de fidelización compartidos.
 
 |                                   Panel de Admin (Escritorio)                                   |                                      Panel de Admin (Móvil)                                      |
 | :---------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------: |
 | <img src="images/SC_LoyalPyME.png" alt="Panel Admin LoyalPyME - Vista Escritorio" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="Panel Admin LoyalPyME - Vista Móvil" width="100%"> |
 
-_(Nota: Las capturas podrían necesitar actualizarse)_ [cite: 2]
+_(Nota: Las capturas podrían necesitar actualizarse para mostrar las nuevas funcionalidades como las imágenes)_
 
 ## Estado del Proyecto y Hoja de Ruta 🗺️
 
-Actualmente, el proyecto ha **completado la Fase 1 (Núcleo Funcional y Pulido)**[cite: 2].
+Actualmente, el proyecto ha **completado la Fase 1 (Núcleo Funcional y Pulido)**.
 
 **La Fase 2 (Funcionalidades Iniciales y Mejoras) está EN PROGRESO:**
 
-- ✅ **Internacionalización (i18n)** del frontend completada (Español e Inglés)[cite: 2].
-- ✅ **Documentación API Swagger** implementada (disponible en `/api-docs` en el backend)[cite: 1].
-- ✅ **Mejoras UX Panel Cliente** realizadas:
-  - Visualización integrada de beneficios del nivel actual.
-  - Barra de progreso visual hacia el siguiente nivel (o indicador de nivel máximo).
-  - Preview integrada de beneficios del siguiente nivel.
-  - Solución al retraso en la actualización del nivel tras validar QR.
-- ⏳ **Pruebas Automatizadas Backend** iniciadas (setup y cobertura básica unitaria/integración)[cite: 2].
-- ⏳ **Pruebas Automatizadas Frontend** pendientes[cite: 2].
+- ✅ **Internacionalización (i18n)** del frontend completada (Español e Inglés).
+- ✅ **Documentación API Swagger** implementada (`/api-docs`).
+- ✅ **Mejoras UX Panel Cliente** realizadas (Beneficios nivel, barra progreso, preview siguiente nivel).
+- ✅ **Imágenes en Recompensas** implementado:
+  - El administrador puede subir y recortar (1:1) imágenes para las recompensas.
+  - Las imágenes se almacenan en Cloudinary.
+  - Los clientes ven las imágenes en la lista de recompensas y en el resumen del dashboard.
+- ⏳ **Pruebas Automatizadas Backend** iniciadas (cobertura básica).
+- ⏳ **Pruebas Automatizadas Frontend** pendientes.
 
 **Próximos Pasos:**
 
-1.  **(Funcional - Fase 2):** Implementar Personalización del Negocio (Logo, Theming).
-2.  **(Técnico):** Continuar ampliando la cobertura de **Pruebas Automatizadas** (Backend y Frontend)[cite: 2].
-3.  **(Funcional - Fase 2):** Empezar con las funcionalidades restantes de la fase (ej: Fidelización Avanzada, Comunicación Básica, Historial de Puntos).
+1.  **(Técnico):** Arreglar tipo `TierData` y Fix Popover Móvil.
+2.  **(Funcional - Fase 2):** Implementar Personalización del Negocio (Logo, Theming).
+3.  **(Visual - Fase 2):** Refinar diseño de `RewardList`.
+4.  **(Técnico):** Continuar ampliando la cobertura de **Pruebas Automatizadas**.
+5.  **(Funcional - Fase 2):** Empezar con funcionalidades como Historial de Actividad, Fidelización Avanzada, Comunicación Básica.
 
-Para una hoja de ruta más detallada, consulta [`PROJECT_STATE_AND_ROADMAP.md`](PROJECT_STATE_AND_ROADMAP.md)[cite: 2].
+Para una hoja de ruta más detallada, consulta [`PROJECT_STATE_AND_ROADMAP.md`](PROJECT_STATE_AND_ROADMAP.md).
 
 ## Tecnologías Utilizadas 🛠️
 
@@ -73,6 +75,7 @@ Para una hoja de ruta más detallada, consulta [`PROJECT_STATE_AND_ROADMAP.md`](
 - `i18next`, `react-i18next` (Internacionalización)
 - `i18next-http-backend`, `i18next-browser-languagedetector`
 - `react-country-flag` (Selector Idioma)
+- **`react-image-crop`** (Recorte de Imágenes)
 - `vite-plugin-mkcert` (Para HTTPS Dev)
 
 **Backend:**
@@ -84,6 +87,9 @@ Para una hoja de ruta más detallada, consulta [`PROJECT_STATE_AND_ROADMAP.md`](
 - node-cron (Tareas Programadas)
 - uuid (IDs Únicos)
 - cors, `date-fns`
+- **`cloudinary`** (Almacenamiento Imágenes)
+- **`multer`** (Manejo Subida Archivos)
+- **`streamifier`** (Helper Streams)
 - `vitest`, `supertest` (Testing)
 - `swagger-jsdoc`, `swagger-ui-express` (Docs API)
 
@@ -93,29 +99,29 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
 
 ### Prerrequisitos
 
-- Node.js (v18 o v20 recomendado) [cite: 2]
-- yarn (v1.x recomendado) [cite: 2]
-- Servidor de base de datos PostgreSQL accesible y ejecutándose localmente[cite: 2].
-- (Opcional) NVM o similar[cite: 2].
+- Node.js (v18 o v20 recomendado)
+- yarn (v1.x recomendado)
+- Servidor de base de datos PostgreSQL accesible y ejecutándose localmente.
+- (Opcional) NVM o similar.
 
 ### Configuración Backend
 
-1.  Clona repo y `cd LoyalPyME/backend` [cite: 2]
-2.  `yarn install` [cite: 2]
-3.  Copia `backend/.env.example` a `backend/.env` [cite: 2]
-4.  **Configura `.env`:** Rellena `DATABASE_URL` y `JWT_SECRET`[cite: 2].
-5.  Ejecuta migraciones: `npx prisma migrate dev` [cite: 2]
-6.  Genera cliente Prisma: **`npx prisma generate`** (¡Importante!) [cite: 2]
-7.  **Datos Iniciales:** Elige **Opción A (Seed):** `npx prisma db seed` (si está implementado) u **Opción B (Manual):** Registra desde `/register-business` en el frontend[cite: 2].
+1.  Clona repo y `cd LoyalPyME/backend`
+2.  `yarn install`
+3.  Copia `backend/.env.example` a `backend/.env`
+4.  **Configura `.env`:** Rellena `DATABASE_URL`, `JWT_SECRET`, y las **credenciales de Cloudinary** (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`).
+5.  Ejecuta migraciones: `npx prisma migrate dev`
+6.  Genera cliente Prisma: **`npx prisma generate`** (¡Importante!)
+7.  **Datos Iniciales:** Elige **Opción A (Seed):** `npx prisma db seed` (si está implementado) u **Opción B (Manual):** Registra desde `/register-business` en el frontend.
 
 ### Configuración Frontend
 
-1.  Navega a `frontend` (`cd ../frontend`) [cite: 2]
-2.  Instala dependencias: `yarn install` [cite: 2]
+1.  Navega a `frontend` (`cd ../frontend`)
+2.  Instala dependencias: `yarn install`
 
 ## Ejecutando el Proyecto ▶️
 
-1.  Asegúrate de que PostgreSQL está **en ejecución**[cite: 2].
+1.  Asegúrate de que PostgreSQL está **en ejecución**.
 2.  **Inicia Backend** (desde `backend/`):
 
     - **Método Recomendado (Desarrollo con Hot-Reload - Requiere 2 Terminales):**
@@ -130,36 +136,36 @@ Para poner el proyecto en marcha en tu entorno de desarrollo:
       yarn build && node dist/index.js
       # (Repetir tras cada cambio)
       ```
-    - **Método `yarn dev` (NO RECOMENDADO):** Inestable en el entorno actual[cite: 2].
-    - _(Backend corre en puerto 3000 o el configurado)_ [cite: 2]
+    - **Método `yarn dev` (NO RECOMENDADO):** Inestable en el entorno actual.
+    - _(Backend corre en puerto 3000 o el configurado)_
 
 3.  **Inicia Frontend** (desde `frontend/`):
     ```bash
     # Usa --host para acceso por red y HTTPS
     yarn dev --host
     ```
-    _(Frontend corre en puerto 5173)_ [cite: 2]
+    _(Frontend corre en puerto 5173)_
 
-Accede vía `https://localhost:5173` (PC) o la URL de red (Móvil)[cite: 2].
+Accede vía `https://localhost:5173` (PC) o la URL de red (Móvil).
 
 #### **Acceso desde Móvil (Red Local)**
 
-1.  Encuentra IP Local del PC (`ipconfig` / `ifconfig`)[cite: 2].
-2.  Asegura Servidores Corriendo (Backend y Frontend)[cite: 2].
-3.  Verifica Firewall PC (Permitir TCP entrante en 5173 y 3000 para red Privada)[cite: 2].
-4.  Verifica Config Vite (`server: { host: true, https: true, proxy: { ... } }`)[cite: 2].
-5.  Accede en Móvil: `https://<TU_IP_PC>:5173`. Acepta advertencia de seguridad[cite: 2].
+1.  Encuentra IP Local del PC (`ipconfig` / `ifconfig`).
+2.  Asegura Servidores Corriendo (Backend y Frontend).
+3.  Verifica Firewall PC (Permitir TCP entrante en 5173 y 3000 para red Privada).
+4.  Verifica Config Vite (`server: { host: true, https: true, proxy: { ... } }`).
+5.  Accede en Móvil: `https://<TU_IP_PC>:5173`. Acepta advertencia de seguridad.
 
 ---
 
 ## Contribuciones 🤝
 
-¡Contribuciones bienvenidas! Flujo: Fork -> Branch -> Commit -> Push -> Pull Request[cite: 2].
+¡Contribuciones bienvenidas! Flujo: Fork -> Branch -> Commit -> Push -> Pull Request.
 
 ## Licencia 📜
 
-Licencia: **GNU Affero General Public License v3.0 (AGPL-3.0)**. Ver [`LICENSE`](LICENSE)[cite: 2].
-Copyright (c) 2024-2025 Olivier Hottelet [cite: 2]
+Licencia: **GNU Affero General Public License v3.0 (AGPL-3.0)**. Ver [`LICENSE`](LICENSE).
+Copyright (c) 2024-2025 Olivier Hottelet
 
 ## Contacto 📧
 
