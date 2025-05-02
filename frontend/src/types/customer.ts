@@ -1,7 +1,7 @@
 // filename: frontend/src/types/customer.ts
-// Version: 1.2.1 (Add setUserData to UseProfileResult type)
+// Version: 1.3.0 (Add imageUrl to DisplayReward)
 
-import React from 'react'; // Asegurar que React está disponible para React.Dispatch
+import React from 'react';
 
 // Enum para TierCalculationBasis
 export enum TierCalculationBasis {
@@ -22,54 +22,60 @@ export interface TierData {
     level: number;
     minValue: number;
     isActive: boolean;
-    // --- IMPORTANTE: Añadir benefits aquí también para que esté completo ---
-    benefits?: TierBenefitData[]; // Hacer opcional o asegurar que siempre se devuelve
+    benefits?: TierBenefitData[]; // Beneficios opcionales
+    // Si el backend siempre los devuelve (incluso vacío), quitar '?'
 }
 
 // Interfaz para Datos del Beneficio
 export interface TierBenefitData {
   id: string;
-  type: string;
+  type: string; // Considerar usar un enum si los tipos son fijos
   value: string;
   description: string | null;
+  // isActive?: boolean; // Podría añadirse si el backend lo devuelve y se necesita
 }
 
-// Interfaz para Datos del Usuario
+// Interfaz para Datos del Usuario (podría expandirse)
 export interface UserData {
     id: string;
     email: string;
     name?: string | null;
     points: number;
-    role: string;
+    role: string; // 'CUSTOMER_FINAL', 'BUSINESS_ADMIN', etc.
     totalSpend: number;
     totalVisits: number;
-    currentTier?: {
+    currentTier?: { // El nivel actual del usuario
         id: string;
         name: string;
-        benefits: TierBenefitData[];
+        benefits: TierBenefitData[]; // Los beneficios activos de ESE nivel
     } | null;
-    businessId?: string;
+    businessId?: string; // ID del negocio al que pertenece
+    // otros campos como isActive, createdAt podrían ser útiles
 }
 
-// Interfaz para Recompensas por Puntos
+// Interfaz para Recompensas por Puntos (obtenidas de /customer/rewards)
+// Asegúrate que coincida con lo que devuelve tu API
 export interface Reward {
     id: string;
     name: string;
     description?: string | null;
     pointsCost: number;
-    isActive: boolean;
+    isActive: boolean; // Confirmar si viene de la API de cliente
     businessId?: string;
+    imageUrl?: string | null; // <-- Añadido
 }
 
-// Interfaz para Recompensas Otorgadas (Regalos)
+// Interfaz para Recompensas Otorgadas (Regalos) (obtenidas de /customer/granted-rewards)
+// Asegúrate que coincida con lo que devuelve tu API
 export interface GrantedReward {
-    id: string;
-    status: string;
+    id: string; // ID de la instancia GrantedReward
+    status: string; // 'PENDING', etc.
     assignedAt: string;
-    reward: {
+    reward: { // La recompensa base asociada
         id: string;
         name: string;
         description?: string | null;
+        imageUrl?: string | null; // <-- Añadido aquí también
     };
     assignedBy?: {
         name?: string | null;
@@ -80,23 +86,44 @@ export interface GrantedReward {
     } | null;
 }
 
-// Tipo Combinado para Mostrar Recompensas/Regalos
+// --- TIPO CORREGIDO ---
+// Tipo Combinado para Mostrar Recompensas/Regalos en la UI
 export type DisplayReward =
-    { isGift: false; id: string; name: string; description?: string | null; pointsCost: number; grantedRewardId?: undefined; assignedByString?: undefined; assignedAt?: undefined; } |
-    { isGift: true; grantedRewardId: string; id: string; name: string; description?: string | null; pointsCost: 0; assignedByString: string; assignedAt: string; };
+    {
+        isGift: false;
+        id: string;
+        name: string;
+        description?: string | null;
+        pointsCost: number;
+        imageUrl?: string | null; // <-- CORREGIDO
+        grantedRewardId?: undefined;
+        assignedByString?: undefined;
+        assignedAt?: undefined;
+    } |
+    {
+        isGift: true;
+        grantedRewardId: string;
+        id: string; // ID de la recompensa base
+        name: string;
+        description?: string | null;
+        pointsCost: 0;
+        imageUrl?: string | null; // <-- CORREGIDO
+        assignedByString: string;
+        assignedAt: string;
+    };
+// --- FIN TIPO CORREGIDO ---
 
-// Interface para el resultado del hook useUserProfileData (MODIFICADA)
+
+// Interface para el resultado del hook useUserProfileData
 export interface UseProfileResult {
     userData: UserData | null;
     loading: boolean;
     error: string | null;
     refetch: () => Promise<void>;
-    // --- NUEVO: Añadir la función para actualizar el estado ---
     setUserData: React.Dispatch<React.SetStateAction<UserData | null>>;
-    // --- FIN NUEVO ---
 }
 
-// Interfaz para Resultado del Hook useCustomerTierData (Se mantiene)
+// Interfaz para Resultado del Hook useCustomerTierData
 export interface UseCustomerTierDataResult {
     allTiers: TierData[] | null;
     businessConfig: CustomerBusinessConfig | null;

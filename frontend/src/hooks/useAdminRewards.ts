@@ -1,27 +1,28 @@
 // filename: frontend/src/hooks/useAdminRewards.ts
-// Version: 1.0.3 (Add console.log for diagnostics)
+// Version: 1.1.0 (Add imageUrl to Reward interface)
 
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../services/axiosInstance';
 import { notifications } from '@mantine/notifications';
-// Icon imports remain removed as they are not used directly here
+// Icon imports not needed here
 
-// --- Tipos ---
-// TODO: Mover Reward a un archivo /types/ compartido
+// --- Tipos (Reward ahora incluye imageUrl) ---
 export interface Reward {
     id: string;
     name: string;
     description?: string | null;
     pointsCost: number;
     isActive: boolean;
-    businessId?: string;
+    businessId?: string; // Es bueno tenerlo si la API lo devuelve
     createdAt: string;
     updatedAt: string;
+    imageUrl?: string | null; // <-- AÑADIDO AQUÍ
 }
 
 export type ActionLoading = { type: 'toggle' | 'delete'; id: string } | null;
+
 export interface UseAdminRewardsReturn {
-    rewards: Reward[];
+    rewards: Reward[]; // Ahora el estado rewards contendrá objetos con imageUrl
     loading: boolean;
     error: string | null;
     actionLoading: ActionLoading;
@@ -32,67 +33,66 @@ export interface UseAdminRewardsReturn {
 // --- Fin Tipos ---
 
 export const useAdminRewards = (): UseAdminRewardsReturn => {
-    // --- Estados Internos ---
-    const [rewards, setRewards] = useState<Reward[]>([]);
+    // --- Estados Internos (sin cambios) ---
+    const [rewards, setRewards] = useState<Reward[]>([]); // Usa la interfaz Reward actualizada
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState<ActionLoading>(null);
 
     // --- Funciones ---
     const fetchRewards = useCallback(async () => {
-        // Si ya hay recompensas, no mostramos el loader principal a pantalla completa,
-        // pero sí podríamos indicar una carga sutil si quisiéramos (no implementado ahora)
         if (rewards.length === 0) setLoading(true);
         setError(null);
         console.log("[useAdminRewards] Fetching rewards...");
         try {
+            // La llamada espera un array de objetos Reward (que ahora incluye imageUrl)
             const response = await axiosInstance.get<Reward[]>('/rewards');
 
-            // --- DIAGNOSTICO: Loguear los datos recibidos ---
             console.log("[useAdminRewards] Raw rewards data received:", response.data);
-            // ------------------------------------------------
 
-            setRewards(response.data ?? []); // Actualizar estado con los datos recibidos
+            // Actualizar estado (TypeScript ahora entenderá que imageUrl puede estar ahí)
+            setRewards(response.data ?? []);
         } catch (err: any) {
-             console.error('[useAdminRewards] Error fetching rewards:', err);
-            const message = err.response?.data?.message || err.message || 'Error desconocido al cargar recompensas.';
-            setError(message);
-            // No mostrar notificación de error si es la carga inicial la que falla
-            // Solo mostrar si intentamos refrescar y falla
-            if (rewards.length > 0) {
-                 notifications.show({ title: 'Error al Refrescar', message, color: 'red' });
-            }
+            // ... (manejo de errores sin cambios) ...
+           console.error('[useAdminRewards] Error fetching rewards:', err);
+           const message = err.response?.data?.message || err.message || 'Error desconocido al cargar recompensas.';
+           setError(message);
+           if (rewards.length > 0) {
+                notifications.show({ title: 'Error al Refrescar', message, color: 'red' });
+           }
          } finally {
             setLoading(false);
             console.log("[useAdminRewards] Fetch rewards finished.");
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Se elimina rewards.length de las dependencias para evitar bucles si la API falla y resetea rewards
+    }, []); // Dependencias sin cambios
 
+    // useEffect para carga inicial (sin cambios)
     useEffect(() => {
         fetchRewards();
     }, [fetchRewards]);
 
+    // handleToggleActive (sin cambios en lógica)
     const handleToggleActive = useCallback(async (rewardId: string, currentIsActive: boolean) => {
-        setActionLoading({ type: 'toggle', id: rewardId });
+        // ... (código sin cambios) ...
+         setActionLoading({ type: 'toggle', id: rewardId });
         const newIsActive = !currentIsActive;
         const actionText = newIsActive ? 'activada' : 'desactivada';
         try {
             await axiosInstance.patch(`/rewards/${rewardId}`, { isActive: newIsActive });
-            // Actualizar estado local *después* de éxito en API
             setRewards((prevRewards) =>
                 prevRewards.map((r) =>
                     r.id === rewardId ? { ...r, isActive: newIsActive, updatedAt: new Date().toISOString() } : r
                 )
             );
             notifications.show({
-                title: `Recompensa ${actionText}`,
+                 title: `Recompensa ${actionText}`,
                 message: `La recompensa se ha ${actionText} correctamente.`,
                 color: 'green',
                 autoClose: 4000
             });
         } catch (err: any) {
-            console.error('Error toggling reward active state:', err);
+             console.error('Error toggling reward active state:', err);
             const message = `Error al ${actionText} la recompensa: ${err.response?.data?.message || err.message || 'Error desconocido'}`;
             notifications.show({
                 title: 'Error al Actualizar Estado', message, color: 'red',
@@ -103,11 +103,12 @@ export const useAdminRewards = (): UseAdminRewardsReturn => {
         }
     }, []);
 
+    // handleDeleteReward (sin cambios en lógica)
     const handleDeleteReward = useCallback(async (rewardId: string, rewardName: string) => {
+        // ... (código sin cambios) ...
         setActionLoading({ type: 'delete', id: rewardId });
         try {
             await axiosInstance.delete(`/rewards/${rewardId}`);
-            // Actualizar estado local *después* de éxito en API
             setRewards((prevRewards) =>
                 prevRewards.filter((r) => r.id !== rewardId)
             );
@@ -115,7 +116,7 @@ export const useAdminRewards = (): UseAdminRewardsReturn => {
                 title: 'Recompensa Eliminada',
                 message: `La recompensa "${rewardName}" ha sido eliminada.`,
                 color: 'green',
-                autoClose: 4000
+                 autoClose: 4000
             });
          } catch (err: any) {
             console.error('Error deleting reward:', err);
@@ -136,13 +137,13 @@ export const useAdminRewards = (): UseAdminRewardsReturn => {
         }
     }, []);
 
-    // Retorno del Hook
+    // Retorno del Hook (sin cambios)
     return {
         rewards,
         loading,
         error,
         actionLoading,
-        fetchRewards, // Exponer fetchRewards como refetch
+        fetchRewards,
         handleToggleActive,
         handleDeleteReward
     };

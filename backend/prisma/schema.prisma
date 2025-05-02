@@ -1,14 +1,9 @@
 // filename: backend/prisma/schema.prisma
-// Version: 1.1.0 (Add adminNotes field to User model)
-
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Version: 1.1.1 (Based on likely state after git reset + ADD imageUrl field)
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client" // Especificar output
 }
 
 datasource db {
@@ -60,134 +55,129 @@ enum BenefitType {
 // --- MODELS ---
 
 model Business {
-  id          String    @id @default(uuid())
-  name        String
-  slug        String    @unique
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  pointsPerEuro Float     @default(1.0)
-  currency    String    @default("EUR")
-  brandingColor String?
-  subscriptionStatus String @default("trial")
-  trialEndsAt   DateTime?
-  lastPaymentDate DateTime?
+  id                          String                 @id @default(uuid())
+  name                        String
+  slug                        String                 @unique
+  isActive                    Boolean                @default(true)
+  createdAt                   DateTime               @default(now())
+  updatedAt                   DateTime               @updatedAt
+  pointsPerEuro               Float                  @default(1.0)
+  currency                    String                 @default("EUR")
+  brandingColor              String?
+  subscriptionStatus        String                 @default("trial")
+  trialEndsAt                 DateTime?
+  lastPaymentDate             DateTime?
 
   // Relationships
-  users       User[]
-  rewards     Reward[]
-  qrCodes     QrCode[]
+  users                       User[]
+  rewards                     Reward[]
+  qrCodes                     QrCode[]
+  grantedRewards              GrantedReward[]
+  tiers                       Tier[]
 
   // Tier System Fields
-  tierSystemEnabled         Boolean?             @default(false)
-  tierCalculationBasis      TierCalculationBasis?
+  tierSystemEnabled           Boolean?               @default(false)
+  tierCalculationBasis        TierCalculationBasis?
   tierCalculationPeriodMonths Int?
-  tierDowngradePolicy       TierDowngradePolicy? @default(NEVER)
-  inactivityPeriodMonths    Int?
-  tiers                     Tier[]
-  grantedRewards          GrantedReward[]
+  tierDowngradePolicy         TierDowngradePolicy?   @default(NEVER)
+  inactivityPeriodMonths      Int?
 
   @@map("businesses")
 }
 
 model User {
-  id                    String      @id @default(uuid())
-  email                 String      @unique
-  password              String
-  name                  String?
-  phone                 String?     @unique
-  role                  UserRole
-  isActive              Boolean     @default(true)
-  isFavorite            Boolean     @default(false)
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
-  businessId            String
-  points                Int         @default(0)
-  marketingOptIn        Boolean     @default(false)
-  documentId            String?     @unique
-  documentType          DocumentType?
-  resetPasswordToken    String?     @unique
-  resetPasswordExpires  DateTime?
+  id                   String        @id @default(uuid())
+  email                String        @unique
+  password             String
+  name                 String?
+  phone                String?       @unique
+  role                 UserRole
+  isActive             Boolean       @default(true)
+  isFavorite           Boolean       @default(false) // Asegúrate que este campo existe en la v1.1.0 que recuperaste
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  businessId           String
+  points               Int           @default(0)
+  marketingOptIn       Boolean       @default(false)
+  documentId           String?       @unique
+  documentType         DocumentType?
+  resetPasswordToken   String?       @unique
+  resetPasswordExpires DateTime?
+  adminNotes           String?       // Asegúrate que este campo existe
 
   // Tier System Fields
-  currentTierId       String?
-  tierAchievedAt      DateTime?
-  lastActivityAt      DateTime?
-  totalSpend          Float?      @default(0)
-  totalVisits         Int?        @default(0)
-  totalPointsEarned   Int?        @default(0)
+  currentTierId        String?
+  tierAchievedAt       DateTime?
+  lastActivityAt       DateTime?
+  totalSpend           Float?        @default(0)
+  totalVisits          Int?          @default(0)
+  totalPointsEarned    Int?          @default(0)
 
-  // --- NUEVO CAMPO AÑADIDO ---
-  adminNotes            String?     // Campo opcional para notas del admin
-  // -------------------------
-
-  // --- LÍNEAS DE RELACIÓN INVERSA AÑADIDAS ---
-  grantedRewards        GrantedReward[] @relation("UserGrantedRewards")
+  // Relationships
+  business             Business      @relation(fields: [businessId], references: [id], onDelete: Cascade) // Mantener Cascade si era así
+  qrCodes              QrCode[]
+  currentTier          Tier?         @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
+  grantedRewards       GrantedReward[] @relation("UserGrantedRewards")
   assignedGrantedRewards GrantedReward[] @relation("AdminGrantedRewards")
-  // ------------------------------------------
-
-  // --- Relaciones existentes ---
-  business    Business @relation(fields: [businessId], references: [id])
-  qrCodes     QrCode[]
-  currentTier Tier?    @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
 
   @@map("users")
 }
 
 model Reward {
-  id          String    @id @default(uuid())
-  businessId  String
-  name        String
-  description String?
-  pointsCost  Int
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String  @id @default(uuid())
+  businessId   String
+  name         String
+  description  String?
+  pointsCost   Int
+  isActive     Boolean @default(true)
+  // --- NUEVO CAMPO AÑADIDO ---
+  imageUrl     String?
+  // --- FIN NUEVO CAMPO ---
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relationships
-  business    Business @relation(fields: [businessId], references: [id])
+  business         Business        @relation(fields: [businessId], references: [id], onDelete: Cascade) // Mantener onDelete original
   grantedInstances GrantedReward[]
 
+  @@unique([businessId, name]) // Mantener si estaba
   @@map("rewards")
 }
 
 model QrCode {
-  id            String       @id @default(uuid())
-  token         String       @unique
-  businessId    String
-  amount        Float
-  ticketNumber  String
-  status        QrCodeStatus @default(PENDING)
-  createdAt     DateTime     @default(now())
-  expiresAt     DateTime
-  completedAt   DateTime?
-  userId        String?
-  pointsEarned  Int?
+  id           String       @id @default(uuid())
+  token        String       @unique
+  businessId   String
+  amount       Float
+  ticketNumber String       // Asegurar que es NOT NULL si así estaba
+  status       QrCodeStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  expiresAt    DateTime
+  completedAt  DateTime?
+  userId       String?
+  pointsEarned Int?
 
   // Relationships
-  business    Business @relation(fields: [businessId], references: [id])
-  user        User?    @relation(fields: [userId], references: [id])
+  business     Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("qr_codes")
 }
 
-
-// --- TIER SYSTEM MODELS (sin cambios) ---
-
 model Tier {
-  id                  String    @id @default(uuid())
+  id                  String   @id @default(uuid())
   businessId          String
   name                String
   level               Int
-  minValue            Float // <-- OJO: Este campo sí existe en tu modelo Tier
+  minValue            Float
   description         String?
   benefitsDescription String?
-  isActive            Boolean   @default(true)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   // Relationships
-  business Business @relation(fields: [businessId], references: [id])
+  business Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   users    User[]
   benefits TierBenefit[]
 
@@ -209,8 +199,6 @@ model TierBenefit {
   tier Tier @relation(fields: [tierId], references: [id], onDelete: Cascade)
 }
 
-
-// --- NUEVO MODELO AÑADIDO ---
 model GrantedReward {
   id           String   @id @default(uuid())
   userId       String
@@ -218,17 +206,14 @@ model GrantedReward {
   businessId   String
   assignedById String
   assignedAt   DateTime @default(now())
-  status       String   @default("PENDING")
+  status       String   @default("PENDING") // Mantenemos String por ahora
   redeemedAt   DateTime?
 
   // Relaciones
   user         User     @relation("UserGrantedRewards", fields: [userId], references: [id], onDelete: Cascade)
   reward       Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  business     Business @relation(fields: [businessId], references: [id])
-  assignedBy   User     @relation("AdminGrantedRewards", fields: [assignedById], references: [id])
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  assignedBy   User     @relation("AdminGrantedRewards", fields: [assignedById], references: [id], onDelete: Restrict)
 
   @@map("granted_rewards")
 }
-// --- FIN NUEVO MODELO ---
-
-// --- FIN DEL CÓDIGO COMPLETO ---

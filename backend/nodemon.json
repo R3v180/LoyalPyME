@@ -1,0 +1,15 @@
+{
+    "watch": ["dist"],
+    "ext": "js,json",
+    "ignore": [
+      "src/",
+      "node_modules/",
+      "prisma/",
+      "tests/",
+      ".git/",
+      "*.test.ts",
+      "*.spec.ts"
+    ],
+    "exec": "node dist/index.js",
+    "delay": "1500ms"
+  }

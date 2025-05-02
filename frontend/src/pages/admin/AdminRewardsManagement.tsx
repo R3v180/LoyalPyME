@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 // Importar hook y tipo Reward
 import { useAdminRewards, Reward } from '../../hooks/useAdminRewards';
 // Importar Formulario
-import RewardForm from '../../components/AddRewardForm'; // Este componente también necesitará i18n
+import RewardForm from '../../components/admin/rewards/RewardForm.tsx'; // Este componente también necesitará i18n
 
 const AdminRewardsManagement: React.FC = () => {
     const { t } = useTranslation();

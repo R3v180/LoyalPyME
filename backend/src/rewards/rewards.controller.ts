@@ -1,159 +1,164 @@
 // filename: backend/src/rewards/rewards.controller.ts
-// Version: 1.1.1 (Fix encoding, remove meta-comments, add req.user checks)
+// Version: 1.2.0 (Fix: Pass imageUrl from body to service)
 
-import { Request, Response, NextFunction } from 'express'; // Add NextFunction
+import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import {
     createReward,
     findRewardsByBusiness,
     findRewardById,
-    updateReward,
+    updateReward, // Asegúrate que updateReward se importa
     deleteReward,
 } from './rewards.service';
 
-// DTOs
+// DTOs (sin cambios)
 export interface CreateRewardDto {
     name: string;
     description?: string;
     pointsCost: number;
+    imageUrl?: string | null; // <-- Incluir imageUrl aquí también es buena práctica
 }
 
 export interface UpdateRewardDto {
     name?: string;
     description?: string;
     pointsCost?: number;
-    isActive?: boolean; // Campo opcional para activar/desactivar
+    isActive?: boolean;
+    imageUrl?: string | null; // <-- Ya estaba aquí
 }
 
 /**
- * Handles creation of a new reward. POST /api/rewards
+ * Handles creation of a new reward.
+ * POST /api/rewards
  */
-export const createRewardHandler = async (req: Request, res: Response, next: NextFunction) => { // Added next
-    // --- FIX: Check req.user ---
+export const createRewardHandler = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user || !req.user.businessId) {
-        console.error("[REWARDS CTRL] Critical: User context missing in createRewardHandler.");
+        // ... (check sin cambios) ...
         return res.status(401).json({ message: "Usuario no autenticado o negocio no asociado." });
     }
     const businessId = req.user.businessId;
-    // const role = req.user.role; // Role check is done by middleware in routes
-    // --- FIN FIX ---
 
-    const { name, description, pointsCost }: CreateRewardDto = req.body;
+    // --- CORRECCIÓN: Extraer imageUrl del body ---
+    const { name, description, pointsCost, imageUrl }: CreateRewardDto = req.body;
+    // --- FIN CORRECCIÓN ---
 
     if (!name || pointsCost === undefined || typeof pointsCost !== 'number' || pointsCost < 0) {
-        return res.status(400).json({ message: 'Se requieren nombre y un coste en puntos válido.' }); // Corregido: válido
+        // ... (validación sin cambios) ...
+        return res.status(400).json({ message: 'Se requieren nombre y un coste en puntos válido.' });
     }
 
     try {
-        const newReward = await createReward({ name, description, pointsCost, businessId });
+        // --- CORRECCIÓN: Pasar imageUrl al servicio ---
+        const newReward = await createReward({
+            name,
+            description,
+            pointsCost,
+            businessId,
+            imageUrl // <-- Pasarlo aquí
+        });
+        // --- FIN CORRECCIÓN ---
         res.status(201).json(newReward);
     } catch (error) {
-        // Loguear el error completo en el servidor
+        // ... (manejo de errores sin cambios) ...
         console.error('[REWARDS CTRL] Error creating reward:', error);
-        // Si es un error conocido de Prisma (ej: violación de constraint), podríamos dar un 409 o 400
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
-             // Manejar errores específicos si es necesario, ej P2002 (unique constraint)
-             // if (error.code === 'P2002') return res.status(409).json({ message: 'Ya existe una recompensa con ese nombre.' });
-            return res.status(500).json({ message: 'Error de base de datos al crear la recompensa.' });
+             if (error.code === 'P2002') return res.status(409).json({ message: `Ya existe una recompensa con el nombre "${name}" para este negocio.` });
+             return res.status(500).json({ message: 'Error de base de datos al crear la recompensa.' });
         }
-        // Usar next para otros errores o errores genéricos 500
         next(new Error('Error del servidor al crear la recompensa.'));
     }
 };
 
 /**
- * Handles fetching all rewards for the authenticated business. GET /api/rewards
+ * Handles fetching all rewards for the authenticated business.
+ * GET /api/rewards
  */
-export const getRewardsHandler = async (req: Request, res: Response, next: NextFunction) => { // Added next
-     // --- FIX: Check req.user ---
+export const getRewardsHandler = async (req: Request, res: Response, next: NextFunction) => {
+    // ... (código sin cambios) ...
      if (!req.user || !req.user.businessId) {
-        console.error("[REWARDS CTRL] Critical: User context missing in getRewardsHandler.");
         return res.status(401).json({ message: "Usuario no autenticado o negocio no asociado." });
     }
     const businessId = req.user.businessId;
-    // --- FIN FIX ---
-
     try {
         const rewards = await findRewardsByBusiness(businessId);
         res.status(200).json(rewards);
     } catch (error) {
         console.error('[REWARDS CTRL] Error fetching rewards:', error);
-        next(new Error('Error del servidor al obtener recompensas.')); // Usar next
+        next(new Error('Error del servidor al obtener recompensas.'));
     }
 };
 
 /**
  * Handles fetching a single reward by ID. GET /api/rewards/:id
  */
-export const getRewardByIdHandler = async (req: Request, res: Response, next: NextFunction) => { // Added next
-     // --- FIX: Check req.user ---
-     if (!req.user || !req.user.businessId) {
-        console.error("[REWARDS CTRL] Critical: User context missing in getRewardByIdHandler.");
+export const getRewardByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
+   // ... (código sin cambios) ...
+    if (!req.user || !req.user.businessId) {
         return res.status(401).json({ message: "Usuario no autenticado o negocio no asociado." });
     }
     const businessId = req.user.businessId;
-    // --- FIN FIX ---
     const rewardId = req.params.id;
-
     if (!rewardId) {
         return res.status(400).json({ message: 'Se requiere el ID de la recompensa en la URL.' });
     }
-
     try {
         const reward = await findRewardById(rewardId, businessId);
         if (!reward) {
-            // Específico 404 Not Found
             return res.status(404).json({ message: 'Recompensa no encontrada o no pertenece a tu negocio.' });
         }
         res.status(200).json(reward);
     } catch (error) {
         console.error('[REWARDS CTRL] Error fetching reward by ID:', error);
-        next(new Error('Error del servidor al obtener la recompensa por ID.')); // Usar next
+        next(new Error('Error del servidor al obtener la recompensa por ID.'));
     }
 };
-
 
 /**
  * Handles updating an existing reward (handles PUT and PATCH).
  * PUT/PATCH /api/rewards/:id
  */
-export const updateRewardHandler = async (req: Request, res: Response, next: NextFunction) => { // Added next
-     // --- FIX: Check req.user ---
+export const updateRewardHandler = async (req: Request, res: Response, next: NextFunction) => {
      if (!req.user || !req.user.businessId) {
-        console.error("[REWARDS CTRL] Critical: User context missing in updateRewardHandler.");
-        return res.status(401).json({ message: "Usuario no autenticado o negocio no asociado." });
+        // ... (check sin cambios) ...
+         return res.status(401).json({ message: "Usuario no autenticado o negocio no asociado." });
     }
     const businessId = req.user.businessId;
-    // const role = req.user.role; // Role check is done by middleware in routes
-    // --- FIN FIX ---
     const rewardId = req.params.id;
+    // --- BUENA PRÁCTICA: Usar el tipo UpdateRewardDto ---
     const updateData: UpdateRewardDto = req.body;
+    // --- FIN BUENA PRÁCTICA ---
 
-    // Validaciones básicas
     if (!rewardId) {
+        // ... (validación sin cambios) ...
         return res.status(400).json({ message: 'Se requiere el ID de la recompensa en la URL.' });
     }
     if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ message: 'Se requieren datos de actualización en el cuerpo de la petición.' }); // Corregido: actualización, petición
+        // ... (validación sin cambios) ...
+        return res.status(400).json({ message: 'Se requieren datos de actualización en el cuerpo de la petición.' });
     }
-    // Validación específica para isActive
+    // Validaciones específicas (como isActive boolean) se mantienen bien
     if (updateData.isActive !== undefined && typeof updateData.isActive !== 'boolean') {
-        return res.status(400).json({ message: 'El campo isActive debe ser un valor booleano (true o false).' }); // Corregido: booleano
+        return res.status(400).json({ message: 'El campo isActive debe ser un valor booleano (true o false).' });
     }
-    // Podríamos añadir más validaciones si es necesario (ej: pointsCost >= 0)
+    // Podríamos añadir validación para pointsCost si se envía en updateData
+     if (updateData.pointsCost !== undefined && (typeof updateData.pointsCost !== 'number' || updateData.pointsCost < 0)) {
+        return res.status(400).json({ message: 'Si se actualiza, pointsCost debe ser un número >= 0.' });
+    }
 
     try {
-        // Llamamos al servicio de actualización
+        // El servicio updateReward ya acepta UpdateRewardData (que incluye imageUrl)
+        // y como pasamos updateData directamente, imageUrl se pasará si viene en el body.
         const updatedReward = await updateReward(rewardId, businessId, updateData);
         res.status(200).json(updatedReward);
     } catch (error) {
-         // Loguear el error completo
+         // ... (manejo de errores sin cambios) ...
          console.error('[REWARDS CTRL] Error updating reward:', error);
-         // Manejar error específico del servicio (404)
          if (error instanceof Error && error.message.includes('no encontrada o no pertenece')) {
              return res.status(404).json({ message: error.message });
          }
-         // Usar next para otros errores
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+            return res.status(409).json({ message: `Ya existe otra recompensa con el nombre "${updateData.name}" para este negocio.` });
+        }
          next(new Error('Error del servidor al actualizar la recompensa.'));
     }
 };
@@ -161,35 +166,28 @@ export const updateRewardHandler = async (req: Request, res: Response, next: Nex
 /**
  * Handles deletion of an existing reward. DELETE /api/rewards/:id
  */
-export const deleteRewardHandler = async (req: Request, res: Response, next: NextFunction) => { // Added next
-     // --- FIX: Check req.user ---
-     if (!req.user || !req.user.businessId) {
-        console.error("[REWARDS CTRL] Critical: User context missing in deleteRewardHandler.");
+export const deleteRewardHandler = async (req: Request, res: Response, next: NextFunction) => {
+   // ... (código sin cambios) ...
+    if (!req.user || !req.user.businessId) {
         return res.status(401).json({ message: "Usuario no autenticado o negocio no asociado." });
     }
     const businessId = req.user.businessId;
-    // const role = req.user.role; // Role check is done by middleware in routes
-    // --- FIN FIX ---
     const rewardId = req.params.id;
-
     if (!rewardId) {
         return res.status(400).json({ message: 'Se requiere el ID de la recompensa en la URL.' });
     }
-
     try {
         const deletedReward = await deleteReward(rewardId, businessId);
-        // Respondemos con un mensaje y el objeto eliminado
-        res.status(200).json({ message: 'Recompensa eliminada con éxito.', deletedReward }); // Corregido: éxito
+        res.status(200).json({ message: 'Recompensa eliminada con éxito.', deletedReward });
     } catch (error) {
+        // ... (manejo de errores sin cambios) ...
         console.error('[REWARDS CTRL] Error deleting reward:', error);
-        // Manejar error específico del servicio (404 si no existe, 409 si está en uso por FK)
         if (error instanceof Error && error.message.includes('no encontrada o no pertenece')) {
             return res.status(404).json({ message: error.message });
         }
         if (error instanceof Error && error.message.includes('siendo utilizada')) {
-             return res.status(409).json({ message: error.message }); // 409 Conflict
+             return res.status(409).json({ message: error.message });
         }
-        // Usar next para otros errores
         next(new Error('Error del servidor al eliminar la recompensa.'));
     }
 };
