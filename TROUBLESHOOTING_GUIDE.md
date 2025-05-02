@@ -1,6 +1,6 @@
 # Guía Rápida de Troubleshooting - LoyalPyME
 
-**Fecha de Última Actualización:** 29 de Abril de 2025
+**Fecha de Última Actualización:** 02 de Mayo de 2025
 
 ---
 
@@ -12,82 +12,73 @@ Esta guía recopila problemas técnicos significativos o no obvios encontrados d
 
 **1. Backend: Inestabilidad con `yarn dev` (nodemon + ts-node)**
 
-- **Síntomas:** Reinicios inesperados, errores `SyntaxError`, cambios no reflejados.
-- **Causa:** Conflictos/inestabilidad de `ts-node-dev`/`nodemon` con módulos ES/CJS en el entorno.
-- **Solución Estable:** Usar **dos terminales** en `backend/`:
-  1.  `npx tsc --watch` (Compilación continua)
-  2.  `npx nodemon dist/index.js` (Ejecución con reinicio automático al cambiar `dist/`)
+- (Sin cambios)
 
-**2. Backend: Cambios en `.ts` No Se Reflejan / Ruta Nueva da 404**
+**2. Backend: Cambios en `.ts` No Se Reflejan / Ruta Nueva da 404 / Lógica Antigua se Ejecuta**
 
-- **Síntomas:** Modificas código, `yarn build` OK (o `tsc -w` OK), pero la API se comporta igual o la nueva ruta no funciona.
-- **Causa:** El proceso `node` (ejecutado por `nodemon` o manualmente) no se reinició para cargar los cambios compilados en `dist/`.
-- **Solución Crítica:** Después de **CADA** `yarn build` (o después de que `tsc --watch` termine), **SIEMPRE DETENER y REINICIAR** el proceso `node dist/index.js` (o asegurarse que `nodemon` lo haga). Si persiste, forzar limpieza: `rm -rf dist && yarn build && node dist/index.js`.
+- **Síntomas:** Modificas código en un archivo `.ts` (ej: un servicio), pero la API sigue comportándose como antes (ej: no guarda un campo nuevo, usa lógica vieja).
+- **Causa:** El proceso `node` que ejecuta `nodemon` solo vigila cambios en la carpeta `dist/`. Si no tienes `npx tsc --watch` corriendo en otra terminal (o no has ejecutado `yarn build` manualmente después de guardar el `.ts`), los cambios no se compilan a JavaScript en `dist/` y `nodemon` no los detecta ni reinicia el servidor con el código nuevo.
+- **Solución Crítica:** **SIEMPRE** asegúrate de que los cambios en `.ts` se compilen a `dist/` antes de esperar que se reflejen en la API en ejecución. Usa el método de 2 terminales (`tsc --watch` y `nodemon`) o ejecuta `yarn build` manualmente antes de (re)iniciar `nodemon` o `node dist/index.js`.
 
 **3. Frontend: Cambios No Se Aplican (Vite HMR)**
 
-- **Síntomas:** Funcionalidad no cambia, estilos viejos, etc., tras guardar archivo.
-- **Solución:** 1. Verificar terminal `yarn dev` por errores. 2. Refresco forzado navegador (Ctrl+Shift+R). 3. **Reiniciar `yarn dev`** (`Ctrl+C` y `yarn dev --host`), especialmente tras cambios en `vite.config.ts`.
+- (Sin cambios)
 
 **4. Backend: Errores `TS2305` / Tipos Prisma no encontrados**
 
-- **Síntomas:** TS no encuentra tipos/enums de Prisma (`User`, `UserRole`, `PrismaClientKnownRequestError`, etc.) tras `yarn install` o `prisma migrate`.
-- **Causa:** Prisma Client (`node_modules/@prisma/client`) no generado o no sincronizado.
-- **Solución Crítica:** Ejecutar **`npx prisma generate`** en `backend/`. Opcional: Reiniciar servidor TS del editor.
+- (Sin cambios)
 
 **5. Backend: Dependencias Circulares (TS)**
 
-- **Síntomas:** Errores de ciclo de importación entre archivos.
-- **Solución:** Mover definiciones (interfaces, tipos) a archivos independientes e importar desde allí.
+- (Sin cambios)
 
 **6. Backend: API no se conecta a Base de Datos (`PrismaClientInitializationError`)**
 
-- **Síntomas:** Endpoints fallan con 500, logs muestran error de conexión a DB. Frecuente tras reinicios del sistema.
-- **Solución:** 1. Verificar que servicio PostgreSQL corre. 2. Verificar `DATABASE_URL` en `.env`. 3. Ejecutar `npx prisma migrate dev` si la BD está vacía/corrupta.
+- (Sin cambios)
 
 **7. Frontend: Error 401 al llamar a Rutas Públicas Backend desde `axiosInstance`**
 
-- **Estado:** Resuelto (Backend v1.3.0+).
-- **Causa Antigua:** Middleware `authenticateToken` aplicado globalmente a `/api`.
-- **Solución Aplicada:** Middlewares aplicados individualmente a rutas protegidas en `backend/src/index.ts`. Rutas públicas (`/api/auth/*`, `/public/*`) no llevan middleware global. Usar `axiosInstance` para `/api/*` (incl. `/api/auth`) y `axios` base para `/public/*`.
+- (Sin cambios)
 
 **8. Frontend: Formulario Mantine parece vacío tras cargar datos**
 
-- **Estado:** Resuelto (en `TierSettingsPage.tsx`).
-- **Causa Antigua:** Llamada incorrecta a `form.reset()` después de `form.setValues()` en la carga.
-- **Solución Aplicada:** Eliminar `form.reset()` de la función de carga inicial. Usar `form.setValues()` y luego `form.reset()` _después_ de un guardado exitoso para actualizar valores base y limpiar estado 'dirty'.
+- (Sin cambios)
 
 **9. Mobile: Escáner QR falla (`setPhotoOptions failed`)**
 
-- **Estado:** Resuelto.
-- **Causa Antigua:** Bug/incompatibilidad en `react-qr-reader`.
-- **Solución Aplicada:** Reemplazo por `html5-qrcode` y uso del hook `useQrScanner`.
+- (Sin cambios)
 
-**10. Git: Error `Deletion of directory '...' failed` (Windows)** - **Causa:** Bloqueo de archivo/carpeta por otro programa. - **Solución:** Cerrar programas -> `git merge --abort` / `git reset --hard HEAD` (si necesario) -> `git pull`.
+**10. Git: Error `Deletion of directory '...' failed` (Windows)** - (Sin cambios)
 
-**11. Testing Backend (Vitest): Test file no se descubre** - **Síntomas:** Tests en archivo `.ts` no se ejecutan. - **Causa:** Nombre de archivo no termina en `.test.ts` o `.spec.ts`. - **Solución:** Renombrar archivo correctamente.
+**11. Testing Backend (Vitest): Test file no se descubre** - (Sin cambios)
 
-**12. Testing Backend (Vitest): Mocking de Prisma falla (`Cannot read properties of undefined`, spy not called)** - **Síntomas:** Tests unitarios de funciones que usan `new PrismaClient()` internamente fallan al intentar mockear Prisma. - **Causa:** Instancia interna de Prisma ignora mocks globales (`vi.mock`). - **Solución Aplicada:** **Inyección de Dependencias**. 1. Refactorizar función bajo prueba para aceptar `prismaClient` como argumento. 2. Refactorizar _todo_ el módulo helper para eliminar `new PrismaClient()` y usar DI. 3. Actualizar llamadas a los helpers en los servicios para pasar la instancia `prisma`. 4. En el test, crear mock simple y pasarlo como argumento a la función.
+**12. Testing Backend (Vitest): Mocking de Prisma falla (`Cannot read properties of undefined`, spy not called)** - (Sin cambios)
 
-**13. Testing Backend (Vitest/TS): Errores TS2352/TS2554 persistentes (Mock vs Type)** - **Síntomas:** `tsc` (en `yarn build` o VS Code) se queja de incompatibilidad de tipos entre el mock simple pasado por DI y el tipo esperado (`Pick<PrismaClient,...>`) o de número incorrecto de argumentos. - **Causa:** Discrepancia estructural grande entre mock y tipo real, o TS server cache/resolución incorrecta de firmas tras refactor. - **Solución Aplicada:** 1. Asegurar que archivo fuente (`.ts`) con la firma correcta está guardado y compilado (`yarn build`). 2. Reiniciar servidor TS en VS Code (`Ctrl+Shift+P` -> Restart TS server). 3. Si persiste el TS2352/2345 en el test al pasar el mock, usar `// @ts-expect-error` en la línea anterior a la llamada dentro del archivo `.test.ts` para suprimir el error de tipo específico del test.
+**13. Testing Backend (Vitest/TS): Errores TS2352/TS2554 persistentes (Mock vs Type)** - (Sin cambios)
 
-**14. Testing Integración (Supertest): Error 401 devuelve `text/plain`, no JSON** - **Síntomas:** Test que espera 401 por falta de token falla por `Content-Type`. - **Causa:** Middleware `authenticateToken` usa `res.sendStatus(401)` que responde con `text/plain`. - **Solución:** En esos tests específicos, eliminar la aserción `.expect('Content-Type', /json/)`.
+**14. Testing Integración (Supertest): Error 401 devuelve `text/plain`, no JSON** - (Sin cambios)
 
-**15. Testing Integración (Supertest): Test Login 401 (Éxito esperado)** - **Causa:** Credenciales hardcodeadas en el test no coinciden con las de la BD de prueba. - **Solución:** Verificar y usar credenciales correctas en el test.
+**15. Testing Integración (Supertest): Test Login 401 (Éxito esperado)** - (Sin cambios)
 
-**16. Testing Integración (Supertest): Setup Falla - Registro Cliente (DNI Inválido)** - **Causa:** DNI generado aleatoriamente en `beforeAll` no tenía letra de control válida. - **Solución:** Añadir función helper `generateValidDni()` al test setup para crear DNIs válidos.
+**16. Testing Integración (Supertest): Setup Falla - Registro Cliente (DNI Inválido)** - (Sin cambios)
 
-**17. Testing Integración (Supertest): Ruta `PATCH` devuelve HTML/404** - **Causa:** Olvido de definir la ruta `router.patch(...)` en el archivo `.routes.ts` correspondiente. - **Solución:** Añadir la definición de la ruta PATCH en el router.
+**17. Testing Integración (Supertest): Ruta `PATCH` devuelve HTML/404** - (Sin cambios)
 
-**18. Testing Integración (Supertest): Error 500 en lugar de 400 (Validación) o 409 (Conflicto)** - **Causa:** Falta validación de entrada (ej: números negativos) en el controlador; Error P2002 (Unique Constraint) de Prisma no manejado específicamente en el `catch` del controlador para devolver 409. - **Solución:** Añadir validaciones explícitas en controlador _antes_ de llamar al servicio; Añadir `if (error instanceof Error && error.message.includes(...))` específico para error de unicidad en el `catch` del controlador para devolver 409.
+**18. Testing Integración (Supertest): Error 500 en lugar de 400 (Validación) o 409 (Conflicto)** - (Sin cambios)
 
-**19. Frontend (i18n): Claves (`loginPage.title`) se muestran en lugar de texto traducido** - **Causa:** Archivos de traducción (`translation.json`) no encontrados o no cargados. Generalmente por ubicación incorrecta de la carpeta `public/locales` o error de sintaxis en el JSON. - **Solución:** Asegurar estructura `frontend/public/locales/{lng}/translation.json`. Validar sintaxis JSON. Vaciar caché del navegador y recargar forzadamente.
+**19. Frontend (i18n): Claves (`loginPage.title`) se muestran en lugar de texto traducido** - (Sin cambios)
 
-**20. Frontend: Banderas de Idioma (Emoji Unicode) no se renderizan** - **Causa:** Falta de soporte de fuente en el sistema/navegador específico. - **Solución:** Usar una librería como `react-country-flag` que utiliza SVG.
+**20. Frontend: Banderas de Idioma (Emoji Unicode) no se renderizan** - (Sin cambios)
 
-**21. Frontend: Navbar Móvil Admin no se cierra automáticamente** - **Causa:** Componente Navbar no tenía acceso a función `close`. - **Solución:** Pasar `close` (de `useDisclosure`) como prop desde Layout a Navbar y llamarla en `onClick` del enlace.
+**21. Frontend: Navbar Móvil Admin no se cierra automáticamente** - (Sin cambios)
 
-**22. PowerShell: Sintaxis para `curl` y JSON** - **Solución:** Usar `Invoke-RestMethod` con parámetros PowerShell (`-Method`, `-Headers @{}`, `-Body ($obj | ConvertTo-Json -Depth N)`).
+**22. PowerShell: Sintaxis para `curl` y JSON** - (Sin cambios)
+
+**--- NUEVOS PUNTOS ---**
+
+**23. Backend: Subida de Imágenes Falla (Error 500 Internal Server Error en API `/upload/...`)** - **Síntomas:** El frontend intenta subir una imagen, pero la llamada a la API falla con un error 500. La notificación del frontend puede decir "Internal Server Error" o un mensaje más específico si el backend lo devuelve. - **Causa Principal:** Casi siempre es un problema con la configuración del proveedor de almacenamiento en la nube (ej: Cloudinary, AWS S3) en el **backend**. - **Credenciales Inválidas/Faltantes:** Las variables de entorno (`CLOUDINARY_...`, `AWS_...`) en `backend/.env` no existen, están mal escritas, tienen valores incorrectos, o no coinciden con la cuenta/proyecto correcto. - **Backend No Reiniciado:** Se corrigió `.env`, pero no se reinició el servidor backend (`nodemon` o `node`). - **Configuración SDK Incorrecta:** El archivo de configuración (ej: `cloudinary.config.ts`, `s3.config.ts`) tiene errores o no inicializa bien el SDK. - **Error en Servicio de Subida:** La lógica en `upload.service.ts` falla al interactuar con la API del proveedor (error de red, permisos incorrectos en el bucket/cuenta, formato de datos inválido). - **Solución Crítica:** 1. **REVISAR LOGS DEL BACKEND:** Mira la consola donde corre el backend **en el momento del error 500**. Busca el mensaje de error específico (ej: "Invalid cloud_name", "Unknown API key", "Access Denied", "Bucket not found", etc.). **Este log es CLAVE.** 2. **VERIFICAR `.env` METICULOSAMENTE:** Comprueba CADA variable de entorno requerida por el proveedor cloud. Compara carácter por carácter con el dashboard del proveedor. Asegúrate de que no haya espacios extra y de que las claves/secretos/nombres pertenezcan a la MISMA cuenta/proyecto. 3. **REINICIAR BACKEND:** **Siempre** reinicia el backend (Ctrl+C, `npx nodemon ...`) después de CUALQUIER cambio en `.env`. 4. **Verificar Configuración SDK:** Revisa el archivo `*.config.ts` correspondiente. ¿Lee bien las variables? ¿Se inicializa correctamente? (Busca logs de "configured successfully" al arrancar). 5. **Añadir Logs en Servicio:** Si persiste, añade `console.log` detallados dentro de la función de subida en `upload.service.ts` para ver qué parámetros se usan y dónde falla exactamente la llamada al SDK. 6. **Probar Credenciales Externamente:** Usa la CLI del proveedor (ej: `aws s3 ls`, `cld admin`) o un script mínimo para verificar si las credenciales funcionan fuera de tu aplicación. 7. **Contactar Soporte:** Si todo falla y las credenciales parecen correctas, contacta al soporte del proveedor cloud.
+
+**24. Backend/Frontend: Campo Nuevo (ej: `imageUrl`) Se Guarda/Recibe Como `null` o No Aparece** - **Síntomas:** Subes una imagen (la subida funciona), guardas la recompensa, pero al volver a verla (en edición o como cliente), la imagen no está (el campo `imageUrl` es `null` o falta). - **Causas Posibles:** - **Backend (Guardado):** La función del servicio (ej: `createReward`, `updateReward` en `rewards.service.ts`) no recibe el campo (`imageUrl`) desde el controlador o no lo incluye en la operación `data` de Prisma (`prisma.reward.create/update`). - **Backend (Lectura):** La función del servicio que lee los datos (ej: `findRewardsByBusiness`, `findActiveRewardsForCustomer`) usa una cláusula `select` en Prisma pero **olvida** incluir el campo nuevo (`imageUrl: true`). Si no hay `select`, Prisma debería devolverlo por defecto. - **Backend (Compilación):** Hiciste los cambios en el archivo `.ts` del servicio, pero **no recompilaste** el backend (`yarn build` o `npx tsc --watch`), por lo que `nodemon` sigue ejecutando el código viejo de la carpeta `dist/` que no maneja el campo nuevo. - **Frontend (Envío):** El componente del formulario (`RewardForm.tsx`) no incluye correctamente el campo (`imageUrl`) en el objeto de datos que envía a la API al guardar. - **Frontend (Recepción/Tipo):** El hook que recibe los datos (`useAdminRewards`, `useCustomerRewardsData`) o el tipo de datos (`Reward`, `DisplayReward`) no incluye la definición del campo nuevo (`imageUrl`), por lo que TypeScript/JavaScript lo ignora al procesar la respuesta. - **Solución:** 1. **Verificar Flujo de Datos (Logs):** Añade `console.log` en puntos clave: - Frontend: Justo antes de la llamada `axios.post/put` para guardar, loguea el objeto de datos completo que se envía. ¿Está `imageUrl` ahí? - Backend (Controlador): Loguea `req.body` al recibir la petición de guardar. ¿Está `imageUrl` ahí? - Backend (Servicio - Guardar): Loguea los datos recibidos del controlador y el objeto `data` pasado a Prisma. ¿Está `imageUrl` ahí? - Backend (Servicio - Leer): Loguea los datos devueltos por Prisma (`findMany`, `findFirst`). ¿Está `imageUrl` ahí? - Frontend (Hook): Loguea la respuesta cruda de la API (`response.data`) antes de hacer `setRewards` o similar. ¿Está `imageUrl` ahí? 2. **Corregir Código:** Basado en los logs, corrige el punto donde se pierde el dato (añadir al `req.body` en el controlador, añadir al `data` de Prisma en el servicio, añadir al `select` de Prisma, actualizar tipos/interfaces en frontend/backend). 3. **Asegurar Compilación Backend:** Confirma que tu proceso de build (`tsc`) está funcionando y actualizando la carpeta `dist/` antes de ejecutar `nodemon`. 4. **Verificar Tipos/Interfaces:** Revisa que la definición del tipo/interfaz en ambos lados (backend y frontend) incluya el nuevo campo correctamente (ej: `imageUrl?: string | null;`). 5. **Verificar Base de Datos:** Comprueba directamente en la base de datos si el campo (`imageUrl`) existe en la tabla y si se está guardando el valor esperado o si queda `NULL`.
 
 ---
 
