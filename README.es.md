@@ -19,26 +19,26 @@
 
 ## Visión y Propósito ✨
 
-LoyalPyME busca ser el aliado tecnológico de las PyMEs, proporcionando herramientas digitales integradas para fomentar la recurrencia, construir relaciones sólidas y mejorar la experiencia del cliente final, adaptándose a diversos sectores.
+LoyalPyME busca ser el aliado tecnológico de las PyMEs, proporcionando herramientas digitales integradas para fomentar la recurrencia, construir relaciones sólidas y mejorar la experiencia del cliente final, adaptándose a diversos sectores (hostelería, retail, servicios).
 
 _(Consulta [PROJECT_STATUS.md](./PROJECT_STATUS.md) para ver las decisiones de diseño clave y la [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) para la visión a largo plazo)._
 
-|                                   Panel de Admin (Referencia)                                   |                                        Panel de Cliente (Referencia)                                         |
-| :---------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------: |
-| <img src="images/SC_LoyalPyME.png" alt="Panel Admin LoyalPyME - Vista Escritorio" width="100%"> | <img src="images/SC_LoyalPyME_Customer_v1.11.png" alt="Panel Cliente LoyalPyME - Con Imágenes" width="100%"> |
+|                                   Panel de Admin (Escritorio)                                   |                                      Panel de Admin (Móvil)                                      |
+| :---------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------: |
+| <img src="images/SC_LoyalPyME.png" alt="Panel Admin LoyalPyME - Vista Escritorio" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="Panel Admin LoyalPyME - Vista Móvil" width="100%"> |
 
-_(Nota: Las capturas pueden necesitar actualizarse. La captura de cliente es un ejemplo conceptual)._
+_(Nota: Las capturas podrían necesitar actualizarse)._
 
 ## Características Principales Implementadas ✅
 
 - **Autenticación Completa:** Registro Negocio/Admin, Registro Cliente, Login (JWT), Reset Contraseña.
 - **Gestión Clientes (Admin):** CRUD, Filtros, Búsqueda, Ordenación, Acciones Individuales/Masivas, Notas.
 - **Gestión Niveles/Tiers (Admin):** CRUD Niveles, CRUD Beneficios por Nivel, Configuración Global del Sistema.
-- **Gestión Recompensas (Admin):** CRUD Recompensas (Puntos), Subida/Recorte 1:1 Imagen (Cloudinary).
+- **Gestión Recompensas con Imágenes (Admin):** CRUD Recompensas (Puntos), Subida/Recorte 1:1 Imagen (Cloudinary).
 - **Flujo Puntos/QR:** Generación QR (Admin), Validación QR (Cliente - Manual/Escáner Móvil `html5-qrcode`).
 - **Lógica Tiers Automática:** Cálculo y asignación/descenso basado en configuración (Backend + Cron).
-- **Panel Cliente:** Pestañas (Resumen, Recompensas), Info Usuario (Puntos, Nivel, Beneficios), Barra Progreso (con Preview Siguiente Nivel), Lista Recompensas/Regalos (con imágenes), Canje Puntos/Regalos, Snippet Resumen (con imágenes).
-- **Otros:** Internacionalización (ES/EN), Documentación API (Swagger), Logo Estático, Layout Cabecera Restringido, Escáner QR Móvil Funcional.
+- **Panel Cliente:** Pestañas (Resumen, Recompensas), Info Usuario (Puntos, Nivel, Beneficios), Barra Progreso (con Preview Siguiente Nivel), Lista Recompensas/Regalos (con imágenes), Canje Puntos/Regalos, Snippet Resumen (con imágenes). Escáner QR funcional.
+- **Otros:** Internacionalización (ES/EN), Documentación API (Swagger), Logo Estático, Layout Cabecera Restringido.
 
 ## Estado Actual y Próximos Pasos 🗺️
 
@@ -49,7 +49,7 @@ El proyecto ha completado la **Fase 1 (Núcleo Funcional)** y está **avanzando 
 
 ## Tecnologías Utilizadas 🛠️
 
-**Frontend:** React, TypeScript, Vite, Mantine UI, Axios, React Router DOM, `html5-qrcode`, `react-image-crop`, `i18next`...
+**Frontend:** React, TypeScript, Vite, Mantine UI (v7+), Axios, React Router DOM (v6+), `html5-qrcode`, `react-image-crop`, `i18next`...
 **Backend:** Node.js, Express, TypeScript, Prisma, PostgreSQL, JWT, bcryptjs, Cloudinary, Multer, Vitest, Supertest, Swagger...
 
 _(Lista detallada en [PROJECT_STATUS.md](./PROJECT_STATUS.md))_
@@ -57,11 +57,11 @@ _(Lista detallada en [PROJECT_STATUS.md](./PROJECT_STATUS.md))_
 ## Inicio Rápido (Desarrollo Local) 🚀
 
 1.  Clonar repositorio.
-2.  **Backend:** `cd backend && yarn install`, configurar `.env`, `npx prisma migrate dev`, `npx prisma generate`, (opcional `db seed` o registrar vía app), ejecutar con `npx tsc --watch` y `npx nodemon dist/index.js`.
+2.  **Backend:** `cd backend && yarn install`, configurar `.env` completo, `npx prisma migrate dev`, `npx prisma generate`, (opcional `db seed` o registrar admin vía app), ejecutar con `npx tsc --watch` y `npx nodemon dist/index.js`.
 3.  **Frontend:** `cd ../frontend && yarn install`, ejecutar con `yarn dev --host`.
 4.  Acceder: `https://localhost:5173`.
 
-**¡Importante!** Consulta la **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** para obtener instrucciones **detalladas** sobre prerrequisitos, configuración completa, ejecución y acceso móvil. Para solucionar problemas comunes, revisa la [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md).
+**¡Importante!** Consulta la **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** para obtener instrucciones **detalladas** y la **[TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md)** para problemas comunes.
 
 ---
 

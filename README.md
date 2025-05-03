@@ -23,11 +23,11 @@ LoyalPyME aims to be the technological ally for SMEs, providing integrated digit
 
 _(See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for key design decisions and [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for the long-term vision)._
 
-|                                   Admin Dashboard (Reference)                                   |                                          Customer Dashboard (Reference)                                          |
-| :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------: |
-| <img src="images/SC_LoyalPyME.png" alt="LoyalPyME Admin Dashboard - Desktop View" width="100%"> | <img src="images/SC_LoyalPyME_Customer_v1.11.png" alt="LoyalPyME Customer Dashboard - With Images" width="100%"> |
+|                                    Admin Dashboard (Desktop)                                    |                                       Admin Dashboard (Mobile)                                       |
+| :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
+| <img src="images/SC_LoyalPyME.png" alt="LoyalPyME Admin Dashboard - Desktop View" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="LoyalPyME Admin Dashboard - Mobile View" width="100%"> |
 
-_(Note: Screenshots might need updating. Customer screenshot is a conceptual example)._
+_(Note: Screenshots might need updating)._
 
 ## Key Implemented Features ✅
 
@@ -37,8 +37,8 @@ _(Note: Screenshots might need updating. Customer screenshot is a conceptual exa
 - **Reward Management with Images (Admin):** Reward CRUD (Points-based), Image Upload (from file), 1:1 Image Cropping, Cloudinary Storage integration.
 - **Points & QR Flow:** QR Code Generation (Admin), QR Validation (Customer - Manual or Mobile Scanner via `html5-qrcode`).
 - **Automatic Tier Logic:** Tier Calculation/Assignment/Downgrade based on business settings (Backend + Cron Job).
-- **Customer Dashboard:** Tab-based Interface (Summary, Rewards), User Info Display (Points, Tier, Benefits), Progress Bar (with Next Tier Preview), Reward/Gift List (with images), Points/Gift Redemption, Summary Snippet (with images).
-- **Other:** Frontend Internationalization (i18n - ES/EN), API Documentation (Swagger), Static Logo display, Constrained Header Layout, Functional Mobile QR Scanner.
+- **Customer Dashboard:** Tab-based Interface (Summary, Rewards), User Info Display (Points, Tier, Benefits), Progress Bar (with Next Tier Preview), Reward/Gift List (with images), Points/Gift Redemption, Summary Snippet (with images). Functional QR Scanner.
+- **Other:** Internationalization (ES/EN), API Documentation (Swagger), Static Logo, Constrained Header Layout.
 
 ## Project Status & Roadmap 🗺️
 
@@ -56,17 +56,10 @@ _(Detailed list in [PROJECT_STATUS.md](./PROJECT_STATUS.md))_
 
 ## Quick Start (Local Development) 🚀
 
-1.  **Clone:** `git clone <repo_url> LoyalPyME && cd LoyalPyME`
-2.  **Backend:**
-    - `cd backend && yarn install`
-    - Copy `.env.example` to `.env` and **fill in ALL variables** (DB, JWT, Cloudinary, Optional: Test Admin).
-    - `npx prisma migrate dev && npx prisma generate`
-    - (Optional) `npx prisma db seed` or register business via app.
-    - **Run:** (Terminal 1) `npx tsc --watch` & (Terminal 2) `npx nodemon dist/index.js`
-3.  **Frontend:**
-    - `cd ../frontend && yarn install`
-    - **Run:** `yarn dev --host`
-4.  **Access:** `https://localhost:5173` (or network IP)
+1.  Clone repository.
+2.  **Backend:** `cd backend && yarn install`, configure `.env` completely, `npx prisma migrate dev`, `npx prisma generate`, (optional `db seed` or register admin via app), run with `npx tsc --watch` & `npx nodemon dist/index.js`.
+3.  **Frontend:** `cd ../frontend && yarn install`, run with `yarn dev --host`.
+4.  Access: `https://localhost:5173`.
 
 **Important!** Refer to the **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** for the **complete, detailed** installation, configuration, running, and mobile access instructions. For common issues, check the [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md).
 
