@@ -2,101 +2,107 @@
 
 **Última Actualización:** 03 de Mayo de 2025
 
-Este documento detalla las tareas pendientes inmediatas, las funcionalidades planificadas a corto/medio plazo y las ideas para la evolución futura de LoyalPyME, incluyendo consideraciones de implementación para referencia futura. Sirve como backlog detallado y repositorio de ideas.
+Este documento detalla las tareas pendientes inmediatas, el alcance definido para una V1.0 operativa, las mejoras planificadas post-V1.0, la deuda técnica y las ideas para la evolución futura.
 
 ---
 
-## A. TAREAS INMEDIATAS / CORRECCIONES TÉCNICAS ⏳📌
+## A. CORRECCIONES INMEDIATAS (Pre-V1.0) ⏳📌
+
+_(Bloqueadores o bugs a solucionar antes de seguir con nuevas features)_
 
 1.  **Arreglar Tipo `TierData`** (`frontend`)
 
     - **Prioridad:** Alta
     - **Dificultad:** Baja
-    - **Objetivo:** Mejorar la seguridad de tipos eliminando `as any` al acceder a `tier.benefits` en el dashboard del cliente.
-    - **Pasos:** Añadir `benefits?: TierBenefitData[];` a `interface TierData` (`types/customer.ts`). Eliminar casts en `CustomerDashboardPage.tsx` (`useMemo`) usando `?.` o checks.
+    - **Objetivo:** Eliminar casts `as any` al acceder a `tier.benefits` en `CustomerDashboardPage.tsx`.
+    - **Pasos:** Añadir `benefits?: TierBenefitData[];` a `interface TierData` (`types/customer.ts`). Eliminar casts usando `?.` o checks.
 
 2.  **Fix Mobile Popover Click en Barra de Progreso** (`frontend`)
     - **Prioridad:** Media (Bug UX)
     - **Dificultad:** Media (Requiere depuración)
     - **Objetivo:** Permitir ver beneficios del siguiente nivel con tap en móvil en `UserInfoDisplay`.
-    - **Pasos:** Depurar (consola remota, inspector). Verificar eventos, CSS (`z-index`), posible bug Mantine. Probar wrapper (`Box`) o icono `IconInfoCircle` como trigger alternativo para el `<Popover>`.
+    - **Pasos:** Depurar (consola remota). Verificar eventos/CSS. Probar wrapper o icono trigger alternativo para `<Popover>`.
 
 ---
 
-## B. PRÓXIMAS FUNCIONALIDADES (FASE 2 / Prioridad Media-Alta) ⭐📝
+## B. ALCANCE OBJETIVO "V1.0" (Operativa y Atractiva) ⭐🚀
 
-3.  ⭐ **Panel Super Admin y Gestión de Negocios/Módulos** (`backend`, `frontend`)
+_(Funcionalidades y requisitos técnicos mínimos para poder empezar a ofrecer la plataforma, aunque sea en beta o con planes iniciales)_
 
-    - **Prioridad:** **MUY ALTA** (Requisito para modelo SaaS/multi-negocio)
+3.  ⭐ **Panel Super Admin y Gestión Negocios/Módulos** (`backend`, `frontend`)
+
+    - **Prioridad:** **CRÍTICA** (Requisito para modelo SaaS/multi-negocio)
     - **Dificultad:** Alta
-    - **Objetivo:** Crear la interfaz y lógica para que el administrador de la plataforma (tú) pueda gestionar los negocios registrados, su estado (activo/inactivo basado en pago futuro), y qué módulos/funcionalidades tienen habilitados.
-    - **Pasos Backend:**
-      1.  **Rol `SUPER_ADMIN`:** Definir en Enum `UserRole` (`schema.prisma`). Crear primer usuario Super Admin manualmente en BD o con script seguro.
-      2.  **Gestión Negocios API:**
-          - Crear `superadmin.routes.ts` (protegido con `checkRole(['SUPER_ADMIN'])`).
-          - Endpoints: `GET /api/superadmin/businesses` (listar/paginar/filtrar negocios), `GET /api/superadmin/businesses/:id` (detalles), `PATCH /api/superadmin/businesses/:id/status` (cambiar `Business.isActive`?).
-          - Crear `superadmin.service.ts` con lógica Prisma para estas operaciones.
-          - Crear `superadmin.controller.ts` para manejar peticiones.
-      3.  **Gestión Módulos/Features API & DB:**
-          - **Decidir Modelo Datos:** ¿Campo JSON `enabledModules: String[]` en `Business`? ¿O tablas `Module` y `BusinessModule`? (Tablas es más escalable).
-          - Crear/Modificar Schema Prisma según decisión. Migrar y Generar.
-          - Endpoints API Super Admin para ver/activar/desactivar módulos por negocio (ej: `PATCH /api/superadmin/businesses/:id/modules`).
-          - Servicios/Controladores para esta lógica.
-      4.  **Feature Flags (Middleware/Servicios):** Implementar lógica en el backend principal para comprobar si un negocio tiene un módulo específico activo _antes_ de permitir el acceso a la API de ese módulo (ej: un middleware `checkModuleActive('WAITER_MODULE')` en las rutas del módulo camarero).
-    - **Pasos Frontend:**
-      1.  **Sección Super Admin:** Crear rutas (ej: `/superadmin`) y componentes accesibles solo para rol `SUPER_ADMIN` (ajustar `PrivateRoute`).
-      2.  **UI Gestión Negocios:** Tabla para listar negocios con buscador/filtros. Vista de detalle por negocio. Botones para activar/desactivar.
-      3.  **UI Gestión Módulos:** En la vista de detalle de un negocio, mostrar lista de módulos disponibles (definidos estáticamente en FE o leídos de tabla `Module` si existe) con `<Switch>` para activarlos/desactivarlos para ESE negocio. Llamar a la API correspondiente al cambiar el switch.
-    - **Consideraciones:** Seguridad robusta para endpoints Super Admin. Diseño claro del sistema de módulos/feature flags.
+    - **Objetivo:** Interfaz/lógica para que el admin de LoyalPyME gestione negocios (estado activo/inactivo) y módulos habilitados.
+    - **Pasos BE:** Rol `SUPER_ADMIN`. API Super Admin (`/api/superadmin/...` protegida) para CRUD básico de Negocios (listar, activar/desactivar) y gestión de módulos/features por negocio (¿Modelo BD `BusinessModule`? ¿JSON en `Business`?). Middleware `checkModuleActive`.
+    - **Pasos FE:** Sección `/superadmin` protegida. UI Gestión Negocios (Tabla, botones estado). UI Gestión Módulos (Lista + Switch por negocio).
+    - **Consideraciones:** Seguridad endpoints Super Admin, diseño feature flags/módulos.
 
-4.  **Añadir Captura desde Cámara en `RewardForm.tsx`** (`frontend`)
+4.  ⭐ **Personalización Negocio - Logo (Upload)** (`backend`, `frontend`)
 
-    - **Prioridad:** Media (Mejora UX Admin)
+    - **Prioridad:** Alta (Importante para imagen de marca del cliente PyME)
+    - **Dificultad:** Media-Alta
+    - **Objetivo:** Permitir al admin del negocio subir su propio logo.
+    - **Pasos BE:** `Business.logoUrl`. API Upload (`/upload/business-logo`). Servicio update `Business`. Devolver `logoUrl` en `/api/profile`.
+    - **Pasos FE:** UI Admin (Settings Page?) con `<FileInput>`. Hook `useLayoutUserData` obtiene `logoUrl`. `AppHeader` muestra logo dinámico o fallback.
+
+5.  ⭐ **Personalización Negocio - Theming Básico** (`backend`, `frontend`)
+
+    - **Prioridad:** Alta (Importante para imagen de marca del cliente PyME)
+    - **Dificultad:** Media
+    - **Objetivo:** Adaptar colores primarios/secundarios básicos.
+    - **Pasos BE:** `Business.themeIdentifier`. UI Admin para seleccionar. Devolver en `/api/profile`.
+    - **Pasos FE:** Definir temas Mantine/variables CSS. Lógica `App.tsx`/`MainLayout.tsx` aplica tema/clase.
+
+6.  ⭐ **Historial de Actividad Cliente** (`backend`, `frontend`)
+
+    - **Prioridad:** Alta (Valor clave para el cliente final)
+    - **Dificultad:** Alta
+    - **Objetivo:** Log de puntos, canjes, regalos para el cliente.
+    - **Pasos BE:** (Recomendado) `model PointTransaction`. Modificar servicios para registrar. API `GET /api/customer/activity` (paginada).
+    - **Pasos FE:** Implementar `ActivityTab.tsx`. Hook `useCustomerActivity`. UI Lista/Feed.
+
+7.  ⭐ **Fundamentos Técnicos Esenciales (Pre-Lanzamiento)** (`backend`, `frontend`, `infra`)
+    - **Prioridad:** **CRÍTICA**
+    - **Dificultad:** Media-Alta
+    - **Objetivo:** Asegurar un mínimo de estabilidad, seguridad y operatividad antes de que usuarios reales (incluso beta) usen la plataforma.
+    - **Tareas Mínimas:**
+      - **Testing Mínimo (BE):** Escribir y pasar tests de integración para flujos críticos: Login (Admin/Cliente), Registro (Cliente/Negocio), Validación QR, Canje Puntos, Canje Regalo, CRUD Recompensa básico, CRUD Tier básico. (Parte de C.12).
+      - **Validación Backend Mínima:** Revisar **todos** los endpoints API y asegurar que las entradas (`req.body`, `req.params`, `req.query`) tienen validaciones básicas para prevenir errores 500 por datos inesperados (puede ser sin Zod inicialmente, pero mejorado respecto a ahora). (Parte de C.14).
+      - **Despliegue Inicial:** Definir, implementar y **probar** un método de despliegue simple pero funcional en un entorno tipo producción (ej: Dockerizar + VPS/Cloud Simple, o PaaS como Render/Fly.io). Configurar variables de entorno de producción (DB, JWT, Cloudinary, etc.). Asegurar HTTPS. (Parte de C.15).
+      - **Logging Básico Producción:** Configurar el backend para que los logs (errores, warnings, info básica) se escriban a archivos o a un servicio de logging simple en producción. (Parte de C.16).
+      - **Seguridad Básica:** Revisar dependencias (`yarn audit`), configurar cabeceras HTTP de seguridad básicas (Helmet.js en Express?), asegurar que la gestión de JWT (expiración, secreto) es robusta.
+
+---
+
+## C. MEJORAS POST-V1.0 / PRÓXIMA PRIORIDAD (Fase 2 Continuación) 📝
+
+_(Funcionalidades valiosas a añadir después del lanzamiento inicial V1.0)_
+
+8.  **Añadir Captura desde Cámara en `RewardForm.tsx`** (`frontend`)
+
+    - **Prioridad:** Media-Baja (Post-V1.0)
     - **Dificultad:** Media
     - **Objetivo:** Opción para tomar foto con cámara para la recompensa.
     - **Pasos:** Activar botón, Modal con `<video>`, `getUserMedia`, botón captura a `<canvas>`, `toBlob`/`toDataURL`, detener stream, pasar DataURL a `ReactCrop`.
 
-5.  **Refinar Espaciado/Diseño `RewardList.tsx`** (`frontend`)
+9.  **Refinar Espaciado/Diseño `RewardList.tsx`** (`frontend`)
 
-    - **Prioridad:** Media (Mejora Visual)
+    - **Prioridad:** Media (Post-V1.0)
     - **Dificultad:** Baja-Media
     - **Objetivo:** Mejorar estética/legibilidad tarjetas recompensa cliente.
     - **Pasos:** Ajustar props Mantine (`SimpleGrid` cols/spacing, `Card` padding, `Stack` gap, `Text` size/fw/lineClamp, `Badge` size/variant). Responsive.
 
-6.  **Personalización Negocio - Logo (Upload)** (`backend`, `frontend`)
+10. **Fidelización Avanzada (Tipos de Beneficios)** (`backend`, `frontend`)
 
-    - **Prioridad:** Alta
-    - **Dificultad:** Media-Alta
-    - **Objetivo:** Permitir al admin subir su logo.
-    - **Pasos BE:** Añadir `logoUrl` a `Business`. API Upload (`/upload/business-logo`, carpeta Cloudinary `logos_...`). Servicio para update `Business`. Devolver `logoUrl` en `/api/profile`.
-    - **Pasos FE:** UI Admin (Settings Page?) con `<FileInput>`. Llamada API Upload. Hook `useLayoutUserData` lee `logoUrl`. `AppHeader` muestra logo dinámico o fallback estático.
-
-7.  **Personalización Negocio - Theming Básico** (`backend`, `frontend`)
-
-    - **Prioridad:** Alta
-    - **Dificultad:** Media
-    - **Objetivo:** Adaptar colores primarios/secundarios.
-    - **Pasos BE:** Añadir `themeIdentifier` a `Business`. UI Admin para seleccionar. Devolver en `/api/profile`.
-    - **Pasos FE:** Definir temas Mantine o variables CSS. Lógica en `App.tsx`/`MainLayout.tsx` lee `themeIdentifier` y aplica tema/clase CSS.
-
-8.  **Historial de Actividad Cliente** (`backend`, `frontend`)
-
-    - **Prioridad:** Alta
+    - **Prioridad:** Media (Post-V1.0)
     - **Dificultad:** Alta
-    - **Objetivo:** Log de puntos, canjes, regalos para el cliente.
-    - **Pasos BE:** (Recomendado) Crear `model PointTransaction`. Modificar servicios para registrar transacciones. API `GET /api/customer/activity` (paginada).
-    - **Pasos FE:** Implementar `ActivityTab.tsx`. Hook `useCustomerActivity`. UI Lista/Feed con icono, descripción, fecha.
-
-9.  **Fidelización Avanzada (Tipos de Beneficios)** (`backend`, `frontend`)
-
-    - **Prioridad:** Media
-    - **Dificultad:** Alta
-    - **Objetivo:** Más variedad en beneficios de Tiers.
-    - **Pasos BE:** Expandir Enum `BenefitType`. Validar `value`. Implementar lógica aplicación (Cron Job cumpleaños?).
+    - **Objetivo:** Más variedad en beneficios de Tiers (ej: % Descuento, Bonus Cumpleaños).
+    - **Pasos BE:** Expandir Enum `BenefitType`. Validar `value`. Implementar lógica aplicación (Cron Job?).
     - **Pasos FE:** Actualizar Form/Select Admin. Actualizar display cliente.
 
-10. **Comunicación Básica (Anuncios)** (`backend`, `frontend`)
-    - **Prioridad:** Media
+11. **Comunicación Básica (Anuncios)** (`backend`, `frontend`)
+    - **Prioridad:** Media (Post-V1.0)
     - **Dificultad:** Alta
     - **Objetivo:** Admin publica noticias/ofertas generales.
     - **Pasos BE:** `model Announcement`. API CRUD Admin. API lectura cliente.
@@ -104,136 +110,132 @@ Este documento detalla las tareas pendientes inmediatas, las funcionalidades pla
 
 ---
 
-## C. TAREAS TÉCNICAS PENDIENTES 🛠️
+## D. DEUDA TÉCNICA Y MEJORAS CONTINUAS 🛠️
 
-11. **Usar Variables Entorno para Credenciales Tests** (`backend`)
+_(Tareas importantes para la salud y escalabilidad a largo plazo, a abordar progresivamente)_
 
-    - **Prioridad:** Media
+12. **Usar Variables Entorno para Credenciales Tests** (`backend`)
+
+    - **Prioridad:** Media (Hacer después de V1.0)
     - **Dificultad:** Media
-    - **Objetivo:** Desacoplar tests de integración de credenciales admin hardcodeadas.
-    - **Pasos:** Definir `TEST_ADMIN_EMAIL`/`PASSWORD` en `.env`/`.env.example`. Modificar `beforeAll` en tests (`tests/integration/*.test.ts`) para usar `process.env`. Actualizar READMEs/`SETUP_GUIDE.md`. (Asegurar que el usuario existe en BD test).
+    - **Objetivo:** Desacoplar tests de credenciales hardcodeadas.
+    - **Pasos:** Definir `TEST_ADMIN_EMAIL`/`PASSWORD` en `.env`/`.env.example`. Modificar `beforeAll` tests. Actualizar `SETUP_GUIDE.md`.
 
-12. **Completar Pruebas Backend** (`backend`)
+13. **Completar Pruebas Backend** (`backend`)
 
-    - **Prioridad:** Media/Baja
+    - **Prioridad:** Media (Continuo Post-V1.0)
     - **Dificultad:** Alta / Larga
-    - **Objetivo:** Aumentar cobertura y fiabilidad.
-    - **Pasos:** Tests Unitarios (servicios). Tests Integración (endpoints, errores, filtros, cron).
+    - **Objetivo:** Aumentar cobertura >80-90%.
+    - **Pasos:** Tests Unitarios servicios. Tests Integración exhaustivos (casos borde, errores, seguridad).
 
-13. **Iniciar/Completar Pruebas Frontend** (`frontend`)
+14. **Iniciar/Completar Pruebas Frontend** (`frontend`)
 
-    - **Prioridad:** Media/Baja
+    - **Prioridad:** Media (Continuo Post-V1.0)
     - **Dificultad:** Alta / Larga
     - **Objetivo:** Asegurar calidad UI/lógica.
-    - **Pasos:** Tests Unitarios (hooks). Tests Componente RTL (UI compleja). Tests Renderizado.
+    - **Pasos:** Tests Unitarios hooks. Tests Componente RTL.
 
-14. **Validación Robusta Backend (Zod)** (`backend`)
+15. **Validación Robusta Backend (Zod)** (`backend`)
 
-    - **Prioridad:** Media
+    - **Prioridad:** Media (Post-V1.0)
     - **Dificultad:** Media
-    - **Objetivo:** Validar DTOs de entrada.
-    - **Pasos:** Instalar `zod`. Definir schemas. Middleware de validación Express.
+    - **Objetivo:** Validar DTOs de forma declarativa.
+    - **Pasos:** Instalar `zod`. Definir schemas. Middleware validación Express.
 
-15. **Estrategia Deployment & CI/CD** (`infra`)
+16. **Estrategia Deployment & CI/CD (Avanzada)** (`infra`)
 
-    - **Prioridad:** Alta (cuando se quiera desplegar)
+    - **Prioridad:** Media (Post-V1.0)
     - **Dificultad:** Alta
-    - **Objetivo:** Despliegue automatizado.
-    - **Pasos:** Decidir plataforma. Dockerizar?. Configurar builds prod, servidor/proxy, secretos prod. Pipeline CI/CD.
+    - **Objetivo:** Despliegue robusto y automatizado.
+    - **Pasos:** Dockerizar. Pipeline CI/CD completo (GitHub Actions?). Entornos Staging/Prod.
 
-16. **Logging/Monitoring Avanzado** (`backend`, `frontend`)
+17. **Logging/Monitoring Avanzado (Producción)** (`backend`, `frontend`)
 
-    - **Prioridad:** Media (Prod)
+    - **Prioridad:** Alta (Post-Lanzamiento)
     - **Dificultad:** Media
-    - **Objetivo:** Observabilidad.
-    - **Pasos:** Integrar Sentry/similar. Implementar librería logging formal (BE).
+    - **Objetivo:** Observabilidad detallada.
+    - **Pasos:** Integrar Sentry. Librería logging formal BE (Winston/Pino). Métricas básicas.
 
-17. **Optimización Base de Datos** (`backend`)
+18. **Optimización Base de Datos** (`backend`)
 
-    - **Prioridad:** Baja (Revisar si hay problemas)
+    - **Prioridad:** Baja (Según necesidad)
     - **Dificultad:** Media
     - **Objetivo:** Rendimiento consultas.
-    - **Pasos:** Analizar queries. Añadir índices (`@index`/`@@index`) en `schema.prisma`.
+    - **Pasos:** Analizar queries (`EXPLAIN ANALYZE`). Añadir índices (`@index`/`@@index`).
 
-18. **Tipado Centralizado (`common` package)** (`infra`, `backend`, `frontend`)
-    - **Prioridad:** Media/Baja (Refactor)
+19. **Tipado Centralizado (`common` package)** (`infra`, `backend`, `frontend`)
+    - **Prioridad:** Media/Baja (Refactor Post-V1.0)
     - **Dificultad:** Media-Alta
-    - **Objetivo:** Evitar duplicación/desincronización tipos.
-    - **Pasos:** Configurar workspace (Yarn/pnpm/Nx). Mover tipos compartidos. Ajustar `tsconfig.json` y imports.
+    - **Objetivo:** Evitar duplicación tipos.
+    - **Pasos:** Configurar workspace. Mover tipos compartidos. Ajustar `tsconfig.json` y imports.
 
 ---
 
-## D. VISIÓN FUTURA (FASE 3+ / Brainstorming) 🚀
+## E. VISIÓN FUTURA / MÓDULOS ADICIONALES (Post-V1.0) 🚀
 
-_(Detalles conceptuales y consideraciones para ideas a más largo plazo)_
+_(Ideas a largo plazo, a detallar y priorizar después de V1.0)_
 
-19. **Interacción Social y Gifting:**
+20. **Módulo Camarero/Servicio (Real-time)**
+
+    - **Objetivo:** Notificar al staff de canjes para preparación/entrega.
+    - **Concepto:** Pantalla simple (tablet?) con lista de canjes pendientes (cliente, recompensa, mesa?, hora). Actualización en tiempo real. Botón "Servido".
+    - **Consideraciones:** WebSockets (Socket.IO), UI específica staff, posible rol "Empleado".
+
+21. **Módulo Pedidos / Carta Digital**
+
+    - **Objetivo:** Permitir a clientes ver carta y/o hacer pedidos desde la app.
+    - **Concepto:** Digitalizar menú, categorías, opciones. UI cliente para navegar/pedir. UI staff para recibir/gestionar pedidos (requiere módulo anterior).
+    - **Consideraciones:** Depende de Gestión Catálogo (#26). Complejidad UI/UX. Integración con cocina/TPV (muy complejo).
+
+22. **Interacción Social y Gifting**
 
     - **Objetivo:** Aumentar engagement y viralidad.
-    - **Ideas:** Regalar Recompensas/Puntos cliente-a-cliente (búsqueda, mensaje), Transferir Puntos (límites?), Programa de Referidos (códigos, bonus mutuo), Compartir Logros, Chat Simple (admin-cliente / cliente-cliente?).
-    - **Consideraciones:** Relaciones usuario (amigos?), búsqueda, BD, UI compleja, privacidad, moderación chat.
+    - **Ideas:** Regalar Recompensas/Puntos cliente-a-cliente, Transferir Puntos, Programa Referidos, Compartir Logros, Chat Simple.
+    - **Consideraciones:** Relaciones usuario (amigos?), búsqueda, BD, UI, privacidad, moderación.
 
-20. **Gamificación Avanzada:**
+23. **Gamificación Avanzada**
 
     - **Objetivo:** Incrementar frecuencia y logro.
-    - **Ideas:** Pérdida/Bonus Puntos (Inactividad/Reactivación), Badges/Logros (hitos, UI perfil), Rachas (visitas/scans), Retos (propuestos por admin), Leaderboards (opcional/anonimizado).
-    - **Consideraciones:** Lógica backend compleja, diseño UI atractivo, configuración admin.
+    - **Ideas:** Pérdida/Bonus Puntos (Inactividad/Reactivación), Badges/Logros, Rachas, Retos, Leaderboards.
+    - **Consideraciones:** Lógica backend compleja, diseño UI, config admin.
 
-21. **Monetización / Compra de Puntos / Módulos:**
+24. **Monetización Avanzada**
 
-    - **Objetivo:** Generar ingresos PyME / Acelerar cliente / Modelo SaaS.
-    - **Ideas:** Recarga Saldo (Stripe?), Paquetes Puntos, Premium Tiers (suscripción), Módulos Opcionales (Camarero, CRM, Analytics Pro) con suscripción (gestionado vía Panel Super Admin - Tarea #3).
-    - **Consideraciones:** Pasarela pago, seguridad PCI, lógica negocio suscripciones/precios/activación, UI compra/gestión.
+    - **Objetivo:** Diversificar ingresos.
+    - **Ideas:** Recarga Saldo (€->Puntos vía Stripe), Paquetes Puntos, Premium Tiers (suscripción), Venta Módulos (SaaS).
+    - **Consideraciones:** Pasarela pago, seguridad PCI, lógica negocio suscripciones.
 
-22. **Personalización y CRM Avanzado:**
+25. **Personalización y CRM Avanzado**
 
     - **Objetivo:** Mejorar relación cliente y marketing dirigido.
-    - **Ideas:** Bonus Cumpleaños (requiere fecha!), Segmentación Clientes (UI admin), Ofertas Dirigidas (a segmento), Feedback/Encuestas Post-Acción (incentivo?), Recomendaciones (avanzado).
-    - **Consideraciones:** Privacidad (fecha cumple.), UI admin potente, posible integración email.
+    - **Ideas:** Bonus Cumpleaños, Segmentación Clientes (UI admin), Ofertas Dirigidas, Feedback/Encuestas Post-Acción, Recomendaciones.
+    - **Consideraciones:** Privacidad (fecha cumple.), UI admin potente, posible integración email/push.
 
-23. **Analíticas Avanzadas (Admin):**
+26. **Gestión de Catálogo e Integración de Datos Externos**
+
+    - **Objetivo:** Facilitar gestión de productos/servicios (precio, stock) sincronizando con sistemas negocio. Esencial para módulos Pedidos, Carta, etc.
+    - **Opciones:** Importación CSV/Excel (Base - Media Dificultad). Conexión Lectura BD (ODBC) (Avanzado - Muy Alta Dificultad). Integración API ERP/TPV (Ideal pero Dependiente - Alta Dificultad).
+    - **Pasos (CSV):** BE (`model Product`, parser, API import, servicio upsert). FE (UI Upload, feedback).
+
+27. **Analíticas Avanzadas (Admin)**
 
     - **Objetivo:** Más insights para el negocio.
-    - **Ideas:** Análisis RFM, efectividad recompensas, gráficos distribución/migración tiers, puntos emitidos vs canjeados, LTV cliente.
-    - **Consideraciones:** Queries agregación complejas, librerías gráficos.
+    - **Ideas:** RFM, efectividad recompensas, gráficos tiers, puntos emitidos/canjeados, LTV.
+    - **Consideraciones:** Queries agregación, librerías gráficos.
 
-24. **Operaciones y Gestión Negocio:**
+28. **Operaciones y Gestión Negocio Adicional**
 
     - **Objetivo:** Facilitar uso operativo en el local.
-    - **Ideas:** **Pantalla Servicio/Comandas** (canjes tiempo real - WebSockets, UI tablet staff?), VIP Lists (flag user, UI admin/cliente?), **Multi-Admin/Roles** (invitar empleados, permisos limitados), Log de Auditoría (`AuditLog`).
-    - **Consideraciones:** WebSockets para tiempo real, diseño roles/permisos granular, UI staff.
+    - **Ideas:** VIP Lists, Multi-Admin/Roles (permisos granulares), Log de Auditoría (`AuditLog`).
+    - **Consideraciones:** Diseño roles/permisos, UI staff/auditoría.
 
-25. **Gestión de Catálogo e Integración de Datos Externos** **(¡Detallado!)**
+29. **App Móvil (PWA/Nativa)**
 
-    - **Objetivo:** Facilitar a los negocios la gestión de sus productos/servicios y datos relacionados (precio, stock) dentro de LoyalPyME, sincronizándolos con sus sistemas existentes. Esencial para módulos futuros (Pedidos, Carta Digital, Inventario, o recompensas específicas de producto).
-    - **Concepto y Opciones (por complejidad creciente):**
-      1.  **Importación Manual CSV/Excel (Base):**
-          - _Descripción:_ UI Admin para subir archivo con catálogo (ID Producto, Nombre, Precio, Desc, Cat?, Stock inicial?). Backend parsea y crea/actualiza `Product`.
-          - _Pros:_ Universal, relativamente fácil de implementar.
-          - _Contras:_ Manual, propenso a errores, datos no en tiempo real (stock/precio desactualizados).
-          - _Dificultad:_ Media.
-      2.  **Conexión Directa Lectura BD (ODBC):**
-          - _Descripción:_ Permitir configurar una conexión ODBC de solo lectura a la base de datos del ERP/TPV del cliente (si este lo permite). Backend LoyalPyME haría consultas `SELECT` periódicas/bajo demanda para obtener precios/stock actualizados.
-          - _Pros:_ Datos casi en tiempo real, menos trabajo manual.
-          - _Contras:_ **Muy complejo**. Requiere instalar drivers ODBC en servidor backend (complica despliegue). Configuración DSN/conexión específica por cada cliente. Dependencia de la estructura de BD del cliente. Rendimiento/seguridad.
-          - _Dificultad:_ Alta / Muy Alta.
-      3.  **Integración API ERP/TPV (Ideal pero Dependiente):**
-          - _Descripción:_ Si el ERP/TPV del cliente ofrece una API REST/GraphQL moderna, desarrollar una integración específica para sincronizar catálogo, precios, stock, etc.
-          - _Pros:_ La mejor opción si API existe y es buena. Datos en tiempo real, robusto.
-          - _Contras:_ Requiere desarrollo específico por cada ERP/TPV a integrar. Depende de terceros.
-          - _Dificultad:_ Alta (por cada integración).
-    - **Pasos Iniciales (Para CSV):**
-      - **BE:** `model Product` (schema, migrate, generate). Librería parseo CSV/Excel (`papaparse`?). API Import (`POST /api/admin/products/import-csv` con Multer). Servicio procesado/upsert. API CRUD Productos (opcional).
-      - **FE:** UI Admin subida CSV (Ajustes/Catálogo). Instrucciones formato, plantilla. Feedback importación. UI ver catálogo (opcional).
-    - **Prioridad:** Importación CSV (Media, sube a Alta con Módulos Producto). ODBC/API (Baja-Media, Muy específica/avanzada).
+    - **Objetivo:** Mejorar experiencia móvil, notificaciones push.
+    - **Concepto:** PWA o nativa (React Native).
+    - **Consideraciones:** Service workers, Expo/RN CLI, API, diseño, cámara nativa, FCM.
 
-26. **App Móvil (PWA/Nativa):**
-
-    - **Objetivo:** Mejorar experiencia móvil, notificaciones push, offline básico.
-    - **Concepto:** PWA o nativa (React Native) enfocada en cliente.
-    - **Consideraciones:** Service workers, Expo/RN CLI, API, diseño adaptado, cámara nativa, FCM.
-
-27. **E2E Tests:** Cypress/Playwright para flujos críticos.
-28. **Integraciones Externas:** (Muy futuro) POS, Reservas, etc.
+30. **E2E Tests:** Cypress/Playwright para flujos críticos.
+31. **Integraciones Externas:** POS, Reservas, etc.
 
 ---
