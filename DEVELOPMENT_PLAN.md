@@ -12,254 +12,228 @@ Este documento detalla las tareas pendientes inmediatas, las funcionalidades pla
 
     - **Prioridad:** Alta
     - **Dificultad:** Baja
-    - **Objetivo:** Mejorar la seguridad de tipos eliminando casts `as any` o similares al acceder a `tier.benefits` en el dashboard del cliente, lo cual puede ocultar errores o causar comportamientos inesperados si la estructura de datos cambia.
-    - **Pasos Detallados:**
-      1.  Abrir `frontend/src/types/customer.ts`.
-      2.  Localizar la interfaz `TierData`.
-      3.  Añadir la propiedad opcional: `benefits?: TierBenefitData[];` (El `?` es importante si la API no siempre devuelve el array de beneficios, por ejemplo, si se pide una lista de tiers sin detalles).
-      4.  Abrir `frontend/src/pages/CustomerDashboardPage.tsx`.
-      5.  Buscar la sección `useMemo` donde se calcula `tierDisplayData`.
-      6.  Inspeccionar cómo se accede a los beneficios del `currentTier` o `nextTier`. Eliminar cualquier `as any` o `as TierData & { benefits: ... }`.
-      7.  Usar encadenamiento opcional (`?.`) o comprobaciones explícitas (`if (tier && tier.benefits)`) para acceder a los beneficios de forma segura.
-      8.  Buscar en otros componentes si se usan casts similares para `tier.benefits` y corregirlos.
+    - **Objetivo:** Mejorar la seguridad de tipos eliminando `as any` al acceder a `tier.benefits` en el dashboard del cliente.
+    - **Pasos:** Añadir `benefits?: TierBenefitData[];` a `interface TierData` (`types/customer.ts`). Eliminar casts en `CustomerDashboardPage.tsx` (`useMemo`) usando `?.` o checks.
 
 2.  **Fix Mobile Popover Click en Barra de Progreso** (`frontend`)
     - **Prioridad:** Media (Bug UX)
     - **Dificultad:** Media (Requiere depuración)
-    - **Objetivo:** El popover que muestra los beneficios del siguiente nivel (activado desde la barra de progreso en `UserInfoDisplay`) funciona con hover en escritorio pero no con tap/click en la simulación móvil del navegador ni (probablemente) en dispositivos reales.
-    - **Archivos:** `frontend/src/components/customer/UserInfoDisplay.tsx`.
-    - **Pasos Detallados:**
-      1.  **Depuración:** Usar las herramientas de depuración remota móvil (ver `TROUBLESHOOTING_GUIDE.md`) para inspeccionar el componente en un dispositivo real o simulador fiable.
-      2.  **Verificar Eventos:** ¿Llega el evento `onClick` o `onTap` al componente `<Progress>` o a su wrapper cuando se usa en móvil?
-      3.  **Verificar CSS:** ¿Hay algún elemento superpuesto que esté interceptando el clic? Comprobar `z-index` del Popover, del Progress y de elementos circundantes. ¿Es el área de la barra de progreso suficientemente grande para un tap cómodo?
-      4.  **Probar Target Alternativo:** Envolver el `<Progress>` en un `<Box onClick={popover.open}>` y ver si el Box sí captura el clic.
-      5.  **Considerar Bug Mantine:** Investigar si hay issues abiertos en Mantine relacionados con `<Popover>` y `<Progress>` o eventos táctiles.
-      6.  **Solución Alternativa (Si todo falla):** Añadir un pequeño `<ActionIcon>` con `IconInfoCircle` justo al lado de la barra de progreso. Hacer que _ese icono_ sea el `Popover.Target` o que abra un `Modal` simple con la información de los beneficios al hacerle clic.
+    - **Objetivo:** Permitir ver beneficios del siguiente nivel con tap en móvil en `UserInfoDisplay`.
+    - **Pasos:** Depurar (consola remota, inspector). Verificar eventos, CSS (`z-index`), posible bug Mantine. Probar wrapper (`Box`) o icono `IconInfoCircle` como trigger alternativo para el `<Popover>`.
 
 ---
 
 ## B. PRÓXIMAS FUNCIONALIDADES (FASE 2 / Prioridad Media-Alta) ⭐📝
 
-3.  **Añadir Captura desde Cámara en `RewardForm.tsx`** (`frontend`)
+3.  ⭐ **Panel Super Admin y Gestión de Negocios/Módulos** (`backend`, `frontend`)
 
-    - **Prioridad:** Media
+    - **Prioridad:** **MUY ALTA** (Requisito para modelo SaaS/multi-negocio)
+    - **Dificultad:** Alta
+    - **Objetivo:** Crear la interfaz y lógica para que el administrador de la plataforma (tú) pueda gestionar los negocios registrados, su estado (activo/inactivo basado en pago futuro), y qué módulos/funcionalidades tienen habilitados.
+    - **Pasos Backend:**
+      1.  **Rol `SUPER_ADMIN`:** Definir en Enum `UserRole` (`schema.prisma`). Crear primer usuario Super Admin manualmente en BD o con script seguro.
+      2.  **Gestión Negocios API:**
+          - Crear `superadmin.routes.ts` (protegido con `checkRole(['SUPER_ADMIN'])`).
+          - Endpoints: `GET /api/superadmin/businesses` (listar/paginar/filtrar negocios), `GET /api/superadmin/businesses/:id` (detalles), `PATCH /api/superadmin/businesses/:id/status` (cambiar `Business.isActive`?).
+          - Crear `superadmin.service.ts` con lógica Prisma para estas operaciones.
+          - Crear `superadmin.controller.ts` para manejar peticiones.
+      3.  **Gestión Módulos/Features API & DB:**
+          - **Decidir Modelo Datos:** ¿Campo JSON `enabledModules: String[]` en `Business`? ¿O tablas `Module` y `BusinessModule`? (Tablas es más escalable).
+          - Crear/Modificar Schema Prisma según decisión. Migrar y Generar.
+          - Endpoints API Super Admin para ver/activar/desactivar módulos por negocio (ej: `PATCH /api/superadmin/businesses/:id/modules`).
+          - Servicios/Controladores para esta lógica.
+      4.  **Feature Flags (Middleware/Servicios):** Implementar lógica en el backend principal para comprobar si un negocio tiene un módulo específico activo _antes_ de permitir el acceso a la API de ese módulo (ej: un middleware `checkModuleActive('WAITER_MODULE')` en las rutas del módulo camarero).
+    - **Pasos Frontend:**
+      1.  **Sección Super Admin:** Crear rutas (ej: `/superadmin`) y componentes accesibles solo para rol `SUPER_ADMIN` (ajustar `PrivateRoute`).
+      2.  **UI Gestión Negocios:** Tabla para listar negocios con buscador/filtros. Vista de detalle por negocio. Botones para activar/desactivar.
+      3.  **UI Gestión Módulos:** En la vista de detalle de un negocio, mostrar lista de módulos disponibles (definidos estáticamente en FE o leídos de tabla `Module` si existe) con `<Switch>` para activarlos/desactivarlos para ESE negocio. Llamar a la API correspondiente al cambiar el switch.
+    - **Consideraciones:** Seguridad robusta para endpoints Super Admin. Diseño claro del sistema de módulos/feature flags.
+
+4.  **Añadir Captura desde Cámara en `RewardForm.tsx`** (`frontend`)
+
+    - **Prioridad:** Media (Mejora UX Admin)
     - **Dificultad:** Media
-    - **Objetivo:** Ofrecer al admin la opción de usar la cámara del dispositivo para tomar la foto de la recompensa, además de subir un archivo.
-    - **Archivos:** `frontend/src/components/admin/rewards/RewardForm.tsx`.
-    - **Pasos Detallados:**
-      1.  Habilitar el botón "Cámara".
-      2.  Crear un estado para controlar la visibilidad de un `Modal` de cámara.
-      3.  En el `onClick` del botón Cámara, abrir el Modal.
-      4.  Dentro del Modal:
-          - Usar `navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }})` al montar/abrir el modal.
-          - Manejar errores (permiso denegado `NotAllowedError`, cámara no encontrada `NotFoundError`). Mostrar alerta al usuario.
-          - Si éxito, obtener el `MediaStream`. Guardarlo en una ref o estado.
-          - Mostrar el stream en un elemento `<video autoPlay ref={videoRef}`.
-          - Añadir un botón "Tomar Foto".
-          - Al hacer clic en "Tomar Foto":
-            - Crear un `<canvas>` (puede ser oculto).
-            - Ajustar tamaño del canvas al del vídeo (`videoRef.current.videoWidth`, `videoHeight`).
-            - Dibujar el frame actual del vídeo en el canvas: `ctx.drawImage(videoRef.current, 0, 0)`.
-            - Obtener la DataURL del canvas: `canvas.toDataURL('image/png')`.
-            - **MUY IMPORTANTE:** Detener el stream de la cámara para liberarla: `streamRef.current?.getTracks().forEach(track => track.stop());`.
-            - Cerrar el Modal.
-            - Llamar a una función en `RewardForm` (pasada como prop al modal o definida ahí) pasándole la DataURL.
-      5.  En `RewardForm`:
-          - La función llamada desde el modal debe hacer: `setImgSrc(dataUrlFromCanvas)`. Esto activará el `ReactCrop` existente.
-          - El resto del flujo (recorte, subida) ya está implementado.
+    - **Objetivo:** Opción para tomar foto con cámara para la recompensa.
+    - **Pasos:** Activar botón, Modal con `<video>`, `getUserMedia`, botón captura a `<canvas>`, `toBlob`/`toDataURL`, detener stream, pasar DataURL a `ReactCrop`.
 
-4.  **Refinar Espaciado/Diseño `RewardList.tsx`** (`frontend`)
+5.  **Refinar Espaciado/Diseño `RewardList.tsx`** (`frontend`)
 
     - **Prioridad:** Media (Mejora Visual)
     - **Dificultad:** Baja-Media
-    - **Objetivo:** Mejorar la apariencia visual y legibilidad de las tarjetas de recompensa en la vista de cliente.
-    - **Archivos:** `frontend/src/components/customer/RewardList.tsx`.
-    - **Pasos Detallados:**
-      1.  Ajustar `cols` en `<SimpleGrid>` para diferentes breakpoints (quizás `xs:1, sm:2, md:3` sea mejor que `xs:2, md:3`).
-      2.  Ajustar `spacing` y `verticalSpacing` en `<SimpleGrid>`.
-      3.  Ajustar `padding` de `<Card>` (¿quizás `p="md"`?).
-      4.  Revisar `gap` del `<Stack>` principal dentro de la Card.
-      5.  Ajustar tamaño (`fz`), peso (`fw`) y `lineClamp` de los `<Text>` para nombre y descripción.
-      6.  ¿Estilizar `<Badge>` (regalo/puntos)? `size`, `variant`.
-      7.  Asegurar consistencia visual con `SummaryTab`.
+    - **Objetivo:** Mejorar estética/legibilidad tarjetas recompensa cliente.
+    - **Pasos:** Ajustar props Mantine (`SimpleGrid` cols/spacing, `Card` padding, `Stack` gap, `Text` size/fw/lineClamp, `Badge` size/variant). Responsive.
 
-5.  **Personalización Negocio - Logo (Upload)** (`backend`, `frontend`)
+6.  **Personalización Negocio - Logo (Upload)** (`backend`, `frontend`)
 
     - **Prioridad:** Alta
     - **Dificultad:** Media-Alta
-    - **Objetivo:** Permitir al admin subir su logo para reemplazar el estático.
-    - **Pasos Backend:**
-      1.  Schema `Business`: Añadir `logoUrl?: String`.
-      2.  Ejecutar `prisma migrate dev --name add_business_logo_url` y `prisma generate`.
-      3.  Ruta API: `POST /api/admin/upload/business-logo` (proteger con rol admin). Usar Multer.
-      4.  Servicio Subida: Reutilizar/adaptar `upload.service.ts` para subir a carpeta Cloudinary `loyalpyme/logos_development/`.
-      5.  Servicio Negocio (`businesses.service.ts` o nuevo): Función `updateBusiness(businessId, { logoUrl: newUrl })`.
-      6.  Controlador: Orquestar subida y actualización del negocio.
-      7.  Servicio Perfil (`auth.service.ts` o donde se obtenga `/api/profile`): Incluir `business: { select: { ..., logoUrl: true } }` en la query del usuario para devolverlo.
-    - **Pasos Frontend:**
-      1.  Crear página/sección "Ajustes del Negocio" para el admin.
-      2.  Componente UI: Incluir `<FileInput>` y un botón "Subir Logo" en esa página. Probablemente no necesite recorte, solo validación de tamaño/tipo.
-      3.  Llamada API: Enviar archivo a `POST /api/admin/upload/business-logo`. La respuesta podría ser la URL o un mensaje de éxito (la URL se leerá del perfil).
-      4.  Hook `useLayoutUserData`: Modificar para que espere y almacene `userData.business.logoUrl`.
-      5.  Componente `AppHeader.tsx`: Modificar componente `Logo` para mostrar `<img>` con `src={userData.business.logoUrl}` si existe, de lo contrario mostrar `src="/loyalpymelogo.jpg"`.
-    - **Consideraciones:** Manejo de caché si la URL del logo no cambia pero la imagen sí.
+    - **Objetivo:** Permitir al admin subir su logo.
+    - **Pasos BE:** Añadir `logoUrl` a `Business`. API Upload (`/upload/business-logo`, carpeta Cloudinary `logos_...`). Servicio para update `Business`. Devolver `logoUrl` en `/api/profile`.
+    - **Pasos FE:** UI Admin (Settings Page?) con `<FileInput>`. Llamada API Upload. Hook `useLayoutUserData` lee `logoUrl`. `AppHeader` muestra logo dinámico o fallback estático.
 
-6.  **Personalización Negocio - Theming Básico** (`backend`, `frontend`)
+7.  **Personalización Negocio - Theming Básico** (`backend`, `frontend`)
 
     - **Prioridad:** Alta
     - **Dificultad:** Media
-    - **Objetivo:** Adaptar colores primarios/secundarios de la interfaz según el negocio.
-    - **Pasos Backend:** Añadir `themeIdentifier: String?` a `Business` (schema, migrate, generate). UI Admin (en "Ajustes Negocio") para seleccionar un tema (ej: 'Default', 'Restaurante', 'Tienda', 'Oscuro'). Servicio/Controlador para guardar. Devolver `themeIdentifier` en `/api/profile`.
-    - **Pasos Frontend:**
-      1.  Definir Temas: En `theme.ts` o archivos separados, crear objetos de tema Mantine (`createTheme`) para cada identificador, variando `primaryColor`, `colors`, `fontFamily`, etc. O definir conjuntos de variables CSS.
-      2.  Aplicar Tema: En `App.tsx` o `MainLayout.tsx`, leer `userData.business.themeIdentifier`. Envolver la app en `<MantineProvider theme={getThemeObject(identifier)}>` que seleccione el objeto de tema correcto. O si es CSS, añadir clase dinámica al `<body>` o `div#root`.
-      3.  Uso: Componentes que usen `color="primary"` o `theme.colors.primary[x]` usarán automáticamente los colores del tema activo.
+    - **Objetivo:** Adaptar colores primarios/secundarios.
+    - **Pasos BE:** Añadir `themeIdentifier` a `Business`. UI Admin para seleccionar. Devolver en `/api/profile`.
+    - **Pasos FE:** Definir temas Mantine o variables CSS. Lógica en `App.tsx`/`MainLayout.tsx` lee `themeIdentifier` y aplica tema/clase CSS.
 
-7.  **Historial de Actividad Cliente** (`backend`, `frontend`)
+8.  **Historial de Actividad Cliente** (`backend`, `frontend`)
 
     - **Prioridad:** Alta
     - **Dificultad:** Alta
-    - **Objetivo:** Mostrar al cliente un log de sus acciones relevantes.
-    - **Pasos Backend:**
-      1.  **Modelo BD:** Crear `model PointTransaction { id, userId, businessId, type: TransactionType, pointsChange: Int, relatedId?: String, relatedType?: String, timestamp }` (Enum `TransactionType`: `QR_VALIDATION`, `REWARD_REDEEM`, `GIFT_REDEEM`, `MANUAL_ADJUST`, `REFERRAL_BONUS`, `BIRTHDAY_BONUS`, `POINT_DECAY`...).
-      2.  **Lógica de Registro:** Modificar servicios (`points.service`, `customer.service`, `admin-customer-individual/bulk.service`) para que CADA VEZ que se modifiquen los puntos o se canjee algo, se cree un registro en `PointTransaction`.
-      3.  **API Lectura:** Endpoint `GET /api/customer/activity` (paginado) que consulte `PointTransaction` para el `userId`, ordenado por `timestamp` descendente. Devolver datos relevantes (tipo, puntos, fecha, descripción derivada).
-    - **Pasos Frontend:**
-      1.  `ActivityTab.tsx`: Implementar UI.
-      2.  Hook `useCustomerActivity`: Llamar a API con paginación (scroll infinito?).
-      3.  UI Lista/Feed: Mostrar cada transacción con icono, descripción clara (ej: "+50 pts por QR Ticket #123", "-100 pts por Canje 'Café Gratis'", "+10 pts Regalo Cumpleaños"), fecha.
+    - **Objetivo:** Log de puntos, canjes, regalos para el cliente.
+    - **Pasos BE:** (Recomendado) Crear `model PointTransaction`. Modificar servicios para registrar transacciones. API `GET /api/customer/activity` (paginada).
+    - **Pasos FE:** Implementar `ActivityTab.tsx`. Hook `useCustomerActivity`. UI Lista/Feed con icono, descripción, fecha.
 
-8.  **Fidelización Avanzada (Tipos de Beneficios)** (`backend`, `frontend`)
+9.  **Fidelización Avanzada (Tipos de Beneficios)** (`backend`, `frontend`)
 
     - **Prioridad:** Media
     - **Dificultad:** Alta
-    - **Objetivo:** Más opciones de beneficios para Tiers.
-    - **Pasos Backend:** Ampliar Enum `BenefitType` (`PERCENTAGE_DISCOUNT`, `FIXED_DISCOUNT`, `FREE_SHIPPING`, `BIRTHDAY_BONUS_POINTS`, `BIRTHDAY_GIFT_REWARD`). Lógica de validación y aplicación en servicios (`tier-benefit.service`, `points.service`, ¿Cron Job para cumpleaños?).
-    - **Pasos Frontend:** Actualizar `AddTierBenefitForm` (`<Select>`). Actualizar `TierBenefitsDisplay` y otros sitios para mostrar los nuevos beneficios de forma comprensible.
+    - **Objetivo:** Más variedad en beneficios de Tiers.
+    - **Pasos BE:** Expandir Enum `BenefitType`. Validar `value`. Implementar lógica aplicación (Cron Job cumpleaños?).
+    - **Pasos FE:** Actualizar Form/Select Admin. Actualizar display cliente.
 
-9.  **Comunicación Básica (Anuncios)** (`backend`, `frontend`)
+10. **Comunicación Básica (Anuncios)** (`backend`, `frontend`)
     - **Prioridad:** Media
     - **Dificultad:** Alta
-    - **Objetivo:** Permitir al admin publicar noticias/ofertas generales.
-    - **Pasos Backend:** `model Announcement`. API CRUD Admin. API Lectura Cliente (`GET /api/customer/announcements`).
-    - **Pasos Frontend:** UI Admin (crear/listar/borrar). UI Cliente (`OffersTab.tsx` para mostrar feed).
+    - **Objetivo:** Admin publica noticias/ofertas generales.
+    - **Pasos BE:** `model Announcement`. API CRUD Admin. API lectura cliente.
+    - **Pasos FE:** UI Admin (crear/listar). UI Cliente (`OffersTab.tsx` feed).
 
 ---
 
 ## C. TAREAS TÉCNICAS PENDIENTES 🛠️
 
-10. **Usar Variables Entorno para Credenciales Tests** (`backend`)
+11. **Usar Variables Entorno para Credenciales Tests** (`backend`)
 
     - **Prioridad:** Media
     - **Dificultad:** Media
     - **Objetivo:** Desacoplar tests de integración de credenciales admin hardcodeadas.
-    - **Pasos:** Definir `TEST_ADMIN_EMAIL`/`PASSWORD` en `.env`/`.env.example`. Modificar `beforeAll` en `tests/integration/*.test.ts` para usar `process.env`. Actualizar `READMEs`/`SETUP_GUIDE.md`.
+    - **Pasos:** Definir `TEST_ADMIN_EMAIL`/`PASSWORD` en `.env`/`.env.example`. Modificar `beforeAll` en tests (`tests/integration/*.test.ts`) para usar `process.env`. Actualizar READMEs/`SETUP_GUIDE.md`. (Asegurar que el usuario existe en BD test).
 
-11. **Completar Pruebas Backend** (`backend`)
+12. **Completar Pruebas Backend** (`backend`)
 
     - **Prioridad:** Media/Baja
     - **Dificultad:** Alta / Larga
     - **Objetivo:** Aumentar cobertura y fiabilidad.
     - **Pasos:** Tests Unitarios (servicios). Tests Integración (endpoints, errores, filtros, cron).
 
-12. **Iniciar/Completar Pruebas Frontend** (`frontend`)
+13. **Iniciar/Completar Pruebas Frontend** (`frontend`)
 
     - **Prioridad:** Media/Baja
     - **Dificultad:** Alta / Larga
     - **Objetivo:** Asegurar calidad UI/lógica.
     - **Pasos:** Tests Unitarios (hooks). Tests Componente RTL (UI compleja). Tests Renderizado.
 
-13. **Validación Robusta Backend (Zod)** (`backend`)
+14. **Validación Robusta Backend (Zod)** (`backend`)
 
     - **Prioridad:** Media
     - **Dificultad:** Media
-    - **Objetivo:** Validar DTOs de entrada de forma declarativa y segura.
-    - **Pasos:** Instalar `zod`. Definir schemas Zod. Middleware de validación Express.
+    - **Objetivo:** Validar DTOs de entrada.
+    - **Pasos:** Instalar `zod`. Definir schemas. Middleware de validación Express.
 
-14. **Estrategia Deployment & CI/CD** (`infra`)
+15. **Estrategia Deployment & CI/CD** (`infra`)
 
     - **Prioridad:** Alta (cuando se quiera desplegar)
     - **Dificultad:** Alta
-    - **Objetivo:** Despliegue automatizado y fiable.
-    - **Pasos:** Decidir plataforma. Dockerizar?. Configurar builds prod. Configurar servidor/proxy. Gestionar secretos prod. Pipeline CI/CD (GitHub Actions?).
+    - **Objetivo:** Despliegue automatizado.
+    - **Pasos:** Decidir plataforma. Dockerizar?. Configurar builds prod, servidor/proxy, secretos prod. Pipeline CI/CD.
 
-15. **Logging/Monitoring Avanzado** (`backend`, `frontend`)
+16. **Logging/Monitoring Avanzado** (`backend`, `frontend`)
 
-    - **Prioridad:** Media (Importante para producción)
+    - **Prioridad:** Media (Prod)
     - **Dificultad:** Media
-    - **Objetivo:** Observabilidad y diagnóstico errores prod.
-    - **Pasos:** Integrar Sentry/similar (FE/BE). Implementar librería logging formal (BE).
+    - **Objetivo:** Observabilidad.
+    - **Pasos:** Integrar Sentry/similar. Implementar librería logging formal (BE).
 
-16. **Optimización Base de Datos** (`backend`)
+17. **Optimización Base de Datos** (`backend`)
 
-    - **Prioridad:** Baja (Revisar si hay problemas de rendimiento)
+    - **Prioridad:** Baja (Revisar si hay problemas)
     - **Dificultad:** Media
-    - **Objetivo:** Asegurar consultas eficientes.
-    - **Pasos:** Analizar queries lentas (`EXPLAIN ANALYZE`). Añadir índices (`@index`/`@@index`) en `schema.prisma`.
+    - **Objetivo:** Rendimiento consultas.
+    - **Pasos:** Analizar queries. Añadir índices (`@index`/`@@index`) en `schema.prisma`.
 
-17. **Tipado Centralizado (`common` package)** (`infra`, `backend`, `frontend`)
-    - **Prioridad:** Media/Baja (Refactor técnico)
+18. **Tipado Centralizado (`common` package)** (`infra`, `backend`, `frontend`)
+    - **Prioridad:** Media/Baja (Refactor)
     - **Dificultad:** Media-Alta
-    - **Objetivo:** Evitar duplicación/desincronización de tipos.
-    - **Pasos:** Configurar workspace (Yarn/pnpm/Nx). Mover tipos compartidos a paquete `common`. Ajustar `tsconfig.json` y imports.
+    - **Objetivo:** Evitar duplicación/desincronización tipos.
+    - **Pasos:** Configurar workspace (Yarn/pnpm/Nx). Mover tipos compartidos. Ajustar `tsconfig.json` y imports.
 
 ---
 
 ## D. VISIÓN FUTURA (FASE 3+ / Brainstorming) 🚀
 
-18. **App Móvil (PWA/Nativa)**
+_(Detalles conceptuales y consideraciones para ideas a más largo plazo)_
 
-    - **Objetivo:** Mejorar experiencia móvil, notificaciones push, acceso offline básico.
-    - **Concepto:** Crear PWA o app nativa (React Native) enfocada en cliente.
-    - **Consideraciones:** Service workers, Expo/RN CLI, API unificada, diseño adaptado, cámara nativa, Firebase Cloud Messaging.
-
-19. **Funcionalidades Sociales y Gifting**
+19. **Interacción Social y Gifting:**
 
     - **Objetivo:** Aumentar engagement y viralidad.
-    - **Ideas:** Regalar Recompensas/Puntos cliente-a-cliente (con búsqueda, mensaje), Transferir Puntos, Programa de Referidos (códigos, bonus mutuo), Compartir Logros, Chat Simple (admin-cliente, ¿cliente-cliente?).
-    - **Consideraciones:** Relaciones usuario (amigos?), búsqueda usuarios, BD, UI compleja, privacidad, moderación chat.
+    - **Ideas:** Regalar Recompensas/Puntos cliente-a-cliente (búsqueda, mensaje), Transferir Puntos (límites?), Programa de Referidos (códigos, bonus mutuo), Compartir Logros, Chat Simple (admin-cliente / cliente-cliente?).
+    - **Consideraciones:** Relaciones usuario (amigos?), búsqueda, BD, UI compleja, privacidad, moderación chat.
 
-20. **Gamificación Avanzada**
+20. **Gamificación Avanzada:**
 
-    - **Objetivo:** Incrementar frecuencia de uso y sentimiento de logro.
-    - **Ideas:** Pérdida/Bonus Puntos (Inactividad/Reactivación), Badges/Logros (hitos, UI perfil), Rachas (visitas/scans consecutivos), Retos (propuestos por admin, UI seguimiento), Leaderboards (opcional/anonimizado).
+    - **Objetivo:** Incrementar frecuencia y logro.
+    - **Ideas:** Pérdida/Bonus Puntos (Inactividad/Reactivación), Badges/Logros (hitos, UI perfil), Rachas (visitas/scans), Retos (propuestos por admin), Leaderboards (opcional/anonimizado).
     - **Consideraciones:** Lógica backend compleja, diseño UI atractivo, configuración admin.
 
-21. **Monetización / Compra de Puntos / Módulos**
+21. **Monetización / Compra de Puntos / Módulos:**
 
-    - **Objetivo:** Generar ingresos para PyME / Permitir a clientes acelerar / Modelo SaaS.
-    - **Ideas:**
-      - **Recarga Saldo:** Comprar puntos con dinero real (pasarela de pago Stripe/PayPal, definir conversión €->Puntos).
-      - **Paquetes Puntos:** Ofertas tipo "Compra X, llévate Y gratis".
-      - **Premium Tiers:** Niveles con beneficios muy altos que requieran suscripción mensual/anual.
-      - **Módulos Opcionales (SaaS):** Vender acceso a funcionalidades avanzadas (Módulo Camarero, Módulo CRM, Módulo Analytics Pro) con suscripción.
-    - **Consideraciones:** Integración pasarela pago, seguridad (PCI), lógica de negocio para suscripciones/precios/activación módulos, UI de compra/gestión suscripción.
+    - **Objetivo:** Generar ingresos PyME / Acelerar cliente / Modelo SaaS.
+    - **Ideas:** Recarga Saldo (Stripe?), Paquetes Puntos, Premium Tiers (suscripción), Módulos Opcionales (Camarero, CRM, Analytics Pro) con suscripción (gestionado vía Panel Super Admin - Tarea #3).
+    - **Consideraciones:** Pasarela pago, seguridad PCI, lógica negocio suscripciones/precios/activación, UI compra/gestión.
 
-22. **Personalización y CRM Avanzado**
+22. **Personalización y CRM Avanzado:**
 
     - **Objetivo:** Mejorar relación cliente y marketing dirigido.
-    - **Ideas:** Bonus Cumpleaños (requiere fecha), Segmentación Clientes (UI admin para crear reglas), Ofertas Dirigidas (enviar anuncio/regalo a segmento), Feedback/Encuestas Post-Acción (con incentivo?), Recomendaciones (muy avanzado).
-    - **Consideraciones:** Privacidad (fecha cumple.), UI admin potente para segmentos, posible integración email.
+    - **Ideas:** Bonus Cumpleaños (requiere fecha!), Segmentación Clientes (UI admin), Ofertas Dirigidas (a segmento), Feedback/Encuestas Post-Acción (incentivo?), Recomendaciones (avanzado).
+    - **Consideraciones:** Privacidad (fecha cumple.), UI admin potente, posible integración email.
 
-23. **Analíticas Avanzadas (Admin)**
+23. **Analíticas Avanzadas (Admin):**
 
-    - **Objetivo:** Dar más insights al negocio.
+    - **Objetivo:** Más insights para el negocio.
     - **Ideas:** Análisis RFM, efectividad recompensas, gráficos distribución/migración tiers, puntos emitidos vs canjeados, LTV cliente.
-    - **Consideraciones:** Queries agregación complejas, librerías gráficos (Recharts?).
+    - **Consideraciones:** Queries agregación complejas, librerías gráficos.
 
-24. **Operaciones y Gestión Negocio**
+24. **Operaciones y Gestión Negocio:**
 
     - **Objetivo:** Facilitar uso operativo en el local.
-    - **Ideas:**
-      - **Pantalla Servicio/Comandas:** (Relacionado con idea inicial) UI simple (tablet?) para staff que muestre canjes de recompensas/regalos en tiempo real (requiere WebSockets). Podría incluir nombre cliente, mesa (si se añade), recompensa. Botón "Marcar como Servido".
-      - **VIP Lists:** Flag en `User` (por Tier o manual). Filtro/vista admin. ¿Mostrar status en app cliente? ¿Integración cola?
-      - **Multi-Admin/Roles:** Permitir invitar empleados con permisos limitados (Generar QR, Ver Clientes, Ver Comandas Canje). Requiere sistema de roles/permisos granular.
-      - **Log de Auditoría (`AuditLog`):** Registrar acciones clave admin (ajuste puntos, cambio nivel, etc.).
-    - **Consideraciones:** WebSockets para tiempo real, diseño roles/permisos, UI adaptada a staff.
+    - **Ideas:** **Pantalla Servicio/Comandas** (canjes tiempo real - WebSockets, UI tablet staff?), VIP Lists (flag user, UI admin/cliente?), **Multi-Admin/Roles** (invitar empleados, permisos limitados), Log de Auditoría (`AuditLog`).
+    - **Consideraciones:** WebSockets para tiempo real, diseño roles/permisos granular, UI staff.
 
-25. **E2E Tests:** Cypress/Playwright para flujos críticos.
-26. **Integraciones Externas:** POS, Reservas, etc.
+25. **Gestión de Catálogo e Integración de Datos Externos** **(¡Detallado!)**
+
+    - **Objetivo:** Facilitar a los negocios la gestión de sus productos/servicios y datos relacionados (precio, stock) dentro de LoyalPyME, sincronizándolos con sus sistemas existentes. Esencial para módulos futuros (Pedidos, Carta Digital, Inventario, o recompensas específicas de producto).
+    - **Concepto y Opciones (por complejidad creciente):**
+      1.  **Importación Manual CSV/Excel (Base):**
+          - _Descripción:_ UI Admin para subir archivo con catálogo (ID Producto, Nombre, Precio, Desc, Cat?, Stock inicial?). Backend parsea y crea/actualiza `Product`.
+          - _Pros:_ Universal, relativamente fácil de implementar.
+          - _Contras:_ Manual, propenso a errores, datos no en tiempo real (stock/precio desactualizados).
+          - _Dificultad:_ Media.
+      2.  **Conexión Directa Lectura BD (ODBC):**
+          - _Descripción:_ Permitir configurar una conexión ODBC de solo lectura a la base de datos del ERP/TPV del cliente (si este lo permite). Backend LoyalPyME haría consultas `SELECT` periódicas/bajo demanda para obtener precios/stock actualizados.
+          - _Pros:_ Datos casi en tiempo real, menos trabajo manual.
+          - _Contras:_ **Muy complejo**. Requiere instalar drivers ODBC en servidor backend (complica despliegue). Configuración DSN/conexión específica por cada cliente. Dependencia de la estructura de BD del cliente. Rendimiento/seguridad.
+          - _Dificultad:_ Alta / Muy Alta.
+      3.  **Integración API ERP/TPV (Ideal pero Dependiente):**
+          - _Descripción:_ Si el ERP/TPV del cliente ofrece una API REST/GraphQL moderna, desarrollar una integración específica para sincronizar catálogo, precios, stock, etc.
+          - _Pros:_ La mejor opción si API existe y es buena. Datos en tiempo real, robusto.
+          - _Contras:_ Requiere desarrollo específico por cada ERP/TPV a integrar. Depende de terceros.
+          - _Dificultad:_ Alta (por cada integración).
+    - **Pasos Iniciales (Para CSV):**
+      - **BE:** `model Product` (schema, migrate, generate). Librería parseo CSV/Excel (`papaparse`?). API Import (`POST /api/admin/products/import-csv` con Multer). Servicio procesado/upsert. API CRUD Productos (opcional).
+      - **FE:** UI Admin subida CSV (Ajustes/Catálogo). Instrucciones formato, plantilla. Feedback importación. UI ver catálogo (opcional).
+    - **Prioridad:** Importación CSV (Media, sube a Alta con Módulos Producto). ODBC/API (Baja-Media, Muy específica/avanzada).
+
+26. **App Móvil (PWA/Nativa):**
+
+    - **Objetivo:** Mejorar experiencia móvil, notificaciones push, offline básico.
+    - **Concepto:** PWA o nativa (React Native) enfocada en cliente.
+    - **Consideraciones:** Service workers, Expo/RN CLI, API, diseño adaptado, cámara nativa, FCM.
+
+27. **E2E Tests:** Cypress/Playwright para flujos críticos.
+28. **Integraciones Externas:** (Muy futuro) POS, Reservas, etc.
 
 ---
-
-Este archivo debería servir como una guía mucho más detallada para recordar qué falta y cómo abordar cada punto cuando llegue el momento. ¡Espero que esta versión más completa te sea útil!
