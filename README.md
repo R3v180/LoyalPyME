@@ -13,158 +13,72 @@
 
 ---
 
-# LoyalPyME 🇬🇧
+# LoyalPyME 🇬🇧 (v1.11.0)
 
 **LoyalPyME** is a comprehensive, full-stack web platform (React Frontend + Node.js Backend) designed to empower Small and Medium-sized Enterprises (SMEs) with a robust, maintainable, and scalable digital customer loyalty program.
 
 ## Vision and Purpose ✨
 
-In today's competitive market, customer loyalty is crucial. LoyalPyME aims to be the technological ally for SMEs, providing the tools to:
+LoyalPyME aims to be the technological ally for SMEs, providing integrated digital tools to foster repeat business, build stronger customer relationships, and enhance the end-customer experience, adaptable across various sectors (hospitality, retail, services).
 
-- **Foster Repeat Business:** Implement engaging points, tiers, and rewards systems (now with images!).
-- **Build Stronger Relationships:** Recognize and reward customer loyalty effectively.
-- **Simplify Program Management:** Offer an intuitive and feature-rich administration panel (now including image management for rewards).
-- **Enhance Customer Experience:** Provide a clear, accessible digital portal for end customers (now displaying reward images).
+_(See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for key design decisions and [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for the long-term vision)._
 
-Our goal is to enable any SME (retail, hospitality, services, etc.) to digitize and optimize its customer retention strategy, evolving the platform towards integrated communication, CRM capabilities, business customization, a mobile presence, and potentially shared loyalty ecosystems.
+|                                   Admin Dashboard (Reference)                                   |                                          Customer Dashboard (Reference)                                          |
+| :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------: |
+| <img src="images/SC_LoyalPyME.png" alt="LoyalPyME Admin Dashboard - Desktop View" width="100%"> | <img src="images/SC_LoyalPyME_Customer_v1.11.png" alt="LoyalPyME Customer Dashboard - With Images" width="100%"> |
 
-|                                    Admin Dashboard (Desktop)                                    |                                       Admin Dashboard (Mobile)                                       |
-| :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
-| <img src="images/SC_LoyalPyME.png" alt="LoyalPyME Admin Dashboard - Desktop View" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="LoyalPyME Admin Dashboard - Mobile View" width="100%"> |
+_(Note: Screenshots might need updating. Customer screenshot is a conceptual example)._
 
-_(Note: Screenshots might need updating to show new features like images)_
+## Key Implemented Features ✅
+
+- **Full Authentication:** Business/Admin Registration, Customer Registration, Login (JWT), Password Reset.
+- **Customer Management (Admin):** CRUD, Filters, Search, Sorting, Individual/Bulk Actions, Notes.
+- **Tier & Benefit Management (Admin):** Tier CRUD, Benefit CRUD per Tier, Global Tier System Settings.
+- **Reward Management with Images (Admin):** Reward CRUD (Points-based), Image Upload (from file), 1:1 Image Cropping, Cloudinary Storage integration.
+- **Points & QR Flow:** QR Code Generation (Admin), QR Validation (Customer - Manual or Mobile Scanner via `html5-qrcode`).
+- **Automatic Tier Logic:** Tier Calculation/Assignment/Downgrade based on business settings (Backend + Cron Job).
+- **Customer Dashboard:** Tab-based Interface (Summary, Rewards), User Info Display (Points, Tier, Benefits), Progress Bar (with Next Tier Preview), Reward/Gift List (with images), Points/Gift Redemption, Summary Snippet (with images).
+- **Other:** Frontend Internationalization (i18n - ES/EN), API Documentation (Swagger), Static Logo display, Constrained Header Layout, Functional Mobile QR Scanner.
 
 ## Project Status & Roadmap 🗺️
 
-Currently, the project has **completed Phase 1 (Core Functionality and Polishing)**.
+The project has completed **Phase 1 (Core Functionality)** and is **significantly progressing through Phase 2 (Initial Features & Enhancements)** - Current version: **v1.11.0**.
 
-**Phase 2 (Initial Features & Enhancements) is IN PROGRESS:**
-
-- ✅ Frontend **Internationalization (i18n)** supports Spanish and English.
-- ✅ **Swagger API Documentation** is implemented (`/api-docs`).
-- ✅ **Customer Dashboard UX Enhancements** are done (Tier benefits, progress bar, next tier preview).
-- ✅ **Reward Images** implemented:
-  - Admins can upload and crop (1:1) images for rewards.
-  - Images are stored using Cloudinary.
-  - Customers see the images in the reward list and dashboard summary.
-- ⏳ **Backend Automated Testing** has been initiated (basic coverage).
-- ⏳ **Frontend Automated Testing** is pending.
-
-**Next Steps:**
-
-1.  **(Technical):** Fix `TierData` type and Mobile Popover Click bug.
-2.  **(Functional - Phase 2):** Implement Business Customization (Logo, Theming).
-3.  **(Visual - Phase 2):** Refine `RewardList` design.
-4.  **(Technical):** Continue expanding **Automated Test** coverage.
-5.  **(Functional - Phase 2):** Begin implementing features like Activity History, Advanced Loyalty, Basic Communication.
-
-For a more detailed roadmap, please refer to [`PROJECT_STATE_AND_ROADMAP.md`](PROJECT_STATE_AND_ROADMAP.md).
+- See **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** for **detailed completed milestones** and **immediate next steps**.
+- See **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** for the **full backlog** of pending tasks and detailed **future ideas**.
 
 ## Used Technologies 🛠️
 
-**Frontend:**
+**Frontend:** React, TypeScript, Vite, Mantine UI (v7+), Axios, React Router DOM (v6+), `html5-qrcode`, `react-image-crop`, `i18next`...
+**Backend:** Node.js, Express, TypeScript, Prisma, PostgreSQL, JWT, bcryptjs, Cloudinary, Multer, Vitest, Supertest, Swagger...
 
-- React & TypeScript
-- Vite (Build Tool)
-- Mantine UI (v7+) & Mantine Hooks
-- `@mantine/form` & `zod` (Form Validation)
-- `@mantine/notifications` & `@mantine/modals`
-- Axios (API Requests)
-- React Router DOM (v6+)
-- `qrcode.react`, `html5-qrcode` (QR Functionality)
-- `i18next`, `react-i18next` (Internationalization)
-- `i18next-http-backend`, `i18next-browser-languagedetector`
-- `react-country-flag` (Language Switcher)
-- **`react-image-crop`** (Image Cropping)
-- `vite-plugin-mkcert` (For HTTPS Dev)
+_(Detailed list in [PROJECT_STATUS.md](./PROJECT_STATUS.md))_
 
-**Backend:**
+## Quick Start (Local Development) 🚀
 
-- Node.js, Express, TypeScript
-- Prisma (ORM) & PostgreSQL (Database)
-- JWT (Authentication) & bcryptjs (Hashing)
-- dotenv (Environment Variables)
-- node-cron (Scheduled Tasks)
-- uuid (Unique IDs)
-- cors, `date-fns`
-- **`cloudinary`** (Image Storage)
-- **`multer`** (File Upload Handling)
-- **`streamifier`** (Stream Helper)
-- `vitest`, `supertest` (Testing)
-- `swagger-jsdoc`, `swagger-ui-express` (API Docs)
+1.  **Clone:** `git clone <repo_url> LoyalPyME && cd LoyalPyME`
+2.  **Backend:**
+    - `cd backend && yarn install`
+    - Copy `.env.example` to `.env` and **fill in ALL variables** (DB, JWT, Cloudinary, Optional: Test Admin).
+    - `npx prisma migrate dev && npx prisma generate`
+    - (Optional) `npx prisma db seed` or register business via app.
+    - **Run:** (Terminal 1) `npx tsc --watch` & (Terminal 2) `npx nodemon dist/index.js`
+3.  **Frontend:**
+    - `cd ../frontend && yarn install`
+    - **Run:** `yarn dev --host`
+4.  **Access:** `https://localhost:5173` (or network IP)
 
-## Installation and Local Setup ⚙️
-
-To get the project up and running in your development environment:
-
-### Prerequisites
-
-- Node.js (v18 or v20 recommended)
-- yarn (v1.x recommended)
-- Accessible PostgreSQL database server running locally.
-- (Optional) NVM or similar.
-
-### Backend Setup
-
-1.  Clone repo & `cd LoyalPyME/backend`
-2.  `yarn install`
-3.  Copy `backend/.env.example` to `backend/.env`
-4.  **Configure `.env`:** Fill in `DATABASE_URL`, `JWT_SECRET`, and **Cloudinary credentials** (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`).
-5.  Run migrations: `npx prisma migrate dev`
-6.  Generate Prisma client: **`npx prisma generate`** (Important!)
-7.  **Initial Data:** Choose **Option A (Seed):** `npx prisma db seed` (if implemented) OR **Option B (Manual):** Register via `/register-business` frontend route.
-
-### Frontend Setup
-
-1.  Navigate to `frontend` folder (`cd ../frontend`)
-2.  Install dependencies: `yarn install`
-
-## Running the Project ▶️
-
-1.  Ensure your PostgreSQL server is **running**.
-2.  **Start the Backend** (from `backend/` folder):
-
-    - **Recommended Method (Development with Hot-Reload - Requires 2 Terminals):**
-      ```bash
-      # Terminal 1: Continuous compilation
-      npx tsc --watch
-      # Terminal 2: Execution and auto-restart
-      npx nodemon dist/index.js
-      ```
-    - **Alternative Method (Stable, No Hot-Reload):**
-      ```bash
-      yarn build && node dist/index.js
-      # (Repeat after each change)
-      ```
-    - **`yarn dev` Method (NOT RECOMMENDED):** Historically unstable in this environment.
-    - _(Backend runs on port 3000 or as configured)_
-
-3.  **Start the Frontend** (from `frontend/` folder):
-    ```bash
-    # Use --host for network access and HTTPS
-    yarn dev --host
-    ```
-    _(Frontend runs on port 5173)_
-
-Access via `https://localhost:5173` (PC) or the network URL (Mobile).
-
-#### **Accessing from Mobile (Local Network)**
-
-1.  Find PC's Local IP (`ipconfig` / `ifconfig`).
-2.  Ensure Servers Running (Backend and Frontend).
-3.  Check PC Firewall (Allow incoming TCP on 5173 and 3000 for Private network).
-4.  Check Vite Config (`server: { host: true, https: true, proxy: { ... } }`).
-5.  Access on Mobile: `https://<YOUR_PC_IP>:5173`. Accept security warning.
+**Important!** Refer to the **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** for the **complete, detailed** installation, configuration, running, and mobile access instructions. For common issues, check the [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md).
 
 ---
 
 ## Contributions 🤝
 
-Contributions welcome! Fork -> Branch -> Commit -> Push -> Pull Request.
+Contributions welcome! Standard flow: Fork -> Branch -> Commit -> Push -> Pull Request. Check [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for pending tasks or to propose new ideas.
 
 ## License 📜
 
-Licensed under **GNU Affero General Public License v3.0 (AGPL-3.0)**. See [`LICENSE`](LICENSE) file.
+Licensed under **GNU Affero General Public License v3.0 (AGPL-3.0)**. See [`LICENSE`](./LICENSE).
 Copyright (c) 2024-2025 Olivier Hottelet
 
 ## Contact 📧

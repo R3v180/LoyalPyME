@@ -1,185 +1,92 @@
-# LoyalPyME - Estado del Proyecto y Hoja de Ruta Detallada 🧭
+# LoyalPyME - Estado del Proyecto y Decisiones Clave
 
-**Versión:** 1.10.0 (Post-Reward Image Upload)
-**Fecha de Última Actualización:** 02 de Mayo de 2025
+**Versión:** 1.11.0 (Post-Reward Images, Logo, Header/Scanner Fixes)
+**Fecha de Última Actualización:** 03 de Mayo de 2025
 
 ---
 
 ## 1. Resumen General del Proyecto LoyalPyME 🎯
 
-- **Concepto:** Plataforma web full-stack (React/Node.js) para que las PyMEs (Pequeñas y Medianas Empresas) gestionen programas de fidelización digital para sus clientes finales. El sistema permite configurar recompensas (ahora con imágenes), niveles (tiers) basados en la actividad del cliente, y acumular/canjear puntos mediante interacciones digitales (ej. QR).
-- **Componentes Principales:**
-  - **Backend (Node.js/Express/Prisma/PostgreSQL):** API RESTful que maneja toda la lógica de negocio (usuarios, negocios, puntos, niveles, recompensas con imágenes, autenticación JWT, subida de imágenes a Cloudinary, etc.) y la interacción con la base de datos. Incluye tareas programadas (cron) para mantenimiento.
-  - **Frontend (React/Vite/Mantine/TypeScript):** Interfaz de usuario web con dos áreas principales:
-    - **Panel de Administración:** Para dueños/empleados de la PyME. Permite configurar el programa de fidelización, gestionar clientes, gestionar recompensas (CRUD, incluyendo subida y recorte de imágenes 1:1), gestionar niveles/beneficios, generar códigos QR, y ver estadísticas.
-    - **Portal de Cliente:** Para los clientes finales de la PyME. Organizado por pestañas ("Resumen", "Recompensas", placeholders). Permite ver saldo, nivel, beneficios, progreso, validar QR, y ver/canjear recompensas y regalos (ahora mostrando sus imágenes). Incluye snippet resumen con imágenes en la pestaña principal.
-- **Propósito:** Dotar a las PyMEs de una herramienta digital moderna, completa y adaptable para fidelizar clientes, fomentar la recurrencia, mejorar la relación y diferenciarse, ofreciendo una experiencia clara y valiosa al cliente final.
-- **Visión a Largo Plazo:** Evolucionar hacia personalización visual avanzada, comunicación integrada, CRM ligero, app móvil, analítica avanzada, y ecosistemas compartidos.
+- **Concepto:** Plataforma web full-stack (React/Node.js) para que las PyMEs gestionen programas de fidelización digital (recompensas con imágenes, niveles, puntos, QR).
+- **Componentes:** Backend (Node/Express/Prisma/Postgres/Cloudinary), Frontend (React/Vite/Mantine/TS).
+- **Áreas Principales:** Panel de Administración, Portal de Cliente (con Tabs).
+- **Propósito:** Herramienta digital completa y adaptable para fidelización, recurrencia y mejora de relación cliente-negocio.
+
+_(Para una descripción más detallada, tecnologías y visión a largo plazo, consulta el [README](./README.es.md))_
 
 ---
 
-## 2. Stack Tecnológico 🛠️
-
-- **Frontend:** React (v19), TypeScript, Vite, Mantine UI (v7+), @mantine/hooks, @mantine/form, zod, @mantine/notifications, @mantine/modals, axios, react-router-dom (v6+), qrcode.react, html5-qrcode, i18next, react-i18next, i18next-http-backend, i18next-browser-languagedetector, react-country-flag, **react-image-crop**, (`vite-plugin-mkcert` dev).
-- **Backend:** Node.js, Express, TypeScript, Prisma (ORM), PostgreSQL, jsonwebtoken, bcryptjs, dotenv, node-cron, uuid, cors, date-fns, **cloudinary**, **multer**, **streamifier**, vitest & supertest, swagger-jsdoc & swagger-ui-express.
-- **Otros:** Git, Yarn v1.
-
----
-
-## 3. Estado Actual Detallado (Hitos Completados - v1.10.0) ✅
+## 2. Estado Actual Detallado (Hitos Completados - v1.11.0) ✅
 
 - **Fase 1 (Núcleo Operativo + Pulido):** **COMPLETADA.**
-  - (Sin cambios)
-- **Fase 2 (Funcionalidades Iniciales y Mejoras UI/UX):** **AVANZANDO.**
-  - ✅ **Internacionalización (i18n) Frontend:** Completada.
-  - ✅ **Documentación API (Swagger):** Implementada.
-  - ✅ **Testing Backend (Inicial):** Setup OK, cobertura básica.
-  - ✅ **Refactor Panel Cliente a Tabs:** Completado.
-  - ✅ **Mejoras UI/UX `UserInfoDisplay`:** Completado (excepto fix popover móvil).
-  - ✅ **Mejora UI/UX `SummaryTab`:** Snippet recompensas implementado.
-  - ✅ **Layout Header Móvil (`AppHeader`):** Corregido.
-  - ✅ **Placeholders Imágenes Recompensas:** Añadidos inicialmente.
-  - ✅ **Dependencias Obsoletas Limpiadas.**
-  - ✅ **Imágenes en Recompensas (Tarea 3):** Implementado.
-    - Backend: Schema, migración, Cloudinary (storage, SDK, config), API de subida (`/api/admin/upload/reward-image` con Multer), servicios CRUD actualizados para `imageUrl`.
-    - Frontend Admin (`RewardForm.tsx`): Selección de archivo (`FileInput`), recorte 1:1 (`react-image-crop`), subida a API, guardado de `imageUrl`.
-    - Frontend Cliente (`RewardList.tsx`, `SummaryTab.tsx`): Muestra de imágenes (`<Image>`) con fallback, respetando aspect ratio 1:1.
+  - Funcionalidades base estables: Autenticación completa, CRUDs Admin (Recompensas, Tiers, Clientes con filtros/acciones/notas), Flujo Puntos/QR, Lógica Tiers (BE+Cron).
+- **Fase 2 (Funcionalidades Iniciales y Mejoras UI/UX):** **AVANZANDO SIGNIFICATIVAMENTE.**
+  - ✅ **Internacionalización (i18n) Frontend:** Completada (ES/EN).
+  - ✅ **Documentación API (Swagger):** Implementada (`/api-docs`).
+  - ✅ **Testing Backend (Inicial):** Setup OK, cobertura básica. (Tests ahora pasan tras fix admin).
+  - ✅ **Refactor Panel Cliente a Tabs:** Completado (`SummaryTab`, `RewardsTab`, etc.).
+  - ✅ **Mejoras UI/UX `UserInfoDisplay`:** Beneficios actuales, barra progreso, preview siguiente nivel (popover móvil pendiente).
+  - ✅ **Mejora UI/UX `SummaryTab`:** Snippet resumen recompensas/regalos implementado.
+  - ✅ **Layout Header Móvil (`AppHeader`):** Corregido solapamiento (Burger Menu).
+  - ✅ **Implementación Imágenes en Recompensas (Tarea 3):** Completado (Backend Cloudinary + API Upload + Servicios; Frontend Admin Form Crop/Upload + Cliente Display).
+  - ✅ **Logo Estático:** Añadido y mostrado en `AppHeader.tsx`.
+  - ✅ **Restringir Ancho Cabecera:** Implementado con `<Container>` en `AppHeader.tsx`.
+  - ✅ **Fix Escáner QR Móvil:** Solucionado error "Element not found" en `useQrScanner.ts`.
+  - ✅ **Gestión Dependencias:** Actualizadas y limpiadas durante desarrollo Tarea 3.
 
 ---
 
-## 4. Key Concepts & Design Decisions (Actualizado) 🔑
+## 3. Key Concepts & Design Decisions (Actualizado) 🔑
 
-- (Sección Puntos/Nivel sin cambios)
-- (Sección Layout Panel Cliente sin cambios)
-- (Sección Layout Tab "Resumen" sin cambios)
-- (Sección Preview Siguiente Nivel sin cambios)
-- **Snippet Resumen Recompensas:** Muestra contador regalos + hasta 4 previews (Regalos->Asequibles) en `SimpleGrid`. Cada preview ahora **muestra la imagen de la recompensa (o un placeholder)** (80x80) + Texto + Badge/Puntos. Botón "Ver Todas".
-- **Aspect Ratio Imágenes Recompensas:** Definido y **aplicado** como **1:1 (Cuadrado)** en `RewardList`, `SummaryTab` y el recorte en `RewardForm`.
-- **Almacenamiento de Imágenes:** Se utiliza **Cloudinary** para el almacenamiento de las imágenes subidas.
-- (Sección Header Móvil sin cambios)
-
----
-
-## 5. Lecciones Aprendidas & Troubleshooting Clave 💡
-
-- (Sección sin cambios relevantes a Tarea 3, pero añadir)
-- **NUEVO APRENDIDO:** La configuración de proveedores cloud (Cloudinary) requiere verificar **exactamente** todas las credenciales (`cloud_name`, `api_key`, `api_secret`) y reiniciar el backend tras cambios en `.env`. Errores 401/500 en subidas suelen originarse ahí. Usar logs del backend es crucial para diagnosticar.
-- **NUEVO APRENDIDO:** Integrar recorte de imágenes en frontend (`react-image-crop`) requiere manejar estado para el archivo fuente, el crop, el crop completado y la URL final, además de usar `canvas` para obtener el blob recortado.
+- **Separación Puntos vs. Nivel:** Nivel por actividad (`business.tierCalculationBasis`), Puntos (`User.points`) moneda canjeable.
+- **Orden de Niveles:** Natural (`level` numérico ascendente).
+- **Actualización Nivel:** Automática (QR/Cron) o Manual Admin. Ajuste puntos admin no afecta directamente (salvo si `basis=POINTS_EARNED`).
+- **Layout Panel Cliente:** Basado en Tabs (`Resumen`, `Recompensas`, `Actividad`, `Ofertas`, `Perfil`). `Resumen` es dashboard principal.
+- **Layout Tab "Resumen":** `Stack` vertical: `UserInfoDisplay`, `QrValidationSection`, `Card` Resumen Recompensas.
+- **Preview Siguiente Nivel:** Tooltip/Popover desde barra de progreso (`UserInfoDisplay`) - (fix móvil pendiente).
+- **Snippet Resumen Recompensas:** Contador regalos + hasta 4 previews (Regalos->Asequibles) con imagen 1:1. Botón "Ver Todas".
+- **Aspect Ratio Imágenes Recompensas:** Forzado 1:1 (Cuadrado) en subida (recorte) y visualización.
+- **Almacenamiento Imágenes:** Cloudinary (configurado vía `.env`).
+- **Layout Cabecera:** Contenido restringido por `<Container>`. Logo estático. Header móvil usa Burger Menu.
+- **Escáner QR:** Usa `html5-qrcode` vía hook `useQrScanner`.
 
 ---
 
-## 6. Setup, Comandos y Acceso ⚙️
+## 4. Lecciones Aprendidas & Troubleshooting Clave 💡
 
-- **Setup Backend:** `cd backend`, `yarn install`, crear y configurar `.env` (incluyendo `DATABASE_URL`, `JWT_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`), `prisma migrate dev`, `prisma generate`.
-- (Resto sin cambios)
+- **Workflow Backend Dev / Compilación:** Crucial `tsc --watch` o `yarn build` para reflejar cambios `.ts` en `dist/`.
+- **Prisma Generate:** Necesario tras `schema.prisma`.
+- **Mocking Prisma:** Usar Inyección de Dependencias.
+- **Errores Prisma:** Manejar P2002 (unicidad -> 409), P2025 (no encontrado -> 404).
+- **Refresco Frontend:** Forzar refresco (Ctrl+Shift+R) o reiniciar `yarn dev`.
+- **Errores TS:** Centralizar Tipos, `NodeJS.Timeout` vs `number` en navegador.
+- **Testing Integración:** 401 puede ser `text/plain`. **Dependencia de datos**: asegurar existencia/validez de datos base (ej: usuario admin de test) antes de ejecutar.
+- **i18n:** Estructura `public/locales`, `react-country-flag` SVG.
+- **Mantine Responsive Props:** Wrappers `Box`/`Group` para `hiddenFrom`/`visibleFrom`.
+- **Mantine Tooltip/Popover:** Diferencias trigger/props.
+- **Cloudinary Debugging:** **Credenciales EXACTAS** (`cloud_name`, `api_key`, `api_secret` misma cuenta), **reiniciar backend** tras `.env`, **logs backend** vitales (`Invalid cloud_name`, `Unknown API key`), **regenerar credenciales** o **cuenta nueva** como último recurso.
+- **Guardado/Lectura Campos Nuevos (`imageUrl`):** Verificar todo el flujo (FE send -> BE Controller -> BE Service Save -> BE Service Read/Select -> BE Service Return -> FE Hook -> FE Component). Asegurar compilación backend. Verificar tipos FE/BE. Revisar BD. Usar logs `[DEBUG]`.
+- **Inicialización Librerías en Modales (QR Scanner):** Posible error `Element ... not found`. Workaround: `setTimeout` en `useEffect` de inicialización.
 
----
-
-## 7. 🗺️ Hoja de Ruta Detallada y Tareas Pendientes (v1.10.0)
-
-_Leyenda: ✅=Completado | ⏳=Pendiente Inmediato/Técnico | ⭐=Próxima Gran Funcionalidad | 📝=Pendiente Fase 2+ | 🛠️=Técnico Fase 2+ | 🚀=Visión Futura_
-
-**A. TAREAS INMEDIATAS / CORRECCIONES TÉCNICAS:**
-
-1.  ⏳ **Arreglar Tipo `TierData`:** _(Técnico Rápido)_
-    - **Objetivo:** Eliminar casts temporales (`as any`, etc.) y mejorar seguridad de tipos.
-    - **Tareas:**
-      - Modificar `interface TierData` en `frontend/src/types/customer.ts`.
-      - Añadir `benefits?: TierBenefitData[];`.
-      - Buscar y eliminar casts relacionados con `tier.benefits`.
-2.  📌 **Fix Mobile Popover Click:** _(Bug UX Móvil)_
-    - **Objetivo:** Hacer que la preview del siguiente nivel funcione al tocar la barra de progreso en móvil.
-    - **Tareas:** Investigar y ajustar implementación en `UserInfoDisplay.tsx`.
-
-**B. FUNCIONALIDADES COMPLETADAS RECIENTEMENTE:**
-
-3.  ✅ **Implementar Imágenes Recompensas:** _(COMPLETADO - Tarea 3)_
-    - **Objetivo:** Permitir a los admins subir imágenes para las recompensas y mostrarlas a los clientes.
-    - **Sub-Tareas Backend:**
-      - ✅ [BE-IMG-1] Modificar `schema.prisma`.
-      - ✅ [BE-IMG-2] Ejecutar `prisma migrate dev`.
-      - ✅ [BE-IMG-3] Ejecutar `prisma generate`.
-      - ✅ [BE-IMG-4] **Decidido/Implementado Storage:** Cloudinary. Credenciales configuradas en `.env`.
-      - ✅ [BE-IMG-5] SDKs Instalados: `cloudinary`, `multer`, `streamifier`.
-      - ✅ [BE-IMG-6] Endpoint API Upload Creado: `POST /api/admin/upload/reward-image` (con Multer).
-      - ✅ [BE-IMG-7] Servicios/Controladores Rewards Actualizados para `imageUrl`.
-    - **Sub-Tareas Frontend (Admin):**
-      - ✅ [FE-ADM-IMG-1] Componente `RewardForm.tsx`:
-        - `<FileInput>` añadido.
-        - Preview de imagen actual/subida.
-        - `react-image-crop` integrado para ratio 1:1.
-        - Estado y lógica para manejar archivo, recorte, URL final.
-      - ✅ [FE-ADM-IMG-2] Lógica `AdminRewardsPage.tsx` / `useAdminRewards.ts`:
-        - Formulario (`RewardForm`) integrado en modal de edición y panel de añadir.
-        - Llamada a API de subida implementada dentro de `RewardForm`.
-        - `imageUrl` enviada en la petición POST/PUT/PATCH a `/api/rewards`.
-        - Imagen actual mostrada al editar.
-    - **Sub-Tareas Frontend (Cliente):**
-      - ✅ [FE-CUST-IMG-1] Componente `RewardList.tsx`:
-        - Importado `Image` de Mantine.
-        - Reemplazado `<Skeleton>` por `<Image src={item.imageUrl || fallback} ... />`.
-      - ✅ [FE-CUST-IMG-2] Componente `SummaryTab.tsx`:
-        - Importado `Image` de Mantine.
-        - Reemplazado `<Skeleton>` por `<Image src={item.imageUrl || fallback} ... />` en `previewItems`.
-
-**C. CONTINUACIÓN FASE 2 (Pendiente):**
-
-4.  📝 **Refinar Espaciado/Diseño `RewardList`:** _(Visual - Prioridad Media)_
-    - **Objetivo:** Mejorar legibilidad y estética general de las tarjetas de recompensa.
-    - **Tareas:** Revisar `RewardList.tsx`. Ajustar `spacing`, `padding`/`margin`, fuentes, badges, `lineClamp`, etc. Asegurar responsive.
-5.  📝 **Personalización Negocio - Logo:** _(Funcional - Prioridad Alta)_
-    - **Objetivo:** Permitir al admin subir un logo y mostrarlo en los Layouts.
-    - **Tareas:** Similar a Imágenes Recompensas (BE: Schema Business, Storage, API Upload/Get; FE Admin: Componente upload en settings; FE Layout: Mostrar `<img>` en `AppHeader`).
-6.  📝 **Personalización Negocio - Theming Básico:** _(Funcional - Prioridad Alta)_
-    - **Objetivo:** Aplicar estilos visuales diferentes basados en el tipo de negocio.
-    - **Tareas:** BE (añadir `themeIdentifier` a Business), FE (definir variables CSS/Temas Mantine, lógica JS para aplicar clase, ajustar CSS).
-7.  📝 **Historial de Actividad Cliente:** _(Funcional - Prioridad Alta - Requiere Backend)_
-    - **Objetivo:** Que el cliente vea sus últimos movimientos (puntos, canjes).
-    - **Tareas:** BE (Endpoint `GET /api/customer/activity`), FE (Crear `ActivityTab.tsx`, consumir endpoint, mostrar lista/tabla).
-8.  📝 **Fidelización Avanzada:** _(Funcional - Prioridad Media)_
-    - **Objetivo:** Ofrecer más tipos de beneficios/recompensas.
-    - **Tareas:** BE (Ampliar `BenefitType`, lógica servicios), FE (UI Admin/Cliente). Ejemplos: `% Descuento`, `Bonus Cumpleaños`, `Bonus por Nivel`.
-9.  📝 **Comunicación Básica:** _(Funcional - Prioridad Media)_
-    - **Objetivo:** Permitir al admin enviar mensajes básicos.
-    - **Tareas:** BE (Entidad `Announcement`?, API CRUD, Email?), FE (UI Admin/Cliente).
-
-**D. TAREAS TÉCNICAS (Pendiente):**
-
-10. 🛠️ **Completar Pruebas Backend:** _(Técnico - Prioridad Media/Baja)_
-11. 🛠️ **Iniciar/Completar Pruebas Frontend:** _(Técnico - Prioridad Media/Baja)_
-12. 🛠️ **Validación Robusta Backend:** Investigar/Implementar Zod u otra librería.
-13. 🛠️ **Estrategia Deployment:** Definir (Docker?, Vercel/Netlify + Render/Heroku?). CI/CD.
-14. 🛠️ **Logging/Monitoring Avanzado:** Integrar Sentry o similar.
-15. 🛠️ **Optimización Base de Datos:** Revisar consultas, añadir índices.
-16. 🛠️ **Tipado Centralizado:** Investigar paquete `common`.
-
-**E. VISIÓN FUTURA (Fase 3+):**
-
-17. 🚀 **App Móvil Nativa/PWA:** _(Prioridad Baja/Fase 3)_
-18. 🚀 **Análisis Avanzado (Admin):** _(Prioridad Baja/Fase 3-4)_
-19. 🚀 **Segmentación y CRM Ligero:** _(Prioridad Baja/Fase 3-4)_
-20. 🚀 **E2E Tests:** _(Prioridad Baja/Fase 3)_
-21. 🚀 **Ecosistemas y Funcionalidades Sociales:** _(Prioridad Baja/Fase 4-5 - Exploratorio)_
+_(Para una guía más exhaustiva de problemas específicos, consulta [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md))_
 
 ---
 
-## 8. 🤝 Flujo de Trabajo Acordado
+## 5. Próximos Pasos Inmediatos / Prioridades ⏳📌
 
-- (Sin cambios)
+1.  **Arreglar Tipo `TierData`:** _(Técnico Rápido)_
+    - **Objetivo:** Eliminar casts (`as any`) en `CustomerDashboardPage.tsx`.
+    - **Tareas:** Añadir `benefits?: TierBenefitData[];` a `interface TierData` en `frontend/src/types/customer.ts`. Eliminar casts relacionados.
+2.  **Fix Mobile Popover Click:** _(Bug UX Móvil)_
+    - **Objetivo:** Hacer que preview siguiente nivel funcione al tocar barra progreso en móvil (`UserInfoDisplay.tsx`).
+    - **Tareas:** Investigar causa (simulación, CSS, eventos), probar en real, ajustar implementación (icono clickeable?).
+
+_(Para ver la hoja de ruta completa, el backlog detallado y las ideas futuras, consulta [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md))_
 
 ---
 
-## 9. Información Adicional ℹ️
+## 6. Información Adicional ℹ️
 
 - Licencia: **AGPL v3.0**.
 
 ---
-
-## 10. Próximo Paso Propuesto 👉
-
-Abordar las **Tareas Pendientes Inmediatas/Técnicas (A.1 y A.2)**:
-
-1.  Arreglar tipo `TierData`.
-2.  Investigar/Fixear el Popover en móvil.
-
-O, si se prefiere, iniciar la **Tarea 4: Refinar Espaciado/Diseño `RewardList`**.

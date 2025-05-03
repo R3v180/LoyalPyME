@@ -1,5 +1,5 @@
 // filename: backend/src/auth/auth.service.ts
-// Version: 2.0.1 (Fix character encoding)
+// Version: 2.1.0 (Add conditional logging for test environment)
 
 import { PrismaClient, User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -8,18 +8,16 @@ import jwt from 'jsonwebtoken';
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
-// Validación de JWT_SECRET (se mantiene)
+// Validación de JWT_SECRET
 if (!JWT_SECRET) {
     console.error('FATAL ERROR: JWT_SECRET is not defined in auth.service.');
-    // Considerar salir del proceso si es crítico: process.exit(1);
+    // process.exit(1); // Considerar salir
 }
 
-// --- Funciones de Utilidad Básicas (Se mantienen y exportan) ---
+// --- Funciones de Utilidad Básicas ---
 
 /**
  * Hashea una contraseña usando bcrypt.
- * @param password - La contraseña en texto plano.
- * @returns La contraseña hasheada.
  */
 export const hashPassword = async (password: string): Promise<string> => {
     const salt = await bcrypt.genSalt(10);
@@ -28,42 +26,56 @@ export const hashPassword = async (password: string): Promise<string> => {
 
 /**
  * Compara una contraseña en texto plano con una hasheada.
- * @param plainPassword - La contraseña en texto plano.
- * @param hashedPassword - La contraseña hasheada almacenada.
- * @returns true si las contraseñas coinciden, false en caso contrario.
  */
 export const comparePassword = async (plainPassword: string, hashedPassword: string): Promise<boolean> => {
-    return bcrypt.compare(plainPassword, hashedPassword);
+    // --- LOG DE DEBUG (Solo en Test) ---
+    if (process.env.VITEST === 'true') {
+        console.log(`[DEBUG TEST - comparePassword] Comparing provided password with hash ${hashedPassword ? hashedPassword.substring(0,10) : 'N/A'}...`);
+    }
+    // --- FIN LOG DE DEBUG ---
+    const isMatch = await bcrypt.compare(plainPassword, hashedPassword);
+    // --- LOG DE DEBUG (Solo en Test) ---
+    if (process.env.VITEST === 'true') {
+        console.log(`[DEBUG TEST - comparePassword] Result: ${isMatch}`);
+    }
+    // --- FIN LOG DE DEBUG ---
+    return isMatch;
 };
 
 /**
  * Genera un token JWT para un usuario.
- * @param user - El objeto User (al menos con id, role, businessId).
- * @returns El token JWT firmado.
  */
 export const generateToken = (user: Pick<User, 'id' | 'role' | 'businessId'>): string => {
-    // Incluir solo lo esencial y seguro en el payload
     const payload = {
         userId: user.id,
         role: user.role,
         businessId: user.businessId
     };
-    // Considera un tiempo de expiración más corto para producción si es posible
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' }); // 7 días de expiración
     return token;
 };
 
 /**
  * Encuentra un usuario por su dirección de email.
- * @param email - El email del usuario a buscar.
- * @returns El objeto User completo o null si no se encuentra.
  */
 export const findUserByEmail = async (email: string): Promise<User | null> => {
-    return prisma.user.findUnique({ where: { email } });
+    // --- LOG DE DEBUG (Solo en Test) ---
+    if (process.env.VITEST === 'true') {
+        console.log(`[DEBUG TEST - findUserByEmail] Searching for email: ${email}`);
+    }
+    // --- FIN LOG DE DEBUG ---
+    const user = await prisma.user.findUnique({ where: { email } });
+    // --- LOG DE DEBUG (Solo en Test) ---
+    if (process.env.VITEST === 'true') {
+        console.log(`[DEBUG TEST - findUserByEmail] User found: ${user ? `{ id: ${user.id}, email: ${user.email}, isActive: ${user.isActive} }` : 'null'}`);
+    }
+    // --- FIN LOG DE DEBUG ---
+    return user;
 };
 
-// --- Las funciones createUser, handleForgotPassword, handleResetPassword, createBusinessAndAdmin y generateSlug han sido movidas a:
-// --- registration.service.ts y password-reset.service.ts
-// --- Asegúrate de que los controladores que las usaban ahora importen desde esos nuevos archivos.
+// --- Funciones movidas a otros servicios ---
+// createUser -> registration.service.ts
+// handleForgotPassword, handleResetPassword -> password-reset.service.ts
+// createBusinessAndAdmin, generateSlug -> registration.service.ts
 
 // End of File: backend/src/auth/auth.service.ts

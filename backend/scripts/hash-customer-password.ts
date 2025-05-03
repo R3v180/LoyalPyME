@@ -1,6 +1,5 @@
 // File: backend/scripts/hash-customer-password.ts
-// Este script hashea la contraseña de un usuario cliente y actualiza la base de datos.
-// Se usa solo para corregir la contraseña del usuario creado manualmente en pgAdmin.
+// MODIFIED: To target admin user and set correct password for tests
 
 import { PrismaClient } from '@prisma/client';
 // Importamos la funcion hashPassword de nuestro servicio de autenticacion
@@ -8,15 +7,15 @@ import { hashPassword } from '../src/auth/auth.service';
 
 // Asegurarse de que las variables de entorno, incluida DATABASE_URL, esten cargadas
 import dotenv from 'dotenv';
-dotenv.config({ path: '.env' });
-
+dotenv.config({ path: '.env' }); // Carga desde backend/.env
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // --- CONFIGURACION ---
-  const userEmailToUpdate = 'cliente@cafeelsol.com'; // <-- Email del usuario cliente creado en pgAdmin
-  const plainPasswordToHash = 'clientepass';        // <-- Contraseña PLANA usada en pgAdmin
+  // --- CONFIGURACION (MODIFICADA) ---
+  const userEmailToUpdate = 'admin@cafeelsol.com'; // <-- Email del admin para los tests
+  const plainPasswordToHash = 'superpasswordseguro';   // <-- Contraseña que usan los tests
+  // --- FIN CONFIGURACION ---
 
   // --- LOGICA DEL SCRIPT ---
   try {
@@ -30,18 +29,16 @@ async function main() {
 
     if (!user) {
         console.error(`[SCRIPT] ERROR: Usuario no encontrado con el email: ${userEmailToUpdate}`);
+        console.error(`[SCRIPT] Asegúrate de haber registrado el negocio con este email primero.`);
         return; // Salir si el usuario no existe
     }
 
     console.log(`[SCRIPT] Usuario encontrado. ID: ${user.id}`);
-    // console.log(`[SCRIPT] Contraseña actual (plaintext): ${user.password}`); // No loggear contraseñas reales!
-
 
     // 2. Hashear la contraseña plana
-    console.log(`[SCRIPT] Hashing la contraseña plana...`);
+    console.log(`[SCRIPT] Hasheando la contraseña plana '${plainPasswordToHash}'...`);
     const hashedPassword = await hashPassword(plainPasswordToHash);
-    console.log(`[SCRIPT] Contraseña hasheada (hash): ${hashedPassword.substring(0, 10)}...`); // Loggear solo el inicio del hash
-
+    console.log(`[SCRIPT] Contraseña hasheada (hash): ${hashedPassword.substring(0, 10)}...`);
 
     // 3. Actualizar el usuario en la base de datos con la contraseña hasheada
     console.log(`[SCRIPT] Actualizando usuario en la base de datos...`);

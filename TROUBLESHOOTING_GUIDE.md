@@ -1,223 +1,101 @@
-# LoyalPyME - Estado del Proyecto y Hoja de Ruta Detallada 🧭
+# Guía Rápida de Troubleshooting - LoyalPyME
 
-**Versión:** 1.11.0 (Post-Reward Images, Logo, Header/Scanner Fixes)
-**Fecha de Última Actualización:** 02 de Mayo de 2025
-
----
-
-## 1. Resumen General del Proyecto LoyalPyME 🎯
-
-- **Concepto:** Plataforma web full-stack (React/Node.js) para que las PyMEs gestionen programas de fidelización digital. Permite configurar recompensas (con imágenes 1:1 subidas a Cloudinary), niveles (tiers) basados en métricas configurables, y acumular/canjear puntos mediante QR.
-- **Componentes Principales:**
-  - **Backend (Node.js/Express/Prisma/PostgreSQL):** API RESTful que maneja lógica de negocio (usuarios, negocios, puntos, tiers, recompensas con `imageUrl`, autenticación JWT), interacción con BD (PostgreSQL vía Prisma), subida de imágenes (Multer + Cloudinary SDK), y tareas programadas (cron para tiers).
-  - **Frontend (React/Vite/Mantine/TypeScript):** Interfaz web con dos áreas:
-    - **Panel de Administración:** Configuración del programa (tiers, reglas, etc.), gestión de clientes (CRUD, filtros, acciones masivas, notas), gestión de recompensas (CRUD + subida/recorte de imágenes 1:1), gestión de niveles/beneficios (CRUD), generación QR puntos, estadísticas básicas. Cabecera muestra logo estático y contenido restringido en ancho.
-    - **Portal de Cliente:** Organizado por pestañas (`Resumen`, `Recompensas`, placeholders `Actividad`, `Ofertas`, `Perfil`). Muestra estado (puntos, nivel con beneficios), progreso a siguiente nivel (con preview beneficios en Tooltip/Popover), validación QR (manual o escáner móvil vía `html5-qrcode`), lista de recompensas/regalos disponibles (mostrando imágenes 1:1), canje. Snippet resumen en `Resumen` muestra imágenes. Cabecera muestra logo estático y contenido restringido.
-- **Propósito:** Herramienta digital completa y adaptable (multi-sector) para fidelizar clientes, fomentar recurrencia, mejorar relación y diferenciarse, ofreciendo experiencia clara y valiosa al cliente final.
-- **Visión a Largo Plazo:** Personalización visual avanzada, comunicación integrada (email/push), CRM ligero, app móvil nativa, analítica avanzada, ecosistemas compartidos, elementos sociales.
+**Fecha de Última Actualización:** 03 de Mayo de 2025
 
 ---
 
-## 2. Stack Tecnológico 🛠️
-
-- **Frontend:** React (v19), TypeScript, Vite, Mantine UI (v7+), @mantine/hooks, @mantine/form, zod, @mantine/notifications, @mantine/modals, axios (instancia `axiosInstance` + base), react-router-dom (v6+), qrcode.react, **html5-qrcode**, i18next, react-i18next, i18next-http-backend, i18next-browser-languagedetector, react-country-flag, **react-image-crop**, (`vite-plugin-mkcert` dev).
-- **Backend:** Node.js, Express, TypeScript, Prisma (ORM), PostgreSQL, jsonwebtoken, bcryptjs, dotenv, node-cron, uuid, cors, date-fns, **cloudinary**, **multer**, **streamifier**, vitest & supertest (testing), swagger-jsdoc & swagger-ui-express (API Docs).
-- **Otros:** Git, Yarn v1.
+Esta guía recopila problemas técnicos significativos o no obvios encontrados durante el desarrollo de LoyalPyME, sus causas y soluciones, para agilizar futuras depuraciones.
 
 ---
 
-## 3. Estado Actual Detallado (Hitos Completados - v1.11.0) ✅
+## Problemas Comunes y Soluciones
 
-- **Fase 1 (Núcleo Operativo + Pulido):** **COMPLETADA.**
-  - Funcionalidades base estables y refactorizadas.
-- **Fase 2 (Funcionalidades Iniciales y Mejoras UI/UX):** **AVANZANDO SIGNIFICATIVAMENTE.**
-  - ✅ **Internacionalización (i18n) Frontend:** Completada (ES/EN).
-  - ✅ **Documentación API (Swagger):** Implementada.
-  - ✅ **Testing Backend (Inicial):** Setup OK, cobertura básica.
-  - ✅ **Refactor Panel Cliente a Tabs:** Completado (`SummaryTab`, `RewardsTab`, etc.).
-  - ✅ **Mejoras UI/UX `UserInfoDisplay`:** Beneficios actuales, barra progreso, preview siguiente nivel (popover móvil pendiente).
-  - ✅ **Mejora UI/UX `SummaryTab`:** Snippet resumen recompensas/regalos implementado.
-  - ✅ **Layout Header Móvil (`AppHeader`):** Corregido solapamiento (Burger Menu).
-  - ✅ **Implementación Imágenes en Recompensas (Tarea 3):** Completado.
-    - **Backend:**
-      - `Reward.imageUrl` añadido a `schema.prisma` y migrado a DB.
-      - Cloudinary configurado como proveedor de storage (`cloudinary.config.ts`, variables en `.env`).
-      - Middleware Multer (`multer.config.ts`) para procesar uploads en memoria.
-      - Endpoint `POST /api/admin/upload/reward-image` creado (`admin.routes.ts`).
-      - Servicio (`upload.service.ts`) implementado para subir a Cloudinary.
-      - Controlador (`upload.controller.ts`) para manejar la petición y llamar al servicio.
-      - Servicios (`rewards.service.ts`, `customer.service.ts`) y Controlador (`rewards.controller.ts`) actualizados para recibir, guardar y devolver `imageUrl` en operaciones CRUD y de lectura de recompensas/regalos.
-    - **Frontend (Admin):**
-      - Componente `RewardForm.tsx` (antes `AddRewardForm.tsx`) ahora maneja imágenes.
-      - Usa `<FileInput>` para selección.
-      - Integra `react-image-crop` para forzar recorte 1:1.
-      - Incluye helper `canvasPreview.ts` para obtener el blob recortado.
-      - Llama a la API de subida con `FormData`.
-      - Guarda la `imageUrl` devuelta en estado local.
-      - Envía `imageUrl` al crear/actualizar recompensa (`POST/PUT /api/rewards`).
-      - Muestra la imagen actual al editar.
-    - **Frontend (Cliente):**
-      - Componentes `RewardList.tsx` y `SummaryTab.tsx` reemplazan `<Skeleton>` por `<Image>`.
-      - Usan `item.imageUrl` con un fallback (`/placeholder-reward.png`).
-      - Mantienen el aspect ratio 1:1.
-  - ✅ **Logo Estático:** Añadido `loyalpymelogo.jpg` a `frontend/public` y mostrado en `AppHeader.tsx`.
-  - ✅ **Layout Cabecera:** Modificado `AppHeader.tsx` para usar `<Container>` y restringir el ancho del contenido en pantallas grandes.
-  - ✅ **Fix Escáner QR Móvil:** Solucionado error "Element not found" en `useQrScanner.ts` (ajuste de timing con `setTimeout`, corrección de tipo `NodeJS.Timeout` a `number`).
-  - ✅ **Dependencias:** Añadidas (`react-image-crop`, `cloudinary`, `multer`, etc.), limpiadas (`react-qr-reader`).
+**1. Backend: Inestabilidad con `yarn dev` (nodemon + ts-node)**
 
----
+- **Síntomas:** Reinicios inesperados, errores `SyntaxError`, cambios no reflejados.
+- **Causa:** Conflictos/inestabilidad de `ts-node-dev`/`nodemon` con módulos ES/CJS en el entorno.
+- **Solución Estable:** Usar **dos terminales** en `backend/`:
+  1.  `npx tsc --watch` (Compilación continua)
+  2.  `npx nodemon dist/index.js` (Ejecución con reinicio automático al cambiar `dist/`)
 
-## 4. Key Concepts & Design Decisions (Actualizado) 🔑
+**2. Backend: Cambios en `.ts` No Se Reflejan / Ruta Nueva da 404 / Lógica Antigua se Ejecuta**
 
-- **Separación Puntos vs. Nivel:** Sin cambios.
-- **Orden de Niveles:** Sin cambios.
-- **Actualización Nivel:** Sin cambios.
-- **Layout Panel Cliente:** Basado en Tabs. Sin cambios.
-- **Layout Tab "Resumen":** `Stack` vertical. Sin cambios.
-- **Preview Siguiente Nivel:** Tooltip/Popover desde barra de progreso (fix móvil pendiente).
-- **Snippet Resumen Recompensas:** Muestra contador regalos + hasta 4 previews (Regalos->Asequibles) en `SimpleGrid`. Cada preview ahora **muestra la imagen** (o fallback) 1:1 + Texto + Badge/Puntos.
-- **Aspect Ratio Imágenes Recompensas:** Definido y **aplicado** como **1:1 (Cuadrado)** en `RewardList`, `SummaryTab` y recorte admin.
-- **Almacenamiento Imágenes:** **Cloudinary**, configurado mediante variables de entorno (`.env`). Se suben a una carpeta específica (ej: `loyalpyme/rewards_development`).
-- **Subida de Imágenes (Flujo):** FE selecciona -> FE recorta (1:1) -> FE obtiene Blob -> FE envía Blob a API Upload BE (`/api/admin/upload/reward-image`) -> BE sube a Cloudinary -> BE devuelve URL Cloudinary -> FE guarda URL -> FE envía URL al crear/actualizar Recompensa (`/api/rewards`).
-- **Layout Cabecera:** Contenido (Logo, controles usuario) restringido por un `<Container>` en pantallas anchas. Logo estático cargado desde `/public`. Header móvil usa Burger Menu.
-- **Escáner QR:** Usa `html5-qrcode` a través del hook `useQrScanner`. Requiere HTTPS y permisos de cámara. El hook maneja inicialización/limpieza.
+- **Síntomas:** Modificas código en un archivo `.ts` (ej: un servicio), pero la API sigue comportándose como antes (ej: no guarda un campo nuevo, usa lógica vieja).
+- **Causa:** El proceso `node` que ejecuta `nodemon` solo vigila cambios en la carpeta `dist/`. Si no tienes `npx tsc --watch` corriendo en otra terminal (o no has ejecutado `yarn build` manualmente después de guardar el `.ts`), los cambios no se compilan a JavaScript en `dist/` y `nodemon` no los detecta ni reinicia el servidor con el código nuevo.
+- **Solución Crítica:** **SIEMPRE** asegúrate de que los cambios en `.ts` se compilen a `dist/` antes de esperar que se reflejen en la API en ejecución. Usa el método de 2 terminales (`tsc --watch` y `nodemon`) o ejecuta `yarn build` manualmente antes de (re)iniciar `nodemon` o `node dist/index.js`. Si persiste, forzar limpieza: `rm -rf dist && yarn build && node dist/index.js`.
 
----
+**3. Frontend: Cambios No Se Aplican (Vite HMR)**
 
-## 5. Lecciones Aprendidas & Troubleshooting Clave 💡 (Actualizado)
+- **Síntomas:** Funcionalidad no cambia, estilos viejos, etc., tras guardar archivo.
+- **Solución:** 1. Verificar terminal `yarn dev` por errores. 2. Refresco forzado navegador (Ctrl+Shift+R). 3. **Reiniciar `yarn dev`** (`Ctrl+C` y `yarn dev --host`), especialmente tras cambios en `vite.config.ts`.
 
-- **Workflow Backend Dev:** Sigue siendo recomendado usar 2 terminales (`tsc -w` y `nodemon dist/...`). Crucial reiniciar `nodemon` tras cambios en `.ts` compilados a `dist/`.
-- **Prisma Generate:** Necesario tras cambios en `schema.prisma`.
-- **Mocking Prisma:** Usar Inyección de Dependencias.
-- **Errores Prisma:** Manejar P2002 (unicidad -> 409 Conflict), P2025 (no encontrado -> 404 Not Found).
-- **Refresco Frontend:** Forzar refresco (Ctrl+Shift+R) o reiniciar `yarn dev` si HMR falla.
-- **Errores TS:** Centralizar tipos, verificar nombres/imports, limpiar caché TS server. `NodeJS.Timeout` vs `number` en navegador.
-- **Testing Integración:** Supertest puede devolver 401 como `text/plain`. Validar datos de setup.
-- **i18n:** Estructura `public/locales`, usar `react-country-flag` para banderas SVG.
-- **Mantine Responsive Props:** `hiddenFrom`/`visibleFrom` pueden necesitar wrappers (`Box`/`Group`).
-- **Mantine Tooltip/Popover:** Diferencias en trigger (`hover` vs `click`), props (`width`).
-- **Cloudinary Debugging (Extenso):**
-  - Errores 500/401 en subidas casi siempre son **credenciales incorrectas** en `backend/.env`.
-  - Verificar **EXACTAMENTE** `CLOUDINARY_CLOUD_NAME` (¡sensible a mayúsculas!), `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` contra el dashboard de Cloudinary. Asegurarse de que las 3 claves pertenecen a la **misma cuenta activa**. No confundir "Key Name" con "Cloud Name".
-  - **Siempre reiniciar el backend** tras cambios en `.env`.
-  - **Logs del Backend son CRUCIALES:** Buscar mensajes específicos como `Invalid cloud_name ...` o `Unknown API key ...`.
-  - Probar diferentes métodos de configuración (variables separadas vs `CLOUDINARY_URL`) puede ayudar a diagnosticar problemas de lectura de `.env`.
-  - Si persisten errores ilógicos ("Invalid cloud_name" para un nombre correcto), **regenerar API Secret/Key** o **crear una cuenta nueva** puede solucionar problemas internos de Cloudinary.
-  - Contactar soporte Cloudinary si las credenciales fallan incluso en pruebas externas (CLI, script mínimo).
-- **Guardado/Lectura Campos Nuevos (ej: `imageUrl`):**
-  - Verificar todo el flujo: FE envía -> BE Controller recibe (`req.body`) -> BE Controller pasa a Service -> BE Service guarda en `prisma.create/update({ data: ... })` -> BE Service lee con `prisma.find...` (¿usa `select`? ¿incluye el campo?) -> BE Service devuelve -> FE Hook recibe -> FE Hook actualiza estado -> FE Componente usa el estado.
-  - Añadir `console.log` en cada paso es la forma más efectiva de ver dónde se pierde el dato.
-  - Asegurar que el backend se recompila (`tsc`) tras cambios en archivos `.ts`.
-  - Verificar que las interfaces/tipos en FE/BE incluyen el nuevo campo.
-  - Comprobar directamente la base de datos.
-- **Inicialización Librerías en Modales/Condicionales (QR Scanner):**
-  - Librerías que interactúan con el DOM (como `html5-qrcode`) pueden fallar si intentan encontrar un elemento (`getElementById`) antes de que React/Mantine lo haya renderizado completamente (especialmente dentro de Modals).
-  - Error común: `Element with ID '...' not found`.
-  - Workaround: Usar `setTimeout` con un pequeño delay (ej: 100ms) en el `useEffect` que inicializa la librería para dar tiempo al DOM. Manejar la limpieza del timeout. (Soluciones más robustas: callback refs).
+**4. Backend: Errores `TS2305` / Tipos Prisma no encontrados**
 
----
+- **Síntomas:** TS no encuentra tipos/enums de Prisma (`User`, `UserRole`, `PrismaClientKnownRequestError`, etc.) tras `yarn install` o `prisma migrate`.
+- **Causa:** Prisma Client (`node_modules/@prisma/client`) no generado o no sincronizado.
+- **Solución Crítica:** Ejecutar **`npx prisma generate`** en `backend/`. Opcional: Reiniciar servidor TS del editor.
 
-## 6. Setup, Comandos y Acceso ⚙️
+**5. Backend: Dependencias Circulares (TS)**
 
-- **Prerrequisitos:** Node, Yarn, PostgreSQL.
-- **Setup Backend:** `cd backend`, `yarn install`, crear `backend/.env` desde `.env.example`, configurar **TODAS** las variables (`DATABASE_URL`, `JWT_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`), `npx prisma migrate dev`, `npx prisma generate`. Seed opcional.
-- **Setup Frontend:** `cd frontend`, `yarn install`.
-- **Correr Backend Dev:** `npx tsc --watch` & `npx nodemon dist/index.js` (Puerto 3000).
-- **Correr Frontend Dev:** `yarn dev --host` (Puerto 5173 HTTPS).
-- **Build Prod:** `yarn build` en ambos.
-- **Correr Prod:** `node dist/index.js`, servir estáticos `frontend/dist`.
-- **Testing Backend:** `yarn test` / `test:watch` / `test:coverage`.
-- **Testing Frontend:** `yarn test` / `test:watch` / `test:coverage`.
-- **API Docs:** `http://localhost:3000/api-docs`.
-- **Credenciales Ejemplo Admin:** (Verificar si siguen siendo válidas o si se usó `db seed`) `admin@cafeelsol.com` / `superpasswordseguro`.
+- **Síntomas:** Errores de ciclo de importación entre archivos.
+- **Solución:** Mover definiciones (interfaces, tipos) a archivos independientes e importar desde allí.
+
+**6. Backend: API no se conecta a Base de Datos (`PrismaClientInitializationError`)**
+
+- **Síntomas:** Endpoints fallan con 500, logs muestran error de conexión a DB. Frecuente tras reinicios del sistema.
+- **Solución:** 1. Verificar que servicio PostgreSQL corre. 2. Verificar `DATABASE_URL` en `.env`. 3. Ejecutar `npx prisma migrate dev` si la BD está vacía/corrupta.
+
+**7. Frontend: Error 401 al llamar a Rutas Públicas Backend desde `axiosInstance`**
+
+- **Estado:** Resuelto (Backend v1.3.0+).
+- **Causa Antigua:** Middleware `authenticateToken` aplicado globalmente a `/api`.
+- **Solución Aplicada:** Middlewares aplicados individualmente a rutas protegidas en `backend/src/index.ts`. Rutas públicas (`/api/auth/*`, `/public/*`) no llevan middleware global. Usar `axiosInstance` para `/api/*` (incl. `/api/auth`) y `axios` base para `/public/*`.
+
+**8. Frontend: Formulario Mantine parece vacío tras cargar datos**
+
+- **Estado:** Resuelto (en `TierSettingsPage.tsx`).
+- **Causa Antigua:** Llamada incorrecta a `form.reset()` después de `form.setValues()` en la carga.
+- **Solución Aplicada:** Eliminar `form.reset()` de la función de carga inicial. Usar `form.setValues()` y luego `form.reset()` _después_ de un guardado exitoso para actualizar valores base y limpiar estado 'dirty'.
+
+**9. Mobile: Escáner QR falla (`setPhotoOptions failed`)**
+
+- **Estado:** Resuelto.
+- **Causa Antigua:** Bug/incompatibilidad en `react-qr-reader`.
+- **Solución Aplicada:** Reemplazo por `html5-qrcode` y uso del hook `useQrScanner`.
+- **Nota:** Este punto se refería a la librería antigua. El problema más reciente del escáner (`html5-qrcode`) se detalla en el punto 25.
+
+**10. Git: Error `Deletion of directory '...' failed` (Windows)** - **Causa:** Bloqueo de archivo/carpeta por otro programa. - **Solución:** Cerrar programas -> `git merge --abort` / `git reset --hard HEAD` (si necesario) -> `git pull`.
+
+**11. Testing Backend (Vitest): Test file no se descubre** - **Síntomas:** Tests en archivo `.ts` no se ejecutan. - **Causa:** Nombre de archivo no termina en `.test.ts` o `.spec.ts`. - **Solución:** Renombrar archivo correctamente.
+
+**12. Testing Backend (Vitest): Mocking de Prisma falla (`Cannot read properties of undefined`, spy not called)** - **Síntomas:** Tests unitarios de funciones que usan `new PrismaClient()` internamente fallan al intentar mockear Prisma. - **Causa:** Instancia interna de Prisma ignora mocks globales (`vi.mock`). - **Solución Aplicada:** **Inyección de Dependencias**. 1. Refactorizar función bajo prueba para aceptar `prismaClient` como argumento. 2. Refactorizar _todo_ el módulo helper para eliminar `new PrismaClient()` y usar DI. 3. Actualizar llamadas a los helpers en los servicios para pasar la instancia `prisma`. 4. En el test, crear mock simple y pasarlo como argumento a la función.
+
+**13. Testing Backend (Vitest/TS): Errores TS2352/TS2554 persistentes (Mock vs Type)** - **Síntomas:** `tsc` (en `yarn build` o VS Code) se queja de incompatibilidad de tipos entre el mock simple pasado por DI y el tipo esperado (`Pick<PrismaClient,...>`) o de número incorrecto de argumentos. - **Causa:** Discrepancia estructural grande entre mock y tipo real, o TS server cache/resolución incorrecta de firmas tras refactor. - **Solución Aplicada:** 1. Asegurar que archivo fuente (`.ts`) con la firma correcta está guardado y compilado (`yarn build`). 2. Reiniciar servidor TS en VS Code (`Ctrl+Shift+P` -> Restart TS server). 3. Si persiste el TS2352/2345 en el test al pasar el mock, usar `// @ts-expect-error` en la línea anterior a la llamada dentro del archivo `.test.ts` para suprimir el error de tipo específico del test.
+
+**14. Testing Integración (Supertest): Error 401 devuelve `text/plain`, no JSON** - **Síntomas:** Test que espera 401 por falta de token falla por `Content-Type`. - **Causa:** Middleware `authenticateToken` usa `res.sendStatus(401)` que responde con `text/plain`. - **Solución:** En esos tests específicos, eliminar la aserción `.expect('Content-Type', /json/)`.
+
+**15. Testing Integración (Supertest): Test Login 401 (Éxito esperado)** - **Causa:** Credenciales hardcodeadas en el test no coinciden con las de la BD de prueba. Puede pasar si la BD se borra/resetea o si las credenciales del admin de desarrollo cambian. - **Solución:** Verificar que el usuario admin usado en los tests (ej: `admin@cafeelsol.com` o el definido en `TEST_ADMIN_EMAIL`) existe en la BD de desarrollo/test y tiene la contraseña correcta (ej: `superpasswordseguro` o `TEST_ADMIN_PASSWORD`). Usar la página de registro o un script (`hash-customer-password.ts` adaptado) para (re)crear/arreglar el usuario admin si es necesario. Considerar usar variables de entorno para las credenciales de test (Tarea Técnica #14).
+
+**16. Testing Integración (Supertest): Setup Falla - Registro Cliente (DNI Inválido)** - **Causa:** DNI generado aleatoriamente en `beforeAll` no tenía letra de control válida. - **Solución:** Añadir función helper `generateValidDni()` al test setup para crear DNIs válidos.
+
+**17. Testing Integración (Supertest): Ruta `PATCH` devuelve HTML/404** - **Causa:** Olvido de definir la ruta `router.patch(...)` en el archivo `.routes.ts` correspondiente. - **Solución:** Añadir la definición de la ruta PATCH en el router.
+
+**18. Testing Integración (Supertest): Error 500 en lugar de 400 (Validación) o 409 (Conflicto)** - **Causa:** Falta validación de entrada (ej: números negativos) en el controlador; Error P2002 (Unique Constraint) de Prisma no manejado específicamente en el `catch` del controlador para devolver 409. - **Solución:** Añadir validaciones explícitas en controlador _antes_ de llamar al servicio; Añadir `if (error instanceof Error && error.message.includes(...))` específico para error de unicidad en el `catch` del controlador para devolver 409.
+
+**19. Frontend (i18n): Claves (`loginPage.title`) se muestran en lugar de texto traducido** - **Causa:** Archivos de traducción (`translation.json`) no encontrados o no cargados. Generalmente por ubicación incorrecta de la carpeta `public/locales` o error de sintaxis en el JSON. - **Solución:** Asegurar estructura `frontend/public/locales/{lng}/translation.json`. Validar sintaxis JSON. Vaciar caché del navegador y recargar forzadamente.
+
+**20. Frontend: Banderas de Idioma (Emoji Unicode) no se renderizan** - **Causa:** Falta de soporte de fuente en el sistema/navegador específico. - **Solución:** Usar una librería como `react-country-flag` que utiliza SVG.
+
+**21. Frontend: Navbar Móvil Admin no se cierra automáticamente** - **Causa:** Componente Navbar no tenía acceso a función `close`. - **Solución:** Pasar `close` (de `useDisclosure`) como prop desde Layout a Navbar y llamarla en `onClick` del enlace.
+
+**22. PowerShell: Sintaxis para `curl` y JSON** - **Solución:** Usar `Invoke-RestMethod` con parámetros PowerShell (`-Method`, `-Headers @{}`, `-Body ($obj | ConvertTo-Json -Depth N)`).
+
+**23. Backend: Subida de Imágenes Cloudinary Falla (Error 500 o 401 en API `/upload/...`)** - **Síntomas:** Error 500 desde el backend al intentar subir. Los logs del backend muestran errores específicos de Cloudinary como `Invalid cloud_name <tu_cloud_name>` o `Unknown API key <tu_api_key>` (a menudo con `http_code: 401`). Esto ocurre incluso si las credenciales en `.env` _parecen_ correctas. - **Causas Posibles Detalladas:** - **Credenciales Incorrectas/Mezcladas:** La causa MÁS probable. Verificar **meticulosamente** en el dashboard de Cloudinary que el `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET` en `backend/.env` coinciden **exactamente** (¡mayúsculas/minúsculas!) con los de la **misma** cuenta/proyecto Cloudinary. No confundir "Key Name" con "Cloud Name". - **Backend No Reiniciado:** Imprescindible reiniciar (Ctrl+C, `npx nodemon...`) tras CUALQUIER cambio en `.env`. - **Error de Lectura `.env`:** Problemas con `dotenv` o cómo se carga el archivo `.env`. Probar a configurar con la variable única `CLOUDINARY_URL=cloudinary://KEY:SECRET@CLOUD_NAME` en `.env` y simplificar `cloudinary.config.ts` para que no llame a `cloudinary.config()` puede ayudar a diagnosticar (aunque la configuración final recomendada es con variables separadas). - **Problema de Cuenta Cloudinary:** Una cuenta nueva o antigua con algún problema interno. - **Solución Aplicada (Tras Varios Intentos):** 1. **Crear una cuenta de Cloudinary completamente nueva.** 2. Obtener las **nuevas** credenciales (Cloud Name, API Key, API Secret) de esta cuenta nueva. 3. Asegurarse de que `cloudinary.config.ts` use la configuración estándar leyendo de `process.env`. 4. Poner las **nuevas y correctas** credenciales en las variables separadas (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`) en `backend/.env`. 5. **Reiniciar el backend**. 6. Verificar los logs de arranque del backend para confirmar que lee las credenciales desde `.env`. 7. Probar la subida.
+
+**24. Backend/Frontend: Campo Nuevo (ej: `imageUrl`) Se Guarda/Recibe Como `null` o No Aparece** - **Síntomas:** La subida de imagen funciona (se obtiene URL), pero al guardar/editar la entidad (Recompensa), la URL no se guarda en la BD (`imageUrl` queda `null`). Por tanto, no se muestra después. - **Causas Posibles:** - **Backend (Controlador):** El handler del controlador (ej: `createRewardHandler` en `rewards.controller.ts`) **no extrae** el campo nuevo (`imageUrl`) del `req.body` y/o **no lo pasa** a la función del servicio correspondiente. - **Backend (Servicio - Guardado):** La función del servicio (ej: `createReward`) no incluye el campo en el objeto `data` de `prisma.create`. - **Backend (Servicio - Actualización):** La función del servicio (ej: `updateReward`) no incluye específicamente el campo `imageUrl` en el `data` de `prisma.update` (aunque pasar el `updateData` completo debería funcionar si el controlador lo envía). - **Backend (Servicio - Lectura):** La función del servicio que lee (ej: `getPendingGrantedRewards` en `customer.service.ts`) usa `select` en Prisma pero **olvida** incluir `imageUrl: true` (o `reward: { select: { ..., imageUrl: true } }` si es anidado). - **Backend (Compilación):** Los cambios en archivos `.ts` no se compilaron a `dist/` (`yarn build` o `npx tsc --watch`). - **Frontend (Tipo):** El tipo/interfaz usado en el frontend (`DisplayReward`, `Reward` en hooks) no incluye el campo `imageUrl?`. - **Solución Aplicada:** 1. **Verificar Controlador:** Asegurarse de que el controlador extrae `imageUrl` de `req.body` y lo pasa al llamar al servicio de creación/actualización (`rewards.controller.ts`). 2. **Verificar Servicio (Guardar):** Confirmar que el servicio recibe `imageUrl` y lo incluye en `prisma.create/update` (`rewards.service.ts`). 3. **Verificar Servicio (Leer):** Revisar **TODAS** las funciones de servicio que devuelven recompensas (`rewards.service.ts`, `customer.service.ts`) y asegurarse de que incluyan `imageUrl: true` si usan `select`. 4. **Verificar Tipos Frontend:** Asegurarse de que todas las interfaces/tipos relevantes en el frontend (`types/customer.ts`, hooks) incluyan `imageUrl?: string | null;`. 5. **Compilar y Reiniciar Backend.** 6. **Verificar Base de Datos:** Comprobar directamente en la BD si el campo (`imageUrl`) existe en la tabla `Reward` y si se guarda el valor. 7. **(Usar Logs):** Añadir `console.log` en cada paso (controller, service-save, service-read, hook) para ver dónde se pierde el dato `imageUrl`.
+
+**25. Mobile: Escáner QR (`html5-qrcode`) No Se Inicia / Error "Element ... not found"** - **Síntomas:** Al intentar abrir el escáner QR en un dispositivo móvil (a través de un Modal), la cámara no se inicia y la consola del navegador móvil muestra `Element with ID 'html5qr-code-reader-region' not found`. - **Causa:** Problema de timing. El `useEffect` en el hook `useQrScanner` que inicializa la librería `Html5Qrcode` se ejecuta _antes_ de que React/Mantine haya terminado de renderizar completamente el contenido del Modal (incluyendo el `<div>` o `<Box>` con el ID `html5qr-code-reader-region`) en el DOM real. - **Solución/Workaround Aplicado:** 1. Modificar el `useEffect` dentro del hook `useQrScanner.ts`. 2. Envolver la lógica de inicialización (`document.getElementById`, `new Html5Qrcode`, `scannerInstance.start`) dentro de un `setTimeout(() => { ... }, 100)` (o un valor pequeño similar). Esto da un breve respiro para que el DOM se actualice antes de buscar el elemento. 3. Asegurarse de manejar correctamente la limpieza del `setTimeout` en la función de retorno del `useEffect`. - **Error Secundario (TypeScript):** Al usar `setTimeout`, el tipo de retorno para la `ref` del timeout debe ser `number` (navegador) y no `NodeJS.Timeout` (Node.js). Corregir el tipo en `useRef<number | null>(null)`.
 
 ---
 
-## 7. 🗺️ Hoja de Ruta Detallada y Tareas Pendientes (v1.11.0)
-
-_Leyenda: ✅=Completado | ⏳=Pendiente Inmediato/Técnico | ⭐=Próxima Gran Funcionalidad | 📝=Pendiente Fase 2+ | 🛠️=Técnico Fase 2+ | 🚀=Visión Futura_
-
-**A. TAREAS INMEDIATAS / CORRECCIONES TÉCNICAS:**
-
-1.  ⏳ **Arreglar Tipo `TierData`:** _(Técnico Rápido)_
-    - **Objetivo:** Eliminar casts (`as any`) en `CustomerDashboardPage.tsx`.
-    - **Tareas:** Añadir `benefits?: TierBenefitData[];` a `interface TierData` en `frontend/src/types/customer.ts`. Eliminar casts relacionados.
-2.  📌 **Fix Mobile Popover Click:** _(Bug UX Móvil)_
-    - **Objetivo:** Hacer que preview siguiente nivel funcione al tocar barra progreso en móvil (`UserInfoDisplay.tsx`).
-    - **Tareas:** Investigar causa (simulación, CSS, eventos), probar en real, ajustar implementación (icono clickeable?).
-
-**B. FUNCIONALIDADES COMPLETADAS RECIENTEMENTE:**
-
-3.  ✅ **Implementar Imágenes Recompensas (Tarea 3):** _(COMPLETADO)_ - Ver sección 3 para detalles.
-4.  ✅ **Añadir Logo Estático:** _(COMPLETADO)_ - Mostrado en `AppHeader`.
-5.  ✅ **Restringir Ancho Cabecera:** _(COMPLETADO)_ - Usando `<Container>` en `AppHeader`.
-6.  ✅ **Fix Escáner QR Móvil:** _(COMPLETADO)_ - Solucionado error "Element not found" en `useQrScanner`.
-
-**C. CONTINUACIÓN FASE 2 (Pendiente):**
-
-7.  📝 **Refinar Espaciado/Diseño `RewardList` (Tarea 4):** _(Visual - Prioridad Media)_
-    - **Objetivo:** Mejorar legibilidad/estética tarjetas recompensa.
-    - **Tareas:** Ajustar estilos/props Mantine en `RewardList.tsx`.
-8.  📝 **(Siguiente Funcionalidad Mencionada):** Añadir captura desde **Cámara** en `RewardForm.tsx`. _(Funcional - Prioridad Media)_
-9.  📝 **Personalización Negocio - Logo (Upload) (Tarea 5):** _(Funcional - Prioridad Alta)_
-    - **Objetivo:** Permitir al admin subir su propio logo.
-    - **Tareas:** Backend (Schema, Storage, API), Frontend (UI Admin, mostrar en `AppHeader`).
-10. 📝 **Personalización Negocio - Theming Básico (Tarea 6):** _(Funcional - Prioridad Alta)_
-    - **Objetivo:** Aplicar estilos diferentes por tipo de negocio.
-    - **Tareas:** Backend (campo `themeIdentifier`), Frontend (CSS/Themes Mantine, JS).
-11. 📝 **Historial de Actividad Cliente (Tarea 7):** _(Funcional - Prioridad Alta - Requiere Backend)_
-    - **Objetivo:** Que el cliente vea sus movimientos.
-    - **Tareas:** Backend (Endpoint `GET /api/customer/activity`), FE (`ActivityTab.tsx`).
-12. 📝 **Fidelización Avanzada (Tarea 8):** _(Funcional - Prioridad Media)_
-    - **Objetivo:** Más tipos de beneficios/recompensas.
-    - **Tareas:** Backend (Enum `BenefitType`, lógica servicios), FE (UI Admin/Cliente).
-13. 📝 **Comunicación Básica (Tarea 9):** _(Funcional - Prioridad Media)_
-    - **Objetivo:** Permitir al admin enviar mensajes básicos.
-    - **Tareas:** Backend (Entidad `Announcement`?, API CRUD, Email?), FE (UI Admin/Cliente).
-
-**D. TAREAS TÉCNICAS (Pendiente):**
-
-14. 🛠️ **Completar Pruebas Backend:** _(Técnico - Prioridad Media/Baja)_
-15. 🛠️ **Iniciar/Completar Pruebas Frontend:** _(Técnico - Prioridad Media/Baja)_
-16. 🛠️ **Validación Robusta Backend:** Investigar/Implementar Zod.
-17. 🛠️ **Estrategia Deployment:** Definir (Docker?, Vercel/Netlify + Render/Heroku?). CI/CD.
-18. 🛠️ **Logging/Monitoring Avanzado:** Integrar Sentry o similar.
-19. 🛠️ **Optimización Base de Datos:** Revisar consultas, añadir índices.
-20. 🛠️ **Tipado Centralizado:** Investigar paquete `common`.
-
-**E. VISIÓN FUTURA (Fase 3+):**
-
-21. 🚀 **App Móvil Nativa/PWA**
-22. 🚀 **Análisis Avanzado (Admin)**
-23. 🚀 **Segmentación y CRM Ligero**
-24. 🚀 **E2E Tests**
-25. 🚀 **Ecosistemas y Funcionalidades Sociales**
-
----
-
-## 8. 🤝 Flujo de Trabajo Acordado
-
-- (Sin cambios)
-
----
-
-## 9. Información Adicional ℹ️
-
-- Licencia: **AGPL v3.0**.
-
----
-
-## 10. Próximo Paso Propuesto 👉
-
-Abordar las **Tareas Pendientes Inmediatas/Técnicas (A.1 y A.2)**:
-
-1.  Arreglar tipo `TierData`.
-2.  Investigar/Fixear el Popover en móvil.
-
-O, si se prefiere empezar con algo visual:
-
-- Iniciar la **Tarea 7: Refinar Espaciado/Diseño `RewardList`**.
-
-O, como mencionaste para mañana:
-
-- Iniciar la **Tarea 8: Añadir captura desde Cámara en `RewardForm`**.
+_(Fin de la Guía)_
