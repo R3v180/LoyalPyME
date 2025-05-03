@@ -1,11 +1,11 @@
 # LoyalPyME 🇬🇧
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![GitHub repo size](https://img.shields.io/github/repo-size/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME)
 [![GitHub contributors](https://img.shields.io/github/contributors/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/graphs/contributors)
 [![GitHub last commit](https://img.shields.io/github/last-commit/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/commits/main)
 [![GitHub issues](https://img.shields.io/github/issues/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/pulls)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/agpl-3.0)
 
 ---
 
@@ -38,7 +38,7 @@ _(Note: Screenshots might need updating)._
 - **Points & QR Flow:** QR Code Generation (Admin), QR Validation (Customer - Manual or Mobile Scanner via `html5-qrcode`).
 - **Automatic Tier Logic:** Tier Calculation/Assignment/Downgrade based on business settings (Backend + Cron Job).
 - **Customer Dashboard:** Tab-based Interface (Summary, Rewards), User Info Display (Points, Tier, Benefits), Progress Bar (with Next Tier Preview), Reward/Gift List (with images), Points/Gift Redemption, Summary Snippet (with images). Functional QR Scanner.
-- **Other:** Internationalization (ES/EN), API Documentation (Swagger), Static Logo, Constrained Header Layout.
+- **Other:** Frontend Internationalization (i18n - ES/EN), API Documentation (Swagger), Static Logo, Constrained Header Layout.
 
 ## Project Status & Roadmap 🗺️
 
@@ -71,7 +71,7 @@ Contributions welcome! Standard flow: Fork -> Branch -> Commit -> Push -> Pull R
 
 ## License 📜
 
-Licensed under **GNU Affero General Public License v3.0 (AGPL-3.0)**. See [`LICENSE`](./LICENSE).
+Licensed under **MIT**. See [`LICENSE`](./LICENSE) file.
 Copyright (c) 2024-2025 Olivier Hottelet
 
 ## Contact 📧
