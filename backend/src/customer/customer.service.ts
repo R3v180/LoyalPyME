@@ -1,18 +1,23 @@
 // filename: backend/src/customer/customer.service.ts
-// Version: 2.1.2 (Add diagnostic logs for reward fetching)
+// Version: 2.2.0 (Add ActivityLog creation on gift redemption)
 
-import { PrismaClient, Reward, Prisma, User, GrantedReward, Business, TierCalculationBasis } from '@prisma/client';
+import {
+    PrismaClient,
+    Reward,
+    Prisma,
+    User,
+    GrantedReward,
+    Business,
+    TierCalculationBasis,
+    ActivityType // <-- Importar ActivityType
+} from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Tipo para la configuración que ve el cliente
+// Tipo para la configuración que ve el cliente (sin cambios)
 export type CustomerBusinessConfig = Pick<Business, 'tierCalculationBasis'> | null;
 
-/**
- * Encuentra todas las recompensas activas para un negocio específico.
- * Utilizado por el cliente para ver qué puede canjear.
- * Devuelve todos los campos de Reward, incluyendo imageUrl.
- */
+// findActiveRewardsForCustomer (sin cambios respecto a la última versión)
 export const findActiveRewardsForCustomer = async ( businessId: string ): Promise<Reward[]> => {
   console.log( `[CUST_SVC] Finding active rewards for business: ${businessId}` );
   try {
@@ -22,10 +27,7 @@ export const findActiveRewardsForCustomer = async ( businessId: string ): Promis
         // Sin 'select', devuelve todos los campos por defecto (incluyendo imageUrl)
     });
     console.log( `[CUST_SVC] Found ${rewards.length} active rewards for business ${businessId}` );
-    // --- LOG DE DEBUG ---
-    // Muestra las recompensas encontradas, verifica si tienen 'imageUrl'
     console.log('[DEBUG findActiveRewardsForCustomer] Rewards found:', rewards);
-    // --- FIN LOG DE DEBUG ---
     return rewards;
   } catch (error) {
     console.error( `[CUST_SVC] Error fetching active rewards for business ${businessId}:`, error );
@@ -36,11 +38,7 @@ export const findActiveRewardsForCustomer = async ( businessId: string ): Promis
   }
 };
 
-
-/**
- * Obtiene las recompensas otorgadas (regalos) que están pendientes de canjear por un usuario.
- * Incluye los detalles de la recompensa base (nombre, desc, imageUrl).
- */
+// getPendingGrantedRewards (sin cambios respecto a la última versión)
 export const getPendingGrantedRewards = async (userId: string): Promise<GrantedReward[]> => {
     console.log(`[CUST_SVC] Fetching pending granted rewards for user ${userId}`);
     try {
@@ -48,7 +46,7 @@ export const getPendingGrantedRewards = async (userId: string): Promise<GrantedR
             where: { userId: userId, status: 'PENDING' },
             include: {
                 reward: {
-                    select: { // Select CORREGIDO (ya incluía imageUrl)
+                    select: {
                         id: true,
                         name: true,
                         description: true,
@@ -61,10 +59,7 @@ export const getPendingGrantedRewards = async (userId: string): Promise<GrantedR
             orderBy: { assignedAt: 'desc' }
         });
         console.log(`[CUST_SVC] Found ${grantedRewards.length} pending granted rewards for user ${userId}`);
-        // --- LOG DE DEBUG ---
-        // Muestra los regalos encontrados, verifica si tienen 'reward.imageUrl' anidado
-        console.log('[DEBUG getPendingGrantedRewards] Granted rewards found (check nested reward.imageUrl):', JSON.stringify(grantedRewards, null, 2));
-        // --- FIN LOG DE DEBUG ---
+        console.log('[DEBUG getPendingGrantedRewards] Granted rewards found:', JSON.stringify(grantedRewards, null, 2));
         return grantedRewards;
     } catch (error) {
         console.error(`[CUST_SVC] Error fetching pending granted rewards for user ${userId}:`, error);
@@ -75,40 +70,65 @@ export const getPendingGrantedRewards = async (userId: string): Promise<GrantedR
     }
 };
 
+// --- redeemGrantedReward MODIFICADO para añadir ActivityLog ---
 /**
  * Permite a un cliente canjear una recompensa que le fue otorgada (un regalo).
- * Marca el estado de GrantedReward como 'REDEEMED'.
+ * Marca el estado de GrantedReward como 'REDEEMED' y crea un log de actividad.
  */
 export const redeemGrantedReward = async ( userId: string, grantedRewardId: string ): Promise<GrantedReward> => {
-    // ... (código sin cambios) ...
     console.log(`[CUST_SVC] User ${userId} attempting to redeem granted reward ${grantedRewardId}`);
     try {
         const updatedGrantedReward = await prisma.$transaction(async (tx) => {
+            // 1. Encontrar el GrantedReward y verificar estado y pertenencia
+            //    AÑADIMOS include para tener businessId y reward.name para el log
             const grantedReward = await tx.grantedReward.findUnique({
                 where: { id: grantedRewardId },
-                include: { reward: { select: { name: true }} }
+                include: {
+                    reward: { select: { name: true } }, // Incluir nombre de la recompensa
+                    business: { select: { id: true } } // Incluir ID del negocio
+                }
             });
 
             if (!grantedReward) { throw new Error(`Regalo con ID ${grantedRewardId} no encontrado.`); }
+            // --- Añadir verificación de businessId ---
+            if (!grantedReward.businessId) {
+                 console.error(`[CUST_SVC] Critical: GrantedReward ${grantedRewardId} has no businessId!`);
+                 throw new Error(`Error interno: El regalo no está asociado a un negocio.`);
+            }
+            // --- Fin verificación ---
             if (grantedReward.userId !== userId) {
                 console.warn(`[CUST_SVC] Unauthorized attempt by user ${userId} to redeem granted reward ${grantedRewardId} belonging to user ${grantedReward.userId}`);
                 throw new Error("Este regalo no te pertenece.");
             }
             if (grantedReward.status !== 'PENDING') {
-                throw new Error(`Este regalo (${grantedReward.reward.name}) ya fue canjeado o no es válido (Estado: ${grantedReward.status}).`);
+                // Usamos el nombre de la recompensa en el mensaje de error
+                throw new Error(`Este regalo (${grantedReward.reward.name || 'ID: '+grantedReward.rewardId}) ya fue canjeado o no es válido (Estado: ${grantedReward.status}).`);
             }
 
+            // 2. Actualizar el estado del GrantedReward
             const redeemed = await tx.grantedReward.update({
                 where: { id: grantedRewardId, userId: userId, status: 'PENDING' },
                 data: { status: 'REDEEMED', redeemedAt: new Date() }
             });
-            console.log(`[CUST_SVC] Granted reward ${grantedRewardId} (${redeemed.rewardId}) successfully redeemed by user ${userId}`);
-            return redeemed;
-        });
-        return updatedGrantedReward;
 
+            // --- 3. NUEVO: Crear Entrada en ActivityLog ---
+            await tx.activityLog.create({
+                data: {
+                    userId: userId,
+                    businessId: grantedReward.businessId, // ID del negocio obtenido con include
+                    type: ActivityType.GIFT_REDEEMED,
+                    pointsChanged: null, // No cambian puntos al canjear regalo
+                    description: `Regalo canjeado: ${grantedReward.reward.name || 'ID: '+grantedReward.rewardId}`, // Nombre obtenido con include
+                    relatedGrantedRewardId: grantedRewardId
+                }
+            });
+            // --- FIN NUEVO ---
+
+            console.log(`[CUST_SVC] Granted reward ${grantedRewardId} (${redeemed.rewardId}) successfully redeemed by user ${userId}. Activity logged.`);
+            return redeemed; // Devuelve el GrantedReward actualizado
+        });
+        return updatedGrantedReward; // Devuelve el resultado de la transacción
     } catch (error) {
-        // ... (manejo de errores sin cambios) ...
         console.error(`[CUST_SVC] Error redeeming granted reward ${grantedRewardId} for user ${userId}:`, error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
             if (error.code === 'P2025') { throw new Error("El regalo no se encontró o ya no estaba pendiente al intentar canjearlo."); }
@@ -118,25 +138,21 @@ export const redeemGrantedReward = async ( userId: string, grantedRewardId: stri
         throw new Error('Error inesperado al canjear el regalo.');
     }
 };
+// --- FIN redeemGrantedReward MODIFICADO ---
 
-
-/**
- * Obtiene la configuración del negocio relevante para el cliente.
- * Por ahora, solo devuelve la base de cálculo para los tiers.
- */
+// getCustomerFacingBusinessConfig (sin cambios respecto a la última versión)
 export const getCustomerFacingBusinessConfig = async (businessId: string): Promise<CustomerBusinessConfig> => {
-    // ... (código sin cambios) ...
     console.log(`[CUST_SVC] Fetching customer-facing config for business: ${businessId}`);
     try {
         const config = await prisma.business.findUnique({
             where: { id: businessId },
             select: { tierCalculationBasis: true }
         });
-
         if (!config) {
             console.warn(`[CUST_SVC] Business not found when fetching config: ${businessId}`);
             return null;
         }
+        // Aseguramos que devolvemos null si tierCalculationBasis es null en la BD
         return { tierCalculationBasis: config.tierCalculationBasis ?? null };
     } catch (error) {
         console.error(`[CUST_SVC] Error fetching customer-facing config for business ${businessId}:`, error);

@@ -1,5 +1,5 @@
 // filename: backend/src/index.ts
-// Version: 1.5.13 (Define admin paths directly in options, add admin schemas - FULL CODE)
+// Version: 1.6.0 (Mount activity router)
 
 import express, { Express, Request, Response, NextFunction, RequestHandler } from 'express';
 import dotenv from 'dotenv';
@@ -21,8 +21,10 @@ import rewardsRouter from './routes/rewards.routes';
 import pointsRouter from './routes/points.routes';
 import customerRouter from './routes/customer.routes';
 import tierRouter from './routes/tiers.routes';
-import adminRouter from './routes/admin.routes'; // Se sigue usando para la lógica
+import adminRouter from './routes/admin.routes';
 import businessRouter from './routes/businesses.routes';
+import activityRouter from './routes/activity.routes'; // <-- NUEVA IMPORTACIÓN
+
 // Cron Job Logic
 import { processTierUpdatesAndDowngrades } from './tiers/tier-logic.service';
 
@@ -49,8 +51,8 @@ const swaggerOptions = {
     openapi: '3.0.0',
     info: {
       title: 'LoyalPyME API',
-      version: '1.6.1',
-      description: 'API REST para la plataforma de fidelización LoyalPyME. Permite gestionar clientes, puntos, niveles, recompensas y autenticación.',
+      version: '1.6.1', // <-- ACTUALIZAR VERSIÓN SI ES NECESARIO
+      description: 'API REST para la plataforma de fidelización LoyalPyME. Permite gestionar clientes, puntos, niveles, recompensas, historial y autenticación.', // <-- Añadido historial
        contact: { name: 'Olivier Hottelet', email: 'olivierhottelet1980@gmail.com' },
        license: { name: 'AGPL-3.0', url: 'https://www.gnu.org/licenses/agpl-3.0.html' }
     },
@@ -61,7 +63,29 @@ const swaggerOptions = {
     components: {
         securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', } },
         schemas: {
-             // Schemas Auth/User/Common/Rewards/Points/Customer/Tiers
+            // --- AÑADIR SCHEMAS PARA ACTIVITY LOG ---
+             ActivityLogItem: {
+                 type: 'object',
+                 properties: {
+                     id: { type: 'string', format: 'uuid', readOnly: true },
+                     type: { type: 'string', enum: ['POINTS_EARNED_QR', 'POINTS_REDEEMED_REWARD', 'GIFT_REDEEMED', 'POINTS_ADJUSTED_ADMIN'], readOnly: true },
+                     pointsChanged: { type: 'integer', nullable: true, readOnly: true, description: 'Cambio en puntos (+/-), null si no aplica.' },
+                     description: { type: 'string', nullable: true, readOnly: true, description: 'Descripción del evento.' },
+                     createdAt: { type: 'string', format: 'date-time', readOnly: true, description: 'Fecha y hora del evento.' }
+                 }
+             },
+             PaginatedActivityResponse: {
+                 type: 'object',
+                 properties: {
+                     logs: { type: 'array', items: { '$ref': '#/components/schemas/ActivityLogItem' } },
+                     totalPages: { type: 'integer', example: 5 },
+                     currentPage: { type: 'integer', example: 1 },
+                     totalItems: { type: 'integer', example: 73 }
+                 }
+             },
+            // --- FIN SCHEMAS ACTIVITY LOG ---
+
+             // ... (Schemas existentes: LoginCredentials, RegisterUserDto, etc.) ...
              LoginCredentials: { type: 'object', required: ['email', 'password'], properties: { email: { type: 'string', format: 'email'}, password: { type: 'string', format: 'password'} }, example: { email: 'user@example.com', password: 'password123' } },
              RegisterUserDto: { type: 'object', required: ['email', 'password', 'phone', 'documentId', 'documentType', 'businessId', 'role'], properties: { email: { type: 'string', format: 'email'}, password: { type: 'string', format: 'password', minLength: 6 }, name: { type: 'string', nullable: true }, phone: { type: 'string', example: '+34612345678' }, documentId: { type: 'string'}, documentType: { type: 'string', enum: ['DNI', 'NIE', 'PASSPORT', 'OTHER']}, businessId: { type: 'string', format: 'uuid'}, role: { type: 'string', enum: ['CUSTOMER_FINAL']} } },
              RegisterBusinessDto: { type: 'object', required: ['businessName', 'adminEmail', 'adminPassword'], properties: { businessName: { type: 'string', minLength: 2 }, adminEmail: { type: 'string', format: 'email'}, adminPassword: { type: 'string', format: 'password', minLength: 6 }, adminName: { type: 'string', nullable: true } } },
@@ -71,17 +95,17 @@ const swaggerOptions = {
              LoginResponse: { type: 'object', properties: { token: { type: 'string'}, user: { '$ref': '#/components/schemas/UserResponse' } } },
              SuccessMessage: { type: 'object', properties: { message: { type: 'string'} }, example: { message: 'Operación completada con éxito.'} },
              ErrorResponse: { type: 'object', properties: { message: { type: 'string'}, error: { type: 'string', nullable: true } }, example: { message: 'Error de validación.', error: 'El campo email es inválido.'} },
-             RewardBase: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, name: { type: 'string'}, description: { type: 'string', nullable: true }, pointsCost: { type: 'integer', format: 'int32', minimum: 0 }, isActive: { type: 'boolean'}, businessId: { type: 'string', format: 'uuid', readOnly: true }, createdAt: { type: 'string', format: 'date-time', readOnly: true }, updatedAt: { type: 'string', format: 'date-time', readOnly: true } } },
-             CreateRewardDto: { type: 'object', required: ['name', 'pointsCost'], properties: { name: { type: 'string', example: 'Café Gratis' }, description: { type: 'string', nullable: true, example: 'Un café espresso o americano.' }, pointsCost: { type: 'integer', format: 'int32', minimum: 0, example: 100 } } },
-             UpdateRewardDto: { type: 'object', properties: { name: { type: 'string'}, description: { type: 'string', nullable: true }, pointsCost: { type: 'integer', format: 'int32', minimum: 0 }, isActive: { type: 'boolean'} } },
+             RewardBase: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, name: { type: 'string'}, description: { type: 'string', nullable: true }, pointsCost: { type: 'integer', format: 'int32', minimum: 0 }, isActive: { type: 'boolean'}, businessId: { type: 'string', format: 'uuid', readOnly: true }, createdAt: { type: 'string', format: 'date-time', readOnly: true }, updatedAt: { type: 'string', format: 'date-time', readOnly: true }, imageUrl: { type: 'string', format: 'url', nullable: true, description: 'URL de la imagen de la recompensa' } } }, // imageUrl añadido aquí
+             CreateRewardDto: { type: 'object', required: ['name', 'pointsCost'], properties: { name: { type: 'string', example: 'Café Gratis' }, description: { type: 'string', nullable: true, example: 'Un café espresso o americano.' }, pointsCost: { type: 'integer', format: 'int32', minimum: 0, example: 100 }, imageUrl: { type: 'string', format: 'url', nullable: true, description: 'URL (opcional) de la imagen subida previamente.' } } }, // imageUrl añadido aquí
+             UpdateRewardDto: { type: 'object', properties: { name: { type: 'string'}, description: { type: 'string', nullable: true }, pointsCost: { type: 'integer', format: 'int32', minimum: 0 }, isActive: { type: 'boolean'}, imageUrl: { type: 'string', format: 'url', nullable: true, description: 'URL (opcional) de la imagen. Enviar null para quitarla.' } } }, // imageUrl añadido aquí
              RewardListResponse: { type: 'array', items: { '$ref': '#/components/schemas/RewardBase' } },
              DeletedRewardResponse: { type: 'object', properties: { message: { type: 'string'}, deletedReward: { '$ref': '#/components/schemas/RewardBase' } } },
              GenerateQrDto: { type: 'object', required: ['amount', 'ticketNumber'], properties: { amount: { type: 'number', format: 'float', minimum: 0.01 }, ticketNumber: { type: 'string'} } },
              QrDataResponse: { type: 'object', properties: { qrToken: { type: 'string', format: 'uuid'}, amount: { type: 'number', format: 'float'} } },
              ValidateQrDto: { type: 'object', required: ['qrToken'], properties: { qrToken: { type: 'string', format: 'uuid'} } },
-             PointsEarnedResponse: { type: 'object', properties: { message: { type: 'string'}, pointsEarned: { type: 'integer'} }, example: { message: '...', pointsEarned: 7 } },
+             PointsEarnedResponse: { type: 'object', properties: { message: { type: 'string'}, pointsEarned: { type: 'integer'}, user: { '$ref': '#/components/schemas/UserResponse' } }, example: { message: '...', pointsEarned: 7, user: { /* ... */ } } }, // 'user' añadido aquí
              RedeemRewardResult: { type: 'object', properties: { message: { type: 'string'}, newPointsBalance: { type: 'integer'} }, example: { message: '...', newPointsBalance: 930 } },
-             RewardInfoForGift: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, name: { type: 'string', readOnly: true }, description: { type: 'string', nullable: true, readOnly: true } } },
+             RewardInfoForGift: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, name: { type: 'string', readOnly: true }, description: { type: 'string', nullable: true, readOnly: true }, imageUrl: { type: 'string', format: 'url', nullable: true, readOnly: true } } }, // imageUrl añadido aquí
              AssignerInfo: { type: 'object', properties: { name: { type: 'string', nullable: true, readOnly: true }, email: { type: 'string', format: 'email', readOnly: true } } },
              BusinessInfoForGift: { type: 'object', properties: { name: { type: 'string', readOnly: true } } },
              GrantedReward: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, status: { type: 'string', enum: ['PENDING', 'REDEEMED', 'EXPIRED'], readOnly: true }, assignedAt: { type: 'string', format: 'date-time', readOnly: true }, redeemedAt: { type: 'string', format: 'date-time', nullable: true, readOnly: true }, reward: { '$ref': '#/components/schemas/RewardInfoForGift' }, assignedBy: { '$ref': '#/components/schemas/AssignerInfo', nullable: true }, business: { '$ref': '#/components/schemas/BusinessInfoForGift', nullable: true } } },
@@ -117,9 +141,28 @@ const swaggerOptions = {
              BulkOperationResponse: { type: 'object', properties: { message: { type: 'string' }, count: { type: 'integer'} } }
          }
     },
-    // Definición de paths directamente
+    // --- AÑADIR PATHS PARA ACTIVITY LOG ---
     paths: {
-        // Public / Auth / Profile / Rewards / Points / Customer / Tiers
+         '/api/customer/activity': { // <-- NUEVO PATH
+             get: {
+                 tags: ['Customer Experience'],
+                 summary: 'Obtiene el historial de actividad del cliente (paginado).',
+                 description: 'Devuelve una lista paginada de eventos de actividad (puntos ganados, canjes) para el cliente autenticado, ordenados por fecha descendente.',
+                 security: [{ bearerAuth: [] }],
+                 parameters: [
+                     { name: 'page', in: 'query', required: false, description: 'Número de página a obtener.', schema: { type: 'integer', default: 1, minimum: 1 } },
+                     { name: 'limit', in: 'query', required: false, description: 'Número de items por página.', schema: { type: 'integer', default: 15, minimum: 1, maximum: 100 } }
+                 ],
+                 responses: {
+                     '200': { description: 'Historial de actividad obtenido con éxito.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/PaginatedActivityResponse' } } } },
+                     '400': { description: 'Parámetros de paginación inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } },
+                     '401': { description: 'No autorizado (sin token o token inválido).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } },
+                     '403': { description: 'Prohibido (rol no cliente).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } },
+                     '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }
+                 }
+             }
+         },
+         // ... (Paths existentes: /public/businesses/public-list, /api/auth/*, /api/profile, /api/rewards/*, etc.) ...
         '/public/businesses/public-list': { get: { tags: ['Public', 'Businesses'], summary: 'Obtiene la lista pública de negocios (ID y Nombre).', description: 'Devuelve un array con el ID y el nombre de todos los negocios registrados, útil para el formulario de registro de clientes. No requiere autenticación.', responses: { '200': { description: 'Lista de negocios obtenida con éxito.', content: { 'application/json': { schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' } } } } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/auth/forgot-password': { post: { tags: ['Authentication'], summary: 'Inicia el proceso de reseteo de contraseña.', description: 'Envía un email (o muestra en consola) con un token para que el usuario pueda restablecer su contraseña si el email existe en el sistema. Responde siempre con éxito para no revelar información sobre la existencia de emails.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/ForgotPasswordDto' } } } }, responses: { '200': { description: 'Solicitud procesada.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/SuccessMessage' }, example: { message: 'Si existe una cuenta con ese email, se ha enviado un enlace para restablecer la contraseña.'} } } }, '400': { description: 'Error de validación (falta el email).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor durante el proceso.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/auth/reset-password/{token}': { post: { tags: ['Authentication'], summary: 'Restablece la contraseña usando un token válido.', description: 'Permite al usuario establecer una nueva contraseña si proporciona un token de reseteo válido y no expirado.', parameters: [{ name: 'token', in: 'path', required: true, description: 'El token de reseteo recibido por email.', schema: { type: 'string' } }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/ResetPasswordDto' } } } }, responses: { '200': { description: 'Contraseña restablecida con éxito.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/SuccessMessage' }, example: { message: 'Contraseña restablecida con éxito.'} } } }, '400': { description: 'Error de validación (token/contraseña inválidos o faltantes).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor durante el proceso.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
@@ -154,32 +197,34 @@ const swaggerOptions = {
         '/api/admin/customers/bulk-status': { patch: { tags: ['Admin Customer Management'], summary: 'Activa/desactiva múltiples clientes.', security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkStatusUpdateDto' } } } }, responses: { '200': { description: 'Clientes actualizados.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkOperationResponse' } } } }, '400': { description: 'Datos inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/admin/customers/bulk-delete': { delete: { tags: ['Admin Customer Management'], summary: 'Elimina múltiples clientes.', security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkCustomerIdListDto' } } } }, responses: { '200': { description: 'Clientes eliminados.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkOperationResponse' } } } }, '400': { description: 'Datos inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (ej: cliente tiene datos asociados).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/admin/customers/bulk-adjust-points': { post: { tags: ['Admin Customer Management'], summary: 'Ajusta puntos para múltiples clientes.', security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkPointsAdjustDto' } } } }, responses: { '200': { description: 'Puntos ajustados.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkOperationResponse' } } } }, '400': { description: 'Datos inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } }
-        // --- FIN NUEVOS Paths Admin ---
     },
     security: [{ bearerAuth: [] }],
   },
-  // Lista de archivos donde buscar anotaciones (AHORA VACÍA)
-  apis: [
-      // Ya no necesitamos escanear ningún archivo
-    ],
+  apis: [], // Ya no necesitamos escanear ningún archivo
 };
+
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 // Servir la UI de Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec) as any);
 
 
-// Rutas Públicas...
+// --- Montaje de Rutas ---
+
+// Rutas Públicas
 app.use('/api/auth', authRouter);
 app.use('/public/businesses', businessRouter);
 
-// Rutas Protegidas...
+// Rutas Protegidas (requieren authenticateToken)
 app.use('/api/profile', authenticateToken, protectedRouter);
 app.use('/api/rewards', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), rewardsRouter);
-app.use('/api/points', authenticateToken, pointsRouter);
-app.use('/api/customer', authenticateToken, checkRole([UserRole.CUSTOMER_FINAL]), customerRouter);
-app.use('/api/tiers', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), tierRouter);
-app.use('/api/admin', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), adminRouter); // Se sigue usando para la lógica
+app.use('/api/points', authenticateToken, pointsRouter); // checkRole se aplica dentro si es necesario
+app.use('/api/customer', authenticateToken, checkRole([UserRole.CUSTOMER_FINAL]), customerRouter); // Protegido para clientes
+app.use('/api/customer/activity', authenticateToken, checkRole([UserRole.CUSTOMER_FINAL]), activityRouter); // <-- NUEVA RUTA MONTADA
+app.use('/api/tiers', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), tierRouter); // Protegido para admin
+app.use('/api/admin', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), adminRouter); // Protegido para admin
+
+// --- Fin Montaje de Rutas ---
 
 // Ruta raíz básica...
 app.get('/', (req: Request, res: Response) => { res.send('Welcome to LoyalPyME API! Docs available at /api-docs'); });

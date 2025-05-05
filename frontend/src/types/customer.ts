@@ -1,5 +1,5 @@
 // filename: frontend/src/types/customer.ts
-// Version: 1.4.0 (Add optional benefits to TierData)
+// Version: 1.5.0 (Add types for Activity Log)
 
 import React from 'react';
 
@@ -7,7 +7,7 @@ import React from 'react';
 export enum TierCalculationBasis {
     SPEND = 'SPEND',
     VISITS = 'VISITS',
-    POINTS_EARNED = 'POINTS_EARNED' // [3889]
+    POINTS_EARNED = 'POINTS_EARNED'
 }
 
 // Interfaz para Configuración del Negocio
@@ -15,120 +15,148 @@ export interface CustomerBusinessConfig {
     tierCalculationBasis: TierCalculationBasis | null;
 }
 
+// Interfaz para Datos del Beneficio
+export interface TierBenefitData {
+  id: string;
+  type: string; // Considerar usar un enum si los tipos son fijos
+  value: string;
+  description: string | null;
+  // isActive?: boolean; // Podría añadirse si el backend lo devuelve y se necesita
+}
+
 // Interfaz para Datos del Tier (ACTUALIZADA)
 export interface TierData {
     id: string;
     name: string;
     level: number;
-    minValue: number; // [3890]
+    minValue: number;
     isActive: boolean;
-    benefits?: TierBenefitData[]; // <-- LÍNEA AÑADIDA (Propiedad opcional)
-} // [3891]
-
-// Interfaz para Datos del Beneficio
-export interface TierBenefitData {
-  id: string;
-  type: string; // Considerar usar un enum si los tipos son fijos
-  value: string; // [3892]
-  description: string | null;
-  // isActive?: boolean; // Podría añadirse si el backend lo devuelve y se necesita
-} // [3893]
+    benefits?: TierBenefitData[]; // <-- Propiedad opcional añadida previamente
+}
 
 // Interfaz para Datos del Usuario (podría expandirse)
 export interface UserData {
-    id: string; // [3894]
+    id: string;
     email: string;
     name?: string | null;
-    points: number;
+    points: number; // <-- Definido como number
     role: string; // 'CUSTOMER_FINAL', 'BUSINESS_ADMIN', etc.
-    totalSpend: number; // [3895]
-    totalVisits: number;
+    totalSpend: number; // <-- Definido como number
+    totalVisits: number; // <-- Definido como number
     currentTier?: { // El nivel actual del usuario
-        id: string; // [3896]
+        id: string;
         name: string;
         benefits: TierBenefitData[]; // Los beneficios activos de ESE nivel
     } | null;
-    businessId?: string; // [3897] // ID del negocio al que pertenece
+    businessId?: string; // ID del negocio al que pertenece
     // otros campos como isActive, createdAt podrían ser útiles
 }
 
 // Interfaz para Recompensas por Puntos (obtenidas de /customer/rewards)
-// Asegúrate que coincida con lo que devuelve tu API
 export interface Reward {
-    id: string; // [3898]
+    id: string;
     name: string;
     description?: string | null;
     pointsCost: number;
-    isActive: boolean; // [3899] // Confirmar si viene de la API de cliente
+    isActive: boolean;
     businessId?: string;
-    imageUrl?: string | null; // [3900] // <-- Añadido
+    imageUrl?: string | null;
 }
 
 // Interfaz para Recompensas Otorgadas (Regalos) (obtenidas de /customer/granted-rewards)
-// Asegúrate que coincida con lo que devuelve tu API
 export interface GrantedReward {
-    id: string; // [3901] // ID de la instancia GrantedReward
+    id: string; // ID de la instancia GrantedReward
     status: string; // 'PENDING', etc.
-    assignedAt: string; // [3902]
+    assignedAt: string;
     reward: { // La recompensa base asociada
         id: string;
-        name: string; // [3903]
+        name: string;
         description?: string | null;
-        imageUrl?: string | null; // <-- Añadido aquí también
-    }; // [3904]
+        imageUrl?: string | null;
+    };
     assignedBy?: {
         name?: string | null;
         email: string;
-    } | null; // [3905]
+    } | null;
     business?: {
         name: string;
-    } | null; // [3906]
+    } | null;
 }
 
-// --- TIPO CORREGIDO ---
 // Tipo Combinado para Mostrar Recompensas/Regalos en la UI
 export type DisplayReward =
     {
-        isGift: false; // [3907]
+        isGift: false;
         id: string;
         name: string;
         description?: string | null;
         pointsCost: number;
-        imageUrl?: string | null; // [3908] // <-- CORREGIDO
+        imageUrl?: string | null;
         grantedRewardId?: undefined;
         assignedByString?: undefined;
         assignedAt?: undefined;
-    } | // [3909]
+    } |
     {
         isGift: true;
         grantedRewardId: string;
-        id: string; // [3910] // ID de la recompensa base
+        id: string; // ID de la recompensa base
         name: string;
-        description?: string | null; // [3911]
+        description?: string | null;
         pointsCost: 0;
-        imageUrl?: string | null; // <-- CORREGIDO
+        imageUrl?: string | null;
         assignedByString: string;
-        assignedAt: string; // [3912]
+        assignedAt: string;
     };
-// --- FIN TIPO CORREGIDO ---
 
 
 // Interface para el resultado del hook useUserProfileData
 export interface UseProfileResult {
-    userData: UserData | null; // [3913]
+    userData: UserData | null;
     loading: boolean;
     error: string | null;
     refetch: () => Promise<void>;
-    setUserData: React.Dispatch<React.SetStateAction<UserData | null>>; // [3914]
+    setUserData: React.Dispatch<React.SetStateAction<UserData | null>>;
 }
 
 // Interfaz para Resultado del Hook useCustomerTierData
 export interface UseCustomerTierDataResult {
     allTiers: TierData[] | null;
-    businessConfig: CustomerBusinessConfig | null; // [3915]
+    businessConfig: CustomerBusinessConfig | null;
     loading: boolean;
     error: string | null;
-    refetch: () => Promise<void>; // [3916]
+    refetch: () => Promise<void>;
 }
+
+// --- Tipos Añadidos para Historial de Actividad ---
+
+// Simula el Enum del backend para los tipos de actividad
+export type ActivityType =
+    | 'POINTS_EARNED_QR'
+    | 'POINTS_REDEEMED_REWARD'
+    | 'GIFT_REDEEMED'
+    | 'POINTS_ADJUSTED_ADMIN';
+
+// Interfaz para un item individual del log de actividad
+export interface ActivityLogItem {
+  id: string;
+  type: ActivityType;
+  pointsChanged: number | null; // Puntos +/- o null
+  description: string | null;   // Descripción del evento
+  createdAt: string;           // Fecha como string ISO
+  // Podrían añadirse IDs relacionados si se necesitaran mostrar detalles:
+  // relatedRewardId?: string | null;
+  // relatedGrantedRewardId?: string | null;
+}
+
+// Interfaz para la respuesta paginada de la API de actividad
+export interface PaginatedActivityResponse {
+  logs: ActivityLogItem[]; // El array de logs de la página actual
+  totalPages: number;      // Número total de páginas
+  currentPage: number;     // Página actual devuelta
+  totalItems: number;      // Número total de items en el historial
+}
+
+// --- Fin Tipos Añadidos ---
+
 
 // End of File: frontend/src/types/customer.ts
