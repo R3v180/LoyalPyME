@@ -213,26 +213,31 @@
     "tabOffers": "Ofertas y Noticias",
     "tabProfile": "Mi Perfil",
     "summary": {
-      "pendingGifts_one": "Tienes {{count}} regalo pendiente:",
-      "pendingGifts_other": "Tienes {{count}} regalos pendientes:",
-      "nextReward": "Próxima recompensa: {{name}} por {{points}} puntos.",
-      "viewAllButton": "Ver Todas las Recompensas y Regalos",
-      "noRewardsInfo": "Acumula más puntos para conseguir recompensas.",
-      "giftsAndRewardsTitle": "Regalos y Recompensas Disponibles:",
-      "rewardsTitle": "Recompensas Disponibles:"
+        "pendingGifts_one": "Tienes {{count}} regalo pendiente:",
+        "pendingGifts_other": "Tienes {{count}} regalos pendientes:",
+        "pendingGiftsDesc": "Tienes regalos esperando ser canjeados.",
+        "nextReward": "Próxima recompensa: {{name}} por {{points}} puntos.",
+        "viewAllButton": "Ver Todas las Recompensas y Regalos", 
+        "noRewardsInfo": "Acumula más puntos para conseguir recompensas.",
+        "giftsAndRewardsTitle": "Regalos y Recompensas Disponibles:",
+        "rewardsTitle": "Recompensas Disponibles:",
+        "unknownAssigner": "Desconocido", 
+        "redeemButton": "Canjear",
+        "viewAllButtonShort": "Ver Todo"
+        
     },
     "activityTab": {
-      "noActivity": "Aún no tienes actividad registrada.",
-      "type_POINTS_EARNED_QR": "Puntos Ganados (QR)",
-      "type_POINTS_REDEEMED_REWARD": "Recompensa Canjeada",
-      "type_GIFT_REDEEMED": "Regalo Canjeado",
-      "type_POINTS_ADJUSTED_ADMIN": "Ajuste Manual de Puntos",
-      "totalItems": "{{count}} registro(s) en total",
-      "desc_EARNED": "Puntos por ticket #{{ticketNumber}}",
-      "desc_REDEEMED": "Canje: {{rewardName}}",
-      "desc_GIFT": "Regalo canjeado: {{rewardName}}",
-      "desc_ADJUSTED": "Ajuste manual de puntos",
-      "desc_ADJUSTED_REASON": "Ajuste manual: {{reason}}"
+        "noActivity": "Aún no tienes actividad registrada.",
+        "type_POINTS_EARNED_QR": "Puntos Ganados (QR)",
+        "type_POINTS_REDEEMED_REWARD": "Recompensa Canjeada",
+        "type_GIFT_REDEEMED": "Regalo Canjeado",
+        "type_POINTS_ADJUSTED_ADMIN": "Ajuste Manual de Puntos",
+        "totalItems": "{{count}} registro(s) en total",
+        "desc_EARNED": "Puntos por ticket #{{ticketNumber}}",
+        "desc_REDEEMED": "Canje: {{rewardName}}",
+        "desc_GIFT": "Regalo canjeado: {{rewardName}}",
+        "desc_ADJUSTED": "Ajuste manual de puntos",
+        "desc_ADJUSTED_REASON": "Ajuste manual: {{reason}}"
     }
   },
   "adminCommon": {

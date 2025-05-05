@@ -213,26 +213,30 @@
     "tabOffers": "Offers & News",
     "tabProfile": "My Profile",
     "summary": {
-      "pendingGifts_one": "You have {{count}} pending gift:",
-      "pendingGifts_other": "You have {{count}} pending gifts:",
-      "nextReward": "Next reward: {{name}} for {{points}} points.",
-      "viewAllButton": "View All Rewards & Gifts",
-      "noRewardsInfo": "Collect more points to get rewards.",
-      "giftsAndRewardsTitle": "Available Gifts & Rewards:",
-      "rewardsTitle": "Available Rewards:"
+        "pendingGifts_one": "You have {{count}} pending gift:",
+        "pendingGifts_other": "You have {{count}} pending gifts:",
+        "pendingGiftsDesc": "You have gifts waiting to be redeemed.",
+        "nextReward": "Next reward: {{name}} for {{points}} points.",
+        "viewAllButton": "View All Rewards & Gifts", 
+        "noRewardsInfo": "Collect more points to get rewards.",
+        "giftsAndRewardsTitle": "Available Gifts & Rewards:",
+        "rewardsTitle": "Available Rewards:",
+        "unknownAssigner": "Unknown", 
+        "redeemButton": "Redeem",
+        "viewAllButtonShort": "View All"
     },
     "activityTab": {
-      "noActivity": "You don't have any recorded activity yet.",
-      "type_POINTS_EARNED_QR": "Points Earned (QR)",
-      "type_POINTS_REDEEMED_REWARD": "Reward Redeemed",
-      "type_GIFT_REDEEMED": "Gift Redeemed",
-      "type_POINTS_ADJUSTED_ADMIN": "Manual Points Adjustment",
-      "totalItems": "{{count}} record(s) total",
-      "desc_EARNED": "Points from ticket #{{ticketNumber}}",
-      "desc_REDEEMED": "Redemption: {{rewardName}}",
-      "desc_GIFT": "Gift redeemed: {{rewardName}}",
-      "desc_ADJUSTED": "Manual points adjustment",
-      "desc_ADJUSTED_REASON": "Manual adjustment: {{reason}}"
+        "noActivity": "You don't have any recorded activity yet.",
+        "type_POINTS_EARNED_QR": "Points Earned (QR)",
+        "type_POINTS_REDEEMED_REWARD": "Reward Redeemed",
+        "type_GIFT_REDEEMED": "Gift Redeemed",
+        "type_POINTS_ADJUSTED_ADMIN": "Manual Points Adjustment",
+        "totalItems": "{{count}} record(s) total",
+        "desc_EARNED": "Points from ticket #{{ticketNumber}}",
+        "desc_REDEEMED": "Redemption: {{rewardName}}",
+        "desc_GIFT": "Gift redeemed: {{rewardName}}",
+        "desc_ADJUSTED": "Manual points adjustment",
+        "desc_ADJUSTED_REASON": "Manual adjustment: {{reason}}"
     }
   },
   "adminCommon": {
