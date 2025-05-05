@@ -1,46 +1,49 @@
 // filename: frontend/src/components/customer/RewardList.tsx
-// Version: 1.3.1 (Fix imports for Stack, remove Box)
+// Version: 1.4.0 (Add loadingRewards and loadingGrantedRewards to props interface)
 
 import React from 'react';
 import {
     SimpleGrid, Card, Button, Alert, Group, Text, Badge, Tooltip, Title,
-    AspectRatio, Image, Stack // <--- Añadido Stack, quitado Box
+    AspectRatio, Image, Stack // Mantener Stack
 } from '@mantine/core';
 import { IconGift, IconAlertCircle, IconInfoCircle, IconCoin } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
-// --- IMPORTANTE: Asegúrate que DisplayReward SÍ incluye imageUrl ---
+// Importar tipo
 import { DisplayReward } from '../../types/customer';
 
-
+// --- Interfaz RewardListProps ACTUALIZADA ---
 interface RewardListProps {
     rewards: DisplayReward[];
     userPoints: number | undefined;
     redeemingRewardId: string | null;
     errorRewards: string | null;
+    loadingRewards: boolean; // <-- AÑADIDA
+    loadingGrantedRewards: boolean; // <-- AÑADIDA
     onRedeemPoints: (rewardId: string) => void;
     onRedeemGift: (grantedRewardId: string, rewardName: string) => void;
 }
+// --- Fin Interfaz Actualizada ---
 
 const RewardList: React.FC<RewardListProps> = ({
     rewards,
     userPoints,
     redeemingRewardId,
     errorRewards,
+    // loadingRewards, // Prop recibida pero no usada internamente (aún)
+    // loadingGrantedRewards, // Prop recibida pero no usada internamente (aún)
     onRedeemPoints,
     onRedeemGift
 }) => {
     const { t, i18n } = useTranslation();
-
     const formatDate = (dateString: string | undefined) => {
-        // ... (sin cambios)
         if (!dateString) return '?';
         try {
             return new Date(dateString).toLocaleDateString(i18n.language);
         } catch { return '?'; }
     };
 
+    // Manejo de error (sin cambios)
     if (errorRewards) {
-        // ... (sin cambios)
          return (
              <Alert icon={<IconAlertCircle size="1rem" />} title={t('common.error')} color="red" mt="lg">
                 {t('customerDashboard.errorLoadingRewards', { error: errorRewards })}
@@ -48,18 +51,20 @@ const RewardList: React.FC<RewardListProps> = ({
         );
     }
 
+    // Manejo de lista vacía (sin cambios)
     if (rewards.length === 0) {
-        // ... (sin cambios)
+        // Podríamos añadir aquí un Loader si loadingRewards o loadingGrantedRewards son true,
+        // pero por ahora mantenemos el comportamiento original.
         return <Text mt="md">{t('customerDashboard.noRewardsAvailable')}</Text>;
     }
 
+    // Renderizado de la lista (sin cambios funcionales, sólo la interfaz de props actualizada)
     return (
         <>
             {/* <Title order={4} mb="md">{t('customerDashboard.rewardsSectionTitle')}</Title> */}
 
             <SimpleGrid cols={{ base: 1, xs: 2, md: 3 }} spacing="lg">
                 {rewards.map((item) => {
-                    // --- Lógica de disabled (sin cambios) ---
                     const isPointsRedeemDisabled = typeof userPoints === 'undefined' ||
                                                      userPoints < item.pointsCost ||
                                                      redeemingRewardId === item.id ||
@@ -70,28 +75,23 @@ const RewardList: React.FC<RewardListProps> = ({
 
                     return (
                         <Card shadow="sm" padding="sm" radius="md" withBorder key={item.isGift ? `G-${item.grantedRewardId}` : `R-${item.id}`}>
-                             {/* --- CORRECCIÓN: Usar Stack --- */}
                             <Stack gap="md">
                                 <AspectRatio ratio={1 / 1}>
                                     <Image
-                                        // --- ¡AQUÍ ESTÁ EL USO DE imageUrl! ---
                                         src={item.imageUrl || '/placeholder-reward.png'}
-                                        // --------------------------------------
                                         alt={item.name}
                                         fit="cover"
                                         radius="sm"
+                                        fallbackSrc="/placeholder-reward.png" // Añadir fallback si no lo tiene
                                     />
                                 </AspectRatio>
 
-                                 {/* --- CORRECCIÓN: Usar Stack --- */}
                                 <Stack gap="xs" style={{ flexGrow: 1 }}>
                                     <Title order={5}>{item.name}</Title>
                                     {item.description && <Text size="sm" c="dimmed" lineClamp={2}>{item.description}</Text>}
                                 </Stack>
 
-                                {/* Información y Botón (sin cambios) */}
                                 {item.isGift ? (
-                                    // ... (código para regalos sin cambios)
                                     <>
                                         <Group gap="xs" mt="sm" justify='space-between'>
                                             <Badge color="lime" variant='light' size="lg" radius="sm">{t('customerDashboard.giftFree')}</Badge>
@@ -116,14 +116,13 @@ const RewardList: React.FC<RewardListProps> = ({
                                         </Button>
                                     </>
                                 ) : (
-                                     // ... (código para recompensas por puntos sin cambios)
                                     <>
-                                         <Group justify="space-between" align="center" mt="sm">
-                                             <Text fw={500} size="sm">{item.pointsCost} {t('customerDashboard.points')}</Text>
-                                             {(userPoints !== undefined && userPoints >= item.pointsCost) && (
-                                                <Badge color="green" variant="light" size="xs">Asequible</Badge>
-                                             )}
-                                         </Group>
+                                        <Group justify="space-between" align="center" mt="sm">
+                                            <Text fw={500} size="sm">{item.pointsCost} {t('customerDashboard.points')}</Text>
+                                            {(userPoints !== undefined && userPoints >= item.pointsCost) && (
+                                                <Badge color="green" variant="light" size="xs">Asequible</Badge> // TODO: i18n 'Affordable'
+                                            )}
+                                        </Group>
                                         <Button
                                             variant="light" color="blue" fullWidth mt="sm" radius="md" size="sm"
                                             onClick={() => onRedeemPoints(item.id)}
@@ -137,7 +136,6 @@ const RewardList: React.FC<RewardListProps> = ({
                                         </Button>
                                     </>
                                 )}
-                             {/* --- CORRECCIÓN: Cerrar Stack --- */}
                             </Stack>
                         </Card>
                     );
