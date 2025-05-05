@@ -1,10 +1,10 @@
 // filename: backend/src/index.ts
-// Version: 1.6.0 (Mount activity router)
+// Version: 1.6.1 (Mount uploads router - COMPLETE FILE)
 
 import express, { Express, Request, Response, NextFunction, RequestHandler } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { UserRole, TierCalculationBasis, TierDowngradePolicy, BenefitType } from '@prisma/client'; // Importar enums
+import { UserRole, TierCalculationBasis, TierDowngradePolicy, BenefitType, Prisma } from '@prisma/client'; // Importar enums y Prisma
 import { PrismaClient } from '@prisma/client';
 import cron from 'node-cron';
 import swaggerJsdoc from 'swagger-jsdoc';
@@ -13,6 +13,7 @@ import swaggerUi from 'swagger-ui-express';
 // Middleware
 import { authenticateToken } from './middleware/auth.middleware';
 import { checkRole } from './middleware/role.middleware';
+// Middleware Multer (se aplica en la ruta específica, no aquí globalmente)
 
 // Routers
 import authRouter from './routes/auth.routes';
@@ -23,7 +24,8 @@ import customerRouter from './routes/customer.routes';
 import tierRouter from './routes/tiers.routes';
 import adminRouter from './routes/admin.routes';
 import businessRouter from './routes/businesses.routes';
-import activityRouter from './routes/activity.routes'; // <-- NUEVA IMPORTACIÓN
+import activityRouter from './routes/activity.routes';
+import uploadsRouter from './routes/uploads.routes'; // <-- Importación añadida
 
 // Cron Job Logic
 import { processTierUpdatesAndDowngrades } from './tiers/tier-logic.service';
@@ -39,20 +41,32 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use((req, res, next) => {
+  // Evitar loggear durante tests
   if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
-      console.log(`[REQ LOG] Received: ${req.method} ${req.originalUrl}`);
+      // Loggear detalles básicos de la petición
+      const method = req.method;
+      const url = req.originalUrl;
+      const ip = req.ip || req.connection.remoteAddress;
+      const timestamp = new Date().toISOString();
+      // Evitar loggear el body si es muy grande o sensible (ej: file uploads)
+      let bodyLog = '';
+      if (req.body && Object.keys(req.body).length > 0 && !req.is('multipart/form-data')) {
+         try { bodyLog = JSON.stringify(req.body); if (bodyLog.length > 500) bodyLog = bodyLog.substring(0, 497) + '...'; } catch { bodyLog = '[Unloggable Body]'; }
+      }
+      console.log(`[REQ LOG - ${timestamp}] ${method} ${url} - From: ${ip} ${bodyLog ? '- Body: '+bodyLog : ''}`);
   }
   next();
 });
 
-// --- Configuración de Swagger ---
+
+// --- Configuración de Swagger COMPLETA ---
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'LoyalPyME API',
-      version: '1.6.1', // <-- ACTUALIZAR VERSIÓN SI ES NECESARIO
-      description: 'API REST para la plataforma de fidelización LoyalPyME. Permite gestionar clientes, puntos, niveles, recompensas, historial y autenticación.', // <-- Añadido historial
+      version: '1.6.1', // Actualizado para reflejar montaje de uploads
+      description: 'API REST para la plataforma de fidelización LoyalPyME. Permite gestionar clientes, puntos, niveles, recompensas, historial, subidas de archivos y autenticación.', // Añadido subidas
        contact: { name: 'Olivier Hottelet', email: 'olivierhottelet1980@gmail.com' },
        license: { name: 'AGPL-3.0', url: 'https://www.gnu.org/licenses/agpl-3.0.html' }
     },
@@ -63,29 +77,10 @@ const swaggerOptions = {
     components: {
         securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', } },
         schemas: {
-            // --- AÑADIR SCHEMAS PARA ACTIVITY LOG ---
-             ActivityLogItem: {
-                 type: 'object',
-                 properties: {
-                     id: { type: 'string', format: 'uuid', readOnly: true },
-                     type: { type: 'string', enum: ['POINTS_EARNED_QR', 'POINTS_REDEEMED_REWARD', 'GIFT_REDEEMED', 'POINTS_ADJUSTED_ADMIN'], readOnly: true },
-                     pointsChanged: { type: 'integer', nullable: true, readOnly: true, description: 'Cambio en puntos (+/-), null si no aplica.' },
-                     description: { type: 'string', nullable: true, readOnly: true, description: 'Descripción del evento.' },
-                     createdAt: { type: 'string', format: 'date-time', readOnly: true, description: 'Fecha y hora del evento.' }
-                 }
-             },
-             PaginatedActivityResponse: {
-                 type: 'object',
-                 properties: {
-                     logs: { type: 'array', items: { '$ref': '#/components/schemas/ActivityLogItem' } },
-                     totalPages: { type: 'integer', example: 5 },
-                     currentPage: { type: 'integer', example: 1 },
-                     totalItems: { type: 'integer', example: 73 }
-                 }
-             },
-            // --- FIN SCHEMAS ACTIVITY LOG ---
-
-             // ... (Schemas existentes: LoginCredentials, RegisterUserDto, etc.) ...
+             // Schemas Activity Log
+             ActivityLogItem: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, type: { type: 'string', enum: ['POINTS_EARNED_QR', 'POINTS_REDEEMED_REWARD', 'GIFT_REDEEMED', 'POINTS_ADJUSTED_ADMIN'], readOnly: true }, pointsChanged: { type: 'integer', nullable: true, readOnly: true, description: 'Cambio en puntos (+/-), null si no aplica.' }, description: { type: 'string', nullable: true, readOnly: true, description: 'Descripción del evento.' }, createdAt: { type: 'string', format: 'date-time', readOnly: true, description: 'Fecha y hora del evento.' } } },
+             PaginatedActivityResponse: { type: 'object', properties: { logs: { type: 'array', items: { '$ref': '#/components/schemas/ActivityLogItem' } }, totalPages: { type: 'integer', example: 5 }, currentPage: { type: 'integer', example: 1 }, totalItems: { type: 'integer', example: 73 } } },
+             // Schemas Auth/User
              LoginCredentials: { type: 'object', required: ['email', 'password'], properties: { email: { type: 'string', format: 'email'}, password: { type: 'string', format: 'password'} }, example: { email: 'user@example.com', password: 'password123' } },
              RegisterUserDto: { type: 'object', required: ['email', 'password', 'phone', 'documentId', 'documentType', 'businessId', 'role'], properties: { email: { type: 'string', format: 'email'}, password: { type: 'string', format: 'password', minLength: 6 }, name: { type: 'string', nullable: true }, phone: { type: 'string', example: '+34612345678' }, documentId: { type: 'string'}, documentType: { type: 'string', enum: ['DNI', 'NIE', 'PASSPORT', 'OTHER']}, businessId: { type: 'string', format: 'uuid'}, role: { type: 'string', enum: ['CUSTOMER_FINAL']} } },
              RegisterBusinessDto: { type: 'object', required: ['businessName', 'adminEmail', 'adminPassword'], properties: { businessName: { type: 'string', minLength: 2 }, adminEmail: { type: 'string', format: 'email'}, adminPassword: { type: 'string', format: 'password', minLength: 6 }, adminName: { type: 'string', nullable: true } } },
@@ -95,22 +90,26 @@ const swaggerOptions = {
              LoginResponse: { type: 'object', properties: { token: { type: 'string'}, user: { '$ref': '#/components/schemas/UserResponse' } } },
              SuccessMessage: { type: 'object', properties: { message: { type: 'string'} }, example: { message: 'Operación completada con éxito.'} },
              ErrorResponse: { type: 'object', properties: { message: { type: 'string'}, error: { type: 'string', nullable: true } }, example: { message: 'Error de validación.', error: 'El campo email es inválido.'} },
-             RewardBase: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, name: { type: 'string'}, description: { type: 'string', nullable: true }, pointsCost: { type: 'integer', format: 'int32', minimum: 0 }, isActive: { type: 'boolean'}, businessId: { type: 'string', format: 'uuid', readOnly: true }, createdAt: { type: 'string', format: 'date-time', readOnly: true }, updatedAt: { type: 'string', format: 'date-time', readOnly: true }, imageUrl: { type: 'string', format: 'url', nullable: true, description: 'URL de la imagen de la recompensa' } } }, // imageUrl añadido aquí
-             CreateRewardDto: { type: 'object', required: ['name', 'pointsCost'], properties: { name: { type: 'string', example: 'Café Gratis' }, description: { type: 'string', nullable: true, example: 'Un café espresso o americano.' }, pointsCost: { type: 'integer', format: 'int32', minimum: 0, example: 100 }, imageUrl: { type: 'string', format: 'url', nullable: true, description: 'URL (opcional) de la imagen subida previamente.' } } }, // imageUrl añadido aquí
-             UpdateRewardDto: { type: 'object', properties: { name: { type: 'string'}, description: { type: 'string', nullable: true }, pointsCost: { type: 'integer', format: 'int32', minimum: 0 }, isActive: { type: 'boolean'}, imageUrl: { type: 'string', format: 'url', nullable: true, description: 'URL (opcional) de la imagen. Enviar null para quitarla.' } } }, // imageUrl añadido aquí
+             // Schemas Rewards (actualizados)
+             RewardBase: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, name_es: { type: 'string', nullable: true}, name_en: { type: 'string', nullable: true}, description_es: { type: 'string', nullable: true }, description_en: { type: 'string', nullable: true }, pointsCost: { type: 'integer', format: 'int32', minimum: 0 }, isActive: { type: 'boolean'}, businessId: { type: 'string', format: 'uuid', readOnly: true }, createdAt: { type: 'string', format: 'date-time', readOnly: true }, updatedAt: { type: 'string', format: 'date-time', readOnly: true }, imageUrl: { type: 'string', format: 'url', nullable: true } } },
+             CreateRewardDto: { type: 'object', required: ['name_es', 'name_en', 'pointsCost'], properties: { name_es: { type: 'string', example: 'Café Gratis' }, name_en: { type: 'string', example: 'Free Coffee' }, description_es: { type: 'string', nullable: true, example: 'Un café espresso o americano.' }, description_en: { type: 'string', nullable: true, example: 'One espresso or americano coffee.' }, pointsCost: { type: 'integer', format: 'int32', minimum: 0, example: 100 }, imageUrl: { type: 'string', format: 'url', nullable: true } } },
+             UpdateRewardDto: { type: 'object', properties: { name_es: { type: 'string'}, name_en: { type: 'string'}, description_es: { type: 'string', nullable: true }, description_en: { type: 'string', nullable: true }, pointsCost: { type: 'integer', format: 'int32', minimum: 0 }, isActive: { type: 'boolean'}, imageUrl: { type: 'string', format: 'url', nullable: true } } },
              RewardListResponse: { type: 'array', items: { '$ref': '#/components/schemas/RewardBase' } },
              DeletedRewardResponse: { type: 'object', properties: { message: { type: 'string'}, deletedReward: { '$ref': '#/components/schemas/RewardBase' } } },
+             // Schemas Points/QR
              GenerateQrDto: { type: 'object', required: ['amount', 'ticketNumber'], properties: { amount: { type: 'number', format: 'float', minimum: 0.01 }, ticketNumber: { type: 'string'} } },
              QrDataResponse: { type: 'object', properties: { qrToken: { type: 'string', format: 'uuid'}, amount: { type: 'number', format: 'float'} } },
              ValidateQrDto: { type: 'object', required: ['qrToken'], properties: { qrToken: { type: 'string', format: 'uuid'} } },
-             PointsEarnedResponse: { type: 'object', properties: { message: { type: 'string'}, pointsEarned: { type: 'integer'}, user: { '$ref': '#/components/schemas/UserResponse' } }, example: { message: '...', pointsEarned: 7, user: { /* ... */ } } }, // 'user' añadido aquí
+             PointsEarnedResponse: { type: 'object', properties: { message: { type: 'string'}, pointsEarned: { type: 'integer'}, user: { '$ref': '#/components/schemas/UserResponse' } }, example: { message: '...', pointsEarned: 7, user: { /* ... */ } } },
              RedeemRewardResult: { type: 'object', properties: { message: { type: 'string'}, newPointsBalance: { type: 'integer'} }, example: { message: '...', newPointsBalance: 930 } },
-             RewardInfoForGift: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, name: { type: 'string', readOnly: true }, description: { type: 'string', nullable: true, readOnly: true }, imageUrl: { type: 'string', format: 'url', nullable: true, readOnly: true } } }, // imageUrl añadido aquí
+             // Schemas Customer Experience
+             RewardInfoForGift: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, name_es: { type: 'string', nullable: true, readOnly: true }, name_en: { type: 'string', nullable: true, readOnly: true }, description_es: { type: 'string', nullable: true, readOnly: true }, description_en: { type: 'string', nullable: true, readOnly: true }, imageUrl: { type: 'string', format: 'url', nullable: true, readOnly: true } } },
              AssignerInfo: { type: 'object', properties: { name: { type: 'string', nullable: true, readOnly: true }, email: { type: 'string', format: 'email', readOnly: true } } },
              BusinessInfoForGift: { type: 'object', properties: { name: { type: 'string', readOnly: true } } },
              GrantedReward: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, status: { type: 'string', enum: ['PENDING', 'REDEEMED', 'EXPIRED'], readOnly: true }, assignedAt: { type: 'string', format: 'date-time', readOnly: true }, redeemedAt: { type: 'string', format: 'date-time', nullable: true, readOnly: true }, reward: { '$ref': '#/components/schemas/RewardInfoForGift' }, assignedBy: { '$ref': '#/components/schemas/AssignerInfo', nullable: true }, business: { '$ref': '#/components/schemas/BusinessInfoForGift', nullable: true } } },
              GrantedRewardListResponse: { type: 'array', items: { '$ref': '#/components/schemas/GrantedReward' } },
              RedeemedGiftResponse: { type: 'object', properties: { message: { type: 'string'}, grantedRewardId: { type: 'string', format: 'uuid'}, rewardId: { type: 'string', format: 'uuid'}, redeemedAt: { type: 'string', format: 'date-time'} } },
+             // Schemas Tiers
              TierBenefitBase: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, type: { type: 'string', enum: Object.values(BenefitType) }, value: { type: 'string'}, description: { type: 'string', nullable: true }, isActive: { type: 'boolean'} } },
              TierWithBenefits: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, name: { type: 'string'}, level: { type: 'integer'}, minValue: { type: 'number'}, description: { type: 'string', nullable: true }, benefitsDescription: { type: 'string', nullable: true }, isActive: { type: 'boolean'}, benefits: { type: 'array', items: { '$ref': '#/components/schemas/TierBenefitBase' } } } },
              TierListResponse: { type: 'array', items: { '$ref': '#/components/schemas/TierWithBenefits' } },
@@ -125,6 +124,7 @@ const swaggerOptions = {
              CreateTierBenefitDto: { type: 'object', required: ['type', 'value'], properties: { type: { type: 'string', enum: Object.values(BenefitType) }, value: { type: 'string'}, description: { type: 'string', nullable: true }, isActive: { type: 'boolean', default: true } } },
              UpdateTierBenefitDto: { type: 'object', properties: { type: { type: 'string', enum: Object.values(BenefitType) }, value: { type: 'string'}, description: { type: 'string', nullable: true }, isActive: { type: 'boolean'} } },
              DeletedTierBenefitResponse: { type: 'object', properties: { message: { type: 'string'}, deletedBenefit: { '$ref': '#/components/schemas/TierBenefitBase' } } },
+             // Schemas Admin Customer Management
              AdminStatsOverviewResponse: { type: 'object', properties: { totalActiveCustomers: { type: 'integer'}, newCustomersLast7Days: { type: 'integer'}, newCustomersPrevious7Days: { type: 'integer'}, pointsIssuedLast7Days: { type: 'integer'}, pointsIssuedPrevious7Days: { type: 'integer'}, rewardsRedeemedLast7Days: { type: 'integer'}, rewardsRedeemedPrevious7Days: { type: 'integer'} } },
              CustomerListItem: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string', nullable: true }, email: { type: 'string', format: 'email' }, points: { type: 'integer' }, createdAt: { type: 'string', format: 'date-time' }, isActive: { type: 'boolean' }, isFavorite: { type: 'boolean', nullable: true }, currentTier: { type: 'object', nullable: true, properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' }, level: { type: 'integer' } } } } },
              AdminCustomerListResponse: { type: 'object', properties: { items: { type: 'array', items: { '$ref': '#/components/schemas/CustomerListItem' } }, totalPages: { type: 'integer' }, currentPage: { type: 'integer' }, totalItems: { type: 'integer' } } },
@@ -138,37 +138,19 @@ const swaggerOptions = {
              BulkCustomerIdListDto: { type: 'object', required: ['customerIds'], properties: { customerIds: { type: 'array', items: { type: 'string', format: 'uuid' }, minItems: 1 } } },
              BulkStatusUpdateDto: { type: 'object', required: ['customerIds', 'isActive'], properties: { customerIds: { type: 'array', items: { type: 'string', format: 'uuid' }, minItems: 1 }, isActive: { type: 'boolean'} } },
              BulkPointsAdjustDto: { type: 'object', required: ['customerIds', 'amount'], properties: { customerIds: { type: 'array', items: { type: 'string', format: 'uuid' }, minItems: 1 }, amount: { type: 'number', not: { const: 0 } }, reason: { type: 'string', nullable: true } } },
-             BulkOperationResponse: { type: 'object', properties: { message: { type: 'string' }, count: { type: 'integer'} } }
+             BulkOperationResponse: { type: 'object', properties: { message: { type: 'string' }, count: { type: 'integer'} } },
+             // Schema para Upload
+             ImageUploadResponse: { type: 'object', properties: { url: { type: 'string', format: 'url', description: 'URL de la imagen subida a Cloudinary.' } } }
          }
     },
-    // --- AÑADIR PATHS PARA ACTIVITY LOG ---
+    // Paths (incluyendo Activity y Uploads)
     paths: {
-         '/api/customer/activity': { // <-- NUEVO PATH
-             get: {
-                 tags: ['Customer Experience'],
-                 summary: 'Obtiene el historial de actividad del cliente (paginado).',
-                 description: 'Devuelve una lista paginada de eventos de actividad (puntos ganados, canjes) para el cliente autenticado, ordenados por fecha descendente.',
-                 security: [{ bearerAuth: [] }],
-                 parameters: [
-                     { name: 'page', in: 'query', required: false, description: 'Número de página a obtener.', schema: { type: 'integer', default: 1, minimum: 1 } },
-                     { name: 'limit', in: 'query', required: false, description: 'Número de items por página.', schema: { type: 'integer', default: 15, minimum: 1, maximum: 100 } }
-                 ],
-                 responses: {
-                     '200': { description: 'Historial de actividad obtenido con éxito.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/PaginatedActivityResponse' } } } },
-                     '400': { description: 'Parámetros de paginación inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } },
-                     '401': { description: 'No autorizado (sin token o token inválido).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } },
-                     '403': { description: 'Prohibido (rol no cliente).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } },
-                     '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }
-                 }
-             }
-         },
-         // ... (Paths existentes: /public/businesses/public-list, /api/auth/*, /api/profile, /api/rewards/*, etc.) ...
-        '/public/businesses/public-list': { get: { tags: ['Public', 'Businesses'], summary: 'Obtiene la lista pública de negocios (ID y Nombre).', description: 'Devuelve un array con el ID y el nombre de todos los negocios registrados, útil para el formulario de registro de clientes. No requiere autenticación.', responses: { '200': { description: 'Lista de negocios obtenida con éxito.', content: { 'application/json': { schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' } } } } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
+         '/public/businesses/public-list': { get: { tags: ['Public', 'Businesses'], summary: 'Obtiene la lista pública de negocios (ID y Nombre).', description: 'Devuelve un array con el ID y el nombre de todos los negocios registrados, útil para el formulario de registro de clientes. No requiere autenticación.', responses: { '200': { description: 'Lista de negocios obtenida con éxito.', content: { 'application/json': { schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' } } } } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
+         '/api/auth/login': { post: { tags: ['Authentication'], summary: 'Autentica un usuario y devuelve un token JWT.', description: 'Verifica las credenciales (email y contraseña) y, si son correctas y el usuario está activo, devuelve los datos del usuario (sin contraseña) y un token JWT.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/LoginCredentials' } } } }, responses: { '200': { description: 'Autenticación exitosa.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/LoginResponse' } } } }, '400': { description: 'Error de validación (falta email o contraseña).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado (credenciales inválidas o usuario inactivo).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
+         '/api/auth/register': { post: { tags: ['Registration'], summary: 'Registra un nuevo usuario cliente.', description: 'Crea una cuenta para un cliente final asociándolo a un negocio existente.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/RegisterUserDto' } } } }, responses: { '201': { description: 'Usuario cliente creado con éxito.', content: { 'application/json': { schema: { type: 'object', properties: { user: { '$ref': '#/components/schemas/UserResponse' } } } } } }, '400': { description: 'Error de validación (campos faltantes, formato inválido, rol incorrecto).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (email, teléfono o documento ya existen, o el negocio no existe).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
+        '/api/auth/register-business': { post: { tags: ['Registration'], summary: 'Registra un nuevo negocio y su administrador inicial.', description: 'Crea una nueva entidad de negocio y el primer usuario administrador asociado a ella.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/RegisterBusinessDto' } } } }, responses: { '201': { description: 'Negocio y administrador creados con éxito. Devuelve el usuario admin y un token JWT.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/LoginResponse' } } } }, '400': { description: 'Error de validación (campos faltantes, contraseña corta, nombre de negocio corto).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (email de admin ya existe, o nombre/slug de negocio ya existe).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/auth/forgot-password': { post: { tags: ['Authentication'], summary: 'Inicia el proceso de reseteo de contraseña.', description: 'Envía un email (o muestra en consola) con un token para que el usuario pueda restablecer su contraseña si el email existe en el sistema. Responde siempre con éxito para no revelar información sobre la existencia de emails.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/ForgotPasswordDto' } } } }, responses: { '200': { description: 'Solicitud procesada.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/SuccessMessage' }, example: { message: 'Si existe una cuenta con ese email, se ha enviado un enlace para restablecer la contraseña.'} } } }, '400': { description: 'Error de validación (falta el email).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor durante el proceso.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/auth/reset-password/{token}': { post: { tags: ['Authentication'], summary: 'Restablece la contraseña usando un token válido.', description: 'Permite al usuario establecer una nueva contraseña si proporciona un token de reseteo válido y no expirado.', parameters: [{ name: 'token', in: 'path', required: true, description: 'El token de reseteo recibido por email.', schema: { type: 'string' } }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/ResetPasswordDto' } } } }, responses: { '200': { description: 'Contraseña restablecida con éxito.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/SuccessMessage' }, example: { message: 'Contraseña restablecida con éxito.'} } } }, '400': { description: 'Error de validación (token/contraseña inválidos o faltantes).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor durante el proceso.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
-        '/api/auth/register': { post: { tags: ['Registration'], summary: 'Registra un nuevo usuario cliente.', description: 'Crea una cuenta para un cliente final asociándolo a un negocio existente.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/RegisterUserDto' } } } }, responses: { '201': { description: 'Usuario cliente creado con éxito.', content: { 'application/json': { schema: { type: 'object', properties: { user: { '$ref': '#/components/schemas/UserResponse' } } } } } }, '400': { description: 'Error de validación (campos faltantes, formato inválido, rol incorrecto).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (email, teléfono o documento ya existen, o el negocio no existe).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
-        '/api/auth/register-business': { post: { tags: ['Registration'], summary: 'Registra un nuevo negocio y su administrador inicial.', description: 'Crea una nueva entidad de negocio y el primer usuario administrador asociado a ella.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/RegisterBusinessDto' } } } }, responses: { '201': { description: 'Negocio y administrador creados con éxito. Devuelve el usuario admin y un token JWT.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/LoginResponse' } } } }, '400': { description: 'Error de validación (campos faltantes, contraseña corta, nombre de negocio corto).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (email de admin ya existe, o nombre/slug de negocio ya existe).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
-        '/api/auth/login': { post: { tags: ['Authentication'], summary: 'Autentica un usuario y devuelve un token JWT.', description: 'Verifica las credenciales (email y contraseña) y, si son correctas y el usuario está activo, devuelve los datos del usuario (sin contraseña) y un token JWT.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/LoginCredentials' } } } }, responses: { '200': { description: 'Autenticación exitosa.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/LoginResponse' } } } }, '400': { description: 'Error de validación (falta email o contraseña).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado (credenciales inválidas o usuario inactivo).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/profile': { get: { tags: ['User Profile'], summary: 'Obtiene el perfil del usuario autenticado.', description: 'Devuelve la información detallada del usuario actualmente autenticado a través del token JWT.', security: [ { bearerAuth: [] } ], responses: { '200': { description: 'Perfil del usuario obtenido con éxito.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/UserResponse' } } } }, '401': { description: 'No autorizado (token no proporcionado o inválido).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido (token válido pero usuario no encontrado o inactivo).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/rewards': { post: { tags: ['Rewards'], summary: 'Crea una nueva recompensa para el negocio.', description: 'Permite al administrador crear una nueva recompensa canjeable por puntos.', security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/CreateRewardDto' } } } }, responses: { '201': { description: 'Recompensa creada con éxito.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/RewardBase' } } } }, '400': { description: 'Datos de entrada inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado (sin token).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido (rol no admin).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (ej: nombre de recompensa duplicado).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } }, get: { tags: ['Rewards'], summary: 'Obtiene la lista de recompensas del negocio.', description: 'Devuelve todas las recompensas (activas e inactivas) definidas para el negocio del administrador autenticado.', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Lista de recompensas obtenida con éxito.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/RewardListResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/rewards/{rewardId}': { parameters: [ { name: 'rewardId', in: 'path', required: true, description: 'ID de la recompensa a gestionar.', schema: { type: 'string', format: 'uuid' } } ], get: { tags: ['Rewards'], summary: 'Obtiene los detalles de una recompensa específica.', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Detalles de la recompensa.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/RewardBase' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '404': { description: 'Recompensa no encontrada.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } }, put: { tags: ['Rewards'], summary: 'Actualiza una recompensa existente (reemplazo completo).', security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/CreateRewardDto' } } } }, responses: { '200': { description: 'Recompensa actualizada.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/RewardBase' } } } }, '400': { description: 'Datos inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '404': { description: 'Recompensa no encontrada.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (ej: nombre duplicado).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } }, patch: { tags: ['Rewards'], summary: 'Actualiza parcialmente una recompensa existente.', security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/UpdateRewardDto' } } } }, responses: { '200': { description: 'Recompensa actualizada.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/RewardBase' } } } }, '400': { description: 'Datos inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '404': { description: 'Recompensa no encontrada.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (ej: nombre duplicado si se cambia).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } }, delete: { tags: ['Rewards'], summary: 'Elimina una recompensa existente.', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Recompensa eliminada con éxito.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/DeletedRewardResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '404': { description: 'Recompensa no encontrada.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (recompensa en uso, ej: asignada como regalo).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
@@ -178,6 +160,7 @@ const swaggerOptions = {
         '/api/customer/rewards': { get: { tags: ['Customer Experience'], summary: 'Obtiene las recompensas activas canjeables por puntos.', description: 'Devuelve la lista de recompensas activas del negocio al que pertenece el cliente, que este puede canjear usando sus puntos.', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Lista de recompensas activas.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/RewardListResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido (rol no cliente).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/customer/granted-rewards': { get: { tags: ['Customer Experience'], summary: 'Obtiene los regalos pendientes del cliente.', description: 'Devuelve una lista de las recompensas que han sido otorgadas al cliente (regalos) y que aún están pendientes de ser canjeadas.', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Lista de regalos pendientes.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/GrantedRewardListResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido (rol no cliente).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/customer/granted-rewards/{grantedRewardId}/redeem': { post: { tags: ['Customer Experience'], summary: 'Canjea un regalo específico.', description: 'Permite al cliente marcar un regalo otorgado (GrantedReward) como canjeado. No consume puntos.', security: [{ bearerAuth: [] }], parameters: [ { name: 'grantedRewardId', in: 'path', required: true, description: 'ID del regalo otorgado a canjear.', schema: { type: 'string', format: 'uuid' } } ], responses: { '200': { description: 'Regalo canjeado con éxito.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/RedeemedGiftResponse' } } } }, '400': { description: 'Error al canjear (ej: ya canjeado).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido (rol no cliente o regalo no pertenece al usuario).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '404': { description: 'Regalo no encontrado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
+         '/api/customer/activity': { get: { tags: ['Customer Experience'], summary: 'Obtiene el historial de actividad del cliente (paginado).', description: 'Devuelve una lista paginada de eventos de actividad (puntos ganados, canjes) para el cliente autenticado, ordenados por fecha descendente.', security: [{ bearerAuth: [] }], parameters: [ { name: 'page', in: 'query', required: false, description: 'Número de página a obtener.', schema: { type: 'integer', default: 1, minimum: 1 } }, { name: 'limit', in: 'query', required: false, description: 'Número de items por página.', schema: { type: 'integer', default: 15, minimum: 1, maximum: 100 } } ], responses: { '200': { description: 'Historial de actividad obtenido con éxito.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/PaginatedActivityResponse' } } } }, '400': { description: 'Parámetros de paginación inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado (sin token o token inválido).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido (rol no cliente).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/customer/tiers': { get: { tags: ['Customer Experience'], summary: 'Obtiene los niveles de fidelización disponibles.', description: 'Devuelve la lista de todos los niveles (tiers) definidos para el negocio del cliente, incluyendo sus beneficios activos, para que el cliente pueda ver la estructura del programa.', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Lista de niveles y sus beneficios.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/TierListResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido (rol no cliente).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/tiers/config': { get: { tags: ['Tiers (Admin)'], summary: 'Obtiene la configuración del sistema de niveles.', description: 'Devuelve la configuración global actual del sistema de niveles para el negocio del administrador.', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Configuración obtenida.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/TierConfigResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '404': { description: 'Negocio no encontrado (raro si el token es válido).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } }, put: { tags: ['Tiers (Admin)'], summary: 'Actualiza la configuración del sistema de niveles.', description: 'Permite al administrador modificar la configuración global del sistema de niveles.', security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/TierConfigUpdateDto' } } } }, responses: { '200': { description: 'Configuración actualizada.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/TierConfigResponse' } } } }, '400': { description: 'Datos inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '404': { description: 'Negocio no encontrado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/tiers': { get: { tags: ['Tiers (Admin)'], summary: 'Obtiene la lista de niveles (tiers) del negocio.', description: 'Devuelve todos los niveles definidos para el negocio, ordenados por nivel ascendente. Permite incluir los beneficios asociados con un parámetro query.', security: [{ bearerAuth: [] }], parameters: [ { name: 'includeBenefits', in: 'query', required: false, description: 'Si es true, incluye los beneficios asociados a cada nivel.', schema: { type: 'boolean', default: false } } ], responses: { '200': { description: 'Lista de niveles.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/AdminTierListResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
@@ -196,17 +179,38 @@ const swaggerOptions = {
         '/api/admin/customers/{customerId}/toggle-active': { patch: { tags: ['Admin Customer Management'], summary: 'Activa/desactiva un cliente.', security: [{ bearerAuth: [] }], parameters: [ { name: 'customerId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } } ], responses: { '200': { description: 'Estado activo cambiado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/CustomerActionResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '404': { description: 'Cliente no encontrado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/admin/customers/bulk-status': { patch: { tags: ['Admin Customer Management'], summary: 'Activa/desactiva múltiples clientes.', security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkStatusUpdateDto' } } } }, responses: { '200': { description: 'Clientes actualizados.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkOperationResponse' } } } }, '400': { description: 'Datos inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
         '/api/admin/customers/bulk-delete': { delete: { tags: ['Admin Customer Management'], summary: 'Elimina múltiples clientes.', security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkCustomerIdListDto' } } } }, responses: { '200': { description: 'Clientes eliminados.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkOperationResponse' } } } }, '400': { description: 'Datos inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (ej: cliente tiene datos asociados).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
-        '/api/admin/customers/bulk-adjust-points': { post: { tags: ['Admin Customer Management'], summary: 'Ajusta puntos para múltiples clientes.', security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkPointsAdjustDto' } } } }, responses: { '200': { description: 'Puntos ajustados.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkOperationResponse' } } } }, '400': { description: 'Datos inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } }
+        '/api/admin/customers/bulk-adjust-points': { post: { tags: ['Admin Customer Management'], summary: 'Ajusta puntos para múltiples clientes.', security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkPointsAdjustDto' } } } }, responses: { '200': { description: 'Puntos ajustados.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/BulkOperationResponse' } } } }, '400': { description: 'Datos inválidos.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '403': { description: 'Prohibido.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
+         // Path para subida de imagen
+         '/api/uploads/image': { // <-- NUEVO PATH
+            post: {
+                 tags: ['Uploads'],
+                 summary: 'Sube una imagen (para recompensas, logos, etc.).',
+                 description: 'Sube un archivo de imagen, lo procesa (ej: Cloudinary) y devuelve la URL pública. Requiere autenticación de admin.',
+                 security: [{ bearerAuth: [] }],
+                 requestBody: {
+                     required: true,
+                     content: { 'multipart/form-data': { schema: { type: 'object', properties: { image: { type: 'string', format: 'binary', description: 'El archivo de imagen a subir.' } } } } }
+                 },
+                 responses: {
+                    '201': { description: 'Imagen subida con éxito.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ImageUploadResponse' } } } },
+                    '400': { description: 'Petición inválida (ej: no hay archivo, tipo incorrecto, demasiado grande).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } },
+                    '401': { description: 'No autorizado.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } },
+                    '403': { description: 'Prohibido (rol no admin).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } },
+                    '500': { description: 'Error interno del servidor durante la subida.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }
+                 }
+             }
+         }
     },
     security: [{ bearerAuth: [] }],
   },
-  apis: [], // Ya no necesitamos escanear ningún archivo
+  apis: [], // No necesitamos escanear archivos
 };
+// --- Fin Configuración Swagger ---
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 // Servir la UI de Swagger
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec) as any);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec) as RequestHandler);
 
 
 // --- Montaje de Rutas ---
@@ -220,32 +224,101 @@ app.use('/api/profile', authenticateToken, protectedRouter);
 app.use('/api/rewards', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), rewardsRouter);
 app.use('/api/points', authenticateToken, pointsRouter); // checkRole se aplica dentro si es necesario
 app.use('/api/customer', authenticateToken, checkRole([UserRole.CUSTOMER_FINAL]), customerRouter); // Protegido para clientes
-app.use('/api/customer/activity', authenticateToken, checkRole([UserRole.CUSTOMER_FINAL]), activityRouter); // <-- NUEVA RUTA MONTADA
+app.use('/api/customer/activity', authenticateToken, checkRole([UserRole.CUSTOMER_FINAL]), activityRouter);
 app.use('/api/tiers', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), tierRouter); // Protegido para admin
 app.use('/api/admin', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), adminRouter); // Protegido para admin
+app.use('/api/uploads', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), uploadsRouter); // <-- Montaje añadido
 
 // --- Fin Montaje de Rutas ---
 
-// Ruta raíz básica...
-app.get('/', (req: Request, res: Response) => { res.send('Welcome to LoyalPyME API! Docs available at /api-docs'); });
-
-// Manejador de errores global...
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('[GLOBAL ERROR HANDLER]', err.stack);
-  const errorMessage = process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message;
-  res.status(500).json({ message: 'Internal Server Error', error: errorMessage });
+// Ruta raíz básica
+app.get('/', (req: Request, res: Response) => {
+  res.send('Welcome to LoyalPyME API! Docs available at /api-docs');
 });
 
-// Cron Job...
+// --- Manejador de errores global COMPLETO ---
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    console.error('[GLOBAL ERROR HANDLER]', err); // Loggear el error completo
+
+    // Manejo específico para errores de Prisma conocidos
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        // Códigos comunes: P2002 (Unique constraint), P2025 (Record not found)
+        if (err.code === 'P2002') {
+            return res.status(409).json({ // 409 Conflict
+                message: 'Conflicto de unicidad.',
+                error: `Ya existe un registro con uno de los valores únicos proporcionados (${(err.meta?.target as string[])?.join(', ')})`,
+                code: err.code
+            });
+        }
+        if (err.code === 'P2025') {
+            return res.status(404).json({ // 404 Not Found
+                message: 'Registro no encontrado.',
+                error: err.meta?.cause || 'El registro necesario para la operación no existe.',
+                code: err.code
+            });
+        }
+        // Otros errores conocidos de Prisma
+        return res.status(400).json({ // 400 Bad Request (genérico para otros errores DB)
+             message: 'Error de base de datos.',
+             error: err.message,
+             code: err.code
+        });
+    }
+
+    // Manejo de errores de validación de Prisma (si usaras validaciones más complejas)
+    if (err instanceof Prisma.PrismaClientValidationError) {
+         console.error('[DB Validation Error]', err.message);
+         return res.status(400).json({
+            message: 'Error de validación de datos.',
+            error: 'Los datos proporcionados no cumplen con el formato esperado por la base de datos.'
+         });
+    }
+
+    // Error genérico para otros tipos de errores
+    const errorMessage = process.env.NODE_ENV === 'production' && !(err instanceof Error && 'status' in err)
+        ? 'Ocurrió un error interno en el servidor.' // Mensaje genérico en producción
+        : err.message || 'Error desconocido.'; // Mensaje detallado en desarrollo o si es un error HTTP con mensaje
+
+    // Determinar status code (si el error tiene un status, usarlo)
+    const statusCode = (err instanceof Error && 'status' in err && typeof err.status === 'number') ? err.status : 500;
+
+    res.status(statusCode).json({
+        message: statusCode === 500 ? 'Error Interno del Servidor' : 'Error en la Petición',
+        error: errorMessage
+    });
+});
+// --- Fin Manejador de errores ---
+
+// --- Cron Job COMPLETO ---
 if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
-    cron.schedule('0 3 * * *', () => { processTierUpdatesAndDowngrades().catch(err => console.error(`[CRON ${new Date().toISOString()}] Job failed:`, err)); });
-    console.log('Scheduled Tier update/downgrade job registered to run daily at 3:00 AM.');
+    const cronSchedule = process.env.TIER_UPDATE_CRON_SCHEDULE || '0 3 * * *'; // Default 3 AM daily
+    console.log(`Scheduling Tier update/downgrade job with schedule: [${cronSchedule}]`);
+    cron.schedule(cronSchedule, () => {
+        const startTime = Date.now();
+        console.log(`[CRON ${new Date().toISOString()}] Starting Tier update/downgrade job...`);
+        processTierUpdatesAndDowngrades()
+            .then(() => {
+                 const duration = (Date.now() - startTime) / 1000;
+                 console.log(`[CRON ${new Date().toISOString()}] Tier update/downgrade job finished successfully in ${duration.toFixed(2)}s.`);
+            })
+            .catch(err => console.error(`[CRON ${new Date().toISOString()}] Tier update/downgrade job failed:`, err));
+    });
+    console.log(`✅ Tier update/downgrade job registered.`);
+} else {
+     console.log("ℹ️ Cron job scheduling skipped in test/Vitest environment.");
 }
+// --- Fin Cron Job ---
 
-// Iniciar servidor...
-if (!process.env.VITEST) { app.listen(port, () => { console.log(`⚡️[server]: Server is running at http://localhost:${port}`); }); }
+// --- Iniciar servidor COMPLETO ---
+if (!process.env.VITEST) { // No iniciar el servidor si estamos en entorno Vitest
+     app.listen(port, () => {
+         console.log(`\n🚀 [server]: Server is running at http://localhost:${port}`);
+         console.log(`📚 [docs]: API Docs available at http://localhost:${port}/api-docs`);
+     });
+}
+// --- Fin Iniciar servidor ---
 
-// Exportar app...
+// Exportar app para tests
 export default app;
 
 // End of file: backend/src/index.ts
