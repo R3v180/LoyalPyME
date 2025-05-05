@@ -1,22 +1,22 @@
 // filename: frontend/src/components/customer/QrValidationSection.tsx
-// Version: 2.2.0 (Refactored to use useQrScanner hook, cleaned)
+// Version: 2.3.0 (Disable Scan QR button on non-mobile devices)
 
-import React, { useState, useCallback } from 'react'; // Quitamos useEffect, useRef
+import React, { useState, useCallback } from 'react';
 import {
-    Paper, Title, Group, TextInput, Button, Modal, Stack, Alert, Text, Box
+    Paper, Title, Group, TextInput, Button, Modal, Stack, Alert, Text, Box, Tooltip // <-- Añadido Tooltip
 } from '@mantine/core';
 import { IconAlertCircle, IconScan, IconTicket } from '@tabler/icons-react';
-// Ya no necesitamos importar nada de html5-qrcode aquí
-// Importamos nuestro nuevo hook
-import { useQrScanner } from '../../hooks/useQrScanner'; // Ajusta la ruta si es necesario
+import { useQrScanner } from '../../hooks/useQrScanner';
+import { useMediaQuery } from '@mantine/hooks'; // <-- Importar useMediaQuery
+import { useTranslation } from 'react-i18next'; // <-- Importar i18n
 
 // Props (sin cambios)
 interface QrValidationSectionProps {
-    onValidate: (token: string) => Promise<void>; // Callback cuando se valida (manual o scan)
-    isValidating: boolean; // Estado de carga global
-    scannerOpened: boolean; // Si el modal del scanner está abierto
-    onOpenScanner: () => void; // Función para abrir el modal
-    onCloseScanner: () => void; // Función para cerrar el modal
+    onValidate: (token: string) => Promise<void>;
+    isValidating: boolean;
+    scannerOpened: boolean;
+    onOpenScanner: () => void;
+    onCloseScanner: () => void;
 }
 
 const QrValidationSection: React.FC<QrValidationSectionProps> = ({
@@ -26,31 +26,27 @@ const QrValidationSection: React.FC<QrValidationSectionProps> = ({
     onOpenScanner,
     onCloseScanner
 }) => {
-    // Estado solo para el input manual
+    const { t } = useTranslation(); // <-- Hook i18n
     const [qrTokenInput, setQrTokenInput] = useState('');
-
-    // ID del div para el scanner
     const qrcodeRegionId = "html5qr-code-reader-region";
+    // --- NUEVO: Detectar si es móvil (ajusta el breakpoint si es necesario) ---
+    const isMobile = useMediaQuery('(max-width: em(768px))');
+    // --- FIN NUEVO ---
 
-    // --- Hook useQrScanner ---
-    // Definimos el callback para cuando el scanner lee un código
+    // Hook useQrScanner (sin cambios en su llamada, pero el botón ahora puede no llamarlo)
     const handleScanSuccess = useCallback((decodedText: string) => {
-        if (!isValidating) { // Doble check por si acaso
-             console.log(`[QrValidationSection] Scan successful: ${decodedText}`);
-            onValidate(decodedText); // Llama al validador principal
-            onCloseScanner(); // Cierra el modal después de escanear
+        if (!isValidating) {
+            onValidate(decodedText);
+            onCloseScanner();
         }
     }, [isValidating, onValidate, onCloseScanner]);
 
-    // Llamamos al hook, pasándole las opciones
     const { scannerError, clearScannerError } = useQrScanner({
         qrcodeRegionId: qrcodeRegionId,
-        enabled: scannerOpened, // El scanner se activa/desactiva según el estado del modal
+        enabled: scannerOpened, // Solo se activa si el modal se abre
         onScanSuccess: handleScanSuccess,
-        // onScanError: (msg) => console.warn("Scanner error callback:", msg), // Opcional: manejar errores del scanner
-        config: { fps: 10, qrbox: { width: 250, height: 250 } } // Config específica
+        config: { fps: 10, qrbox: { width: 250, height: 250 } }
     });
-    // --- Fin Hook ---
 
     // Handler envío manual (sin cambios)
     const handleManualSubmit = () => {
@@ -59,77 +55,93 @@ const QrValidationSection: React.FC<QrValidationSectionProps> = ({
         }
     };
 
-    // Limpiar error del scanner al cerrar el modal manualmente
+    // Limpiar error del scanner al cerrar el modal manualmente (sin cambios)
     const handleCloseModal = () => {
         clearScannerError();
         onCloseScanner();
     };
 
-    // El useEffect complejo ha sido eliminado y reemplazado por el hook useQrScanner
+    // --- NUEVO: Texto para el Tooltip del botón deshabilitado ---
+    const scanButtonTooltip = !isMobile ? t('customerDashboard.scanButtonDisabledTooltip', 'Escanear QR solo disponible en móvil') : '';
+    // --- FIN NUEVO ---
 
     // JSX
     return (
         <>
-            <Paper shadow="sm" p="lg" mb="xl" withBorder>
-                <Title order={4} mb="md">Validar Código QR</Title>
+            <Paper shadow="sm" p="lg" mb="xl" withBorder radius="lg">
+                {/* Título traducido */}
+                <Title order={4} mb="md">{t('customerDashboard.validateQrSectionTitle', 'Validar Código QR')}</Title>
                 <Group align="flex-end">
-                    <TextInput
-                        label="Introduce el código del ticket/QR" // Corregido: Introduce, código
-                        placeholder="Pega el código aquí..."
+                     <TextInput
+                        // Labels/Placeholders traducidos
+                        label={t('customerDashboard.qrInputLabel', 'Introduce el código del ticket/QR')}
+                        placeholder={t('customerDashboard.qrInputPlaceholder', 'Pega el código aquí...')}
                         value={qrTokenInput}
                         onChange={(event) => setQrTokenInput(event.currentTarget.value)}
                         style={{ flexGrow: 1 }}
-                        disabled={isValidating || scannerOpened} // Deshabilitar si valida o si el scanner está abierto
+                        disabled={isValidating || scannerOpened}
                     />
-                    <Button
+                     <Button
                         onClick={handleManualSubmit}
                         leftSection={<IconTicket size={18} />}
-                        loading={isValidating && !scannerOpened} // Loading solo si valida MANualmente
+                        loading={isValidating && !scannerOpened}
                         disabled={!qrTokenInput.trim() || isValidating || scannerOpened}
                         variant='outline'>
-                        Validar Código {/* Corregido: Código */}
+                        {/* Texto botón traducido */}
+                        {t('customerDashboard.validateButton', 'Validar Código')}
                     </Button>
-                    <Button
-                        onClick={onOpenScanner} // Abre el modal
-                        leftSection={<IconScan size={18} />}
-                        disabled={isValidating} // Deshabilitar solo si está validando
-                        variant='gradient'
-                        gradient={{ from: 'blue', to: 'cyan', deg: 90 }}
-                    >
-                        Escanear QR
-                    </Button>
+
+                    {/* --- NUEVO: Tooltip alrededor del botón Scan --- */}
+                    <Tooltip label={scanButtonTooltip} disabled={isMobile} withArrow position="top">
+                        {/* Usamos un Box o Group como wrapper porque a veces Tooltip no funciona bien directamente sobre Button disabled */}
+                        <Box>
+                            <Button
+                                onClick={onOpenScanner}
+                                leftSection={<IconScan size={18} />}
+                                // --- NUEVO: Deshabilitar si no es móvil ---
+                                disabled={isValidating || !isMobile}
+                                // --- FIN NUEVO ---
+                                variant='gradient'
+                                gradient={{ from: 'blue', to: 'cyan', deg: 90 }}
+                            >
+                                {/* Texto botón traducido */}
+                                {t('customerDashboard.scanButton', 'Escanear QR')}
+                            </Button>
+                        </Box>
+                    </Tooltip>
+                    {/* --- FIN Tooltip --- */}
+
                 </Group>
             </Paper>
 
-            {/* El Modal ahora es más simple */}
+            {/* Modal (sin cambios funcionales, pero añadimos traducción) */}
             <Modal
                 opened={scannerOpened}
-                onClose={handleCloseModal} // Usar handler que limpia error
-                title="Escanear Código QR" // Corregido: Código
-                size="auto" // Ajustar tamaño automáticamente
+                onClose={handleCloseModal}
+                title={t('customerDashboard.scanModalTitle', 'Escanear Código QR')}
+                size="auto"
                 centered
             >
                 <Stack>
-                    <Text size="sm" ta="center" c="dimmed">Apunta la cámara al código QR</Text> {/* Corregido: cámara, código */}
-                    {/* Div donde el hook renderizará la vista de la cámara */}
+                   <Text size="sm" ta="center" c="dimmed">{t('customerDashboard.scanInstructions', 'Apunta la cámara al código QR')}</Text>
                     <Box id={qrcodeRegionId} w="100%"></Box>
-                    {/* Mostrar error del hook si existe */}
                     {scannerError && (
                         <Alert
                             icon={<IconAlertCircle size="1rem" />}
-                            title="Error de Escáner" // Corregido: Escáner
+                            // Título traducido
+                            title={t('customerDashboard.errorScanningQr', 'Error de Escáner')}
                             color="red"
                             withCloseButton
-                            onClose={clearScannerError} // Limpiar error al cerrar alerta
+                            onClose={clearScannerError}
                             mt="sm"
                         >
                             {scannerError}
                         </Alert>
-                    )}
-                    {/* Indicador de validación (si se está validando DESPUÉS de escanear) */}
-                    {isValidating && <Group justify='center'><Text>Validando...</Text></Group>}
+                     )}
+                    {isValidating && <Group justify='center'><Text>{t('customerDashboard.validating', 'Validando...')}</Text></Group>}
                     <Button variant="outline" onClick={handleCloseModal} disabled={isValidating}>
-                        Cancelar Escaneo {/* Corregido: Escaneo */}
+                        {/* Texto botón traducido */}
+                       {t('customerDashboard.scanCancelButton', 'Cancelar Escaneo')}
                     </Button>
                 </Stack>
             </Modal>
