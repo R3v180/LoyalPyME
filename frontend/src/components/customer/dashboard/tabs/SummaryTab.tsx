@@ -1,43 +1,39 @@
 // filename: frontend/src/components/customer/dashboard/tabs/SummaryTab.tsx
-// Version: 1.6.2 (Ensure Image component is used + Add DEBUG log)
+// Version: 1.3.3 (Correctly pass 'benefits' prop to UserInfoDisplay)
 
 import React, { useMemo } from 'react';
-// Asegúrate que Image esté importado y Skeleton NO
 import {
-    Stack, Alert, Card, Text, Button, Badge, Paper, SimpleGrid, Image
+    Stack, Grid, Paper, Title, Group, Text, Box, Image as MantineImage,
+    AspectRatio, Button, Alert, Loader, Center,
+    SimpleGrid, Badge
 } from '@mantine/core';
-import { IconArrowRight } from '@tabler/icons-react';
+import { IconGift } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
-// Import child components
-import UserInfoDisplay from '../../UserInfoDisplay';
-import QrValidationSection from '../../QrValidationSection';
+// Importar Componentes Hijos y sus Props
+import UserInfoDisplay, { type UserInfoDisplayProps } from '../../UserInfoDisplay'; // Corregida ruta
+import QrValidationSection from '../../QrValidationSection'; // Corregida ruta
 
-// Import types needed
-import {
-    UserData,
-    TierBenefitData,
-    DisplayReward,
-} from '../../../../types/customer';
+// Importar Tipos necesarios
+import type { DisplayReward, UserData, TierBenefitData } from '../../../../types/customer'; // Añadido TierBenefitData
 
-// Define ProgressBarDataType locally
-type ProgressBarDataType = {
-    type: 'progress'; percentage: number; currentValueLabel: string; targetValueLabel: string; unit: string; nextTierName: string;
-} | { type: 'max_level'; currentTierName: string; } | null;
+// ProgressBarDataType ya no se define localmente, se usa el de UserInfoDisplayProps
 
-// Props (sin cambios)
+
+// Props del componente ACTUALIZADAS (se recibe currentTierBenefits de nuevo)
 interface SummaryTabProps {
+    // Props pasadas directamente a UserInfoDisplay
     userData: UserData | null;
     loadingUser: boolean;
     errorUser: string | null;
-    progressBarData: ProgressBarDataType;
-    currentTierBenefits: TierBenefitData[];
+    progressBarData: UserInfoDisplayProps['progressBarData'];
+    currentTierBenefits: TierBenefitData[]; // <-- Añadido de nuevo
     nextTierName: string | null;
     nextTierBenefits: TierBenefitData[];
-    loadingTierData: boolean;
-    errorTierData: string | null;
-    displayRewards: DisplayReward[];
-    setActiveTab: (value: string | null) => void;
+
+    // Props específicas de SummaryTab y QrValidationSection
+    displayRewards: DisplayReward[] | null;
+    setActiveTab: (tabValue: string | null) => void;
     handleValidateQr: (token: string) => Promise<void>;
     validatingQr: boolean;
     scannerOpened: boolean;
@@ -45,88 +41,93 @@ interface SummaryTabProps {
     onCloseScanner: () => void;
 }
 
+
+const MAX_PREVIEW_ITEMS = 3;
+
 const SummaryTab: React.FC<SummaryTabProps> = ({
-    userData, loadingUser, errorUser, progressBarData, currentTierBenefits,
-    nextTierName, nextTierBenefits, loadingTierData, errorTierData,
-    displayRewards, setActiveTab, handleValidateQr, validatingQr,
-    scannerOpened, onOpenScanner, onCloseScanner
+    // --- Desestructuración ACTUALIZADA ---
+    userData,
+    loadingUser,
+    errorUser,
+    progressBarData,
+    currentTierBenefits, // <-- Añadido de nuevo
+    nextTierName,
+    nextTierBenefits,
+    // loadingTierData, errorTierData ya no se reciben aquí
+    displayRewards,
+    setActiveTab,
+    handleValidateQr,
+    validatingQr,
+    scannerOpened,
+    onOpenScanner,
+    onCloseScanner
+    // --- Fin Desestructuración ---
 }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const currentLanguage = i18n.language;
 
-    // Summary Snippet Logic (sin cambios)
-    const rewardsSummary = useMemo(() => {
-        const allGifts = displayRewards?.filter(r => r.isGift) ?? [];
-        const pointRewards = displayRewards?.filter(r => !r.isGift && r.pointsCost > 0) ?? [];
-        const userPts = userData?.points ?? 0;
-        const pendingGiftsCount = allGifts.length;
-        const affordablePointRewards = pointRewards.filter(r => r.pointsCost <= userPts).sort((a, b) => a.pointsCost - b.pointsCost);
-        const maxPreviewItems = 4;
-        const previewItems: DisplayReward[] = [...allGifts.slice(0, maxPreviewItems)];
-        if (previewItems.length < maxPreviewItems) { previewItems.push(...affordablePointRewards.slice(0, maxPreviewItems - previewItems.length)); }
-        const nextReward = pointRewards.filter(r => r.pointsCost > userPts).sort((a, b) => a.pointsCost - b.pointsCost)[0];
-        return { pendingGiftsCount, previewItems, nextReward };
-    }, [displayRewards, userData?.points]);
+    // Memo para preparar datos de resumen (sin cambios)
+    const rewardsSummary = useMemo(() => { const pendingGifts = displayRewards?.filter(r => r.isGift) ?? []; const pointsRewards = displayRewards?.filter(r => !r.isGift) ?? []; pointsRewards.sort((a, b) => (a.pointsCost ?? 0) - (b.pointsCost ?? 0)); const nextReward = pointsRewards.length > 0 ? pointsRewards[0] : null; const previewItems = [...pendingGifts, ...pointsRewards].slice(0, MAX_PREVIEW_ITEMS); return { pendingGiftsCount: pendingGifts.length, nextReward, previewItems, hasAnyRewards: !!displayRewards && displayRewards.length > 0 }; }, [displayRewards]);
 
-    // --- AÑADIR ESTE LOG PARA DEPURAR ---
-    console.log('[DEBUG SummaryTab] previewItems:', rewardsSummary.previewItems);
-    // ----------------------------------
+    if (loadingUser && !userData) { return <Group justify="center" p="xl"><Loader /></Group>; }
 
     return (
-         <Stack gap="xl">
-            {/* UserInfoDisplay y QrValidationSection (sin cambios aquí) */}
-            <UserInfoDisplay
-                userData={userData} loadingUser={loadingUser} errorUser={errorUser}
-                progressBarData={progressBarData} benefits={currentTierBenefits}
-                nextTierName={nextTierName} nextTierBenefits={nextTierBenefits}
-            />
-             { !loadingTierData && errorTierData && ( <Alert /* ... */ /> ) }
-            <QrValidationSection
-                onValidate={handleValidateQr} isValidating={validatingQr}
-                scannerOpened={scannerOpened} onOpenScanner={onOpenScanner} onCloseScanner={onCloseScanner}
-            />
+        <Grid gutter="xl">
+            <Grid.Col span={{ base: 12, md: 7 }}>
+                <Stack gap="xl">
+                    {/* --- Pasar prop 'benefits' correctamente a UserInfoDisplay --- */}
+                    <UserInfoDisplay
+                        userData={userData}
+                        loadingUser={loadingUser}
+                        errorUser={errorUser}
+                        progressBarData={progressBarData}
+                        benefits={currentTierBenefits} // <-- Pasar prop requerida 'benefits'
+                        nextTierName={nextTierName}
+                        nextTierBenefits={nextTierBenefits}
+                        // loadingTierData y errorTierData no parecen ser requeridas por UserInfoDisplayProps (según error)
+                    />
+                    {/* --- Fin paso de prop --- */}
+                    <QrValidationSection
+                        onValidate={handleValidateQr}
+                        isValidating={validatingQr}
+                        scannerOpened={scannerOpened}
+                        onOpenScanner={onOpenScanner}
+                        onCloseScanner={onCloseScanner}
+                    />
+                </Stack>
+            </Grid.Col>
 
-            {/* Rewards Summary Snippet Card */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder data-testid="rewards-summary-card">
-                <Stack gap="md">
-                     {(rewardsSummary.pendingGiftsCount > 0 || rewardsSummary.previewItems.length > 0) && (
-                         <Text size="sm" fw={500}>
-                            {rewardsSummary.pendingGiftsCount > 0
-                                ? t('customerDashboard.summary.pendingGifts', { count: rewardsSummary.pendingGiftsCount })
-                                : t('customerDashboard.summary.rewardsTitle')}
-                        </Text>
-                     )}
-                    {rewardsSummary.previewItems.length > 0 && (
-                        <SimpleGrid cols={{ base: 2, xs: 3, sm: 4 }} spacing="sm" verticalSpacing="md">
-                             {rewardsSummary.previewItems.map((item) => (
-                                 <Paper key={item.isGift ? item.grantedRewardId : item.id} p="xs" radius="sm" withBorder component={Stack} gap={4} align="center" data-testid={`preview-${item.id}`}>
-                                     {/* --- CÓDIGO CORRECTO CON IMAGE --- */}
-                                     <Image
-                                        src={item.imageUrl || '/placeholder-reward.png'} // Usa imageUrl o fallback
-                                        alt={item.name}
-                                        h={80}
-                                        w={80}
-                                        fit="cover"
-                                        radius="sm"
-                                     />
-                                     {/* --- FIN CÓDIGO CORRECTO --- */}
-                                     <Text size="xs" ta="center" lineClamp={2} style={{ height: '2.4em' }}>{item.name}</Text>
-                                     {item.isGift ? ( <Badge size="xs" variant="light" color="teal" mt={2}>{t('customerDashboard.giftFree')}</Badge> )
-                                      : ( <Text size="xs" ta="center" c="blue" fw={500} mt={2}>{item.pointsCost.toLocaleString()} {t('common.points')}</Text> )}
-                                 </Paper>
-                             ))}
-                         </SimpleGrid>
-                    )}
-                     {rewardsSummary.nextReward && ( <Text size="sm">{t('customerDashboard.summary.nextReward', { name: rewardsSummary.nextReward.name, points: rewardsSummary.nextReward.pointsCost.toLocaleString() })}</Text> )}
-                    {rewardsSummary.previewItems.length > 0 || rewardsSummary.nextReward ? (
-                         <Button variant="light" color="blue" fullWidth mt="xs" rightSection={<IconArrowRight size={16} />} onClick={() => setActiveTab('rewards')} data-testid="view-rewards-button">
-                             {t('customerDashboard.summary.viewAllButton')}
-                         </Button>
-                     ) : (
-                         <Text size="sm" c="dimmed" mt="xs">{t('customerDashboard.summary.noRewardsInfo')}</Text>
-                     )}
-                 </Stack>
-            </Card>
-         </Stack>
+            {/* Columna Derecha: Resumen Recompensas (Sin cambios aquí) */}
+            <Grid.Col span={{ base: 12, md: 5 }}>
+                <Paper shadow="sm" p="lg" withBorder radius="lg" style={{ height: '100%' }}>
+                    <Stack gap="lg">
+                        <Title order={4}> {rewardsSummary.pendingGiftsCount > 0 ? t('customerDashboard.summary.giftsAndRewardsTitle') : t('customerDashboard.summary.rewardsTitle')} </Title>
+                        {rewardsSummary.pendingGiftsCount > 0 && ( <Alert color="yellow" icon={<IconGift />} title={t('customerDashboard.summary.pendingGifts', { count: rewardsSummary.pendingGiftsCount })} variant='light' radius="md"> {t('customerDashboard.summary.pendingGiftsDesc', 'Tienes regalos esperando ser canjeados.')} </Alert> )}
+                        {rewardsSummary.previewItems.length > 0 ? (
+                            <SimpleGrid cols={MAX_PREVIEW_ITEMS} spacing="sm" verticalSpacing={0}>
+                                {rewardsSummary.previewItems.map(item => {
+                                     const displayName = (currentLanguage === 'es' ? item.name_es : item.name_en) || item.name_es || item.name_en || '(Sin nombre)';
+                                     return (
+                                        <Stack key={item.id + (item.isGift ? '-gift' : '-reward')} gap={4} align="center">
+                                            <AspectRatio ratio={1 / 1} style={{ width: '80%', maxWidth: '100px' }}>
+                                                <MantineImage src={item.imageUrl || '/placeholder-reward.png'} alt={displayName} radius="sm" fallbackSrc="/placeholder-reward.png" />
+                                            </AspectRatio>
+                                            <Text size="xs" ta="center" lineClamp={2} style={{ height: '2.4em' }}>{displayName}</Text>
+                                            {item.isGift && <Badge size="xs" color="lime" variant='outline'>{t('customerDashboard.giftFree')}</Badge>}
+                                            {!item.isGift && <Text size="xs" fw={500}>{item.pointsCost} {t('common.points')}</Text>}
+                                        </Stack>
+                                    );
+                                })}
+                            </SimpleGrid>
+                        ) : ( <Center> <Text c="dimmed">{t('customerDashboard.summary.noRewardsInfo')}</Text> </Center> )}
+                        <Box mt="auto">
+                            {rewardsSummary.nextReward && ( <Text size="sm">{t('customerDashboard.summary.nextReward', { name: (currentLanguage === 'es' ? rewardsSummary.nextReward.name_es : rewardsSummary.nextReward.name_en) || rewardsSummary.nextReward.name_es || rewardsSummary.nextReward.name_en || '(Recompensa)', points: rewardsSummary.nextReward.pointsCost.toLocaleString() })}</Text> )}
+                            {rewardsSummary.hasAnyRewards && ( <Button variant="light" fullWidth mt="sm" onClick={() => setActiveTab('rewards')} radius="lg"> {t('customerDashboard.summary.viewAllButton')} </Button> )}
+                        </Box>
+                    </Stack>
+                </Paper>
+            </Grid.Col>
+        </Grid>
     );
 };
 

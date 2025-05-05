@@ -1,5 +1,5 @@
 // filename: frontend/src/components/customer/dashboard/tabs/ActivityTab.tsx
-// Version: 2.0.2 (Add explicit type annotation to map callback to satisfy TS6133)
+// Version: 2.1.4 (Use explicitly typed intermediate variable for timeline title)
 
 import React from 'react';
 import {
@@ -12,7 +12,7 @@ import {
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { useCustomerActivity } from '../../../../hooks/useCustomerActivity';
-// Importación de tipos sin cambios (type import sigue siendo bueno)
+// Importación de tipos
 import type { ActivityLogItem } from '../../../../types/customer';
 import { ActivityType } from '../../../../types/customer';
 
@@ -30,7 +30,7 @@ const ActivityTab: React.FC = () => {
         // refetch
     } = useCustomerActivity();
 
-    // Función para obtener icono y color (sin cambios)
+    // Función para obtener icono y color
     const getActivityVisuals = (type: ActivityType): { icon: React.ReactNode; color: string } => {
         switch (type) {
             case 'POINTS_EARNED_QR': return { icon: <IconTicket size={12} />, color: 'green' };
@@ -41,7 +41,7 @@ const ActivityTab: React.FC = () => {
         }
     };
 
-    // Función para formatear la fecha (sin cambios)
+    // Función para formatear la fecha
     const formatDate = (dateString: string) => {
         if (!dateString) return 'N/A';
         try { return new Date(dateString).toLocaleString(i18n.language, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return t('common.invalidDate', 'Fecha inválida'); }
@@ -53,20 +53,49 @@ const ActivityTab: React.FC = () => {
         if (error) { return <Alert title={t('common.error')} color="red" icon={<IconAlertCircle />}>{error}</Alert>; }
         if (activityLogs.length === 0) { return <Text c="dimmed" ta="center">{t('customerDashboard.activityTab.noActivity', 'Aún no tienes actividad registrada.')}</Text>; }
 
-        // Renderizar Timeline si hay datos
         return (
             <Timeline active={-1} bulletSize={20} lineWidth={2}>
-                {/* --- ANOTACIÓN DE TIPO AÑADIDA AQUÍ --- */}
                 {activityLogs.map((item: ActivityLogItem) => {
-                // --- FIN ANOTACIÓN ---
                     const visuals = getActivityVisuals(item.type);
                     const pointsText = item.pointsChanged !== null ? `${item.pointsChanged > 0 ? '+' : ''}${item.pointsChanged}` : null;
                     const pointsColor = item.pointsChanged === null ? 'gray' : (item.pointsChanged > 0 ? 'green' : 'red');
+
+                    // Variable para calcular el título (tipo inferido puede ser complejo)
+                    let timelineTitleCalculationResult: string | ReturnType<typeof t> = '';
+                    const descriptionData = item.description || '';
+
+                    // Calcular título traducido con interpolación
+                    switch(item.type) {
+                        case 'POINTS_EARNED_QR':
+                            timelineTitleCalculationResult = t('customerDashboard.activityTab.desc_EARNED', { ticketNumber: descriptionData });
+                            break;
+                        case 'POINTS_REDEEMED_REWARD':
+                            timelineTitleCalculationResult = t('customerDashboard.activityTab.desc_REDEEMED', { rewardName: descriptionData });
+                            break;
+                         case 'GIFT_REDEEMED':
+                            timelineTitleCalculationResult = t('customerDashboard.activityTab.desc_GIFT', { rewardName: descriptionData });
+                             break;
+                        case 'POINTS_ADJUSTED_ADMIN':
+                            if (item.description) {
+                                timelineTitleCalculationResult = t('customerDashboard.activityTab.desc_ADJUSTED_REASON', { reason: item.description });
+                            } else {
+                                timelineTitleCalculationResult = t('customerDashboard.activityTab.desc_ADJUSTED');
+                            }
+                            break;
+                        default:
+                            // Fallback
+                            timelineTitleCalculationResult = item.description || t(`customerDashboard.activityTab.type_${item.type}`, item.type);
+                    }
+
+                    // Variable intermedia explícitamente tipada como string
+                    const finalTimelineTitle: string = String(timelineTitleCalculationResult);
+
                     return (
                         <Timeline.Item
                             key={item.id}
                             bullet={ <ThemeIcon size={20} variant="light" color={visuals.color} radius="xl"> {visuals.icon} </ThemeIcon> }
-                            title={item.description || t(`customerDashboard.activityTab.type_${item.type}`, item.type)}
+                            // Usar la variable intermedia explícitamente tipada
+                            title={finalTimelineTitle}
                         >
                             <Group justify="space-between">
                                 <Text c="dimmed" size="xs"> {formatDate(item.createdAt)} </Text>

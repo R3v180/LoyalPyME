@@ -175,6 +175,7 @@
     "scanModalTitle": "Scan QR Code",
     "scanInstructions": "Point the camera at the QR code",
     "scanCancelButton": "Cancel Scan",
+    "scanButtonDisabledTooltip": "QR scanning only available on mobile",
     "rewardsSectionTitle": "Rewards & Gifts",
     "noRewardsAvailable": "No rewards or gifts available at this moment.",
     "redeemGiftButton": "Redeem Gift",
@@ -212,13 +213,26 @@
     "tabOffers": "Offers & News",
     "tabProfile": "My Profile",
     "summary": {
-        "pendingGifts_one": "You have {{count}} pending gift:",
-        "pendingGifts_other": "You have {{count}} pending gifts:",
-        "nextReward": "Next reward: {{name}} for {{points}} points.",
-        "viewAllButton": "View All Rewards & Gifts",
-        "noRewardsInfo": "Collect more points to get rewards.",
-        "giftsAndRewardsTitle": "Available Gifts & Rewards:",
-        "rewardsTitle": "Available Rewards:"
+      "pendingGifts_one": "You have {{count}} pending gift:",
+      "pendingGifts_other": "You have {{count}} pending gifts:",
+      "nextReward": "Next reward: {{name}} for {{points}} points.",
+      "viewAllButton": "View All Rewards & Gifts",
+      "noRewardsInfo": "Collect more points to get rewards.",
+      "giftsAndRewardsTitle": "Available Gifts & Rewards:",
+      "rewardsTitle": "Available Rewards:"
+    },
+    "activityTab": {
+      "noActivity": "You don't have any recorded activity yet.",
+      "type_POINTS_EARNED_QR": "Points Earned (QR)",
+      "type_POINTS_REDEEMED_REWARD": "Reward Redeemed",
+      "type_GIFT_REDEEMED": "Gift Redeemed",
+      "type_POINTS_ADJUSTED_ADMIN": "Manual Points Adjustment",
+      "totalItems": "{{count}} record(s) total",
+      "desc_EARNED": "Points from ticket #{{ticketNumber}}",
+      "desc_REDEEMED": "Redemption: {{rewardName}}",
+      "desc_GIFT": "Gift redeemed: {{rewardName}}",
+      "desc_ADJUSTED": "Manual points adjustment",
+      "desc_ADJUSTED_REASON": "Manual adjustment: {{reason}}"
     }
   },
   "adminCommon": {
@@ -291,18 +305,32 @@
     "toggleStatusSuccess": "The reward has been {{status}} successfully.",
     "toggleStatusError": "Error {{status}} reward: {{error}}",
     "statusActivated": "activated",
-    "statusDeactivated": "deactivated"
+    "statusDeactivated": "deactivated",
+    "updateSuccessMessage": "Reward \"{{name}}\" updated.",
+    "createSuccessMessage": "Reward \"{{name}}\" created."
   },
   "component": {
     "rewardForm": {
-      "nameLabel": "Reward Name:",
-      "namePlaceholder": "E.g.: Free Coffee",
-      "descriptionLabel": "Description (Optional):",
-      "descriptionPlaceholder": "E.g.: One espresso or americano coffee",
       "pointsCostLabel": "Points Cost:",
       "pointsCostPlaceholder": "E.g.: 100",
-      "errorNameRequired": "The reward name cannot be empty.",
-      "errorPointsCostInvalid": "The points cost must be a number equal to or greater than zero."
+      "errorPointsCostInvalid": "Points cost must be a number equal to or greater than zero.",
+      "nameEsLabel": "Name (ES)",
+      "nameEsPlaceholder": "E.g.: Free Coffee",
+      "nameEnLabel": "Name (EN)",
+      "nameEnPlaceholder": "E.g.: Free Coffee",
+      "descriptionEsLabel": "Description (ES, Optional)",
+      "descriptionEsPlaceholder": "E.g.: One espresso or americano coffee",
+      "descriptionEnLabel": "Description (EN, Optional)",
+      "descriptionEnPlaceholder": "E.g.: One espresso or americano coffee",
+      "imageLabel": "Image (1:1, Optional)",
+      "removeImageButton": "Remove Image",
+      "selectImageButton": "Select Image",
+      "cropInstructions": "Crop the image (1:1 aspect ratio)",
+      "confirmCropButton": "Confirm Crop & Upload",
+      "errorInvalidDataTitle": "Invalid Data",
+      "errorInvalidDataMsg": "Please fill in the names in both languages and a valid points cost (0 or greater).",
+      "errorNameEsRequired": "The Spanish name is required.",
+      "errorNameEnRequired": "The English name is required."
     },
     "generateQr": {
       "amountLabel": "Sale Amount (€):",
@@ -481,7 +509,7 @@
     "tooltipActivateCustomer": "Activate Customer",
     "tooltipFavorite": "Mark as Favorite",
     "tooltipUnfavorite": "Remove from Favorites",
-    "checkboxAriaLabel": "Select customer",
+    "checkboxAriaLabel": "Select customer", 
     "checkboxSelectAllAriaLabel": "Select all visible rows",
     "adjustPointsModalTitle": "Adjust Points for {{name}}",
     "adjustPointsCurrent": "Current points: {{points}}",
