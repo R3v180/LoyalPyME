@@ -13,7 +13,7 @@
 
 ---
 
-# LoyalPyME 🇬🇧 (v1.11.0)
+# LoyalPyME 🇬🇧 (v1.12.0)
 
 **LoyalPyME** is a comprehensive, full-stack web platform (React Frontend + Node.js Backend) designed to empower Small and Medium-sized Enterprises (SMEs) with a robust, maintainable, and scalable digital customer loyalty program.
 
@@ -34,15 +34,16 @@ _(Note: Screenshots might need updating)._
 - **Full Authentication:** Business/Admin Registration, Customer Registration, Login (JWT), Password Reset.
 - **Customer Management (Admin):** CRUD, Filters, Search, Sorting, Individual/Bulk Actions, Notes.
 - **Tier & Benefit Management (Admin):** Tier CRUD, Benefit CRUD per Tier, Global Tier System Settings.
-- **Reward Management with Images (Admin):** Reward CRUD (Points-based), Image Upload (from file), 1:1 Image Cropping, Cloudinary Storage integration.
-- **Points & QR Flow:** QR Code Generation (Admin), QR Validation (Customer - Manual or Mobile Scanner via `html5-qrcode`).
+- **Reward Management (Admin):** Reward CRUD (Points-based), Image Upload (from file), 1:1 Image Cropping, Cloudinary Storage, **Multi-language support (ES/EN)** for name/description.
+- **Points & QR Flow:** QR Code Generation (Admin), QR Validation (Customer - Manual or Mobile Scanner via `html5-qrcode`, with graceful error handling).
 - **Automatic Tier Logic:** Tier Calculation/Assignment/Downgrade based on business settings (Backend + Cron Job).
-- **Customer Dashboard:** Tab-based Interface (Summary, Rewards), User Info Display (Points, Tier, Benefits), Progress Bar (with Next Tier Preview), Reward/Gift List (with images), Points/Gift Redemption, Summary Snippet (with images). Functional QR Scanner.
+- **Customer Dashboard:** Tab-based Interface (Summary, Rewards, Activity), User Info Display (Points, Tier, Benefits), Progress Bar (with Next Tier Preview triggered by hover/icon click), Reward/Gift List (with images), Points/Gift Redemption (from Summary & Rewards tabs), Functional QR Scanner.
+- **Customer Activity History:** Paginated timeline view of points earned, rewards redeemed, and gifts redeemed.
 - **Other:** Frontend Internationalization (i18n - ES/EN), API Documentation (Swagger), Static Logo, Constrained Header Layout.
 
 ## Project Status & Roadmap 🗺️
 
-The project has completed **Phase 1 (Core Functionality)** and is **significantly progressing through Phase 2 (Initial Features & Enhancements)** - Current version: **v1.11.0**.
+The project has completed **Phase 1 (Core Functionality)** and is **significantly progressing through Phase 2 (Initial Features & Enhancements)** - Current version: **v1.12.0**.
 
 - See **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** for **detailed completed milestones** and **immediate next steps**.
 - See **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** for the **full backlog** of pending tasks and detailed **future ideas**.

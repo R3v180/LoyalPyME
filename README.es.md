@@ -13,7 +13,7 @@
 
 ---
 
-# LoyalPyME 🇪🇸 (v1.11.0)
+# LoyalPyME 🇪🇸 (v1.12.0)
 
 **LoyalPyME** es una plataforma web integral full-stack (Frontend React + Backend Node.js) diseñada para facilitar a las Pequeñas y Medianas Empresas (PyMEs) la gestión de un programa de fidelización de clientes digital potente, robusto, mantenible y escalable.
 
@@ -34,15 +34,16 @@ _(Nota: Las capturas podrían necesitar actualizarse)._
 - **Autenticación Completa:** Registro Negocio/Admin, Registro Cliente, Login (JWT), Reset Contraseña.
 - **Gestión Clientes (Admin):** CRUD, Filtros, Búsqueda, Ordenación, Acciones Individuales/Masivas, Notas.
 - **Gestión Niveles/Tiers (Admin):** CRUD Niveles, CRUD Beneficios por Nivel, Configuración Global del Sistema.
-- **Gestión Recompensas con Imágenes (Admin):** CRUD Recompensas (Puntos), Subida/Recorte 1:1 Imagen (Cloudinary).
+- **Gestión Recompensas (Admin):** CRUD Recompensas (Puntos), Subida/Recorte 1:1 Imagen (Cloudinary), **Soporte Multi-idioma (ES/EN)** para nombre y descripción.
 - **Flujo Puntos/QR:** Generación QR (Admin), Validación QR (Cliente - Manual/Escáner Móvil `html5-qrcode`).
 - **Lógica Tiers Automática:** Cálculo y asignación/descenso basado en configuración (Backend + Cron).
-- **Panel Cliente:** Pestañas (Resumen, Recompensas), Info Usuario (Puntos, Nivel, Beneficios), Barra Progreso (con Preview Siguiente Nivel), Lista Recompensas/Regalos (con imágenes), Canje Puntos/Regalos, Snippet Resumen (con imágenes). Escáner QR funcional.
+- **Panel Cliente:** Pestañas (Resumen, Recompensas, Actividad), Info Usuario (Puntos, Nivel, Beneficios), Barra Progreso (con Preview Siguiente Nivel), Lista Recompensas/Regalos (con imágenes), Canje Puntos/Regalos (directo desde Resumen y pestaña Recompensas), Escáner QR funcional.
+- **Historial de Actividad (Cliente):** Visualización paginada de puntos ganados, recompensas y regalos canjeados.
 - **Otros:** Internacionalización (ES/EN), Documentación API (Swagger), Logo Estático, Layout Cabecera Restringido.
 
 ## Estado Actual y Próximos Pasos 🗺️
 
-El proyecto ha completado la **Fase 1 (Núcleo Funcional)** y está **avanzando significativamente en la Fase 2 (Funcionalidades Iniciales y Mejoras)** - Versión actual: **v1.11.0**.
+El proyecto ha completado la **Fase 1 (Núcleo Funcional)** y está **avanzando significativamente en la Fase 2 (Funcionalidades Iniciales y Mejoras)** - Versión actual: **v1.12.0**.
 
 - Consulta **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** para ver los **hitos completados en detalle** y los **próximos pasos inmediatos**.
 - Consulta **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** para ver el **backlog completo** de tareas pendientes y las **ideas futuras** detalladas.
