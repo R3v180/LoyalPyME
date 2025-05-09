@@ -1,6 +1,4 @@
-// filename: frontend/src/components/admin/rewards/RewardForm.tsx
-// Version: 2.1.0 (Adapt useState form for i18n Reward fields)
-
+// frontend/src/components/admin/rewards/RewardForm.tsx
 import React, { useState, useEffect, useRef, FormEvent, SyntheticEvent } from 'react';
 import axiosInstance from '../../../services/axiosInstance';
 import { notifications } from '@mantine/notifications';
@@ -20,17 +18,13 @@ import ReactCrop, {
 import 'react-image-crop/dist/ReactCrop.css';
 import { canvasPreview, canvasToBlob } from '../../../utils/canvasPreview';
 import { useTranslation } from 'react-i18next';
+import type { Reward } from '../../../types/customer';
 
-// --- IMPORTAR TIPO REWARD ACTUALIZADO ---
-import type { Reward } from '../../../types/customer'; // Importar tipo con name_es/en etc.
-
-
-// Props del componente ACTUALIZADAS
 interface RewardFormProps {
     mode: 'add' | 'edit';
-    initialData?: Reward | null; // <-- Ahora espera el tipo Reward con name_es/en
+    initialData?: Reward | null;
     rewardIdToUpdate?: string | null;
-    onSubmitSuccess: () => void; // Simplificado para no devolver la recompensa
+    onSubmitSuccess: () => void;
     onCancel: () => void;
 }
 
@@ -44,18 +38,13 @@ const RewardForm: React.FC<RewardFormProps> = ({
     const imgRef = useRef<HTMLImageElement>(null);
     const previewCanvasRef = useRef<HTMLCanvasElement>(null);
 
-    // --- ESTADOS DEL FORMULARIO ACTUALIZADOS ---
-    // const [name, setName] = useState<string>(''); // Eliminado
-    // const [description, setDescription] = useState<string>(''); // Eliminado
-    const [name_es, setNameEs] = useState<string>(''); // Nuevo
-    const [name_en, setNameEn] = useState<string>(''); // Nuevo
-    const [description_es, setDescriptionEs] = useState<string>(''); // Nuevo
-    const [description_en, setDescriptionEn] = useState<string>(''); // Nuevo
+    const [name_es, setNameEs] = useState<string>('');
+    const [name_en, setNameEn] = useState<string>('');
+    const [description_es, setDescriptionEs] = useState<string>('');
+    const [description_en, setDescriptionEn] = useState<string>('');
     const [pointsCost, setPointsCost] = useState<number | ''>('');
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    // --- FIN ESTADOS FORMULARIO ---
 
-    // Estado de Imagen/Crop (sin cambios)
     const [imgSrc, setImgSrc] = useState<string>('');
     const [crop, setCrop] = useState<Crop>();
     const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
@@ -63,10 +52,8 @@ const RewardForm: React.FC<RewardFormProps> = ({
     const [isUploading, setIsUploading] = useState<boolean>(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
 
-    // --- useEffect ACTUALIZADO ---
     useEffect(() => {
         if (mode === 'edit' && initialData) {
-            // Usar nuevos campos de initialData
             setNameEs(initialData.name_es || '');
             setNameEn(initialData.name_en || '');
             setDescriptionEs(initialData.description_es || '');
@@ -75,203 +62,192 @@ const RewardForm: React.FC<RewardFormProps> = ({
             setImageUrl(initialData.imageUrl || null);
             setImgSrc(''); setCrop(undefined); setCompletedCrop(undefined); setUploadError(null);
         } else {
-            // Resetear nuevos campos
             setNameEs(''); setNameEn(''); setDescriptionEs(''); setDescriptionEn('');
             setPointsCost(''); setImageUrl(null); setImgSrc(''); setCrop(undefined); setCompletedCrop(undefined); setUploadError(null);
         }
     }, [mode, initialData]);
-    // --- FIN useEffect ---
 
-    // Handle file selection (sin cambios)
-    const onSelectFile = (file: File | null) => { /* ... (sin cambios) ... */ if (!file) { setImgSrc(''); setCrop(undefined); setCompletedCrop(undefined); return; } setCrop(undefined); setCompletedCrop(undefined); setUploadError(null); setImageUrl(null); const reader = new FileReader(); reader.addEventListener('load', () => { const imageDataUrl = reader.result?.toString() || ''; setImgSrc(imageDataUrl); }); reader.readAsDataURL(file); };
-    // onImageLoad (sin cambios)
-    const onImageLoad = (e: SyntheticEvent<HTMLImageElement>) => { /* ... (sin cambios) ... */ const { width, height, naturalWidth, naturalHeight } = e.currentTarget; if (naturalWidth < MIN_DIMENSION || naturalHeight < MIN_DIMENSION) { setUploadError(`La imagen es demasiado pequeña. Debe ser al menos ${MIN_DIMENSION}x${MIN_DIMENSION} píxeles.`); setImgSrc(''); return; } const cropWidthInPercent = (MIN_DIMENSION / width) * 100; const crop = centerCrop( makeAspectCrop( { unit: '%', width: cropWidthInPercent, }, ASPECT_RATIO, width, height ), width, height ); setCrop(crop); };
+    const onSelectFile = (file: File | null) => {
+        if (!file) {
+            setImgSrc(''); setCrop(undefined); setCompletedCrop(undefined);
+            return;
+        }
+        setCrop(undefined); setCompletedCrop(undefined); setUploadError(null); setImageUrl(null);
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+            const imageDataUrl = reader.result?.toString() || '';
+            setImgSrc(imageDataUrl);
+        });
+        reader.readAsDataURL(file);
+    };
 
-    // --- handleConfirmCropAndUpload ACTUALIZADO ---
-    // Cambiar endpoint de subida si es necesario
+    const onImageLoad = (e: SyntheticEvent<HTMLImageElement>) => {
+        const { width, height, naturalWidth, naturalHeight } = e.currentTarget;
+        setUploadError(null);
+
+        if (naturalWidth < MIN_DIMENSION || naturalHeight < MIN_DIMENSION) {
+            setUploadError(`La imagen es demasiado pequeña. Debe ser al menos ${MIN_DIMENSION}x${MIN_DIMENSION} píxeles.`);
+            setImgSrc('');
+            return;
+        }
+
+        const imageAspectRatio = naturalWidth / naturalHeight;
+        let initialCropWidthPx: number;
+        let initialCropHeightPx: number;
+
+        if (imageAspectRatio > ASPECT_RATIO) {
+            initialCropHeightPx = naturalHeight;
+            initialCropWidthPx = initialCropHeightPx * ASPECT_RATIO;
+        } else {
+            initialCropWidthPx = naturalWidth;
+            initialCropHeightPx = initialCropWidthPx / ASPECT_RATIO;
+        }
+
+        const cropWidthPercent = (initialCropWidthPx / naturalWidth) * 100;
+        // const cropHeightPercent = (initialCropHeightPx / naturalHeight) * 100; // <-- ELIMINADO (no usado)
+        
+        const newCrop = centerCrop(
+            makeAspectCrop(
+                {
+                    unit: '%',
+                    width: cropWidthPercent,
+                },
+                ASPECT_RATIO,
+                width,
+                height
+            ),
+            width,
+            height
+        );
+        setCrop(newCrop);
+        setCompletedCrop({
+            x: (naturalWidth - initialCropWidthPx) / 2,
+            y: (naturalHeight - initialCropHeightPx) / 2,
+            width: initialCropWidthPx,
+            height: initialCropHeightPx,
+            unit: 'px'
+        });
+    };
+
     const handleConfirmCropAndUpload = async () => {
-        if (!imgRef.current || !previewCanvasRef.current || !completedCrop) { setUploadError('Selección de recorte o imagen no válida.'); return; }
+        if (!imgRef.current || !previewCanvasRef.current || !completedCrop || completedCrop.width === 0 || completedCrop.height === 0) {
+            setUploadError('Selección de recorte o imagen no válida. Asegúrate de que el recorte tiene un tamaño.');
+            return;
+        }
         setIsUploading(true); setUploadError(null);
         try {
             await canvasPreview(imgRef.current, previewCanvasRef.current, completedCrop);
             const blob = await canvasToBlob(previewCanvasRef.current, 'image/png', 0.9);
             if (!blob) { throw new Error('No se pudo crear el archivo de imagen recortada.'); }
+            
             const formData = new FormData();
-            // --- CAMBIAR 'imageFile' por 'image' si coincide con tu backend/Multer ---
             formData.append('image', blob, `reward-crop-${Date.now()}.png`);
 
-            // --- CAMBIAR endpoint si es necesario ---
-            // const response = await axiosInstance.post<{ imageUrl: string }>('/admin/upload/reward-image', formData, {
-            const response = await axiosInstance.post<{ url: string }>('/uploads/image', formData, { // Usando endpoint genérico
+            const response = await axiosInstance.post<{ url: string }>('/uploads/image', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            // --- Asumiendo que la respuesta devuelve { url: '...' } ---
-            // if (response.data && response.data.imageUrl) {
-            //    setImageUrl(response.data.imageUrl);
-            if (response.data && response.data.url) { // Usando .url
-               setImageUrl(response.data.url); // Guardar URL final
-            // --- FIN CAMBIO ---
+            if (response.data && response.data.url) {
+               setImageUrl(response.data.url);
                setImgSrc(''); setCrop(undefined); setCompletedCrop(undefined);
-               notifications.show({ title: 'Éxito', message: 'Imagen recortada y subida correctamente.', color: 'green', icon: <IconCheck size={18} />, });
+               notifications.show({ title: t('common.success'), message: 'Imagen recortada y subida correctamente.', color: 'green', icon: <IconCheck size={18} />, });
             } else { throw new Error('La API no devolvió una URL de imagen válida.'); }
-        } catch (err: any) { console.error('Error uploading cropped image:', err); const apiError = err.response?.data?.message || err.message || 'Error desconocido durante la subida.'; setUploadError(`Error al subir: ${apiError}`); notifications.show({ title: 'Error de Subida', message: `No se pudo subir la imagen: ${apiError}`, color: 'red', icon: <IconAlertCircle size={18} />, });
-        } finally { setIsUploading(false); }
+        } catch (err: any) {
+            console.error('Error uploading cropped image:', err);
+            const apiError = err.response?.data?.message || err.message || 'Error desconocido durante la subida.';
+            setUploadError(`Error al subir: ${apiError}`);
+            notifications.show({ title: t('common.error'), message: `No se pudo subir la imagen: ${apiError}`, color: 'red', icon: <IconAlertCircle size={18} />, });
+        } finally {
+            setIsUploading(false);
+        }
     };
-     // --- FIN handleConfirmCropAndUpload ---
 
-    // --- handleSubmit ACTUALIZADO ---
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        // Validación actualizada
         if (!name_es.trim() || !name_en.trim() || pointsCost === '' || pointsCost < 0) {
             notifications.show({
-                title: t('component.rewardForm.errorInvalidDataTitle', 'Datos Inválidos'), // TODO: i18n
-                message: t('component.rewardForm.errorInvalidDataMsg', 'Por favor, rellena los nombres en ambos idiomas y un coste en puntos válido (0 o mayor).'), // TODO: i18n
+                title: t('component.rewardForm.errorInvalidDataTitle'),
+                message: t('component.rewardForm.errorInvalidDataMsg'),
                 color: 'orange', icon: <IconAlertCircle size={18} />,
             });
             return;
         }
-
         setIsSubmitting(true);
-
-        // Payload actualizado con campos i18n
         const payload = {
-            name_es: name_es.trim(),
-            name_en: name_en.trim(),
-            description_es: description_es.trim() || null,
-            description_en: description_en.trim() || null,
-            pointsCost: Number(pointsCost),
-            imageUrl: imageUrl,
+            name_es: name_es.trim(), name_en: name_en.trim(),
+            description_es: description_es.trim() || null, description_en: description_en.trim() || null,
+            pointsCost: Number(pointsCost), imageUrl: imageUrl,
         };
-
         try {
             let successMessage = '';
-            let savedReward: Reward | null = null; // Para obtener la recompensa guardada
-
+            let savedReward: Reward | null = null;
             if (mode === 'add') {
                 const response = await axiosInstance.post<Reward>('/rewards', payload);
                 savedReward = response.data;
                 successMessage = t('adminCommon.createSuccess');
-            } else { // mode === 'edit'
+            } else {
                 if (!rewardIdToUpdate) throw new Error("Falta el ID de la recompensa para actualizar.");
-                // Usar PATCH para enviar solo los campos modificados sería mejor,
-                // pero requiere más lógica si no se usa Mantine Form.
-                // Por ahora usamos PUT que reemplaza todo (asegúrate que el backend lo soporte o cambie a PATCH).
-                 const response = await axiosInstance.patch<Reward>(`/rewards/${rewardIdToUpdate}`, payload); // Cambiado a PATCH
-                // const response = await axiosInstance.put<Reward>(`/rewards/${rewardIdToUpdate}`, payload);
+                const response = await axiosInstance.patch<Reward>(`/rewards/${rewardIdToUpdate}`, payload);
                 savedReward = response.data;
                 successMessage = t('adminCommon.updateSuccess');
             }
-
             const displayName = savedReward?.name_es || savedReward?.name_en || '';
             notifications.show({
                 title: successMessage,
-                message: `Recompensa "${displayName}" guardada.`, // TODO: i18n
+                // Usamos la clave de la página de gestión para el mensaje de éxito
+                message: t('adminRewardsPage.updateSuccessMessage', { name: displayName }),
                 color: 'green', icon: <IconCheck size={18} />, autoClose: 4000,
             });
-            onSubmitSuccess(); // Llamar al callback de éxito
-
+            onSubmitSuccess();
         } catch (err: any) {
             console.error(`Error ${mode === 'add' ? 'adding' : 'updating'} reward:`, err);
-            const actionText = mode === 'add' ? 'añadir' : 'actualizar';
-            const errorMessage = `Error al ${actionText} la recompensa: ${err.response?.data?.message || err.message || 'Error desconocido'}`;
+            // const actionText = mode === 'add' ? t('common.add') : t('common.edit'); // <-- ELIMINADO actionText
+            const errorMessage = t('adminCommon.saveError') + `: ${err.response?.data?.message || err.message || t('common.errorUnknown')}`;
             notifications.show({ title: t('common.error'), message: errorMessage, color: 'red', icon: <IconX size={18} />, autoClose: 6000 });
         } finally {
             setIsSubmitting(false);
         }
     };
-     // --- FIN handleSubmit ---
 
     const submitButtonText = mode === 'add' ? t('adminRewardsPage.addButton') : t('common.save');
-    const displayImageUrl = imgSrc || imageUrl || (mode === 'edit' && initialData?.imageUrl) || null;
+    const displayImageUrlForPreview = imageUrl || (mode === 'edit' && initialData?.imageUrl && !imgSrc ? initialData.imageUrl : null);
     const showCropper = !!imgSrc && !imageUrl;
 
     return (
         <Stack gap="md">
-            {/* Formulario de Detalles */}
             <form onSubmit={handleSubmit}>
                 <Stack gap="md">
-                    {/* --- CAMPOS ACTUALIZADOS --- */}
-                     <TextInput
-                        label={t('component.rewardForm.nameEsLabel', 'Nombre (ES)')}
-                        placeholder={t('component.rewardForm.nameEsPlaceholder', 'Ej: Café Gratis')}
-                        value={name_es}
-                        onChange={(e) => setNameEs(e.currentTarget.value)}
-                        required
-                        disabled={isSubmitting}
-                        radius="lg"
-                    />
-                     <TextInput
-                        label={t('component.rewardForm.nameEnLabel', 'Nombre (EN)')}
-                        placeholder={t('component.rewardForm.nameEnPlaceholder', 'E.g.: Free Coffee')}
-                        value={name_en}
-                        onChange={(e) => setNameEn(e.currentTarget.value)}
-                        required
-                        disabled={isSubmitting}
-                        radius="lg"
-                    />
-                    <Textarea
-                        label={t('component.rewardForm.descriptionEsLabel', 'Descripción (ES)')}
-                        placeholder={t('component.rewardForm.descriptionEsPlaceholder', 'Ej: Un café espresso o americano')}
-                        value={description_es}
-                        onChange={(e) => setDescriptionEs(e.currentTarget.value)}
-                        rows={3}
-                        disabled={isSubmitting}
-                        radius="lg"
-                    />
-                     <Textarea
-                        label={t('component.rewardForm.descriptionEnLabel', 'Descripción (EN)')}
-                        placeholder={t('component.rewardForm.descriptionEnPlaceholder', 'E.g.: One espresso or americano')}
-                        value={description_en}
-                        onChange={(e) => setDescriptionEn(e.currentTarget.value)}
-                        rows={3}
-                        disabled={isSubmitting}
-                        radius="lg"
-                    />
-                    {/* --- FIN CAMPOS --- */}
+                     <TextInput label={t('component.rewardForm.nameEsLabel')} placeholder={t('component.rewardForm.nameEsPlaceholder')} value={name_es} onChange={(e) => setNameEs(e.currentTarget.value)} required disabled={isSubmitting} radius="lg" />
+                     <TextInput label={t('component.rewardForm.nameEnLabel')} placeholder={t('component.rewardForm.nameEnPlaceholder')} value={name_en} onChange={(e) => setNameEn(e.currentTarget.value)} required disabled={isSubmitting} radius="lg" />
+                    <Textarea label={t('component.rewardForm.descriptionEsLabel')} placeholder={t('component.rewardForm.descriptionEsPlaceholder')} value={description_es} onChange={(e) => setDescriptionEs(e.currentTarget.value)} rows={2} disabled={isSubmitting} radius="lg" />
+                     <Textarea label={t('component.rewardForm.descriptionEnLabel')} placeholder={t('component.rewardForm.descriptionEnPlaceholder')} value={description_en} onChange={(e) => setDescriptionEn(e.currentTarget.value)} rows={2} disabled={isSubmitting} radius="lg" />
+                    <NumberInput label={t('component.rewardForm.pointsCostLabel')} placeholder={t('component.rewardForm.pointsCostPlaceholder')} value={pointsCost} onChange={(value) => setPointsCost(typeof value === 'number' ? value : '')} min={0} step={1} allowDecimal={false} required disabled={isSubmitting} radius="lg" />
 
-                    <NumberInput
-                        label={t('component.rewardForm.pointsCostLabel', 'Coste en Puntos:')}
-                        placeholder={t('component.rewardForm.pointsCostPlaceholder', 'Ej: 100')}
-                        value={pointsCost}
-                        onChange={(value) => setPointsCost(typeof value === 'number' ? value : '')}
-                        min={0}
-                        step={1}
-                        allowDecimal={false}
-                        required
-                        disabled={isSubmitting}
-                        radius="lg"
-                    />
-
-                    {/* Sección Imagen (sin cambios funcionales) */}
                     <Stack gap="xs" mt="sm">
-                         <Text fw={500} size="sm">{t('component.rewardForm.imageLabel', 'Imagen (1:1, Opcional)')}</Text>
-                         {displayImageUrl && !showCropper && ( <AspectRatio ratio={1 / 1} maw={200}> <MantineImage src={displayImageUrl} alt={`Preview ${name_es || name_en || 'recompensa'}`} radius="md" fallbackSrc="/placeholder-reward.png" /> </AspectRatio> )}
-                         {!displayImageUrl && !showCropper && ( <AspectRatio ratio={1 / 1} maw={200}> <Center bg="gray.1" style={{ borderRadius: 'var(--mantine-radius-md)' }}> <IconPhoto size={48} color="var(--mantine-color-gray-5)" stroke={1.5} /> </Center> </AspectRatio> )}
+                         <Text fw={500} size="sm">{t('component.rewardForm.imageLabel')}</Text>
+                         {displayImageUrlForPreview && !showCropper && ( <AspectRatio ratio={1 / 1} maw={200}><MantineImage src={displayImageUrlForPreview} alt={`Preview ${name_es || name_en || 'recompensa'}`} radius="md" fallbackSrc="/placeholder-reward.png" /></AspectRatio> )}
+                         {!displayImageUrlForPreview && !showCropper && ( <AspectRatio ratio={1 / 1} maw={200}><Center bg="gray.1" style={{ borderRadius: 'var(--mantine-radius-md)' }}><IconPhoto size={48} color="var(--mantine-color-gray-5)" stroke={1.5} /></Center></AspectRatio> )}
                          <Group gap="sm">
-                             <FileInput placeholder="Seleccionar imagen..." accept="image/png,image/jpeg,image/webp,image/gif" onChange={onSelectFile} leftSection={<IconUpload size={16} />} clearable disabled={isSubmitting || isUploading} style={{ flexGrow: 1 }} />
-                             <Button variant="outline" disabled leftSection={<IconCamera size={16} />} title="Usar cámara (Próximamente)"> Cámara </Button>
+                             <FileInput placeholder={t('component.rewardForm.selectImageButton')} accept="image/png,image/jpeg,image/webp,image/gif" onChange={onSelectFile} leftSection={<IconUpload size={16} />} clearable disabled={isSubmitting || isUploading} style={{ flexGrow: 1 }} value={null} />
+                             <Button variant="outline" disabled leftSection={<IconCamera size={16} />} title={t('common.upcomingFeatureTitle')}> {t('common.camera', 'Cámara')} </Button>
                          </Group>
                          {showCropper && (
                             <Box mt="md">
-                                <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)} aspect={ASPECT_RATIO} minWidth={MIN_DIMENSION} minHeight={MIN_DIMENSION} >
-                                    {/* eslint-disable-next-line jsx-a11y/alt-text */}
-                                     <img ref={imgRef} src={imgSrc} style={{ maxHeight: '400px' }} onLoad={onImageLoad} />
+                                <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)} aspect={ASPECT_RATIO} minWidth={MIN_DIMENSION} minHeight={MIN_DIMENSION} circularCrop={false} >
+                                     <img ref={imgRef} src={imgSrc} style={{ maxHeight: '400px', display: imgSrc ? 'block' : 'none' }} onLoad={onImageLoad} alt="Para recortar" />
                                 </ReactCrop>
-                                <Button mt="sm" onClick={handleConfirmCropAndUpload} loading={isUploading} disabled={!completedCrop || isUploading || isSubmitting} leftSection={<IconCheck size={16} />} >
-                                     {t('component.rewardForm.confirmCropButton', 'Confirmar Recorte y Subir')} {/* TODO: i18n */}
+                                <Button mt="sm" onClick={handleConfirmCropAndUpload} loading={isUploading} disabled={!completedCrop || isUploading || isSubmitting || !imgSrc} leftSection={<IconCheck size={16} />} >
+                                     {t('component.rewardForm.confirmCropButton')}
                                  </Button>
-                                <canvas ref={previewCanvasRef} style={{ display: 'none', border: '1px solid black', objectFit: 'contain', width: completedCrop?.width ?? 0, height: completedCrop?.height ?? 0, }}/>
+                                {completedCrop && completedCrop.width > 0 && <canvas ref={previewCanvasRef} style={{ display: 'none', border: '1px solid black', objectFit: 'contain', width: completedCrop.width, height: completedCrop.height, }}/>}
                              </Box>
                          )}
-                        {uploadError && ( <Alert title="Error de Imagen" color="red" icon={<IconAlertCircle size={16} />} mt="sm">{uploadError}</Alert> )}
+                        {uploadError && ( <Alert title={t('common.error')} color="red" icon={<IconAlertCircle size={16} />} mt="sm" withCloseButton onClose={()=>setUploadError(null)}>{uploadError}</Alert> )}
                     </Stack>
-                    {/* Fin Sección Imagen */}
 
                     <Group justify="flex-end" mt="md">
                         <Button variant="light" onClick={onCancel} disabled={isSubmitting || isUploading} radius="lg"> {t('common.cancel')} </Button>
-                        <Button type="submit" loading={isSubmitting} radius="lg" disabled={isUploading}> {submitButtonText} </Button>
+                        <Button type="submit" loading={isSubmitting} radius="lg" disabled={isUploading || showCropper}> {submitButtonText} </Button>
                     </Group>
                 </Stack>
             </form>
