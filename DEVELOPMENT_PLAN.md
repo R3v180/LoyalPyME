@@ -1,166 +1,259 @@
 # LoyalPyME - Plan de Desarrollo y Futuras Funcionalidades
 
-**Última Actualización:** 05 de Mayo de 2025
+**Última Actualización:** 09 de Mayo de 2025
 
-Este documento detalla las tareas pendientes inmediatas, el alcance definido para una V1.0 operativa, las mejoras planificadas post-V1.0, la deuda técnica y las ideas para la evolución futura.
-
----
-
-## A. CORRECCIONES INMEDIATAS (Pre-V1.0) ⏳📌
-
-_(Bloqueadores o bugs a solucionar antes de seguir con nuevas features)_
-
-1.  **[COMPLETADO]** ~~Arreglar Tipo `TierData` (`frontend`)~~
-
-    - ~~**Prioridad:** Alta~~
-    - ~~**Dificultad:** Baja~~
-    - ~~**Objetivo:** Eliminar casts `as any` al acceder a `tier.benefits` en `CustomerDashboardPage.tsx`.~~
-    - ~~**Pasos:** Añadir `benefits?: TierBenefitData[];` a `interface TierData` (`types/customer.ts`). Eliminar casts usando `?.` o checks.~~
-
-2.  **[COMPLETADO]** ~~Fix Mobile Popover Click en Barra de Progreso (`frontend`)~~
-
-    - ~~**Prioridad:** Media (Bug UX)~~
-    - ~~**Dificultad:** Media (Requiere depuración)~~
-    - ~~**Objetivo:** Permitir ver beneficios del siguiente nivel con tap en móvil en `UserInfoDisplay`.~~
-    - ~~**Pasos:** Se implementó icono (`IconHelp`) clickeable solo en móvil como disparador del Popover.~~
-
-3.  **[COMPLETADO]** ~~Fix Backend Build Error (`uploads.service.ts`) (`backend`)~~
-
-    - ~~**Prioridad:** CRÍTICA (Impedía compilación backend)~~
-    - ~~**Dificultad:** Baja-Media~~
-    - ~~**Objetivo:** Solucionar error `TS2307: Cannot find module './uploads.service'` que reportaba `tsc` al compilar `uploads.controller.ts`.~~
-    - ~~**Pasos:** Se corrigieron nombres de archivo (`uploads.controller.ts`) e importaciones internas. Se verificó la existencia/exportación en `uploads.service.ts`. Se requirió limpieza de `dist/` y `npx prisma generate` para asegurar que `tsc` veía los tipos/módulos correctos.~~
-
-4.  **[COMPLETADO]** ~~Feature: Botones Canje en Resumen Cliente (`frontend`)~~
-    - ~~**Prioridad:** Media (Mejora UX solicitada)~~
-    - ~~**Dificultad:** Baja-Media~~
-    - ~~**Objetivo:** Añadir botones "Canjear" a las previsualizaciones de recompensas/regalos en `SummaryTab.tsx`.~~
-    - ~~**Pasos:** Pasar props (`onRedeem...`, `redeemingRewardId`, `userPoints`) desde `CustomerDashboardPage` a `SummaryTab`. Añadir lógica de botones condicionales en `SummaryTab`. Simplificar texto botones. Añadir claves i18n.~~
+Este documento detalla las tareas pendientes inmediatas, el alcance definido para las próximas versiones operativas (con foco en la plataforma base, Módulo Camarero MVP, y luego mejoras LCo), la deuda técnica y las ideas para la evolución futura.
 
 ---
 
-## B. ALCANCE OBJETIVO "V1.0" (Operativa y Atractiva) ⭐🚀
+## A. TRABAJO RECIENTEMENTE COMPLETADO / CORRECCIONES ✅
 
-_(Funcionalidades y requisitos técnicos mínimos para poder empezar a ofrecer la plataforma, aunque sea en beta o con planes iniciales)_
+1.  **[COMPLETADO]** ~~Panel Super Admin y Gestión de Módulos (MVP Base)~~
 
-5.  ⭐ **Panel Super Admin y Gestión Negocios/Módulos** (`backend`, `frontend`)
-
-    - **Prioridad:** **CRÍTICA** (Requisito para modelo SaaS/multi-negocio)
-    - **Dificultad:** Alta
-    - **Objetivo:** Interfaz/lógica para que el admin de LoyalPyME gestione negocios (estado activo/inactivo) y módulos habilitados.
-    - **Pasos BE:** Rol `SUPER_ADMIN`. API Super Admin (`/api/superadmin/...` protegida) para CRUD básico de Negocios (listar, activar/desactivar) y gestión de módulos/features por negocio (¿Modelo BD `BusinessModule`? ¿JSON en `Business`?). Middleware `checkModuleActive`.
-    - **Pasos FE:** Sección `/superadmin` protegida. UI Gestión Negocios (Tabla, botones estado). UI Gestión Módulos (Lista + Switch por negocio).
-    - **Consideraciones:** Seguridad endpoints Super Admin, diseño feature flags/módulos, creación primer Super Admin.
-
-6.  ⭐ **Personalización Negocio - Logo (Upload)** (`backend`, `frontend`)
-
-    - **Prioridad:** Alta (Importante para imagen de marca del cliente PyME)
-    - **Dificultad:** Media-Alta
-    - **Objetivo:** Permitir al admin del negocio subir su propio logo.
-    - **Pasos BE:** `Business.logoUrl`. API Upload (`/upload/business-logo` o usar genérica `/uploads/image`). Servicio update `Business`. Devolver `logoUrl` en `/api/profile`.
-    - **Pasos FE:** UI Admin (Settings Page?) con `<FileInput>`. Hook `useLayoutUserData` obtiene `logoUrl`. `AppHeader` muestra logo dinámico o fallback.
-
-7.  ⭐ **Personalización Negocio - Theming Básico** (`backend`, `frontend`)
-
-    - **Prioridad:** Alta (Importante para imagen de marca del cliente PyME)
-    - **Dificultad:** Media
-    - **Objetivo:** Adaptar colores primarios/secundarios básicos.
-    - **Pasos BE:** `Business.themeIdentifier` o `brandingColor`. UI Admin para seleccionar. Devolver en `/api/profile`.
-    - **Pasos FE:** Definir temas Mantine/variables CSS. Lógica `App.tsx`/`MainLayout.tsx` aplica tema/clase.
-
-8.  ⭐ **[COMPLETADO]** ~~Historial de Actividad Cliente (`backend`, `frontend`)~~
-
-    - ~~**Prioridad:** Alta (Valor clave para el cliente final)~~
+    - ~~**Prioridad (Original):** CRÍTICA~~
     - ~~**Dificultad:** Alta~~
-    - ~~**Objetivo:** Log de puntos, canjes, regalos para el cliente.~~
-    - ~~**Pasos BE:** Creado `model ActivityLog`. Servicios modificados para registrar. API `GET /api/customer/activity` (paginada) creada.~~
-    - ~~**Pasos FE:** Implementado `ActivityTab.tsx`. Creado Hook `useCustomerActivity`. UI Lista/Timeline con paginación. Descripciones internacionalizadas.~~
+    - ~~**Objetivo Alcanzado (MVP):** Interfaz/lógica Super Admin para listar negocios, activar/desactivar negocios, y activar/desactivar módulos LoyalPyME Core (LCo) y LoyalPyME Camarero (LC) por negocio. Middleware `checkModuleActive` implementado y aplicado a rutas LCo. `auth.middleware` y `useLayoutUserData` actualizados para manejar y exponer flags de módulos. Navbar y Overview del Admin de Negocio reaccionan a estos flags.~~
+    - ~~**Detalles Implementación:**~~
+      - ~~**BE:** Rol `SUPER_ADMIN`, API Super Admin (`/api/superadmin/*`) para gestión de estado de `Business` y flags `isLoyaltyCoreActive`, `isCamareroActive`. Scripts de seed y creación de Super Admin.~~
+      - ~~**FE:** Página `/superadmin` con tabla de negocios y controles (switches).~~
 
-9.  ⭐ **Fundamentos Técnicos Esenciales (Pre-Lanzamiento)** (`backend`, `frontend`, `infra`)
+2.  **[COMPLETADO]** ~~Arreglar Tipo `TierData` (`frontend`)~~
+
+    - ~~**Detalles:** Eliminación de casts `as any` al acceder a `tier.benefits` en `CustomerDashboardPage.tsx` añadiendo `benefits?: TierBenefitData[];` a `interface TierData` (`types/customer.ts`).~~
+
+3.  **[COMPLETADO]** ~~Fix Mobile Popover Click en Barra de Progreso (`frontend`)~~
+
+    - ~~**Detalles:** Implementación de icono (`IconHelp`) clickeable solo en móvil como disparador del Popover en `UserInfoDisplay` para ver beneficios del siguiente nivel.~~
+
+4.  **[COMPLETADO]** ~~Fix Backend Build Error (`uploads.service.ts`) (`backend`)~~
+
+    - ~~**Detalles:** Corrección de nombres de archivo e importaciones. Limpieza de `dist/` y `npx prisma generate`.~~
+
+5.  **[COMPLETADO]** ~~Feature: Botones Canje en Resumen Cliente (`frontend`)~~
+    - ~~**Detalles:** Añadidos botones "Canjear" a las previsualizaciones de recompensas/regalos en `SummaryTab.tsx`, pasando props necesarias y añadiendo lógica condicional.~~
+
+---
+
+## B. PRIORIDAD ACTUAL: Módulo "LoyalPyME Camarero" (LC) - Desarrollo del MVP 🧑‍🍳📱
+
+_(Funcionalidades y requisitos técnicos mínimos para un primer lanzamiento operativo del módulo Camarero, aprovechando la base de Super Admin ya implementada para su activación por negocio)._
+
+6.  ⭐ **LC - Diseño y Estructura Base de Datos** (`backend`)
+
+    - **Prioridad:** **CRÍTICA (BLOQUEADOR PARA LC)**
+    - **Dificultad Estimada:** Media-Alta
+    - **Objetivo:** Definir, implementar y migrar los modelos Prisma necesarios para el módulo Camarero.
+    - **Modelos Clave a Considerar:** `Table` (Mesas, QR de mesa, estado), `MenuCategory`, `MenuItem` (con precio, imagen, descripción, alérgenos, estado disponible, destino KDS), `ModifierGroup`, `ModifierOption` (con ajuste de precio), `Order` (con estado, mesa, cliente opcional, camarero opcional, total), `OrderItem` (con cantidad, precio unitario, notas, estado KDS, modificadores seleccionados), `StaffPin` (para camareros/cocina).
+    - **Pasos:**
+      1.  Refinar y finalizar las definiciones de estos modelos en `schema.prisma`.
+      2.  Establecer relaciones (ej: `Order` con `Table` y `OrderItem`, `OrderItem` con `MenuItem` y `ModifierOption`).
+      3.  Considerar campos para auditoría (quién sirvió, quién preparó).
+      4.  Ejecutar `npx prisma migrate dev --name add_camarero_module_tables`.
+      5.  Ejecutar `npx prisma generate`.
+
+7.  ⭐ **LC - Backend: API para Gestión de Carta Digital por el Admin del Negocio** (`backend`)
+
     - **Prioridad:** **CRÍTICA**
-    - **Dificultad:** Media-Alta
-    - **Objetivo:** Asegurar un mínimo de estabilidad, seguridad y operatividad antes de que usuarios reales (incluso beta) usen la plataforma.
+    - **Dificultad Estimada:** Alta
+    - **Objetivo:** Endpoints API REST para que el `BUSINESS_ADMIN` pueda realizar CRUD completo sobre `MenuCategory`, `MenuItem` (incluyendo subida de imagen para ítems), `ModifierGroup`, y `ModifierOption`.
+    - **Pasos:**
+      1.  Crear nuevas rutas (ej: `/api/camarero/admin/menu/categories`, `/api/camarero/admin/menu/items`, etc.).
+      2.  Proteger estas rutas con `authenticateToken`, `checkRole(['BUSINESS_ADMIN'])`, y **`checkModuleActive('CAMARERO')`**.
+      3.  Implementar controladores y servicios para cada entidad CRUD.
+      4.  Para `MenuItem`, integrar con el servicio de subida de imágenes existente (Cloudinary) para las fotos de los platos.
+      5.  Incluir lógica para marcar ítems como "agotado" (`isAvailable`).
+      6.  Validaciones robustas de entrada para todos los endpoints.
+
+8.  ⭐ **LC - Frontend: UI para Gestión de Carta Digital por el Admin del Negocio** (`frontend`)
+
+    - **Prioridad:** **CRÍTICA**
+    - **Dificultad Estimada:** Alta
+    - **Objetivo:** Interfaz de usuario en el panel de `BUSINESS_ADMIN` (ej: nueva sección `/admin/dashboard/camarero/menu-editor`) para gestionar la carta digital.
+    - **Pasos:**
+      1.  Asegurar que el enlace/sección en `AdminNavbar.tsx` y `AdminOverview.tsx` solo aparece si `isCamareroActive` es `true`.
+      2.  Diseñar y desarrollar componentes React/Mantine para:
+          - Listar, crear, editar, eliminar `MenuCategory`.
+          - Listar, crear, editar (con formulario complejo incluyendo subida de imagen y selección de modificadores), eliminar `MenuItem` dentro de una categoría.
+          - Gestionar `ModifierGroup` y `ModifierOption` asociados a un `MenuItem`.
+      3.  Integrar con las APIs del backend creadas en el punto anterior.
+
+9.  ⭐ **LC - Backend & Frontend: Visualización de Carta Digital por el Cliente Final** (`backend`, `frontend`)
+
+    - **Prioridad:** Alta
+    - **Dificultad Estimada:** Media-Alta
+    - **Objetivo:** Permitir que los clientes del restaurante escaneen un QR en su mesa y vean la carta digital actualizada en sus móviles.
+    - **Pasos BE:**
+      1.  API pública o semi-pública (ej: `/public/camarero/menu/:businessSlug` o `/api/camarero/menu/:businessId`) para obtener la estructura completa de la carta (categorías, ítems activos, modificadores) de un negocio. Debe ser eficiente.
+      2.  Lógica para generar y asociar QR únicos a cada `Table` del negocio.
+    - **Pasos FE:**
+      1.  Página/vista dedicada (ej: `/menu/:businessSlug/:tableNumber`) que se carga al escanear el QR.
+      2.  UI atractiva, responsive y fácil de navegar para la carta digital:
+          - Mostrar categorías, ítems con fotos, descripciones, precios, alérgenos.
+          - Permitir búsqueda y filtrado básico.
+
+10. ⭐ **LC - Backend & Frontend: Flujo de Pedido Básico por el Cliente Final** (`backend`, `frontend`)
+
+    - **Prioridad:** Alta
+    - **Dificultad Estimada:** Muy Alta
+    - **Objetivo:** Permitir a los clientes seleccionar ítems de la carta digital, personalizar con modificadores, añadir notas y enviar el pedido a cocina/barra. (MVP inicial puede ser con sesión de mesa anónima, sin login de cliente LCo).
+    - **Pasos BE:**
+      1.  API para recibir un nuevo pedido (`Order` con sus `OrderItem`). Debe asociarse a la `Table` (identificada por el QR escaneado).
+      2.  Lógica para validar el pedido (ítems disponibles, precios correctos).
+      3.  Crear registros `Order` y `OrderItem` en la BD, con estado inicial (ej: `RECEIVED`).
+    - **Pasos FE (Carta Digital Cliente):**
+      1.  UI para seleccionar cantidad, modificadores, añadir notas a ítems.
+      2.  Carrito de compra o resumen del pedido.
+      3.  Botón para enviar pedido.
+      4.  Feedback al cliente sobre el estado del envío del pedido.
+
+11. ⭐ **LC - Backend & Frontend: KDS (Kitchen/Bar Display System) Básico** (`backend`, `frontend`)
+
+    - **Prioridad:** Alta
+    - **Dificultad Estimada:** Alta
+    - **Objetivo:** Pantalla(s) para cocina y/o barra donde aparecen las nuevas comandas (o ítems específicos) y el personal puede marcar su estado de preparación.
+    - **Pasos BE:**
+      1.  API para que las pantallas KDS obtengan los `OrderItem` pendientes/en preparación (filtrados por `kdsDestination` si se implementa).
+      2.  API para que el personal de KDS actualice el estado de un `OrderItem` (ej: de `PENDING` a `PREPARING`, de `PREPARING` a `READY`).
+      3.  Considerar WebSockets para actualizaciones en tiempo real en las pantallas KDS cuando entra un nuevo pedido o ítem.
+    - **Pasos FE:**
+      1.  Interfaz de usuario clara para KDS, mostrando comandas/ítems en columnas o tarjetas.
+      2.  Visualización de mesa, hora, ítems, modificadores, notas.
+      3.  Botones para cambiar el estado del ítem/pedido.
+
+12. ⭐ **LC - Backend & Frontend: Interfaz Camarero Básica (MVP)** (`backend`, `frontend`)
+
+    - **Prioridad:** Media-Alta
+    - **Dificultad Estimada:** Alta
+    - **Objetivo Inicial:** Que un camarero pueda ver notificaciones de "Pedido Listo" del KDS y marcar ítems/pedidos como "Servidos".
+    - **Pasos BE:**
+      1.  API para que la interfaz del camarero reciba notificaciones (podría ser polling o WebSockets) cuando un `OrderItem` está `READY`.
+      2.  API para que el camarero marque un `OrderItem` (o `Order` completo) como `SERVED`, registrando su `userId` (del camarero, después de login con PIN) y la hora.
+    - **Pasos FE:**
+      1.  Login para camareros (con PIN gestionado por `BUSINESS_ADMIN`).
+      2.  Vista simple de notificaciones/pedidos listos para servir.
+      3.  Botón para marcar como "Servido".
+
+13. **LC - Fundamentos Técnicos Esenciales (Pre-Lanzamiento LC)** (`backend`, `frontend`, `infra`)
+    - **Prioridad:** **CRÍTICA** (paralelo al desarrollo de LC)
+    - **Dificultad Estimada:** Media-Alta
+    - **Objetivo:** Asegurar un mínimo de estabilidad, seguridad y operatividad para el módulo Camarero.
     - **Tareas Mínimas:**
-      - Testing Mínimo (BE): Escribir y pasar tests de integración para flujos críticos: Login (Admin/Cliente), Registro (Cliente/Negocio), Validación QR, Canje Puntos, Canje Regalo, CRUD Recompensa básico, CRUD Tier básico, Historial Actividad. (Parte de C.12).
-      - Validación Backend Mínima:** Revisar **todos\*\* los endpoints API y asegurar que las entradas (`req.body`, `req.params`, `req.query`) tienen validaciones básicas para prevenir errores 500 por datos inesperados (puede ser sin Zod inicialmente, pero mejorado respecto a ahora). (Parte de C.14).
-      - Despliegue Inicial:** Definir, implementar y **probar\*\* un método de despliegue simple pero funcional en un entorno tipo producción (ej: Dockerizar + VPS/Cloud Simple, o PaaS como Render/Fly.io). Configurar variables de entorno de producción (DB, JWT, Cloudinary, etc.). Asegurar HTTPS. (Parte de C.15).
-      - Logging Básico Producción:\*\* Configurar el backend para que los logs (errores, warnings, info básica) se escriban a archivos o a un servicio de logging simple en producción. (Parte de C.16).
-      - Seguridad Básica:\*\* Revisar dependencias (`yarn audit`), configurar cabeceras HTTP de seguridad básicas (Helmet.js en Express?), asegurar que la gestión de JWT (expiración, secreto) es robusta.
+      - **Testing Mínimo (BE):** Escribir y pasar tests de integración para flujos críticos de LC: CRUD Ítem Menú, Enviar Pedido Cliente, Ver Pedido en KDS, Actualizar Estado KDS.
+      - **Validación Backend Mínima (LC):** Revisar **todos** los nuevos endpoints API de LC y asegurar que las entradas tienen validaciones básicas.
+      - **(Si se opta por Modelo Híbrido) Diseño y Prototipo de Gateway Local:** Si la operativa offline es crítica, empezar a diseñar la arquitectura y un prototipo del gateway local que se instalaría en el restaurante. Esta es una tarea significativa.
+      - **Logging y Seguridad:** Extender el logging actual para cubrir las operaciones de LC. Revisar la seguridad de los nuevos endpoints, especialmente los que no requieren autenticación de cliente final (ej: ver carta).
 
 ---
 
-## C. MEJORAS POST-V1.0 / PRÓXIMA PRIORIDAD (Fase 2 Continuación) 📝
+## C. FUNCIONALIDADES LOYALPYME CORE (LCo) Y MEJORAS PLATAFORMA - PRIORIDAD SECUNDARIA / POST-LC MVP 📝
 
-_(Funcionalidades valiosas a añadir después del lanzamiento inicial V1.0, o si se decide incluirlas en V1.0)_
+_(Funcionalidades valiosas que estaban en el plan V1.0 original de LCo o como mejoras generales, ahora con prioridad ajustada)_
 
-10. **Feature: "Mi Perfil" Cliente (con Foto)** (`backend`, `frontend`) - **NUEVO (Prioridad Solicitada)**
+14. **Plataforma - Personalización Negocio - Logo (Upload)** (`backend`, `frontend`)
 
-    - **Prioridad:** Alta (Solicitada por usuario para V1.0)
-    - **Dificultad:** Media
-    - **Objetivo:** Implementar pestaña "Mi Perfil" y permitir subida/visualización de avatar.
+    - **Prioridad:** Media (Después del MVP de LC, pero podría adelantarse si es simple y reutilizable por LC)
+    - **Dificultad Estimada:** Media-Alta
+    - **Objetivo:** Permitir al admin del negocio subir su propio logo.
+    - **Pasos BE:** `Business.logoUrl`. API Upload (`/upload/business-logo` o usar genérica `/uploads/image` que ya existe). Servicio update `Business`. Devolver `logoUrl` en `/api/profile` del negocio.
+    - **Pasos FE:** UI Admin (Settings Page?) con `<FileInput>`. Hook `useLayoutUserData` (o similar para datos del negocio) obtiene `logoUrl`. `AppHeader` y otras áreas muestran logo dinámico o fallback.
+
+15. **Plataforma - Personalización Negocio - Theming Básico** (`backend`, `frontend`)
+
+    - **Prioridad:** Media (Similar al logo)
+    - **Dificultad Estimada:** Media
+    - **Objetivo:** Permitir al admin del negocio adaptar colores primarios/secundarios básicos.
+    - **Pasos BE:** `Business.brandingColorPrimary`, `Business.brandingColorSecondary`. UI Admin para seleccionar. Devolver en `/api/profile` del negocio.
+    - **Pasos FE:** Definir temas Mantine o variables CSS. Lógica en `App.tsx` o `MainLayout.tsx` aplica tema/clase dinámicamente.
+
+16. **LCo - Historial de Actividad Cliente (Mejoras)** (`backend`, `frontend`)
+
+    - **Estado:** Ya implementado en LCo (v1.12.0).
+    - **Posibles Mejoras Futuras (Baja Prioridad):** Filtros avanzados, exportación.
+
+17. **LCo - Feature: "Mi Perfil" Cliente (con Foto)** (`backend`, `frontend`)
+
+    - **Prioridad:** Baja (Post-LC MVP y si LCo se retoma con fuerza)
+    - **Dificultad Estimada:** Media
+    - **Objetivo:** Implementar pestaña "Mi Perfil" en el dashboard de cliente LCo y permitir subida/visualización de avatar.
     - **Pasos BE:** Añadir `avatarUrl` a `User`. Crear API Upload avatar. Modificar `GET /profile`.
-    - **Pasos FE:** Implementar `ProfileTab.tsx` (UI subida/recorte?). Modificar `UserInfoDisplay`/`AppHeader` para mostrar `<Avatar>`. Actualizar hooks (`useUserProfileData`, `useLayoutUserData`).
+    - **Pasos FE:** Implementar `ProfileTab.tsx` (UI subida/recorte?). Modificar `UserInfoDisplay`/`AppHeader` para mostrar `<Avatar>`. Actualizar hooks.
 
-11. **Feature: "Ofertas y Noticias" (Comunicación Básica)** (`backend`, `frontend`) - **NUEVO (Prioridad Solicitada)**
+18. **LCo - Feature: "Ofertas y Noticias" (Comunicación Básica)** (`backend`, `frontend`)
 
-    - **Prioridad:** Alta (Solicitada por usuario para V1.0) / Media (Plan Original)
-    - **Dificultad:** Alta
-    - **Objetivo:** Admin publica noticias/ofertas generales. Cliente las ve.
-    - **Pasos BE:** `model Announcement`. API CRUD Admin. API lectura cliente. _(Opcional: Lógica Mailing)_.
-    - **Pasos FE:** UI Admin (crear/listar). Implementar `OffersTab.tsx` feed. Mostrar resumen en `SummaryTab.tsx`. Hook `useAnnouncements`. _(Opcional: UI suscripción email)_.
+    - **Prioridad:** Baja (Similar a "Mi Perfil LCo")
+    - **Dificultad Estimada:** Alta
+    - **Objetivo:** Admin de LCo publica noticias/ofertas generales. Cliente LCo las ve.
 
-12. **Añadir Captura desde Cámara en `RewardForm.tsx`** (`frontend`)
+    * **Pasos BE:** `model Announcement`. API CRUD Admin. API lectura cliente.
+    * **Pasos FE:** UI Admin (crear/listar). Implementar `OffersTab.tsx`. Mostrar resumen en `SummaryTab.tsx`.
 
-    - **Prioridad:** Media-Baja (Post-V1.0)
-    - **Dificultad:** Media
-    - **Objetivo:** Opción para tomar foto con cámara para la recompensa.
-    - **Pasos:** Activar botón, Modal con `<video>`, `getUserMedia`, botón captura a `<canvas>`, `toBlob`/`toDataURL`, detener stream, pasar DataURL a `ReactCrop`.
+19. **LCo - Fidelización Avanzada (Más Tipos de Beneficios para Tiers)** (`backend`, `frontend`)
 
-13. **Refinar Espaciado/Diseño `RewardList.tsx`** (`frontend`)
+    - **Prioridad:** Media (Si LCo sigue siendo un foco importante después de LC)
+    - **Dificultad Estimada:** Alta
+    - **Objetivo:** Más variedad en beneficios de Tiers LCo (ej: % Descuento aplicable en pedidos, Bonus Cumpleaños automático).
+    - **Pasos BE:** Expandir Enum `BenefitType`. Validar `value` según tipo. Implementar lógica de aplicación (posiblemente en el flujo de pedido de LC si hay integración, o mediante crons).
+    - **Pasos FE:** Actualizar Form/Select Admin para nuevos tipos. Actualizar display de beneficios para el cliente.
 
-    - **Prioridad:** Media (Post-V1.0)
-    - **Dificultad:** Baja-Media
-    - **Objetivo:** Mejorar estética/legibilidad tarjetas recompensa cliente.
-    - **Pasos:** Ajustar props Mantine (`SimpleGrid` cols/spacing, `Card` padding, `Stack` gap, `Text` size/fw/lineClamp, `Badge` size/variant). Responsive.
-
-14. **Fidelización Avanzada (Tipos de Beneficios)** (`backend`, `frontend`)
-    - **Prioridad:** Media (Post-V1.0)
-    - **Dificultad:** Alta
-    - **Objetivo:** Más variedad en beneficios de Tiers (ej: % Descuento, Bonus Cumpleaños).
-    - **Pasos BE:** Expandir Enum `BenefitType`. Validar `value`. Implementar lógica aplicación (Cron Job?).
-    - **Pasos FE:** Actualizar Form/Select Admin. Actualizar display cliente.
+20. **Completar Funcionalidad #5 - Panel Super Admin (Más allá del MVP)** (`backend`, `frontend`)
+    - **Prioridad:** Media (Según necesidad después de LC MVP)
+    - **Objetivo:** CRUD completo de Negocios, gestión de suscripciones más detallada (si aplica), logs de Super Admin.
+    - **Pasos:** Ver "Pendiente para Completar Funcionalidad #5" en la Sección A.
 
 ---
 
-## D. DEUDA TÉCNICA Y MEJORAS CONTINUAS 🛠️
+## D. DEUDA TÉCNICA Y MEJORAS CONTINUAS (Transversales a LCo y LC) 🛠️
 
-_(Tareas importantes para la salud y escalabilidad a largo plazo, a abordar progresivamente)_
+_(Tareas importantes para la salud y escalabilidad a largo plazo de TODA la plataforma, a abordar progresivamente)_
 
-15. Usar Variables Entorno para Credenciales Tests (`backend`)
-16. Completar Pruebas Backend (`backend`)
-17. Iniciar/Completar Pruebas Frontend (`frontend`)
-18. Validación Robusta Backend (Zod) (`backend`)
-19. Estrategia Deployment & CI/CD (Avanzada) (`infra`)
-20. Logging/Monitoring Avanzado (Producción) (`backend`, `frontend`)
-21. Optimización Base de Datos (`backend`)
-22. Tipado Centralizado (`common` package) (`infra`, `backend`, `frontend`)
+21. **Usar Variables Entorno para Credenciales de Tests** (`backend`)
+    - **Objetivo:** Eliminar credenciales hardcodeadas de los archivos de test.
+22. **Completar Pruebas Backend (LCo y LC)** (`backend`)
+    - **Objetivo:** Aumentar cobertura de tests de integración y unitarios para todos los flujos críticos de ambos módulos.
+23. **Iniciar/Completar Pruebas Frontend (LCo y LC)** (`frontend`)
+    - **Objetivo:** Implementar tests unitarios para componentes complejos y tests de integración/E2E para flujos de usuario clave.
+24. **Validación Robusta Backend con Zod** (Todos los módulos) (`backend`)
+    - **Objetivo:** Reemplazar validaciones manuales en controladores por esquemas Zod para mayor robustez y claridad.
+25. **Estrategia de Despliegue & CI/CD (Avanzada)** (`infra`)
+    - **Objetivo:** Automatizar el proceso de build, test y despliegue para backend y frontend. Investigar Dockerización.
+26. **Logging/Monitoring Avanzado en Producción** (`backend`, `frontend`)
+    - **Objetivo:** Integrar herramientas de logging estructurado (ej: Winston, Pino) y monitorización de errores (ej: Sentry) y rendimiento.
+27. **Optimización de Consultas a Base de Datos** (`backend`)
+    - **Objetivo:** Revisar consultas Prisma complejas o frecuentes, añadir índices donde sea necesario, optimizar para rendimiento.
+28. **Tipado Centralizado (Potencial `common` package)** (`infra`, `backend`, `frontend`)
+    - **Objetivo:** Mover tipos y enums compartidos entre backend y frontend a un paquete común para evitar duplicación y asegurar consistencia.
+29. **Mejorar UI/UX General:**
+    - Refinar espaciado/diseño `RewardList.tsx` (`frontend`, LCo).
+    - Añadir captura desde cámara en `RewardForm.tsx` (`frontend`, LCo).
+    - Mejorar la accesibilidad (ARIA, contraste).
 
 ---
 
-## E. VISIÓN FUTURA / MÓDULOS ADICIONALES (Post-V1.0) 🚀
+## E. VISIÓN FUTURA / MÓDULOS ADICIONALES (Post-MVP LC y Mejoras LCo) 🚀
 
-_(Ideas a largo plazo, a detallar y priorizar después de V1.0)_
+_(Ideas a largo plazo, que requerirán su propio análisis y planificación detallada si se decide proceder con ellas)_
 
-23. Módulo Camarero/Servicio (Real-time)
-24. Módulo Pedidos / Carta Digital
-25. Interacción Social y Gifting
-26. Gamificación Avanzada
-27. Monetización Avanzada
-28. Personalización y CRM Avanzado
-29. Gestión de Catálogo e Integración de Datos Externos
-30. Analíticas Avanzadas (Admin)
-31. Operaciones y Gestión Negocio Adicional
-32. App Móvil (PWA/Nativa)
-33. E2E Tests
+30. **LC - Funcionalidades Avanzadas de Servicio:**
+    - **Pago Online desde Mesa:** Integración con pasarelas de pago.
+    - **División de Cuentas Avanzada:** Múltiples métodos de división directamente por los clientes o el camarero.
+    - **Gestión de Reservas:** Integrada con la gestión de mesas.
+    - **Gestión de Inventario (Básico):** Para marcar ítems como agotados automáticamente o alertar sobre stock bajo.
+    - **Informes y Analíticas Avanzadas para LC:** Más métricas sobre rendimiento de camareros, tiempos, rentabilidad de platos.
+31. **LC - Integración Completa y Nativa con LCo:**
+    - Permitir canjear recompensas de puntos LCo directamente al hacer un pedido en LC.
+    - Aplicar beneficios de Tier LCo (ej: % descuento) automáticamente a la cuenta en LC.
+    - Interfaz de cliente en LC que muestre claramente sus puntos LCo y recompensas disponibles.
+32. **Módulo Pedidos Online / Take Away / Delivery:** (Extensión natural de LC y la carta digital)
+33. **App Móvil Dedicada (PWA o Nativa):**
+    - Para Clientes LCo (mejorando la experiencia PWA actual).
+    - Para Personal de LC (Camareros, KDS).
+34. **E2E (End-to-End) Tests Automatizados:** Para los flujos de usuario más críticos de toda la plataforma.
+35. **Monetización Avanzada:**
+    - Diferentes planes de suscripción (Básico, Pro, Premium) con acceso a distintos módulos o límites de uso.
+    - Cobro por módulos adicionales específicos.
+36. **Personalización y CRM Avanzado (Transversal):**
+    - Segmentación de clientes más avanzada.
+    - Campañas de marketing dirigidas.
+37. **Gamificación Avanzada (LCo):** Badges, retos, leaderboards.
 
 ---

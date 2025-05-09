@@ -1,8 +1,8 @@
 # LoyalPyME - Guía Completa de Instalación y Ejecución Local
 
-**Última Actualización:** 03 de Mayo de 2025
+**Última Actualización:** 09 de Mayo de 2025
 
-Esta guía describe los pasos necesarios para instalar, configurar y ejecutar el proyecto LoyalPyME en un entorno de desarrollo local.
+Esta guía describe los pasos necesarios para instalar, configurar y ejecutar el proyecto LoyalPyME en un entorno de desarrollo local. Es crucial seguir los pasos en orden para asegurar una configuración correcta.
 
 ---
 
@@ -10,192 +10,297 @@ Esta guía describe los pasos necesarios para instalar, configurar y ejecutar el
 
 Antes de empezar, asegúrate de tener instalado lo siguiente en tu sistema:
 
-- **Node.js:** Se recomienda una versión LTS reciente (v18 o v20 al momento de escribir esto). Puedes descargarlo desde [nodejs.org](https://nodejs.org/).
-- **Yarn:** Gestor de paquetes para Node.js (v1.x recomendada para este proyecto). Si tienes Node.js/npm, puedes instalarlo con `npm install --global yarn`.
-- **PostgreSQL:** Sistema de base de datos. Necesitas tener un servidor PostgreSQL instalado y **corriendo** localmente o accesible en tu red. Puedes descargarlo desde [postgresql.org](https://www.postgresql.org/download/). Necesitarás crear una base de datos para el proyecto (puedes llamarla `loyalpymedb`).
-- **Git:** Sistema de control de versiones para clonar el repositorio. [git-scm.com](https://git-scm.com/downloads).
-- **(Opcional) NVM (Node Version Manager):** Útil para gestionar múltiples versiones de Node.js ([Linux/Mac](https://github.com/nvm-sh/nvm), [Windows](https://github.com/coreybutler/nvm-windows)).
+- **Node.js:** Se recomienda una versión LTS reciente (v18 o v20+ al momento de escribir esto). Puedes descargarlo desde [nodejs.org](https://nodejs.org/). Node.js incluye npm (Node Package Manager).
+- **Yarn (Opcional, pero usado en los ejemplos de scripts):** Gestor de paquetes para Node.js (v1.x recomendada si se usa). Si tienes Node.js/npm, puedes instalarlo con `npm install --global yarn`. Si prefieres usar `npm` para todos los comandos, puedes adaptar los ejemplos (`yarn install` -> `npm install`, `yarn dev` -> `npm run dev`).
+- **PostgreSQL:** Sistema de base de datos relacional. Necesitas tener un servidor PostgreSQL instalado y **corriendo** localmente o accesible en tu red.
+  - Puedes descargarlo desde [postgresql.org/download](https://www.postgresql.org/download/).
+  - Durante la instalación, se te pedirá configurar una contraseña para el usuario `postgres` (o el usuario administrador por defecto). Anótala.
+  - Necesitarás crear una base de datos para el proyecto. Usando una herramienta como `psql` (cliente de línea de comandos de PostgreSQL) o pgAdmin (GUI), puedes crearla con: `CREATE DATABASE loyalpymedb;` (o el nombre que prefieras, pero deberás ajustarlo en el `.env`).
+- **Git:** Sistema de control de versiones para clonar el repositorio. [git-scm.com/downloads](https://git-scm.com/downloads).
+- **`npx`:** Es una herramienta que viene con `npm` (desde la versión 5.2+). Permite ejecutar paquetes de Node.js sin necesidad de instalarlos globalmente. La usaremos para comandos de Prisma y `ts-node`.
+- **(Opcional) NVM (Node Version Manager):** Útil para gestionar múltiples versiones de Node.js si trabajas en varios proyectos ([Linux/Mac](https://github.com/nvm-sh/nvm), [Windows](https://github.com/coreybutler/nvm-windows)).
+- **(Opcional) Editor de Código:** Se recomienda VS Code con extensiones para Prisma, TypeScript, ESLint.
 
 ---
 
 ## 2. Instalación del Backend
 
-1.  **Clonar Repositorio:** Si aún no lo tienes, clona el repositorio y entra en la carpeta raíz:
+La configuración del backend implica clonar el proyecto, instalar dependencias, configurar el entorno y preparar la base de datos.
+
+1.  **Clonar Repositorio:**
+    Si aún no lo tienes, clona el repositorio del proyecto desde su URL y navega a la carpeta raíz del proyecto.
 
     ```bash
-    git clone <url_del_repositorio> LoyalPyME
+    git clone <URL_DEL_REPOSITORIO_GIT> LoyalPyME
     cd LoyalPyME
     ```
 
-2.  **Navegar a Backend:**
+2.  **Navegar a la Carpeta del Backend:**
+    Todos los comandos siguientes para el backend se ejecutarán desde esta carpeta.
 
     ```bash
     cd backend
     ```
 
-3.  **Instalar Dependencias:**
+3.  **Instalar Dependencias del Backend:**
+    Esto instalará todos los paquetes listados en `package.json` (Express, Prisma, etc.).
 
     ```bash
     yarn install
+    # Alternativamente, si usas npm:
+    # npm install
     ```
 
 4.  **Configurar Variables de Entorno (`.env`):**
+    Las variables de entorno son cruciales para configurar la conexión a la base de datos, secretos JWT, y credenciales de servicios externos como Cloudinary.
 
-    - Copia el archivo de ejemplo:
+    - Copia el archivo de ejemplo `.env.example` a un nuevo archivo llamado `.env`:
       ```bash
       cp .env.example .env
+      # En Windows, puedes usar: copy .env.example .env
       ```
     - Abre el archivo `.env` recién creado con un editor de texto.
     - **Edita las siguientes variables obligatorias:**
-      - `DATABASE_URL`: La cadena de conexión a tu base de datos PostgreSQL. Formato: `postgresql://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:<DB_PORT>/<DB_NAME>?schema=public`.
-        - Ejemplo local común: `postgresql://postgres:tu_contraseña_postgres@localhost:5432/loyalpymedb?schema=public` (Reemplaza `tu_contraseña_postgres` si estableciste una).
-      - `JWT_SECRET`: Una cadena larga, secreta y aleatoria para firmar los tokens de autenticación. **¡No uses la de ejemplo en producción!**
-      - `CLOUDINARY_CLOUD_NAME`: El "Cloud Name" de tu cuenta de Cloudinary.
+      - `DATABASE_URL`: La cadena de conexión a tu base de datos PostgreSQL. El formato es: `postgresql://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:<DB_PORT>/<DB_NAME>?schema=public`.
+        - Ejemplo para una instalación local común de PostgreSQL (reemplaza `<DB_PASSWORD>` con la contraseña que configuraste para tu usuario `postgres`, y `<DB_NAME>` con el nombre de la base de datos que creaste, ej: `loyalpymedb`):
+          `postgresql://postgres:tu_contraseña_postgres@localhost:5432/loyalpymedb?schema=public`
+        - Asegúrate que el usuario de la BD tiene permisos para crear tablas en el schema `public` de esa base de datos.
+      - `JWT_SECRET`: Una cadena larga, secreta y aleatoria utilizada para firmar los tokens de autenticación (JWT). **¡No uses el valor de ejemplo en un entorno de producción!** Puedes generar una con un generador de contraseñas online.
+      - `CLOUDINARY_CLOUD_NAME`: El "Cloud Name" de tu cuenta de Cloudinary (para almacenamiento de imágenes).
       - `CLOUDINARY_API_KEY`: La "API Key" de tu cuenta de Cloudinary.
       - `CLOUDINARY_API_SECRET`: El "API Secret" de tu cuenta de Cloudinary.
-    - **Edita estas variables si vas a ejecutar los tests de integración:** (Opcional para desarrollo normal)
-      - `TEST_ADMIN_EMAIL`: El email que usarán los tests para el login de admin (ej: `"tests@admin.com"`). _(Tarea Técnica Pendiente #14)_
-      - `TEST_ADMIN_PASSWORD`: La contraseña para ese email de test (ej: `"testpassword123"`). _(Tarea Técnica Pendiente #14)_
-    - Guarda el archivo `.env`.
+    - **(Opcional) Variables para Tests de Integración:** Si planeas ejecutar los tests de integración del backend, podrías necesitar definir:
+      - `TEST_ADMIN_EMAIL`: Email para el admin en los tests.
+      - `TEST_ADMIN_PASSWORD`: Contraseña para el admin en los tests.
+        _(Nota: Actualmente, los tests podrían tener credenciales hardcodeadas. Idealmente, deberían usar estas variables de entorno.)_
+    - **(Opcional) Variables para Creación de Super Admin (si se leen desde .env en el script):**
+      - `SUPERADMIN_EMAIL`
+      - `SUPERADMIN_PASSWORD`
+    - Guarda los cambios en el archivo `.env`.
 
-5.  **Aplicar Migraciones de Base de Datos:** Este comando crea/actualiza las tablas en tu base de datos según el `schema.prisma`.
-
-    ```bash
-    npx prisma migrate dev
-    ```
-
-    _(La primera vez te pedirá un nombre para la migración, puedes poner "init")_.
-
-6.  **Generar Cliente Prisma:** **¡Paso MUY importante!** Actualiza el cliente Prisma basado en tu schema.
-
-    ```bash
-    npx prisma generate
-    ```
-
-    _(Debes ejecutarlo cada vez que cambies `schema.prisma`)_.
-
-7.  **Datos Iniciales (Opcional):**
-    - **Opción A (Seed):** Si existe un script de seed (`prisma/seed.ts`), ejecútalo: `npx prisma db seed`.
-    - **Opción B (Manual):** Registra tu primer negocio y usuario administrador a través de la interfaz frontend (`/register-business`) una vez que ambos (frontend y backend) estén corriendo.
-    - **Para Tests:** Si vas a correr los tests de integración, asegúrate de que el usuario admin definido en los tests (actualmente `admin@cafeelsol.com`/`superpasswordseguro`, o en el futuro el de las variables `TEST_ADMIN_...`) exista en la base de datos (se recomienda registrarlo vía la app).
+5.  **Preparar la Base de Datos y Cargar Datos Iniciales:**
+    Estos pasos inicializarán tu base de datos con el esquema definido y datos de prueba.
+    - **Paso 5.1: Resetear y Aplicar Migraciones:**
+      Este comando es fundamental para el desarrollo. **Eliminará todos los datos de tu base de datos `loyalpymedb` (si existe y tiene datos)**, aplicará todas las migraciones desde el principio y creará las tablas según tu archivo `prisma/schema.prisma`. Es la forma más limpia de asegurar que tu BD está sincronizada con el schema durante el desarrollo.
+      ```bash
+      npx prisma migrate reset
+      ```
+      Prisma te pedirá confirmación. Escribe `y` o `yes` y presiona Enter.
+    - **Paso 5.2: Generar Cliente Prisma:**
+      Después de cualquier cambio en el schema (como el que ocurre con `migrate reset` o `migrate dev`), debes regenerar el Cliente Prisma. Esto actualiza los tipos de TypeScript en `node_modules/.prisma/client` para que coincidan con tu schema.
+      ```bash
+      npx prisma generate
+      ```
+    - **Paso 5.3: Poblar con Datos de Demostración (Seed):**
+      Este comando ejecuta el script `prisma/seed.ts`. Este script está diseñado para crear:
+      - Un negocio de demostración llamado "Restaurante Demo LoyalPyME".
+      - Un usuario administrador (`BUSINESS_ADMIN`) para ese negocio con credenciales: `admin@demo.com` / `password`.
+      - Un usuario cliente (`CUSTOMER_FINAL`) para ese negocio con credenciales: `cliente@demo.com` / `password`.
+      - Algunos Tiers y Recompensas de ejemplo para el negocio demo.
+      - Los módulos LoyalPyME Core y LoyalPyME Camarero se activan por defecto para este negocio demo.
+        Ejecuta:
+      ```bash
+      npx prisma db seed
+      ```
+      Deberías ver en la consola los logs del script indicando la creación de estos datos.
+    - **Paso 5.4: Crear Usuario Super Administrador Global:**
+      La plataforma tiene un rol de Super Administrador para gestionar todos los negocios. Este script crea el primer (y posiblemente único) Super Admin.
+      Por defecto (según el script `scripts/create-superadmin.ts`), las credenciales son: `superadmin@loyalpyme.com` / `superadminpassword`.
+      **¡Es crucial que cambies la contraseña por defecto en el script `create-superadmin.ts` si vas a usar esto en un entorno más allá de tu máquina local!**
+      Ejecuta:
+      ```bash
+      npx ts-node ./scripts/create-superadmin.ts
+      ```
+      Guarda estas credenciales del Super Admin en un lugar seguro.
 
 ---
 
 ## 3. Instalación del Frontend
 
-1.  **Navegar a Frontend:** Desde la raíz del proyecto (`LoyalPyME/`)
+1.  **Navegar a la Carpeta del Frontend:**
+    Desde la raíz del proyecto (`LoyalPyME/`):
 
     ```bash
     cd frontend
     ```
 
-    _(O `cd ../frontend` si estás en `backend/`)_.
+    (O `cd ../frontend` si estás en la carpeta `backend/`).
 
-2.  **Instalar Dependencias:**
+2.  **Instalar Dependencias del Frontend:**
+    Esto instalará React, Mantine, y otras librerías necesarias.
     ```bash
     yarn install
+    # Alternativamente, si usas npm:
+    # npm install
     ```
+    _(No se requiere archivo `.env` en la carpeta `frontend/` por defecto, ya que la URL de la API se configura en `vite.config.ts` para el proxy o se usa directamente en `axiosInstance` si es una URL completa)._
 
 ---
 
 ## 4. Ejecución en Modo Desarrollo
 
-**¡Asegúrate de que tu servidor PostgreSQL esté corriendo!**
+**¡Asegúrate de que tu servidor PostgreSQL esté corriendo localmente!**
 
-Se recomienda usar **dos terminales separadas** para el backend.
+Se recomienda usar **dos terminales separadas** para el backend para una mejor experiencia de desarrollo.
 
-- **Terminal 1 (Backend - Compilador TS):**
-
-  - Navega a la carpeta `backend/`.
-  - Ejecuta: `npx tsc --watch`
-  - Vigila cambios en `.ts` y compila a `dist/`. Déjalo corriendo.
-
-- **Terminal 2 (Backend - Servidor Node):**
+- **Terminal 1 (Backend - Compilador TypeScript en modo "watch"):**
 
   - Navega a la carpeta `backend/`.
-  - Ejecuta: `npx nodemon dist/index.js`
-  - Inicia el servidor (`http://localhost:3000`) y reinicia si `dist/` cambia. Déjalo corriendo.
+  - Ejecuta el script `dev:build` de tu `package.json` (o el comando directo):
+    ```bash
+    yarn dev:build
+    # o npx tsc --watch
+    ```
+  - Esto vigilará cambios en tus archivos `.ts` dentro de `src/` y los compilará automáticamente a JavaScript en la carpeta `dist/`. Déjalo corriendo.
 
-- **Terminal 3 (Frontend - Servidor Vite):**
+- **Terminal 2 (Backend - Servidor Node.js con Nodemon):**
+
+  - Navega a la carpeta `backend/`.
+  - Ejecuta el script `dev:run` de tu `package.json` (o el comando directo):
+    ```bash
+    yarn dev:run
+    # o npx nodemon dist/index.js
+    ```
+  - Esto iniciará el servidor Express (`http://localhost:3000` por defecto) usando los archivos compilados en `dist/`. Nodemon reiniciará el servidor automáticamente si detecta cambios en `dist/` (causados por `tsc --watch`). Déjalo corriendo.
+
+- **Terminal 3 (Frontend - Servidor de Desarrollo Vite):**
   - Navega a la carpeta `frontend/`.
-  - Ejecuta: `yarn dev --host`
-  - Inicia el servidor de desarrollo (`https://localhost:5173` y la IP de red). Déjalo corriendo.
+  - Ejecuta el script `dev`:
+    ```bash
+    yarn dev
+    # Si necesitas que el frontend sea accesible desde otros dispositivos en tu red local (ej: móvil):
+    # yarn dev --host
+    ```
+  - Esto iniciará el servidor de desarrollo de Vite. Por defecto (con `mkcert`), intentará usar `https://localhost:5173`. Si no usas HTTPS, será `http://localhost:5173`. La terminal te mostrará la URL exacta. Déjalo corriendo.
 
 ---
 
-## 5. Acceso desde Móvil (Red Local)
+## 5. Acceso a la Aplicación y Paneles
 
-1.  **Encuentra la IP Local de tu PC:** (Usando `ipconfig` o `ifconfig`).
-2.  **Asegura Servidores Corriendo:** Los 3 procesos de la sección anterior.
-3.  **Verifica Firewall:** Permitir TCP entrante en puertos `5173` y `3000` para red Privada.
-4.  **Verifica Config Vite:** `server: { host: true, https: true, proxy: { ... } }` en `vite.config.ts`.
-5.  **Accede desde el Navegador Móvil:** `https://<TU_IP_LOCAL_PC>:5173`.
-6.  **Acepta Advertencia de Seguridad:** Necesario por el certificado autofirmado.
+Una vez que todos los servidores estén corriendo:
+
+- **Aplicación Principal (Login, Registro Cliente, Dashboard Cliente, Panel Admin Negocio):**
+  - Abre tu navegador y ve a `https://localhost:5173` (o la URL que te haya dado Vite).
+  - **Credenciales del Negocio Demo (creadas por el seed):**
+    - Email: `admin@demo.com`
+    - Contraseña: `password`
+  - **Credenciales del Cliente Demo (creadas por el seed):**
+    - Email: `cliente@demo.com`
+    - Contraseña: `password`
+- **Panel Super Administrador:**
+  - Navega a `https://localhost:5173/superadmin`
+  - **Credenciales Super Admin (creadas por el script `create-superadmin.ts`):**
+    - Email: `superadmin@loyalpyme.com` (o el que configuraste)
+    - Contraseña: `superadminpassword` (¡o la que configuraste!)
+- **API Backend Directa:**
+  - La API está disponible en `http://localhost:3000`.
+- **Documentación API (Swagger UI):**
+  - Accede a `http://localhost:3000/api-docs` en tu navegador para ver y probar los endpoints de la API.
+
+**Acceso desde Móvil (Red Local):**
+Si ejecutaste el frontend con `yarn dev --host`, Vite te mostrará una URL de "Network" (ej: `https://192.168.1.XX:5173`).
+
+1.  Asegúrate que tu PC y tu dispositivo móvil están en la misma red WiFi.
+2.  Abre el navegador en tu móvil y escribe esa URL de red.
+3.  Si usas HTTPS (recomendado), es probable que el móvil muestre una advertencia de seguridad por el certificado autofirmado de `mkcert`. Deberás aceptarla para continuar (generalmente hay una opción de "Avanzado" o "Continuar de todas formas").
+4.  Verifica que tu firewall en la PC permite conexiones entrantes en el puerto `5173` (para Vite) y `3000` (para el backend API) en redes privadas.
 
 ---
 
 ## 6. Build para Producción
 
-- En `backend/`: `yarn build`
-- En `frontend/`: `yarn build`
+Para crear las versiones optimizadas para despliegue:
+
+- **Backend:**
+  Desde la carpeta `backend/`:
+  ```bash
+  yarn build
+  # o npm run build
+  ```
+  Esto generará la carpeta `dist/` con el código JavaScript transpilado.
+- **Frontend:**
+  Desde la carpeta `frontend/`:
+  ```bash
+  yarn build
+  # o npm run build
+  ```
+  Esto generará la carpeta `dist/` (dentro de `frontend/`) con los assets estáticos optimizados.
 
 ---
 
 ## 7. Ejecución en Producción (Conceptual)
 
-_(Despliegue detallado pendiente)._ Implica compilar (`yarn build`), subir archivos (`backend/dist`, `frontend/dist`, dependencias prod), configurar variables de entorno, asegurar conexión a BD prod, ejecutar migraciones prod, iniciar servidor Node (`node dist/index.js`), y configurar un servidor web/proxy inverso (Nginx?).
+El despliegue a un entorno de producción es un tema más amplio y depende del proveedor de hosting/plataforma elegido. Conceptualmente, implicaría:
+
+1.  Construir el backend y frontend (ver sección anterior).
+2.  Configurar un servidor de producción (VPS, PaaS como Render, Heroku, etc.).
+3.  Configurar una base de datos PostgreSQL de producción.
+4.  Establecer todas las variables de entorno (`.env`) necesarias en el servidor de producción (DB_URL, JWT_SECRET, credenciales Cloudinary, etc.).
+5.  Subir los archivos de `backend/dist/`, `backend/node_modules/` (solo producción), y `frontend/dist/`.
+6.  Ejecutar las migraciones de Prisma en la base de datos de producción: `npx prisma migrate deploy`.
+7.  Iniciar el servidor Node.js del backend (ej: `node dist/index.js`, idealmente usando un gestor de procesos como PM2).
+8.  Configurar un servidor web (como Nginx o Apache) para servir los archivos estáticos del frontend y actuar como proxy inverso para las peticiones `/api` hacia el backend Node.js.
+9.  Asegurar HTTPS con certificados SSL válidos.
+
+_(El plan de desarrollo menciona una "Estrategia Deployment & CI/CD (Avanzada)" como tarea futura)._
 
 ---
 
 ## 8. Comandos y Herramientas Útiles (Ampliados)
 
-Ejecuta estos comandos desde la carpeta correspondiente (`backend/` o `frontend/`).
+Ejecuta estos comandos desde la carpeta correspondiente (`backend/` o `frontend/` según aplique).
 
-- **Base de Datos (Backend):**
+- **Base de Datos (Backend - Prisma):**
 
-  - `npx prisma studio`: **Abre una interfaz gráfica en el navegador** para ver y editar los datos de tu base de datos. ¡Muy útil!
-  - `npx prisma migrate dev`: Aplica migraciones pendientes, crea la BD si no existe, genera Prisma Client. (Ya mencionado en setup).
-  - `npx prisma generate`: Regenera Prisma Client después de cambios en `schema.prisma`. (Ya mencionado en setup).
-  - `npx prisma format`: Formatea automáticamente tu archivo `schema.prisma`.
-  - `npx prisma validate`: Comprueba si tu `schema.prisma` es válido.
-  - `npx prisma db seed`: Ejecuta el script `prisma/seed.ts` (si existe) para poblar la BD con datos iniciales.
-  - `npx prisma migrate reset`: **¡CUIDADO!** Borra la base de datos y vuelve a aplicar todas las migraciones. Útil para empezar de cero o si las migraciones dan problemas irrecuperables.
+  - `npx prisma studio`: Abre una interfaz gráfica en el navegador para ver y editar los datos de tu base de datos. ¡Muy útil para desarrollo!
+  - `npx prisma migrate dev`: Aplica migraciones pendientes, crea la BD si no existe (en desarrollo). Te pedirá un nombre para la nueva migración si hay cambios en el schema.
+  - `npx prisma migrate reset`: **¡CUIDADO!** Borra la base de datos y vuelve a aplicar todas las migraciones. Útil para empezar de cero si las migraciones dan problemas irrecuperables en desarrollo.
+  - `npx prisma generate`: Regenera el Cliente Prisma (`@prisma/client`) después de cambios en `schema.prisma`. **Esencial después de cualquier migración.**
+  - `npx prisma format`: Formatea automáticamente tu archivo `schema.prisma` para mantenerlo ordenado.
+  - `npx prisma validate`: Comprueba si tu `schema.prisma` es válido sintácticamente.
+  - `npx prisma db seed`: Ejecuta el script `prisma/seed.ts` para poblar la BD con datos iniciales/demo.
 
-- **Testing (Backend):**
+- **Testing (Backend - Vitest):**
 
-  - `yarn test`: Ejecuta todos los tests (`*.test.ts`) una vez.
-  - `yarn test:watch`: Ejecuta los tests y se queda vigilando cambios para volver a ejecutarlos.
-  - `yarn test --coverage`: Ejecuta los tests y genera un informe de cobertura de código.
-  - `yarn test <nombre_archivo>`: Ejecuta solo los tests de un archivo específico (ej: `yarn test tests/integration/auth.test.ts`).
+  - `yarn test` (o `npm run test`): Ejecuta todos los tests (`*.test.ts`) una vez.
+  - `yarn test:watch` (o `npm run test:watch`): Ejecuta los tests y se queda vigilando cambios para volver a ejecutarlos.
+  - `yarn test --coverage` (o `npm run test -- --coverage`): Ejecuta los tests y genera un informe de cobertura de código.
+  - `yarn test <nombre_archivo_o_patron>`: Ejecuta solo tests específicos.
 
-- **Testing (Frontend):**
+- **Testing (Frontend - Vitest):**
 
-  - `yarn test`: Ejecuta todos los tests una vez.
-  - `yarn test:watch`: Ejecuta en modo vigilancia.
-  - `yarn test:ui`: Abre una interfaz gráfica en el navegador para explorar los resultados de los tests de Vitest.
-  - `yarn test --coverage`: Ejecuta con informe de cobertura.
+  - `yarn test` (o `npm run test`): Ejecuta todos los tests una vez.
+  - `yarn test:watch` (o `npm run test:watch`): Ejecuta en modo vigilancia.
+  - `yarn test:ui` (o `npm run test:ui`): Abre una interfaz gráfica en el navegador para explorar los resultados de los tests de Vitest.
+  - `yarn test --coverage` (o `npm run test -- --coverage`): Ejecuta con informe de cobertura.
 
-- **Scripts Personalizados (Backend):**
+- **Scripts Personalizados (Backend - ejecutados con `ts-node`):**
 
-  - `npx ts-node ./scripts/hash-customer-password.ts`: Ejemplo para ejecutar un script TS directamente (usado para actualizar hash de contraseña). Necesita `ts-node` (puedes instalarlo con `yarn add --dev ts-node` si no lo tienes).
+  - `npx ts-node ./scripts/create-superadmin.ts`: Crea el usuario Super Administrador global.
+  - `npx ts-node ./scripts/hash-customer-password.ts`: (Ejemplo) Script para actualizar hash de contraseña de un usuario específico. Adaptar según necesidad.
+    _(Para ejecutar scripts `ts-node`, asegúrate de estar en la carpeta `backend/` y que `ts-node` esté en `devDependencies`)_.
 
 - **Otros Comandos Frontend:**
 
-  - `yarn lint`: Ejecuta ESLint para comprobar la calidad y estilo del código.
-  - `yarn preview`: Construye la app para producción y la sirve localmente para previsualizarla.
+  - `yarn lint` (o `npm run lint`): Ejecuta ESLint para comprobar la calidad y estilo del código.
+  - `yarn preview` (o `npm run preview`): Construye la app para producción y la sirve localmente para previsualizarla.
 
-- **Herramientas Externas:**
-  - **pgAdmin / DBeaver / etc.:** Clientes gráficos de base de datos para inspeccionar o modificar datos en PostgreSQL directamente.
-  - **psql:** Cliente de línea de comandos para PostgreSQL.
-  - **Postman / Insomnia:** Herramientas para probar la API backend directamente enviando peticiones HTTP.
-  - **Navegador (Herramientas de Desarrollador - F12):** Indispensable para depurar el frontend (Consola, Red, Elementos, Almacenamiento Local).
-  - **Navegador (Depuración Remota Móvil):** Para ver la consola del navegador móvil en el PC (ver sección 5 y `TROUBLESHOOTING_GUIDE.md`).
+- **Herramientas Externas Recomendadas:**
+  - **Clientes Gráficos de PostgreSQL:** pgAdmin (oficial), DBeaver (universal), DataGrip (de JetBrains, de pago). Muy útiles para inspeccionar el schema, los datos, y ejecutar SQL directamente.
+  - **psql:** Cliente de línea de comandos para PostgreSQL. Potente para usuarios avanzados.
+  - **Postman / Insomnia / Bruno:** Herramientas para probar la API backend directamente enviando peticiones HTTP (GET, POST, etc.) y viendo las respuestas. Esencial para depurar APIs.
+  - **Navegador (Herramientas de Desarrollador - F12):** Indispensable para depurar el frontend:
+    - **Consola:** Ver logs de JavaScript, errores.
+    - **Red (Network):** Inspeccionar peticiones API, sus cabeceras, cuerpos y respuestas.
+    - **Elementos (Elements):** Inspeccionar y modificar el DOM y CSS.
+    - **Aplicación (Application):** Ver y modificar `localStorage`, `sessionStorage`, cookies.
+  - **Navegador (Depuración Remota Móvil):** Si necesitas depurar la vista móvil, los navegadores de escritorio ofrecen herramientas para conectar con el navegador de un dispositivo móvil (o emulador) y ver su consola/inspector. (Ver sección 5 y `TROUBLESHOOTING_GUIDE.md`).
 
 ---
 
 ## 9. ¿Problemas?
 
-Consulta la [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md) para ver soluciones a errores comunes encontrados durante el desarrollo.
+Si encuentras problemas durante la instalación o ejecución, consulta primero la [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md) para ver soluciones a errores comunes ya documentados.
 
 ---
 

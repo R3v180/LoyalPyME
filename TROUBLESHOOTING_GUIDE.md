@@ -1,6 +1,6 @@
 # Guía Rápida de Troubleshooting - LoyalPyME
 
-**Fecha de Última Actualización:** 05 de Mayo de 2025
+**Fecha de Última Actualización:** 09 de Mayo de 2025
 
 ---
 
@@ -9,6 +9,63 @@ Esta guía recopila problemas técnicos significativos o no obvios encontrados d
 ---
 
 ## Problemas Comunes y Soluciones
+
+**NUEVO: Problemas con el Script de Seed (`npx prisma db seed`)**
+
+**A. `npx prisma db seed` no ejecuta el script `prisma/seed.ts` o no muestra `console.log`s:**
+
+- **Síntomas:** El comando `npx prisma db seed` se completa rápidamente sin mostrar los `console.log` del script `seed.ts`, y la base de datos no se puebla. Sin embargo, ejecutar `npx ts-node ./prisma/seed.ts` directamente SÍ funciona y muestra los logs.
+- **Causa Más Probable:** Prisma CLI (v5+) no está encontrando o interpretando correctamente la configuración para ejecutar el script de seed TypeScript.
+- **Solución Crítica:**
+  1.  **Asegurar `package.json` (en `backend/`):** Dentro de tu `backend/package.json`, añade o verifica una sección `"prisma"` que defina el comando de seed:
+      ```json
+      {
+        // ... otras secciones ...
+        "prisma": {
+          "seed": "ts-node prisma/seed.ts"
+          // La opción --compiler-options "{\"module\":\"commonjs\"}" puede causar errores TS5023
+          // Es mejor confiar en el tsconfig.json del proyecto si está configurado para commonjs.
+        }
+      }
+      ```
+  2.  Asegúrate de que `ts-node` está en tus `devDependencies`.
+  3.  Ejecuta `npx prisma db seed` desde la misma carpeta donde está el `package.json` que contiene la sección `"prisma"` (normalmente `backend/`).
+
+**B. Error `TSError: ⨯ Unable to compile TypeScript: error TS5023: Unknown compiler option 'X'` al ejecutar `npx prisma db seed`:**
+
+- **Síntomas:** El comando `npx prisma db seed` falla con errores `TS5023` indicando opciones de compilador desconocidas (a menudo números o caracteres sueltos).
+- **Causa:** El comando definido en `package.json` para el seed (bajo `"prisma": { "seed": "..." }`) tiene una sintaxis incorrecta para pasar argumentos como `--compiler-options` a `ts-node`, usualmente debido a problemas con el escapado de comillas dentro del JSON del `package.json`.
+- **Solución:** Simplifica el comando de seed en `package.json` a:
+  ```json
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  }
+  ```
+  Asegúrate que tu `backend/tsconfig.json` tiene `"module": "commonjs"` (o el módulo que estés usando para tu backend).
+
+**C. Errores de TypeScript en `seed.ts` (ej: `Property 'X' does not exist on type 'BusinessCreateInput'`) después de modificar `schema.prisma`:**
+
+- **Síntomas:** El editor o la compilación de `ts-node` muestra errores de TypeScript en `seed.ts` indicando que campos recién añadidos al schema no existen en los tipos de entrada generados por Prisma (ej: `BusinessCreateInput`).
+- **Causa:** El Cliente Prisma (`node_modules/.prisma/client`) no se ha regenerado después de la última migración exitosa de `schema.prisma` (`migrate dev` o `migrate reset`).
+- **Solución Crítica:** **SIEMPRE** ejecuta `npx prisma generate` en `backend/` después de cada `npx prisma migrate dev` o `npx prisma migrate reset` exitoso. Si el editor sigue mostrando errores, reinicia el servidor TypeScript de tu editor (ej: en VS Code, Ctrl+Shift+P -> "TypeScript: Restart TS server").
+
+**D. Error `P3018` (Migration failed to apply) con `DETAIL: La llave (businessId)=... no está presente en la tabla «Business»` al intentar migrar `schema.prisma` después de cambios estructurales:**
+
+- **Síntomas:** `npx prisma migrate dev` falla con `P3018` y un error de base de datos sobre violación de clave foránea (usualmente `ERROR: inserción o actualización en la tabla «YYY» viola la llave foránea «YYY_businessId_fkey»`). Prisma también puede advertir sobre `DROP` de tablas no vacías antes de intentar la migración.
+- **Causa:** Un cambio estructural grande (ej: hacer opcional un campo que era parte de una relación obligatoria, cambiar tipos de campos relacionados, etc.) hace que Prisma determine que necesita recrear tablas. Si tienes datos existentes, Prisma intenta aplicar los cambios, pero si los datos se reinsertan en un orden incorrecto (ej: un `Tier` antes que su `Business` asociado si la tabla `Business` fue recreada) o si los datos referenciados se pierden temporalmente durante la migración, las restricciones de claves foráneas pueden fallar.
+- **Solución (Para Desarrollo donde los datos NO son críticos):** La forma más limpia y rápida es resetear la base de datos. Esto eliminará todos los datos existentes y aplicará todas las migraciones desde cero sobre una BD limpia.
+  ```bash
+  npx prisma migrate reset
+  ```
+  Confirma la acción cuando se te pregunte. Luego, no olvides ejecutar `npx prisma generate` y, si tienes un script de seed, `npx prisma db seed`.
+- **Solución (Para Producción o datos críticos - ¡CON MUCHO CUIDADO!):** Esto es mucho más complejo. Implica analizar el SQL generado por la migración fallida (en `prisma/migrations/.../migration.sql`), entender por qué falla, y potencialmente editar ese SQL o realizar operaciones manuales en la BD para preparar los datos ANTES de reintentar la migración. A menudo es preferible hacer cambios más pequeños e incrementales en producción o tener una estrategia de backup/restore robusta. Consulta la documentación de Prisma sobre "Resolving failed migrations".
+
+---
+
+_(Aquí continúa el resto de tu contenido original de TROUBLESHOOTING_GUIDE.md)_
+_(Me aseguro de incluir los puntos que ya tenías)_
+
+---
 
 **1. Backend: Inestabilidad con `yarn dev` (nodemon + ts-node)**
 
@@ -43,7 +100,7 @@ Esta guía recopila problemas técnicos significativos o no obvios encontrados d
 **6. Backend: API no se conecta a Base de Datos (`PrismaClientInitializationError`)**
 
 - **Síntomas:** Endpoints fallan con 500, logs muestran error de conexión a DB. Frecuente tras reinicios del sistema.
-- **Solución:** 1. Verificar que servicio PostgreSQL corre. 2. Verificar `DATABASE_URL` en `.env`. 3. Ejecutar `npx prisma migrate dev` si la BD está vacía/corrupta.
+- **Solución:** 1. Verificar que servicio PostgreSQL corre. 2. Verificar `DATABASE_URL` en `.env`. 3. Ejecutar `npx prisma migrate dev` si la BD está vacía/corrupta (o `npx prisma migrate reset` en desarrollo).
 
 **7. Frontend: Error 401 al llamar a Rutas Públicas Backend desde `axiosInstance`**
 
