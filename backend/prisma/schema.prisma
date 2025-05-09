@@ -1,22 +1,50 @@
-// filename: backend/prisma/schema.prisma
-// Version: 1.2.1 (Make internationalized Reward names optional temporarily - COMPLETE FILE)
+// backend/prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client" // Especificar output
+  // Para quitar el warning de "output path" que viste antes, puedes añadir:
+  // output   = "./node_modules/.prisma/client" 
+  // Si la ruta relativa desde schema.prisma a node_modules/.prisma/client es esa.
+  // Si tu schema.prisma está en backend/prisma/ y node_modules está en backend/,
+  // entonces sería: output = "../node_modules/.prisma/client"
+  // Por ahora, lo dejaremos comentado para centrarnos en el seed.
+
+  // --- AÑADIR ESTA LÍNEA PARA EL SEED ---
+  // Le dice a Prisma cómo ejecutar el script de seed.
+  // Usamos npx para asegurar que ts-node se encuentra si no está global.
+  // La ruta a seed.ts es relativa al schema.prisma.
+  previewFeatures = ["clientExtensions", "postgresqlExtensions"] // Mantén esto si ya lo tenías
+  // Asegúrate que solo hay UN `previewFeatures`
+  // La línea importante es la siguiente:
+  // seed = "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" ./seed.ts"
+  // PERO Prisma a veces tiene problemas con rutas relativas directas así para el seed.
+  // La forma más robusta cuando el `package.json` no funciona es un script ejecutable.
+  // Vamos a intentar la forma que Prisma espera para scripts TS, que es a través del package.json.
+  // Dado que la entrada en package.json no parece ser recogida automáticamente por `npx prisma db seed`,
+  // hay una posible confusión en cómo Prisma CLI localiza el package.json correcto o interpreta esa sección.
+
+  // VAMOS A QUITAR CUALQUIER DIRECTIVA `seed = "..."` DE AQUÍ POR AHORA.
+  // El problema debe ser que `npx prisma db seed` no está "viendo" el package.json de la carpeta `backend`
+  // cuando lo ejecutas desde `backend/`.
+  // Si el `package.json` que modificamos con la sección "prisma" está en `D:\proyectos\loyalpyme\backend\package.json`
+  // y ejecutas `npx prisma db seed` desde `D:\proyectos\loyalpyme\backend\`, debería funcionar.
+
+  // La advertencia "You did not specify an output path..." es para el generador, no para el seed.
+  // Podemos añadir el output para quitarla, no afectará al seed:
+  output   = "../node_modules/.prisma/client" // Ajusta si tu node_modules está en otro nivel
 }
+
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// --- ENUMS ---
-
+// ---------- ENUMS ----------
 enum UserRole {
-  SUPER_ADMIN
   BUSINESS_ADMIN
   CUSTOMER_FINAL
+  SUPER_ADMIN
 }
 
 enum DocumentType {
@@ -30,9 +58,9 @@ enum QrCodeStatus {
   PENDING
   COMPLETED
   EXPIRED
+  CANCELLED
 }
 
-// Tier System Enums
 enum TierCalculationBasis {
   SPEND
   VISITS
@@ -51,211 +79,191 @@ enum BenefitType {
   CUSTOM_BENEFIT
 }
 
-// --- MODELS ---
+enum ActivityType {
+  POINTS_EARNED_QR
+  POINTS_REDEEMED_REWARD
+  GIFT_REDEEMED
+  POINTS_ADJUSTED_ADMIN
+  TIER_UPGRADE
+  TIER_DOWNGRADE
+}
 
+
+// ---------- MODELS ----------
 model Business {
-  id                          String              @id @default(uuid())
+  id                          String    @id @default(uuid())
   name                        String
-  slug                        String              @unique
-  isActive                    Boolean             @default(true)
-  createdAt                   DateTime            @default(now())
-  updatedAt                   DateTime            @updatedAt
-  pointsPerEuro               Float               @default(1.0)
-  currency                    String              @default("EUR")
-  brandingColor             String?
-  subscriptionStatus          String              @default("trial")
-  trialEndsAt                 DateTime?
-  lastPaymentDate             DateTime?
-
-  // Tier System Fields
-  tierSystemEnabled           Boolean?            @default(false)
+  slug                        String    @unique
+  logoUrl                     String?
+  brandingColorPrimary        String?   @default("#007bff")
+  brandingColorSecondary      String?   @default("#6c757d")
+  pointsPerEuro               Float     @default(1)
+  // qrCodeExpirationMinutes     Int       @default(30) // Este campo no estaba en el schema original, si lo necesitas, descomenta y migra
+  tierSystemEnabled           Boolean   @default(false)
   tierCalculationBasis        TierCalculationBasis?
-  tierCalculationPeriodMonths Int?
-  tierDowngradePolicy         TierDowngradePolicy?  @default(NEVER)
-  inactivityPeriodMonths      Int?
-
-  // Relationships
+  tierCalculationPeriodMonths Int?      @default(0)
+  tierDowngradePolicy         TierDowngradePolicy @default(NEVER)
+  inactivityPeriodMonths      Int?      @default(6)
+  isActive                    Boolean   @default(true)
+  isLoyaltyCoreActive         Boolean   @default(false)
+  isCamareroActive            Boolean   @default(false)
   users                       User[]
   rewards                     Reward[]
   qrCodes                     QrCode[]
-  grantedRewards              GrantedReward[]
   tiers                       Tier[]
-  activityLogs                ActivityLog[] // <-- Línea añadida para relación inversa
-
-  @@map("businesses")
+  activityLogs                ActivityLog[]
+  grantedRewards              GrantedReward[]
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
 }
+
 
 model User {
-  id                       String        @id @default(uuid())
-  email                    String        @unique
-  password                 String
-  name                     String?
-  phone                    String?       @unique
-  role                     UserRole
-  isActive                 Boolean       @default(true)
-  isFavorite               Boolean       @default(false) // Asegúrate que este campo existe en la v1.1.0 que recuperaste
-  createdAt                DateTime      @default(now())
-  updatedAt                DateTime      @updatedAt
-  businessId               String
-  points                   Int           @default(0)
-  marketingOptIn           Boolean       @default(false)
-  documentId               String?       @unique
-  documentType             DocumentType?
-  resetPasswordToken       String?       @unique
-  resetPasswordExpires     DateTime?
-  adminNotes               String?       // Asegúrate que este campo existe
-
-  // Tier System Fields
-  currentTierId            String?
-  tierAchievedAt           DateTime?
-  lastActivityAt           DateTime?
-  totalSpend               Float?        @default(0)
-  totalVisits              Int?          @default(0)
-  totalPointsEarned        Int?          @default(0)
-
-  // Relationships
-  business                 Business        @relation(fields: [businessId], references: [id], onDelete: Cascade) // Mantener Cascade si era así
-  qrCodes                  QrCode[]
-  currentTier              Tier?           @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
-  grantedRewards           GrantedReward[] @relation("UserGrantedRewards")
-  assignedGrantedRewards   GrantedReward[] @relation("AdminGrantedRewards")
-  activityLogs             ActivityLog[] // <-- Línea añadida para relación inversa
-
-  @@map("users")
+  id                    String        @id @default(uuid())
+  email                 String        @unique
+  password              String
+  name                  String?
+  phone                 String?       @unique
+  documentId            String?       @unique
+  documentType          DocumentType?
+  role                  UserRole
+  points                Int           @default(0)
+  totalSpend            Float         @default(0)
+  totalVisits           Int           @default(0)
+  tierAchievedAt        DateTime?
+  lastActivityAt        DateTime?
+  resetPasswordToken    String?       @map("reset_password_token")
+  resetPasswordExpires  DateTime?     @map("reset_password_expires_at")
+  isActive              Boolean       @default(true)
+  isFavorite            Boolean?      @default(false)
+  adminNotes            String?       @db.Text
+  businessId            String?
+  business              Business?     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  qrcodesUsed           QrCode[]
+  activityLogs          ActivityLog[]
+  currentTierId         String?
+  currentTier           Tier?         @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
+  grantedRewards        GrantedReward[] @relation("CustomerGrantedRewards")
+  assignedRewards       GrantedReward[] @relation("AdminAssignedRewards")
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  @@index([businessId])
+  @@index([currentTierId])
 }
 
-// --- Reward Model MODIFICADO ---
 model Reward {
   id             String   @id @default(uuid())
-  businessId     String
-  // name           String // <-- Eliminado
-  // description    String? // <-- Eliminado
-  name_es        String?  @db.VarChar(255) // <-- CAMBIADO A OPCIONAL (?)
-  name_en        String?  @db.VarChar(255) // <-- CAMBIADO A OPCIONAL (?)
-  description_es String?
-  description_en String?
+  name_es        String?
+  name_en        String?
+  description_es String?  @db.Text
+  description_en String?  @db.Text
   pointsCost     Int
   isActive       Boolean  @default(true)
-  imageUrl       String?  // Campo añadido previamente
+  imageUrl       String?
+  businessId     String
+  business       Business @relation(fields: [businessId], references: [id])
+  grantedRewards GrantedReward[]
+  activityLogs   ActivityLog[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-
-  // Relationships
-  business         Business        @relation(fields: [businessId], references: [id], onDelete: Cascade) // Mantener onDelete original
-  grantedInstances GrantedReward[]
-
-  // Ya no podemos tener unique en campos opcionales directamente
-  // Se eliminan/comentan las restricciones @@unique para los nombres internacionalizados
-  // @@unique([businessId, name_es]) // <-- Eliminado/Comentado
-  // @@unique([businessId, name_en]) // <-- Eliminado/Comentado
-  @@map("rewards")
+  @@unique([businessId, name_es], name: "unique_reward_name_es_business")
+  @@unique([businessId, name_en], name: "unique_reward_name_en_business")
+  @@index([businessId])
 }
-// --- FIN Reward Model MODIFICADO ---
 
 model QrCode {
-  id           String       @id @default(uuid())
-  token        String       @unique
+  id           String        @id @default(uuid())
+  token        String        @unique
   businessId   String
+  business     Business      @relation(fields: [businessId], references: [id])
   amount       Float
-  ticketNumber String       // Asegurar que es NOT NULL si así estaba
-  status       QrCodeStatus @default(PENDING)
-  createdAt    DateTime     @default(now())
-  expiresAt    DateTime
-  completedAt  DateTime?
-  userId       String?
+  ticketNumber String
   pointsEarned Int?
-
-  // Relationships
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@map("qr_codes")
+  status       QrCodeStatus  @default(PENDING)
+  expiresAt    DateTime
+  userId       String?
+  user         User?         @relation(fields: [userId], references: [id])
+  completedAt  DateTime?
+  activityLogs ActivityLog[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  @@index([businessId])
+  @@index([userId])
 }
 
 model Tier {
-  id                  String      @id @default(uuid())
-  businessId          String
+  id                  String        @id @default(uuid())
   name                String
   level               Int
   minValue            Float
-  description         String?
-  benefitsDescription String?
-  isActive            Boolean     @default(true)
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
-
-  // Relationships
-  business Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  users    User[]
-  benefits TierBenefit[]
-
-  @@unique([businessId, level])
+  description         String?       @db.Text
+  benefitsDescription String?       @db.Text
+  isActive            Boolean       @default(true)
+  businessId          String
+  business            Business      @relation(fields: [businessId], references: [id])
+  users               User[]
+  benefits            TierBenefit[]
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
   @@unique([businessId, name])
+  @@unique([businessId, level])
+  @@index([businessId])
 }
 
 model TierBenefit {
   id          String      @id @default(uuid())
   tierId      String
+  tier        Tier        @relation(fields: [tierId], references: [id], onDelete: Cascade)
   type        BenefitType
   value       String
-  description String?
+  description String?     @db.Text
   isActive    Boolean     @default(true)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  @@index([tierId])
+}
 
-  // Relationships
-  tier Tier @relation(fields: [tierId], references: [id], onDelete: Cascade)
+model ActivityLog {
+  id                       String        @id @default(uuid())
+  userId                   String
+  user                     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId               String
+  business                 Business      @relation(fields: [businessId], references: [id])
+  type                     ActivityType
+  pointsChanged            Int?
+  description              String?       @db.Text
+  relatedRewardId          String?
+  relatedReward            Reward?       @relation(fields: [relatedRewardId], references: [id], onDelete: SetNull)
+  relatedQrId              String?
+  relatedQr                QrCode?       @relation(fields: [relatedQrId], references: [id], onDelete: SetNull)
+  relatedGrantedRewardId   String?
+  relatedGrantedReward     GrantedReward? @relation(fields: [relatedGrantedRewardId], references: [id], onDelete: SetNull)
+  createdAt                DateTime      @default(now())
+  @@index([userId])
+  @@index([businessId])
+  @@index([type])
+  @@index([relatedRewardId])
+  @@index([relatedQrId])
+  @@index([relatedGrantedRewardId])
 }
 
 model GrantedReward {
-  id           String    @id @default(uuid())
-  userId       String
-  rewardId     String
-  businessId   String
-  assignedById String
-  assignedAt   DateTime  @default(now())
-  status       String    @default("PENDING") // Mantenemos String por ahora
-  redeemedAt   DateTime?
-
-  // Relaciones
-  user       User     @relation("UserGrantedRewards", fields: [userId], references: [id], onDelete: Cascade)
-  reward     Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  assignedBy User     @relation("AdminGrantedRewards", fields: [assignedById], references: [id], onDelete: Restrict)
-
-  @@map("granted_rewards")
-}
-
-// --- Añadido para Historial de Actividad ---
-
-// Define los tipos de eventos que se registrarán
-enum ActivityType {
-  POINTS_EARNED_QR       // Puntos ganados por escanear QR
-  POINTS_REDEEMED_REWARD // Puntos gastados al canjear recompensa por puntos
-  GIFT_REDEEMED          // Regalo (GrantedReward) canjeado
-  POINTS_ADJUSTED_ADMIN  // Puntos añadidos/quitados manualmente por admin
-}
-
-// Modelo para registrar cada evento/transacción del historial
-model ActivityLog {
-  id                     String       @id @default(uuid())
-  userId                 String       // ID del usuario cliente
-  user                   User         @relation(fields: [userId], references: [id], onDelete: Cascade) // Relación con User
-  businessId             String       // ID del negocio (para filtrar/scope)
-  business               Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  type                   ActivityType // Un Enum para el tipo de evento
-  pointsChanged          Int?         // Puntos ganados (+) o gastados (-) (null si no aplica, ej: canje regalo)
-  description            String?      // Descripción textual
-  relatedQrId            String?
-  relatedRewardId        String?
-  relatedGrantedRewardId String?
-  createdAt              DateTime     @default(now()) // Fecha del evento
-
-  // Indices para mejorar rendimiento
-  @@index([userId, createdAt])
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation("CustomerGrantedRewards", fields: [userId], references: [id])
+  rewardId      String
+  reward        Reward    @relation(fields: [rewardId], references: [id])
+  businessId    String
+  business      Business  @relation(fields: [businessId], references: [id])
+  assignedById  String?
+  assignedBy    User?     @relation("AdminAssignedRewards", fields: [assignedById], references: [id])
+  status        String    @default("PENDING")
+  assignedAt    DateTime  @default(now())
+  redeemedAt    DateTime?
+  expiresAt     DateTime?
+  activityLog   ActivityLog[]
+  @@index([userId])
+  @@index([rewardId])
+  @@index([assignedById])
   @@index([businessId])
 }
-
-// --- Fin Añadido ---
-
-// End of File: backend/prisma/schema.prisma

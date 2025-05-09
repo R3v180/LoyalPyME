@@ -62,6 +62,7 @@
     "errorUnknown": "An unexpected error occurred."
   },
   "registerPage": {
+    "welcomeTitle": "Welcome to LoyalPyME!",
     "title": "Create your Customer Account",
     "subtitle": "Already have an account?",
     "loginLink": "Sign in",
@@ -217,11 +218,11 @@
         "pendingGifts_other": "You have {{count}} pending gifts:",
         "pendingGiftsDesc": "You have gifts waiting to be redeemed.",
         "nextReward": "Next reward: {{name}} for {{points}} points.",
-        "viewAllButton": "View All Rewards & Gifts", 
+        "viewAllButton": "View All Rewards & Gifts",
         "noRewardsInfo": "Collect more points to get rewards.",
         "giftsAndRewardsTitle": "Available Gifts & Rewards:",
         "rewardsTitle": "Available Rewards:",
-        "unknownAssigner": "Unknown", 
+        "unknownAssigner": "Unknown",
         "redeemButton": "Redeem",
         "viewAllButtonShort": "View All"
     },
@@ -285,7 +286,8 @@
     "cardCustomersButton": "Manage Customers",
     "errorLoadingStats": "Could not load statistics.",
     "noStatsAvailable": "No statistical data available.",
-    "defaultBusinessName": "your Business"
+    "defaultBusinessName": "your Business",
+    "noModulesActivePrompt": "No active modules for this business. Activate them from the Super Admin panel."
   },
   "adminRewardsPage": {
     "title": "Reward Management",
@@ -513,7 +515,7 @@
     "tooltipActivateCustomer": "Activate Customer",
     "tooltipFavorite": "Mark as Favorite",
     "tooltipUnfavorite": "Remove from Favorites",
-    "checkboxAriaLabel": "Select customer", 
+    "checkboxAriaLabel": "Select customer",
     "checkboxSelectAllAriaLabel": "Select all visible rows",
     "adjustPointsModalTitle": "Adjust Points for {{name}}",
     "adjustPointsCurrent": "Current points: {{points}}",
@@ -593,5 +595,33 @@
     "pointsMultiplier": "x{{value}} Points Multiplier",
     "exclusiveRewardAccess": "Exclusive Reward: {{value}}",
     "customBenefit": "{{value}}"
+  },
+  "superAdminPage": {
+    "title": "Super Admin Panel",
+    "searchPlaceholder": "Search businesses by name or slug...",
+    "tableHeaderBusiness": "Business",
+    "tableHeaderStatus": "Overall Status",
+    "tableHeaderLoyalty": "Loyalty",
+    "tableHeaderCamarero": "Waiter Module",
+    "tableHeaderRegistered": "Registered",
+    "noBusinesses": "No businesses registered.",
+    "tooltipActivateBusiness": "Activate business",
+    "tooltipDeactivateBusiness": "Deactivate business",
+    "moduleLoyaltyCoreTooltip": "Toggle Loyalty Module (LoyalPyME Core)",
+    "moduleCamareroTooltip": "Toggle Waiter Module",
+    "statusChangeSuccess": "Business '{{businessName}}' status changed to {{status}}.",
+    "statusChangeError": "Error changing business status.",
+    "moduleChangeSuccess": "Module '{{moduleName}}' {{status}} for business '{{businessName}}'.",
+    "moduleChangeError": "Error changing status for module '{{moduleName}}'.",
+    "moduleLoyaltyCore": "LoyalPyME Core",
+    "moduleCamarero": "LoyalPyME Waiter",
+    "businessFallbackName": "the business"
+  },
+  "adminCamarero": {
+    "manageMenu": "Manage Menu",
+    "manageTables": "Manage Tables",
+    "cardMenuTitle": "Digital Menu",
+    "cardMenuDesc": "Create and edit your menu products, categories, and modifiers.",
+    "cardMenuButton": "Manage Menu"
   }
 }

@@ -1,24 +1,21 @@
-// File: backend/src/routes/protected.routes.ts
-// Version: 1.0.2 (Correct version for modular routing)
-
+// backend/src/routes/protected.routes.ts
 import { Router, Request, Response } from 'express';
-// Ya NO necesitamos importar authenticateToken aquí
 
 const router = Router();
 
-// NOTA: El middleware authenticateToken YA SE APLICÓ globalmente a '/api' en index.ts
+// El middleware authenticateToken ya se aplica ANTES de que se llegue a este handler
+// cuando se monta el router en index.ts con app.use('/api/profile', authenticateToken, protectedRouter);
 
-// Ruta protegida para obtener el perfil del usuario autenticado
-// Definida como la RAÍZ ('/') relativa al punto de montaje '/api/profile'
 router.get('/', (req: Request, res: Response) => {
+  // --- AÑADIR LOG AQUÍ ---
+  console.log('[PROTECTED ROUTE /api/profile DEBUG] req.user object before sending response:', JSON.stringify(req.user, null, 2));
+  // --- FIN LOG ---
+
   if (!req.user) {
-    console.error("Error: req.user is missing in /api/profile route handler!");
-    return res.status(401).json({ message: 'Authentication failed.' });
+    console.error("[PROTECTED ROUTE /api/profile DEBUG] Error: req.user is missing in /api/profile route handler!");
+    return res.status(401).json({ message: 'Authentication failed. User data not available.' });
   }
-  res.json(req.user);
+  res.json(req.user); // Esto es lo que recibe el frontend
 });
 
-// Exporta el router
 export default router;
-
-// End of File: backend/src/routes/protected.routes.ts

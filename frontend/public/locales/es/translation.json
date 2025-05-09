@@ -62,6 +62,7 @@
     "errorUnknown": "Ocurrió un error inesperado."
   },
   "registerPage": {
+    "welcomeTitle": "¡Bienvenido a LoyalPyME!",
     "title": "Crea tu Cuenta de Cliente",
     "subtitle": "¿Ya tienes cuenta?",
     "loginLink": "Inicia sesión",
@@ -217,14 +218,13 @@
         "pendingGifts_other": "Tienes {{count}} regalos pendientes:",
         "pendingGiftsDesc": "Tienes regalos esperando ser canjeados.",
         "nextReward": "Próxima recompensa: {{name}} por {{points}} puntos.",
-        "viewAllButton": "Ver Todas las Recompensas y Regalos", 
+        "viewAllButton": "Ver Todas las Recompensas y Regalos",
         "noRewardsInfo": "Acumula más puntos para conseguir recompensas.",
         "giftsAndRewardsTitle": "Regalos y Recompensas Disponibles:",
         "rewardsTitle": "Recompensas Disponibles:",
-        "unknownAssigner": "Desconocido", 
+        "unknownAssigner": "Desconocido",
         "redeemButton": "Canjear",
         "viewAllButtonShort": "Ver Todo"
-        
     },
     "activityTab": {
         "noActivity": "Aún no tienes actividad registrada.",
@@ -286,7 +286,8 @@
     "cardCustomersButton": "Gestionar Clientes",
     "errorLoadingStats": "No se pudieron cargar las estadísticas.",
     "noStatsAvailable": "No hay datos estadísticos disponibles.",
-    "defaultBusinessName": "tu Negocio"
+    "defaultBusinessName": "tu Negocio",
+    "noModulesActivePrompt": "No hay módulos activos para este negocio. Actívalos desde el panel de Super Administrador."
   },
   "adminRewardsPage": {
     "title": "Gestión de Recompensas",
@@ -311,19 +312,19 @@
     "toggleStatusError": "Error al {{status}} la recompensa: {{error}}",
     "statusActivated": "activada",
     "statusDeactivated": "desactivada",
-    "updateSuccessMessage": "Recompensa \"{{name}}\" actualizada.", 
+    "updateSuccessMessage": "Recompensa \"{{name}}\" actualizada.",
     "createSuccessMessage": "Recompensa \"{{name}}\" creada."
   },
   "component": {
     "rewardForm": {
-      "nameLabel": "Nombre de la Recompensa:", 
-      "namePlaceholder": "Ej: Café Gratis", 
-      "descriptionLabel": "Descripción (Opcional):", 
-      "descriptionPlaceholder": "Ej: Un café espresso o americano", 
-      "pointsCostLabel": "Coste en Puntos:", 
-      "pointsCostPlaceholder": "Ej: 100", 
-      "errorNameRequired": "El nombre de la recompensa no puede estar vacío.", 
-      "errorPointsCostInvalid": "El coste en puntos debe ser un número igual o mayor que cero.", 
+      "nameLabel": "Nombre de la Recompensa:",
+      "namePlaceholder": "Ej: Café Gratis",
+      "descriptionLabel": "Descripción (Opcional):",
+      "descriptionPlaceholder": "Ej: Un café espresso o americano",
+      "pointsCostLabel": "Coste en Puntos:",
+      "pointsCostPlaceholder": "Ej: 100",
+      "errorNameRequired": "El nombre de la recompensa no puede estar vacío.",
+      "errorPointsCostInvalid": "El coste en puntos debe ser un número igual o mayor que cero.",
       "nameEsLabel": "Nombre (ES)",
       "nameEsPlaceholder": "Ej: Café Gratis",
       "nameEnLabel": "Nombre (EN)",
@@ -599,5 +600,33 @@
     "pointsMultiplier": "Multiplicador x{{value}} Puntos",
     "exclusiveRewardAccess": "Recompensa Exclusiva: {{value}}",
     "customBenefit": "{{value}}"
+  },
+  "superAdminPage": {
+    "title": "Panel de Super Administrador",
+    "searchPlaceholder": "Buscar negocios por nombre o slug...",
+    "tableHeaderBusiness": "Negocio",
+    "tableHeaderStatus": "Estado General",
+    "tableHeaderLoyalty": "Fidelización",
+    "tableHeaderCamarero": "Camarero",
+    "tableHeaderRegistered": "Registrado",
+    "noBusinesses": "No hay negocios registrados.",
+    "tooltipActivateBusiness": "Activar negocio",
+    "tooltipDeactivateBusiness": "Desactivar negocio",
+    "moduleLoyaltyCoreTooltip": "Activar/Desactivar Módulo Fidelización (LoyalPyME Core)",
+    "moduleCamareroTooltip": "Activar/Desactivar Módulo Camarero",
+    "statusChangeSuccess": "Estado del negocio '{{businessName}}' cambiado a {{status}}.",
+    "statusChangeError": "Error al cambiar el estado del negocio.",
+    "moduleChangeSuccess": "Módulo '{{moduleName}}' {{status}} para el negocio '{{businessName}}'.",
+    "moduleChangeError": "Error al cambiar el estado del módulo '{{moduleName}}'.",
+    "moduleLoyaltyCore": "LoyalPyME Core",
+    "moduleCamarero": "LoyalPyME Camarero",
+    "businessFallbackName": "el negocio"
+  },
+  "adminCamarero": {
+    "manageMenu": "Gestionar Carta",
+    "manageTables": "Gestionar Mesas",
+    "cardMenuTitle": "Carta Digital",
+    "cardMenuDesc": "Crea y edita los productos, categorías y modificadores de tu menú.",
+    "cardMenuButton": "Gestionar Carta"
   }
 }

@@ -1,12 +1,12 @@
-// filename: frontend/src/routes/index.tsx
-// Version: 1.7.0 (Introduce PublicLayout for public routes)
-
-import { Routes, Route, Navigate } from 'react-router-dom';
+// frontend/src/routes/index.tsx
+// --- MODIFICACIÓN: Añadir Outlet a la importación ---
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+// --- FIN MODIFICACIÓN ---
 
 // Layouts y Protección
 import PrivateRoute from '../components/PrivateRoute';
 import MainLayout from '../components/layout/MainLayout';
-import PublicLayout from '../components/layout/PublicLayout'; // <-- Importar nuevo layout
+import PublicLayout from '../components/layout/PublicLayout';
 
 // Páginas Públicas
 import LoginPage from '../pages/LoginPage';
@@ -18,7 +18,7 @@ import RegisterBusinessPage from '../pages/RegisterBusinessPage';
 // Página de Cliente
 import CustomerDashboardPage from '../pages/CustomerDashboardPage';
 
-// Páginas Específicas de Admin
+// Páginas Específicas de Admin (Business Admin)
 import AdminOverview from '../pages/admin/AdminOverview';
 import AdminRewardsManagement from '../pages/admin/AdminRewardsManagement';
 import AdminGenerateQr from '../pages/admin/AdminGenerateQr';
@@ -26,35 +26,44 @@ import TierSettingsPage from '../pages/admin/tiers/TierSettingsPage';
 import TierManagementPage from '../pages/admin/tiers/TierManagementPage';
 import AdminCustomerManagementPage from '../pages/admin/AdminCustomerManagementPage';
 
+import SuperAdminPage from '../pages/admin/SuperAdminPage';
+
 
 function AppRoutes() {
   return (
     <Routes>
-      {/* --- Rutas Públicas (AHORA usan PublicLayout) --- */}
-      <Route element={<PublicLayout />}> {/* Envuelve rutas públicas */}
+      {/* Rutas Públicas (usan PublicLayout) */}
+      <Route element={<PublicLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/register-business" element={<RegisterBusinessPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-        {/* Redirige la ruta raíz a login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Route>
-      {/* --- Fin Rutas Públicas --- */}
 
+      {/* Rutas Protegidas (usan MainLayout y PrivateRoute) */}
+      <Route element={<MainLayout />}>
 
-      {/* --- Rutas Protegidas (Siguen usando MainLayout) --- */}
-      <Route
-        element={
-          <PrivateRoute roles={['BUSINESS_ADMIN', 'CUSTOMER_FINAL']}>
-            <MainLayout />
-          </PrivateRoute>
-        }
-      >
-        {/* Las rutas hijas se renderizan en el <Outlet /> de MainLayout */}
+        {/* Rutas para SUPER_ADMIN */}
+        <Route
+            path="/superadmin"
+            element={
+                <PrivateRoute roles={['SUPER_ADMIN']}>
+                    <SuperAdminPage />
+                </PrivateRoute>
+            }
+        />
 
-        {/* Sección Admin */}
-        <Route path="/admin/dashboard">
+        {/* Rutas para BUSINESS_ADMIN */}
+        <Route
+            path="/admin/dashboard"
+            element={
+                <PrivateRoute roles={['BUSINESS_ADMIN']}>
+                    <Outlet /> {/* Outlet aquí para renderizar las sub-rutas de admin */}
+                </PrivateRoute>
+            }
+        >
             <Route index element={<AdminOverview />} />
             <Route path="rewards" element={<AdminRewardsManagement />} />
             <Route path="generate-qr" element={<AdminGenerateQr />} />
@@ -63,16 +72,18 @@ function AppRoutes() {
             <Route path="customers" element={<AdminCustomerManagementPage />} />
         </Route>
 
-        {/* Sección Cliente */}
+        {/* Rutas para CUSTOMER_FINAL */}
         <Route
-          path="/customer/dashboard"
-          element={<CustomerDashboardPage />}
+            path="/customer/dashboard"
+            element={
+                <PrivateRoute roles={['CUSTOMER_FINAL']}>
+                    <CustomerDashboardPage />
+                </PrivateRoute>
+            }
         />
 
       </Route>
-      {/* --- Fin Rutas Protegidas --- */}
 
-      {/* TODO: Pagina 404 */}
       {/* <Route path="*" element={<NotFoundPage />} /> */}
 
     </Routes>
@@ -80,5 +91,3 @@ function AppRoutes() {
 }
 
 export default AppRoutes;
-
-// End of File: frontend/src/routes/index.tsx

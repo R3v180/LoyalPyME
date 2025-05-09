@@ -1,11 +1,10 @@
-// filename: backend/src/routes/rewards.routes.ts
-// Version: 1.2.1 (Remove meta-comments)
-
+// backend/src/routes/rewards.routes.ts
 import { Router } from 'express';
-// Importar checkRole y UserRole
 import { checkRole } from '../middleware/role.middleware';
 import { UserRole } from '@prisma/client';
-// Importar handlers
+// --- AÑADIR IMPORTACIÓN ---
+import { checkModuleActive } from '../middleware/module.middleware';
+// --- FIN AÑADIR ---
 import {
     createRewardHandler,
     getRewardsHandler,
@@ -16,29 +15,18 @@ import {
 
 const router = Router();
 
-// --- Rutas para la gestion de recompensas ---
-// TODAS estas rutas ahora requieren el rol BUSINESS_ADMIN (según checkRole aplicado)
+// Middleware de rol (BUSINESS_ADMIN) ya se aplica a nivel de montaje en index.ts
+// o se aplica individualmente aquí si fuera necesario (como lo tienes actualmente)
 
-// POST /api/rewards - Crear nueva recompensa
-router.post('/', checkRole([UserRole.BUSINESS_ADMIN]), createRewardHandler);
+// --- APLICAR checkModuleActive A TODAS LAS RUTAS ---
+const loyaltyCoreRequired = checkModuleActive('LOYALTY_CORE');
 
-// GET /api/rewards - Obtener todas las recompensas del negocio
-// Aunque obtener podría ser para clientes también, lo restringimos a admin por ahora
-// Más adelante podríamos tener una ruta pública o para clientes si fuera necesario
-router.get('/', checkRole([UserRole.BUSINESS_ADMIN]), getRewardsHandler);
-
-// GET /api/rewards/:id - Obtener una recompensa específica por ID
-router.get('/:id', checkRole([UserRole.BUSINESS_ADMIN]), getRewardByIdHandler);
-
-// PUT /api/rewards/:id - Actualizar una recompensa completa (reemplazo)
-router.put('/:id', checkRole([UserRole.BUSINESS_ADMIN]), updateRewardHandler);
-
-// PATCH /api/rewards/:id - Actualizar parcialmente una recompensa
-router.patch('/:id', checkRole([UserRole.BUSINESS_ADMIN]), updateRewardHandler);
-
-// DELETE /api/rewards/:id - Eliminar una recompensa
-router.delete('/:id', checkRole([UserRole.BUSINESS_ADMIN]), deleteRewardHandler);
+router.post('/', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, createRewardHandler);
+router.get('/', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, getRewardsHandler);
+router.get('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, getRewardByIdHandler);
+router.put('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, updateRewardHandler);
+router.patch('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, updateRewardHandler);
+router.delete('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, deleteRewardHandler);
+// --- FIN APLICAR ---
 
 export default router;
-
-// End of File: backend/src/routes/rewards.routes.ts

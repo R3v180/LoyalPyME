@@ -23,7 +23,7 @@ import {
 } from '../admin/admin-customer-bulk.controller';
 import { handleGetOverviewStats } from '../admin/admin-stats.controller';
 // --- NUEVO: Importar handler de subida ---
-import { handleImageUpload } from '../uploads/upload.controller';
+import { handleImageUpload } from '../uploads/uploads.controller';
 // --- FIN NUEVO ---
 
 
