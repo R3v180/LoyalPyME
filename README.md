@@ -13,84 +13,109 @@
 
 ---
 
-# LoyalPyME 🇬🇧 (v1.13.0)
+# LoyalPyME 🇬🇧 (v1.14.0)
 
-**LoyalPyME** is a comprehensive and modular full-stack web platform (React Frontend + Node.js Backend) designed for Small and Medium-sized Enterprises (SMEs). It currently includes:
+**LoyalPyME** is a comprehensive and modular full-stack web platform (React Frontend + Node.js Backend) designed for Small and Medium-sized Enterprises (SMEs). The platform consists of different modules that can be activated per business:
 
-- **LoyalPyME Core:** A robust system for managing digital customer loyalty programs (points, tiers, rewards, QR codes).
-- **Coming Soon: LoyalPyME Waiter:** An advanced module for digitizing and optimizing service operations in the hospitality sector (digital menu, table-side ordering, KDS, waiter interface).
+- **LoyalPyME Core:** A robust system for managing digital customer loyalty programs (points, tiers, custom rewards, QR codes for earning, customer dashboard, etc.).
+- **LoyalPyME Waiter (In Development):** An advanced module focused on digitizing and optimizing service operations in the hospitality sector. It will include features like a digital menu accessible via table QR codes, customer/waiter ordering, Kitchen/Bar Display System (KDS), table management, and a waiter interface.
 
-The platform is designed to be maintainable, scalable, and adaptable to business needs.
+The platform is engineered to be maintainable, scalable, and adaptable to the specific needs of each business.
 
 ## Vision and Purpose ✨
 
-LoyalPyME aims to be the technological ally for SMEs by providing integrated digital tools.
-With **LoyalPyME Core**, businesses foster repeat custom and build strong customer relationships.
-With the upcoming **LoyalPyME Waiter**, hospitality businesses will optimize their service, reduce operational costs, and enhance the end-customer experience.
-The platform adapts to various sectors, with an initial focus on retail, services (for LCo), and hospitality (for LC).
+LoyalPyME aims to be the technological ally for SMEs, providing integrated digital tools to enhance their growth and efficiency.
+With **LoyalPyME Core**, businesses can foster customer loyalty and recurrence, building stronger, lasting relationships.
+With the upcoming **LoyalPyME Waiter** module, hospitality businesses will be able to modernize their operations, reduce errors, streamline service, significantly improve the end-customer experience, and gain valuable operational insights.
+The platform is versatile, with applications in retail, various services (for LoyalPyME Core), and a strong focus on hospitality (for LoyalPyME Waiter).
 
-_(See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for key design decisions and [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for the long-term vision and module status)._
+_(See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for detailed status, key design decisions, and completed milestones. For the roadmap and feature backlog, review [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md))._
 
 |                                    Admin Dashboard (Desktop)                                    |                                       Admin Dashboard (Mobile)                                       |
 | :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
 | <img src="images/SC_LoyalPyME.png" alt="LoyalPyME Admin Dashboard - Desktop View" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="LoyalPyME Admin Dashboard - Mobile View" width="100%"> |
 
-_(Note: Screenshots might need updating to reflect modules and the Super Admin panel)._
+_(Note: Screenshots might not reflect the latest features or the Super Admin panel interface. They will be updated progressively)._
 
-## Key Implemented Features (Base Platform & LoyalPyME Core) ✅
+## Key Implemented Features ✅
 
-- **Multi-Module Management (Base):**
-  - Super Admin panel for global management of client businesses.
-  - Activation/Deactivation of modules (e.g., LoyalPyME Core, LoyalPyME Waiter) per business.
-  - Access control to functionalities based on active modules for each business.
-- **LoyalPyME Core (Loyalty Module):**
-  - **Full Authentication:** Business/Admin Registration, Customer Registration, Login (JWT), Password Reset.
-  - **Customer Management (Admin LCo):** CRUD, Filters, Search, Sorting, Individual/Bulk Actions, Notes.
-  - **Tier & Benefit Management (Admin LCo):** Tier CRUD, Benefit CRUD per Tier, Global Tier System Settings.
-  - **Reward Management (Admin LCo):** Reward CRUD (Points-based), Image Upload & 1:1 Cropping (Cloudinary), Multi-language support (ES/EN) for name/description.
-  - **Points & QR Flow (LCo):** QR Code Generation (Admin), QR Validation (Customer - Manual/Mobile Scanner).
-  - **Automatic Tier Logic (LCo):** Tier Calculation/Assignment/Downgrade based on business settings (Backend + Cron Job).
-  - **Customer Dashboard (LCo):** Tab-based Interface (Summary, Rewards, Activity), User Info (Points, Tier, Benefits), Progress Bar (with Next Tier Preview), Reward/Gift List, Points/Gift Redemption, QR Scanner.
-  - **Customer Activity History (LCo):** Paginated timeline view of points earned and redemptions.
-- **Other (Platform):** Frontend Internationalization (i18n - ES/EN), API Documentation (Swagger), Static Logo, Constrained Header Layout.
+**Base Platform & Multi-Module Management:**
+
+- **Super Admin Panel:** Interface for global administration of client businesses registered on the platform.
+- **Module Management per Business:** Ability to activate or deactivate specific modules (like LoyalPyME Core or LoyalPyME Waiter) for each client business.
+- **Module-Based Access Control:** Available functionality for each business administrator and their customers/employees depends on the modules active for their business.
+
+**LoyalPyME Core (Loyalty Module - Functional):**
+
+- **Full Authentication:** Business & Admin Registration, Customer Registration, Secure Login with JWT, Password Reset Functionality.
+- **Customer Management (LCo Admin):** Advanced listing with search, filters, and sorting. Customer CRUD, including adding internal notes, manual points adjustment, tier changes, activation/deactivation, and favorites unteren. Bulk actions on customers.
+- **Tier & Benefit Management (LCo Admin):** Loyalty tier CRUD. Definition of specific benefits per tier. Global configuration of the tier system (calculation basis, downgrade policy, inactivity periods).
+- **Reward Management (LCo Admin):** Full CRUD for point-redeemable rewards. Includes image upload and 1:1 cropping (Cloudinary) for each reward. Multi-language support (ES/EN) for reward names and descriptions.
+- **Points & QR Flow (LCo):** Admin generation of unique QR codes for customers to earn points (associated with a sale amount and ticket number). QR validation by the End Customer via manual input or mobile camera scanning (using `html5-qrcode`).
+- **Automatic Tier Logic (LCo):** Backend system (with Cron Job) that automatically calculates and updates customer tiers based on business configuration (spend, visits, points) and downgrade policies.
+- **Customer Dashboard (LCo):** Multi-tab interface for the end customer:
+  - **Summary:** Key info, points, current tier, progress bar to next tier (with benefit preview), summary of available gifts/rewards, and QR validation section.
+  - **Rewards:** Full list of rewards available for point redemption and granted gifts, with images and redemption option.
+  - **Activity:** Paginated history of all point transactions (earned, spent) and gift redemptions.
+- **Other (Platform & LCo):**
+  - Full frontend internationalization (i18n - ES/EN).
+  - Backend API Documentation generated with Swagger and accessible via `/api-docs`.
+  - Static logo and constrained header layout for consistent branding.
+
+**LoyalPyME Waiter Module (In Development - Backend Foundations Ready):**
+
+- **Database:** Prisma models defined for Tables (with QR and status), Digital Menu (Categories, Items with i18n, price, image, allergens, tags, availability, etc.), Modifiers (Groups and Options with price adjustments), Orders (with status, items, optional customer/waiter), and Staff (with roles and PINs).
+- **Backend API (Business Admin):** CRUD endpoints implemented for managing Menu Categories, Menu Items, and their Modifiers. These APIs are protected and only accessible if the Waiter module is active for the business.
 
 ## Project Status & Roadmap 🗺️
 
-The project has completed **Phase 1 (LCo Core Functionality)** and the **base implementation for multi-module management and the Super Admin Panel**. Current version: **v1.13.0**.
+The project has completed **Phase 1 (LCo Core Functionality)** and the **base implementation of the multi-module architecture and Super Admin Panel**. Current version: **v1.14.0**.
 
-- Development is now focused on the **"LoyalPyME Waiter" module** for the hospitality sector.
-- See **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** for **detailed completed milestones** and **immediate next steps**.
-- See **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** for the **full backlog** of pending tasks and detailed **future ideas**.
+- The primary development focus is now on building the **"LoyalPyME Waiter" module** for the hospitality industry.
+- See **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** for **detailed completed milestones** and **key design decisions**.
+- See **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** for the **full backlog** of pending tasks, the detailed roadmap for the Waiter Module, and **future ideas**.
 
 ## Used Technologies 🛠️
 
-**Frontend:** React, TypeScript, Vite, Mantine UI (v7+), Axios, React Router DOM (v6+), `html5-qrcode`, `react-image-crop`, `i18next`, Zustand (or similar for global state management if needed in the future)...
-**Backend:** Node.js, Express, TypeScript, Prisma, PostgreSQL, JWT, bcryptjs, Cloudinary, Multer, Vitest, Supertest, Swagger, `node-cron`...
+**Frontend:** React, TypeScript, Vite, Mantine UI (v7+), Axios, React Router DOM (v6+), `html5-qrcode`, `react-image-crop`, `i18next` (for i18n), Zustand (or similar, considered for advanced global state management if needed).
+**Backend:** Node.js, Express, TypeScript, Prisma ORM, PostgreSQL, JSON Web Tokens (JWT), bcryptjs (for hashing), Cloudinary (image storage), Multer (upload handling), Vitest (unit/integration testing), Supertest (API testing), Swagger (API documentation), `node-cron` (scheduled tasks).
 
-_(Detailed and updated list in [PROJECT_STATUS.md](./PROJECT_STATUS.md))_
+_(A more detailed and continuously updated list can be found in [PROJECT_STATUS.md](./PROJECT_STATUS.md))._
 
 ## Quick Start (Local Development) 🚀
 
-1.  Clone repository.
-2.  **Backend:** `cd backend && yarn install`, configure `.env` completely (see `.env.example`), `npx prisma migrate reset` (deletes and recreates DB), `npx prisma db seed` (for demo data), `npx ts-node ./scripts/create-superadmin.ts` (to create superadmin user), run with `npx tsc --watch` & `npx nodemon dist/index.js`.
-3.  **Frontend:** `cd ../frontend && yarn install`, run with `yarn dev --host`.
-4.  **Access:**
-    - Customer/Business Admin App: `https://localhost:5173`
-    - Super Admin Panel: `https://localhost:5173/superadmin` (login with credentials from `create-superadmin.ts`)
-    - Demo Business (seed): `admin@demo.com` / `password`
-    - Demo Customer (seed): `cliente@demo.com` / `password`
+1.  Clone the repository.
+2.  **Backend:**
+    - `cd backend && yarn install`
+    - Configure the `.env` file completely (copy from `.env.example` and fill in).
+    - `npx prisma migrate reset` (This will delete and recreate the database).
+    - `npx prisma db seed` (This will populate the database with a demo business, admin, customer, and sample LCo data).
+    - `npx ts-node ./scripts/create-superadmin.ts` (This will create the global Super Admin user).
+    - Run in two terminals:
+      1.  `yarn dev:build` (or `npx tsc --watch`)
+      2.  `yarn dev:run` (or `npx nodemon dist/index.js`)
+3.  **Frontend:**
+    - `cd ../frontend && yarn install`
+    - Run: `yarn dev` (or `yarn dev --host` for local network access).
+4.  **Accessing the Applications:**
+    - **Customer / Business Admin App:** `https://localhost:5173`
+      - Demo Business Login (LCo): `admin@demo.com` / `password`
+      - Demo Customer Login (LCo): `cliente@demo.com` / `password`
+    - **Super Admin Panel:** `https://localhost:5173/superadmin`
+      - Login: `superadmin@loyalpyme.com` / `superadminpassword` (or credentials configured in the script).
+    - **API Documentation:** `http://localhost:3000/api-docs`
 
-**Important!** Refer to the **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** for **complete, detailed** instructions. For common issues, check the [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md).
+**Important!** Refer to the **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** for **complete and detailed** installation, configuration, and running instructions. For common issues, check the [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md).
 
 ---
 
 ## Contributions 🤝
 
-Contributions welcome! Standard flow: Fork -> Branch -> Commit -> Push -> Pull Request. Check [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for pending tasks or to propose new ideas.
+Contributions are welcome! Please follow the standard flow: Fork -> New Branch -> Commit -> Push -> Pull Request. Review the [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for pending tasks or to propose new features or improvements.
 
 ## License 📜
 
-Licensed under **MIT**. See [`LICENSE`](./LICENSE) file.
+This project is licensed under the **MIT License**. See the [`LICENSE`](./LICENSE) file for details.
 Copyright (c) 2024-2025 Olivier Hottelet
 
 ## Contact 📧
