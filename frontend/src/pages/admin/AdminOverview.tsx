@@ -1,7 +1,5 @@
 // frontend/src/pages/admin/AdminOverview.tsx
-// --- CAMBIO: Modificar la importación de React ---
-import { useEffect, useState, FC } from 'react'; // Importar FC para el tipo de componente
-// --- FIN CAMBIO ---
+import { useEffect, useState, FC } from 'react';
 import {
     Container, Title, Text, SimpleGrid, Card, Button, Group, Stack,
     Loader, Alert
@@ -17,10 +15,7 @@ import { useAdminOverviewStats } from '../../hooks/useAdminOverviewStats';
 import StatCard from '../../components/admin/StatCard';
 import { useLayoutUserData } from '../../hooks/useLayoutUserData';
 
-
-// --- CAMBIO: Añadir tipo explícito al componente ---
 const AdminOverview: FC = () => {
-// --- FIN CAMBIO ---
     const { t } = useTranslation();
     const { userData: layoutUserData, loadingUser: loadingLayoutUser } = useLayoutUserData();
     const [adminName, setAdminName] = useState<string | null>(null);
@@ -37,7 +32,12 @@ const AdminOverview: FC = () => {
 
     useEffect(() => {
         if (layoutUserData) {
-            setAdminName(layoutUserData.name || layoutUserData.email || t('adminOverview.defaultBusinessName'));
+            setAdminName(layoutUserData.name || layoutUserData.email || t('adminCommon.adminTitle'));
+            // Como discutimos, /api/profile no devuelve el nombre del negocio directamente en layoutUserData.
+            // Si quisieras el nombre real del negocio aquí, necesitarías:
+            // 1. Que /api/profile (auth.middleware.ts) añada business.name a req.user
+            // 2. O hacer una llamada API separada aquí para obtener los detalles del layoutUserData.businessId
+            // Por ahora, mantenemos el placeholder.
             setBusinessName(t('adminOverview.defaultBusinessName'));
         } else if (!loadingLayoutUser) {
             setAdminName(t('adminCommon.adminTitle'));
@@ -51,18 +51,67 @@ const AdminOverview: FC = () => {
         manageTiers: '/admin/dashboard/tiers/manage',
         settingsTiers: '/admin/dashboard/tiers/settings',
         customers: '/admin/dashboard/customers',
-        camareroMenu: '/admin/dashboard/camarero/menu',
+        camareroMenuEditor: "/admin/dashboard/camarero/menu-editor", // Ruta actualizada
     };
 
     const isLoadingPage = loadingLayoutUser || loadingStats;
 
     const quickAccessCards = [
-        { titleKey: 'adminOverview.cardRewardsTitle', descriptionKey: 'adminOverview.cardRewardsDesc', buttonTextKey: 'adminOverview.cardRewardsButton', icon: IconGift, color: 'blue', to: routes.rewards, showCondition: layoutUserData?.isLoyaltyCoreActive === true, },
-        { titleKey: 'adminOverview.cardTiersTitle', descriptionKey: 'adminOverview.cardTiersDesc', buttonTextKey: 'adminOverview.cardTiersButton', icon: IconStairsUp, color: 'teal', to: routes.manageTiers, showCondition: layoutUserData?.isLoyaltyCoreActive === true, },
-        { titleKey: 'adminOverview.cardTierSettingsTitle', descriptionKey: 'adminOverview.cardTierSettingsDesc', buttonTextKey: 'adminOverview.cardTierSettingsButton', icon: IconSettings, color: 'orange', to: routes.settingsTiers, showCondition: layoutUserData?.isLoyaltyCoreActive === true, },
-        { titleKey: 'adminOverview.cardQrTitle', descriptionKey: 'adminOverview.cardQrDesc', buttonTextKey: 'adminOverview.cardQrButton', icon: IconQrcode, color: 'grape', to: routes.generateQr, showCondition: layoutUserData?.isLoyaltyCoreActive === true, },
-        { titleKey: 'adminOverview.cardCustomersTitle', descriptionKey: 'adminOverview.cardCustomersDesc', buttonTextKey: 'adminOverview.cardCustomersButton', icon: IconUsers, color: 'indigo', to: routes.customers, showCondition: layoutUserData?.isLoyaltyCoreActive === true || layoutUserData?.isCamareroActive === true, },
-        { titleKey: 'adminCamarero.cardMenuTitle', descriptionKey: 'adminCamarero.cardMenuDesc', buttonTextKey: 'adminCamarero.cardMenuButton', icon: IconToolsKitchen, color: 'lime', to: routes.camareroMenu, showCondition: layoutUserData?.isCamareroActive === true, },
+        {
+            titleKey: 'adminOverview.cardRewardsTitle',
+            descriptionKey: 'adminOverview.cardRewardsDesc',
+            buttonTextKey: 'adminOverview.cardRewardsButton',
+            icon: IconGift,
+            color: 'blue',
+            to: routes.rewards,
+            showCondition: layoutUserData?.isLoyaltyCoreActive === true,
+        },
+        {
+            titleKey: 'adminOverview.cardTiersTitle',
+            descriptionKey: 'adminOverview.cardTiersDesc',
+            buttonTextKey: 'adminOverview.cardTiersButton',
+            icon: IconStairsUp,
+            color: 'teal',
+            to: routes.manageTiers,
+            showCondition: layoutUserData?.isLoyaltyCoreActive === true,
+        },
+        {
+            titleKey: 'adminOverview.cardTierSettingsTitle',
+            descriptionKey: 'adminOverview.cardTierSettingsDesc',
+            buttonTextKey: 'adminOverview.cardTierSettingsButton',
+            icon: IconSettings,
+            color: 'orange',
+            to: routes.settingsTiers,
+            showCondition: layoutUserData?.isLoyaltyCoreActive === true,
+        },
+        {
+            titleKey: 'adminOverview.cardQrTitle',
+            descriptionKey: 'adminOverview.cardQrDesc',
+            buttonTextKey: 'adminOverview.cardQrButton',
+            icon: IconQrcode,
+            color: 'grape',
+            to: routes.generateQr,
+            showCondition: layoutUserData?.isLoyaltyCoreActive === true,
+        },
+        {
+            titleKey: 'adminOverview.cardCustomersTitle',
+            descriptionKey: 'adminOverview.cardCustomersDesc',
+            buttonTextKey: 'adminOverview.cardCustomersButton',
+            icon: IconUsers,
+            color: 'indigo',
+            to: routes.customers,
+            showCondition: layoutUserData?.isLoyaltyCoreActive === true || layoutUserData?.isCamareroActive === true,
+        },
+        // Tarjeta para Gestión de Menú del Módulo Camarero
+        {
+            titleKey: 'adminCamarero.manageMenu.title', // Usar clave de título de página para consistencia
+            descriptionKey: 'adminCamarero.cardMenuDesc', // Clave para descripción de la tarjeta
+            buttonTextKey: 'adminCamarero.cardMenuButton', // Clave para texto del botón
+            icon: IconToolsKitchen,
+            color: 'lime',
+            to: routes.camareroMenuEditor, // Ruta correcta
+            showCondition: layoutUserData?.isCamareroActive === true,
+        },
     ];
 
     if (isLoadingPage && !statsData && !layoutUserData) {
@@ -72,7 +121,7 @@ const AdminOverview: FC = () => {
     return (
         <Container size="lg" mt="md">
             <Stack gap="xl">
-                <Title order={2}>{t('adminOverview.welcome', { name: adminName || 'Admin' })}</Title>
+                <Title order={2}>{t('adminOverview.welcome', { name: adminName || t('adminCommon.adminTitle') })}</Title>
                 <Text fz="lg">
                     {t('adminOverview.panelIntro')}{' '}
                     <Text span fw={700}>{businessName || '...'}</Text>.
@@ -108,7 +157,7 @@ const AdminOverview: FC = () => {
                     ))}
                 </SimpleGrid>
                 {quickAccessCards.filter(card => card.showCondition).length === 0 && !isLoadingPage && (
-                    <Text c="dimmed" ta="center">{t('adminOverview.noModulesActivePrompt', 'No hay módulos activos para este negocio. Actívalos desde el panel de Super Administrador.')}</Text>
+                    <Text c="dimmed" ta="center">{t('adminOverview.noModulesActivePrompt')}</Text>
                 )}
             </Stack>
         </Container>

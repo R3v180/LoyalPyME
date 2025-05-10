@@ -1,7 +1,5 @@
 // frontend/src/routes/index.tsx
-// --- MODIFICACIÓN: Añadir Outlet a la importación ---
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
-// --- FIN MODIFICACIÓN ---
 
 // Layouts y Protección
 import PrivateRoute from '../components/PrivateRoute';
@@ -18,7 +16,7 @@ import RegisterBusinessPage from '../pages/RegisterBusinessPage';
 // Página de Cliente
 import CustomerDashboardPage from '../pages/CustomerDashboardPage';
 
-// Páginas Específicas de Admin (Business Admin)
+// Páginas Específicas de Admin (Business Admin LCo)
 import AdminOverview from '../pages/admin/AdminOverview';
 import AdminRewardsManagement from '../pages/admin/AdminRewardsManagement';
 import AdminGenerateQr from '../pages/admin/AdminGenerateQr';
@@ -26,7 +24,11 @@ import TierSettingsPage from '../pages/admin/tiers/TierSettingsPage';
 import TierManagementPage from '../pages/admin/tiers/TierManagementPage';
 import AdminCustomerManagementPage from '../pages/admin/AdminCustomerManagementPage';
 
+// Página Super Admin
 import SuperAdminPage from '../pages/admin/SuperAdminPage';
+
+// Página de Gestión de Menú (Admin Camarero)
+import MenuManagementPage from '../pages/admin/camarero/MenuManagementPage';
 
 
 function AppRoutes() {
@@ -45,47 +47,42 @@ function AppRoutes() {
       {/* Rutas Protegidas (usan MainLayout y PrivateRoute) */}
       <Route element={<MainLayout />}>
 
-        {/* Rutas para SUPER_ADMIN */}
+        {/* Ruta para SUPER_ADMIN */}
         <Route
             path="/superadmin"
-            element={
-                <PrivateRoute roles={['SUPER_ADMIN']}>
-                    <SuperAdminPage />
-                </PrivateRoute>
-            }
+            element={ <PrivateRoute roles={['SUPER_ADMIN']}><SuperAdminPage /></PrivateRoute> }
         />
 
         {/* Rutas para BUSINESS_ADMIN */}
         <Route
             path="/admin/dashboard"
-            element={
-                <PrivateRoute roles={['BUSINESS_ADMIN']}>
-                    <Outlet /> {/* Outlet aquí para renderizar las sub-rutas de admin */}
-                </PrivateRoute>
-            }
+            element={ <PrivateRoute roles={['BUSINESS_ADMIN']}><Outlet /></PrivateRoute> }
         >
             <Route index element={<AdminOverview />} />
+            {/* Rutas LCo */}
             <Route path="rewards" element={<AdminRewardsManagement />} />
             <Route path="generate-qr" element={<AdminGenerateQr />} />
             <Route path="tiers/settings" element={<TierSettingsPage />} />
             <Route path="tiers/manage" element={<TierManagementPage />} />
             <Route path="customers" element={<AdminCustomerManagementPage />} />
+
+            {/* Rutas Módulo Camarero (LC) */}
+            <Route path="camarero/menu-editor" element={<MenuManagementPage />} />
+            {/* Ejemplo de futuras rutas para Camarero:
+            <Route path="camarero/tables" element={<TableManagementPage />} />
+            <Route path="camarero/staff" element={<StaffManagementPage />} />
+            */}
         </Route>
 
         {/* Rutas para CUSTOMER_FINAL */}
         <Route
             path="/customer/dashboard"
-            element={
-                <PrivateRoute roles={['CUSTOMER_FINAL']}>
-                    <CustomerDashboardPage />
-                </PrivateRoute>
-            }
+            element={ <PrivateRoute roles={['CUSTOMER_FINAL']}><CustomerDashboardPage /></PrivateRoute> }
         />
 
       </Route>
 
       {/* <Route path="*" element={<NotFoundPage />} /> */}
-
     </Routes>
   );
 }

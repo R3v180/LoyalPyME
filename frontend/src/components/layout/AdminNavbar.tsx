@@ -9,29 +9,26 @@ import {
     IconUsers,
     IconStairsUp,
     IconSettings,
-    IconToolsKitchen, // Para módulo Camarero
+    IconToolsKitchen,
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
-
-// Importar UserData desde el archivo de tipos central
-import type { UserData } from '../../types/customer'; // Ajusta la ruta si es necesario
+import type { UserData } from '../../types/customer';
 
 interface AdminNavbarProps {
     pathname: string;
     closeNavbar: () => void;
-    userData: UserData | null; // userData ahora es del tipo UserData completo
+    userData: UserData | null;
 }
 
 const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname, closeNavbar, userData }) => {
     const { t } = useTranslation();
 
-    // Definimos todos los enlaces posibles con una condición para mostrarlos
     const allPossibleNavLinks = [
         {
             to: "/admin/dashboard",
             labelKey: 'adminCommon.dashboard',
             icon: IconGauge,
-            showCondition: true // El dashboard principal siempre se muestra para un BUSINESS_ADMIN
+            showCondition: true
         },
         {
             to: "/admin/dashboard/rewards",
@@ -40,7 +37,7 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname, closeNavbar, userDa
             showCondition: userData?.isLoyaltyCoreActive === true
         },
         {
-            to: "/admin/dashboard/generate-qr", // QR de puntos (LCo)
+            to: "/admin/dashboard/generate-qr",
             labelKey: 'adminCommon.generateQr',
             icon: IconQrcode,
             showCondition: userData?.isLoyaltyCoreActive === true
@@ -49,8 +46,6 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname, closeNavbar, userDa
             to: "/admin/dashboard/customers",
             labelKey: 'adminCommon.customers',
             icon: IconUsers,
-            // Mostrar Clientes si CUALQUIERA de los módulos principales está activo,
-            // o si se considera una función base del admin.
             showCondition: userData?.isLoyaltyCoreActive === true || userData?.isCamareroActive === true
         },
         {
@@ -65,27 +60,26 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname, closeNavbar, userDa
             icon: IconSettings,
             showCondition: userData?.isLoyaltyCoreActive === true
         },
-        // Enlaces PLACEHOLDER para el Módulo Camarero
+        // Enlace para Gestión de Menú del Módulo Camarero
         {
-            to: "/admin/dashboard/camarero/menu",
-            labelKey: 'adminCamarero.manageMenu', // Necesitarás añadir esta clave i18n
+            to: "/admin/dashboard/camarero/menu-editor", // Ruta final
+            labelKey: 'adminCamarero.manageMenu.title', // Clave de i18n para el título de la página
             icon: IconToolsKitchen,
             showCondition: userData?.isCamareroActive === true
         },
-        // Podrías añadir más enlaces para Camarero aquí (ej: mesas, personal, etc.)
+        // Puedes añadir más enlaces para el módulo Camarero aquí
         // {
         //     to: "/admin/dashboard/camarero/tables",
-        //     labelKey: 'adminCamarero.manageTables',
-        //     icon: IconTable, // Necesitarías importar IconTable
+        //     labelKey: 'adminCamarero.manageTables', // Deberás crear esta clave i18n
+        //     icon: IconTable, // Necesitarías importar IconTable de @tabler/icons-react
         //     showCondition: userData?.isCamareroActive === true
         // },
     ];
 
-    // Filtramos los enlaces que se deben mostrar
     const navLinksToShow = allPossibleNavLinks.filter(link => link.showCondition);
+    // console.log("[AdminNavbar] userData PROPS received:", JSON.stringify(userData, null, 2));
+    // console.log("[AdminNavbar] Links to show:", navLinksToShow.map(l => l.labelKey));
 
-    // Añadimos un pequeño log para ver qué userData recibe AdminNavbar
-    // console.log("[AdminNavbar] userData received:", userData);
 
     return (
         <>

@@ -618,10 +618,16 @@
     "businessFallbackName": "the business"
   },
   "adminCamarero": {
-    "manageMenu": "Manage Menu",
-    "manageTables": "Manage Tables",
-    "cardMenuTitle": "Digital Menu",
-    "cardMenuDesc": "Create and edit your menu products, categories, and modifiers.",
-    "cardMenuButton": "Manage Menu"
+    "manageMenu": "Manage Menu", 
+    "manageTables": "Manage Tables", 
+    "cardMenuTitle": "Digital Menu", 
+    "cardMenuDesc": "Create and edit your menu products, categories, and modifiers.", 
+    "cardMenuButton": "Manage Menu", 
+    
+    "manageMenu.title": "Digital Menu Management",
+    "manageMenu.categoriesSectionTitle": "Menu Categories",
+    "manageMenu.categoryManagerPlaceholder": "Category Manager will go here...",
+    "manageMenu.itemsSectionTitle": "Menu Items",
+    "manageMenu.itemManagerPlaceholder": "Item Manager (by category) will go here..."
   }
 }

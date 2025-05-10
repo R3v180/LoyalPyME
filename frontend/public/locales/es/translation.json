@@ -623,10 +623,16 @@
     "businessFallbackName": "el negocio"
   },
   "adminCamarero": {
-    "manageMenu": "Gestionar Carta",
+    "manageMenu": "Gestionar Carta", 
     "manageTables": "Gestionar Mesas",
-    "cardMenuTitle": "Carta Digital",
-    "cardMenuDesc": "Crea y edita los productos, categorías y modificadores de tu menú.",
-    "cardMenuButton": "Gestionar Carta"
+    "cardMenuTitle": "Carta Digital", 
+    "cardMenuDesc": "Crea y edita los productos, categorías y modificadores de tu menú.", 
+    "cardMenuButton": "Gestionar Carta", 
+
+    "manageMenu.title": "Gestión de Carta Digital",
+    "manageMenu.categoriesSectionTitle": "Categorías del Menú",
+    "manageMenu.categoryManagerPlaceholder": "Gestor de Categorías irá aquí...",
+    "manageMenu.itemsSectionTitle": "Ítems del Menú",
+    "manageMenu.itemManagerPlaceholder": "Gestor de Ítems (por categoría) irá aquí..."
   }
 }
