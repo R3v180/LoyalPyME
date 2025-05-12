@@ -1,129 +1,115 @@
-# LoyalPyME 🇬🇧
+# LoyalPyME 🇪🇸 (v1.15.0)
 
-[![GitHub repo size](https://img.shields.io/github/repo-size/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME)
-[![GitHub contributors](https://img.shields.io/github/contributors/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/graphs/contributors)
-[![GitHub last commit](https://img.shields.io/github/last-commit/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/commits/main)
-[![GitHub issues](https://img.shields.io/github/issues/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/issues)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/pulls)
+**LoyalPyME** es una plataforma web integral y modular (Frontend React + Backend Node.js) diseñada para Pequeñas y Medianas Empresas (PyMEs). La plataforma se compone de diferentes módulos que pueden ser activados por negocio:
 
----
+- **LoyalPyME Core:** Un sistema robusto para la gestión de programas de fidelización de clientes digitales (puntos, niveles, recompensas personalizadas, códigos QR para acumulación, panel de cliente, etc.).
+- **LoyalPyME Camarero (En Desarrollo):** Un módulo avanzado enfocado en la digitalización y optimización del servicio en el sector hostelero. Incluirá funcionalidades como carta digital accesible por QR en mesa, toma de comandas por el cliente o camarero, envío a pantallas de cocina/barra (KDS), gestión de mesas e interfaz para camareros.
 
-🇬🇧 **You are reading the English version.** | 🇪🇸 [Leer en Español](README.es.md)
+La plataforma está diseñada para ser mantenible, escalable y adaptable a las necesidades específicas de cada negocio.
 
----
+## Visión y Propósito ✨
 
-# LoyalPyME 🇬🇧 (v1.15.0)
+LoyalPyME busca ser el aliado tecnológico de las PyMEs, proporcionando herramientas digitales integradas para potenciar su crecimiento y eficiencia.
+Con **LoyalPyME Core**, las empresas pueden fomentar la lealtad y recurrencia de sus clientes, construyendo relaciones más sólidas y duraderas.
+Con el próximo módulo **LoyalPyME Camarero**, los negocios de hostelería podrán modernizar su operativa, reducir errores, agilizar el servicio, mejorar significativamente la experiencia del cliente final y obtener datos valiosos para la gestión.
+La plataforma es versátil, con aplicaciones en retail, servicios diversos (para LoyalPyME Core) y un fuerte enfoque en hostelería (para LoyalPyME Camarero).
 
-**LoyalPyME** is a comprehensive and modular full-stack web platform (React Frontend + Node.js Backend) designed for Small and Medium-sized Enterprises (SMEs). The platform consists of different modules that can be activated per business:
+_(Consulta [PROJECT_STATUS.md](./PROJECT_STATUS.md) para ver el estado detallado, las decisiones de diseño clave y los hitos completados. Para la hoja de ruta y el backlog de funcionalidades, revisa [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md))._
 
-- **LoyalPyME Core:** A robust system for managing digital customer loyalty programs (points, tiers, custom rewards, QR codes for earning, customer dashboard, etc.).
-- **LoyalPyME Waiter (In Development):** An advanced module focused on digitizing and optimizing service operations in the hospitality sector. It will include features like a digital menu accessible via table QR codes, customer/waiter ordering, Kitchen/Bar Display System (KDS), table management, and a waiter interface.
+|                                   Panel de Admin (Escritorio)                                   |                                      Panel de Admin (Móvil)                                      |
+| :---------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------: |
+| <img src="images/SC_LoyalPyME.png" alt="Panel Admin LoyalPyME - Vista Escritorio" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="Panel Admin LoyalPyME - Vista Móvil" width="100%"> |
 
-The platform is engineered to be maintainable, scalable, and adaptable to the specific needs of each business.
+_(Nota: Las capturas de pantalla podrían no reflejar las últimas funcionalidades o la interfaz del panel Super Admin. Se actualizarán progresivamente)._
 
-## Vision and Purpose ✨
+## Características Principales Implementadas ✅
 
-LoyalPyME aims to be the technological ally for SMEs, providing integrated digital tools to enhance their growth and efficiency.
-With **LoyalPyME Core**, businesses can foster customer loyalty and recurrence, building stronger, lasting relationships.
-With the upcoming **LoyalPyME Waiter** module, hospitality businesses will be able to modernize their operations, reduce errors, streamline service, significantly improve the end-customer experience, and gain valuable operational insights.
-The platform is versatile, with applications in retail, various services (for LoyalPyME Core), and a strong focus on hospitality (for LoyalPyME Waiter).
+**Plataforma Base y Gestión Multi-Módulo:**
 
-_(See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for detailed status, key design decisions, and completed milestones. For the roadmap and feature backlog, review [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md))._
+- **Panel Super Admin:** Interfaz para la administración global de negocios clientes registrados en la plataforma.
+- **Gestión de Módulos por Negocio:** Capacidad para activar o desactivar módulos específicos (como LoyalPyME Core o LoyalPyME Camarero) para cada negocio cliente.
+- **Control de Acceso Basado en Módulos:** La funcionalidad disponible para cada administrador de negocio y sus clientes/empleados depende de los módulos que tengan activos.
 
-|                                    Admin Dashboard (Desktop)                                    |                                       Admin Dashboard (Mobile)                                       |
-| :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
-| <img src="images/SC_LoyalPyME.png" alt="LoyalPyME Admin Dashboard - Desktop View" width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="LoyalPyME Admin Dashboard - Mobile View" width="100%"> |
+**LoyalPyME Core (Módulo de Fidelización - Funcional):**
 
-_(Note: Screenshots might not reflect the latest features or the Super Admin panel interface. They will be updated progressively)._
+- **Autenticación Completa:** Registro de Negocios y su primer Administrador, Registro de Clientes Finales, Login seguro con JWT, Funcionalidad de Reseteo de Contraseña.
+- **Gestión de Clientes (Admin LCo):** Listado avanzado con búsqueda, filtros y ordenación. CRUD de clientes, incluyendo la capacidad de añadir notas internas, ajustar puntos manualmente, cambiar nivel, activar/desactivar y marcar como favoritos. Acciones masivas sobre clientes.
+- **Gestión de Niveles/Tiers (Admin LCo):** Creación, edición y eliminación de niveles de fidelización. Definición de beneficios específicos por nivel. Configuración global del sistema de tiers (base de cálculo, política de descenso, periodos de inactividad).
+- **Gestión de Recompensas (Admin LCo):** CRUD completo para recompensas canjeables por puntos. Incluye subida y recorte de imágenes (1:1, Cloudinary) para cada recompensa. Soporte multi-idioma (ES/EN) para nombre y descripción de recompensas.
+- **Flujo de Puntos y QR (LCo):** Generación de códigos QR únicos por parte del Admin para que los clientes sumen puntos (asociados a un importe de venta y número de ticket). Validación de QR por el Cliente Final a través de introducción manual o escaneo con la cámara del móvil (usando `html5-qrcode`).
+- **Lógica de Tiers Automática (LCo):** Sistema backend (con tarea programada/Cron Job) que calcula y actualiza automáticamente el nivel de los clientes basado en la configuración del negocio (gasto, visitas, puntos) y las políticas de descenso.
+- **Panel de Cliente (LCo):** Interfaz para el cliente final con múltiples pestañas:
+  - **Resumen:** Información clave, puntos, nivel actual, barra de progreso hacia el siguiente nivel (con previsualización de beneficios), resumen de regalos/recompensas disponibles, y sección para validar QR.
+  - **Recompensas:** Listado completo de recompensas disponibles para canjear con puntos y regalos otorgados, con imágenes y opción de canje.
+  - **Actividad:** Historial paginado de todas las transacciones de puntos (ganados, gastados) y canjes de regalos.
+- **Otros (Plataforma y LCo):**
+  - Internacionalización (i18n) completa del frontend (ES/EN).
+  - Documentación de la API Backend generada con Swagger y accesible vía `/api-docs`.
+  - Logo estático y diseño de cabecera restringido para una imagen de marca consistente.
 
-## Key Implemented Features ✅
+**Módulo LoyalPyME Camarero (En Desarrollo - UI Gestión Carta Admin Completa):**
 
-**Base Platform & Multi-Module Management:**
+- **Base de Datos:** Modelos Prisma definidos para Mesas (con QR y estado), Carta Digital (Categorías, Ítems con i18n, precio, imagen, alérgenos, tags, disponibilidad, etc.), Modificadores (Grupos y Opciones con ajuste de precio), Pedidos (con estado, ítems, cliente/camarero opcional), y Personal (con roles y PINs).
+- **API Backend (Admin Negocio):** Endpoints CRUD implementados para la gestión de Categorías del Menú, Ítems del Menú y sus Modificadores. Estas APIs están protegidas y solo accesibles si el módulo Camarero está activo para el negocio.
+- **UI Frontend (Admin Negocio - Gestión Carta):** Interfaz completa para gestionar categorías de la carta digital (CRUD, reordenación), ítems del menú (CRUD con campos detallados, subida/recorte de imagen), grupos de modificadores asociados a ítems (CRUD), y opciones de modificadores dentro de los grupos (CRUD).
 
-- **Super Admin Panel:** Interface for global administration of client businesses registered on the platform.
-- **Module Management per Business:** Ability to activate or deactivate specific modules (like LoyalPyME Core or LoyalPyME Waiter) for each client business.
-- **Module-Based Access Control:** Available functionality for each business administrator and their customers/employees depends on the modules active for their business.
+## Estado Actual y Próximos Pasos 🗺️
 
-**LoyalPyME Core (Loyalty Module - Functional):**
+La plataforma ha completado la **Fase 1 (Núcleo Funcional de LoyalPyME Core)**, la **implementación base de la arquitectura multi-módulo junto con el Panel Super Admin**, y una parte importante de la **Fase 3 (Módulo LoyalPyME Camarero - UI de Gestión de Carta para Administradores)**. La versión actual es **v1.15.0**.
 
-- **Full Authentication:** Business & Admin Registration, Customer Registration, Secure Login with JWT, Password Reset Functionality.
-- **Customer Management (LCo Admin):** Advanced listing with search, filters, and sorting. Customer CRUD, including adding internal notes, manual points adjustment, tier changes, activation/deactivation, and favorites. Bulk actions on customers.
-- **Tier & Benefit Management (LCo Admin):** Loyalty tier CRUD. Definition of specific benefits per tier. Global configuration of the tier system (calculation basis, downgrade policy, inactivity periods).
-- **Reward Management (LCo Admin):** Full CRUD for point-redeemable rewards. Includes image upload and 1:1 cropping (Cloudinary) for each reward. Multi-language support (ES/EN) for reward names and descriptions.
-- **Points & QR Flow (LCo):** Admin generation of unique QR codes for customers to earn points (associated with a sale amount and ticket number). QR validation by the End Customer via manual input or mobile camera scanning (using `html5-qrcode`).
-- **Automatic Tier Logic (LCo):** Backend system (with Cron Job) that automatically calculates and updates customer tiers based on business configuration (spend, visits, points) and downgrade policies.
-- **Customer Dashboard (LCo):** Multi-tab interface for the end customer:
-  - **Summary:** Key info, points, current tier, progress bar to next tier (with benefit preview), summary of available gifts/rewards, and QR validation section.
-  - **Rewards:** Full list of rewards available for point redemption and granted gifts, with images and redemption option.
-  - **Activity:** Paginated history of all point transactions (earned, spent) and gift redemptions.
-- **Other (Platform & LCo):**
-  - Full frontend internationalization (i18n - ES/EN).
-  - Backend API Documentation generated with Swagger and accessible via `/api-docs`.
-  - Static logo and constrained header layout for consistent branding.
+- El enfoque principal de desarrollo para el Módulo Camarero se centrará ahora en:
+  1.  Visualización de la Carta Digital por parte del cliente final.
+  2.  Flujo de Pedido por parte del cliente final.
+  3.  Sistema de Visualización en Cocina (KDS).
+- Consulta **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** para ver los **hitos completados en detalle** y las **decisiones de diseño clave**.
+- Consulta **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** para ver el **backlog completo** de tareas pendientes, la hoja de ruta detallada para el Módulo Camarero y las **ideas futuras**.
 
-**LoyalPyME Waiter Module (In Development - Admin Menu Management UI Complete):**
+## Tecnologías Utilizadas 🛠️
 
-- **Database:** Prisma models defined for Tables (with QR and status), Digital Menu (Categories, Items with i18n, price, image, allergens, tags, availability, etc.), Modifiers (Groups and Options with price adjustments), Orders (with status, items, optional customer/waiter), and Staff (with roles and PINs).
-- **Backend API (Business Admin):** CRUD endpoints implemented for managing Menu Categories, Menu Items, and their Modifiers. These APIs are protected and only accessible if the Waiter module is active for the business.
-- **Frontend UI (Business Admin - Menu Management):** Complete interface for managing digital menu categories (CRUD, reordering), menu items (CRUD with detailed fields, image upload/crop), modifier groups associated with items (CRUD), and modifier options within groups (CRUD).
+**Frontend:** React, TypeScript, Vite, Mantine UI (v7+), Axios, React Router DOM (v6+), `html5-qrcode`, `react-image-crop`, `i18next` (para i18n), Zustand (o similar, considerado para gestión de estado global avanzada si es necesario).
+**Backend:** Node.js, Express, TypeScript, Prisma ORM, PostgreSQL, JSON Web Tokens (JWT), bcryptjs (para hashing), Cloudinary (almacenamiento de imágenes), Multer (manejo de subidas), Vitest (testing unitario/integración), Supertest (testing API), Swagger (documentación API), `node-cron` (tareas programadas).
 
-## Project Status & Roadmap 🗺️
+_(Una lista más detallada y continuamente actualizada se encuentra en [PROJECT_STATUS.md](./PROJECT_STATUS.md))._
 
-The project has completed **Phase 1 (LCo Core Functionality)**, the **base implementation of the multi-module architecture and Super Admin Panel**, and a significant part of **Phase 3 (LoyalPyME Waiter Module - Admin Menu Management)**. Current version: **v1.15.0**.
+## Inicio Rápido (Desarrollo Local) 🚀
 
-- The primary development focus for the Waiter Module will now shift towards:
-  1.  Customer-facing Digital Menu display.
-  2.  Customer Ordering Flow.
-  3.  Kitchen Display System (KDS).
-- See **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** for **detailed completed milestones** and **key design decisions**.
-- See **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** for the **full backlog** of pending tasks, the detailed roadmap for the Waiter Module, and **future ideas**.
-
-## Used Technologies 🛠️
-
-**Frontend:** React, TypeScript, Vite, Mantine UI (v7+), Axios, React Router DOM (v6+), `html5-qrcode`, `react-image-crop`, `i18next` (for i18n), Zustand (or similar, considered for advanced global state management if needed).
-**Backend:** Node.js, Express, TypeScript, Prisma ORM, PostgreSQL, JSON Web Tokens (JWT), bcryptjs (for hashing), Cloudinary (image storage), Multer (upload handling), Vitest (unit/integration testing), Supertest (API testing), Swagger (API documentation), `node-cron` (scheduled tasks).
-
-_(A more detailed and continuously updated list can be found in [PROJECT_STATUS.md](./PROJECT_STATUS.md))._
-
-## Quick Start (Local Development) 🚀
-
-1.  Clone the repository.
+1.  Clonar el repositorio.
 2.  **Backend:**
     - `cd backend && yarn install`
-    - Configure the `.env` file completely (copy from `.env.example` and fill in).
-    - `npx prisma migrate reset` (This will delete and recreate the database).
-    - `npx prisma db seed` (This will populate the database with a demo business, admin, customer, and sample LCo/LC data).
-    - `npx ts-node ./scripts/create-superadmin.ts` (This will create the global Super Admin user).
-    - Run in two terminals:
-      1.  `yarn dev:build` (or `npx tsc --watch`)
-      2.  `yarn dev:run` (or `npx nodemon dist/index.js`)
+    - Configurar el archivo `.env` completamente (copiar de `.env.example` y rellenar).
+    - `npx prisma migrate reset` (Esto borrará y recreará la base de datos).
+    - `npx prisma db seed` (Esto poblará la base de datos con un negocio demo, admin, cliente, y datos de ejemplo para LCo/LC).
+    - `npx ts-node ./scripts/create-superadmin.ts` (Esto creará el usuario Super Admin global).
+    - Ejecutar en dos terminales:
+      1.  `yarn dev:build` (o `npx tsc --watch`)
+      2.  `yarn dev:run` (o `npx nodemon dist/index.js`)
 3.  **Frontend:**
     - `cd ../frontend && yarn install`
-    - Run: `yarn dev` (or `yarn dev --host` for local network access).
-4.  **Accessing the Applications:**
-    - **Customer / Business Admin App:** `https://localhost:5173`
-      - Demo Business Login (LCo & LC): `admin@demo.com` / `password`
-      - Demo Customer Login (LCo): `cliente@demo.com` / `password`
-    - **Super Admin Panel:** `https://localhost:5173/superadmin`
-      - Login: `superadmin@loyalpyme.com` / `superadminpassword` (or credentials configured in the script).
-    - **API Documentation:** `http://localhost:3000/api-docs`
+    - Ejecutar: `yarn dev` (o `yarn dev --host` para acceso en red local).
+4.  **Acceso a las Aplicaciones:**
+    - **Cliente Final / Admin de Negocio:** `https://localhost:5173`
+      - Login Negocio Demo (LCo & LC): `admin@demo.com` / `password`
+      - Login Cliente Demo (LCo): `cliente@demo.com` / `password`
+    - **Panel Super Admin:** `https://localhost:5173/superadmin`
+      - Login: `superadmin@loyalpyme.com` / `superadminpassword` (o las credenciales configuradas en el script).
+    - **Documentación API:** `http://localhost:3000/api-docs`
 
-**Important!** Refer to the **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** for **complete and detailed** installation, configuration, and running instructions. For common issues, check the [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md).
+**¡Importante!** Consulta la **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** para obtener instrucciones **completas y detalladas** sobre la instalación, configuración y ejecución. Para problemas comunes, revisa la [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md).
 
 ---
 
-## Contributions 🤝
+## Contribuciones 🤝
 
-While this project is now transitioning to proprietary software, bug reports or suggestions can still be made via GitHub Issues. Code contributions will be considered on a case-by-case basis and would require a Contributor License Agreement (CLA).
+Este proyecto es software propietario. Si tienes informes de errores o sugerencias, pueden hacerse a través de los Issues de GitHub (si el repositorio permite issues siendo privado).
 
-## License 📜
+## Licencia 📜
 
-This project is proprietary software.
-Copyright (c) 2024-2025 Olivier Hottelet. All rights reserved.
+Este proyecto es software propietario.
+Copyright (c) 2024-2025 Olivier Hottelet. Todos los derechos reservados.
 
-Refer to the [LICENSE.md](./LICENSE.md) file in the root directory for more details.
+Consulta el archivo [LICENSE.md](./LICENSE.MD) en el directorio raíz para más detalles.
 
-## Contact 📧
+## Contacto 📧
 
 - **Olivier Hottelet**
 - olivierhottelet1980@gmail.com
