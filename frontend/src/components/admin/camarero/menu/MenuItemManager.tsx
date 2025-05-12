@@ -14,8 +14,7 @@ import { useModals } from '@mantine/modals';
 
 import { useAdminMenuItems } from '../../../../hooks/useAdminMenuItems';
 import { MenuItemData, MenuItemFormData } from '../../../../types/menu.types';
-// Placeholder para el futuro modal de ítems - Necesitaremos crearlo
-// import MenuItemFormModal from './MenuItemFormModal';
+import MenuItemFormModal from './MenuItemFormModal'; // Asegúrate que esta importación es correcta
 
 interface MenuItemManagerProps {
     categoryId: string;
@@ -31,31 +30,53 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryN
         items,
         loading: loadingItems,
         error: errorItems,
-        // addItem, // Se usará con MenuItemFormModal
+        addItem, 
         updateItem,
         deleteItem,
+        fetchItems: refetchItems, // Exponer fetchItems para refrescar si es necesario
     } = useAdminMenuItems(categoryId);
 
-    // Estados para el futuro modal de ítems
-    // const [itemModalOpened, setItemModalOpened] = useState(false); // Comentado hasta que exista MenuItemFormModal
-    // const [editingItem, setEditingItem] = useState<MenuItemData | null>(null); // Comentado
-    const [isSubmittingItemForm, setIsSubmittingItemForm] = useState(false); // Para deshabilitar botones mientras el form (futuro) envía
+    const [itemModalOpened, setItemModalOpened] = useState(false);
+    const [editingItem, setEditingItem] = useState<MenuItemData | null>(null);
+    const [isSubmittingItemForm, setIsSubmittingItemForm] = useState(false);
     
     const [isUpdatingItemStatusId, setIsUpdatingItemStatusId] = useState<string | null>(null);
     const [isDeletingItemId, setIsDeletingItemId] = useState<string | null>(null);
 
-    console.log(`[MenuItemManager] Renderizando para Categoría ID: ${categoryId} ("${categoryName}"). Items: ${items.length}, Loading: ${loadingItems}`);
+    // console.log(`[MenuItemManager] Categoria: ${categoryName} (ID: ${categoryId}). Items: ${items.length}`);
 
     const handleOpenAddItemModal = () => {
-        // setEditingItem(null);
-        // setItemModalOpened(true);
-        alert(t('common.upcomingFeatureTitle') + " - Modal para añadir ítem AÚN NO IMPLEMENTADO");
+        setEditingItem(null); // Asegurarse que no hay datos de edición
+        setItemModalOpened(true); // Abrir el modal
     };
 
     const handleOpenEditItemModal = (item: MenuItemData) => {
-        // setEditingItem(item);
-        // setItemModalOpened(true);
-        alert(t('common.upcomingFeatureTitle') + ` - Modal para editar ítem AÚN NO IMPLEMENTADO: ${item.name_es}`);
+        setEditingItem(item); // Establecer el ítem a editar
+        setItemModalOpened(true); // Abrir el modal
+    };
+
+    const handleCloseItemModal = () => {
+        setItemModalOpened(false);
+        setEditingItem(null);
+        // Opcional: form.reset() si el formulario estuviera aquí, pero está en el modal hijo
+    };
+
+    const handleSubmitItemForm = async (formData: MenuItemFormData) => {
+        setIsSubmittingItemForm(true);
+        let success = false;
+        if (editingItem) {
+            const result = await updateItem(editingItem.id, formData);
+            if (result) success = true;
+        } else {
+            const result = await addItem(formData); 
+            if (result) success = true;
+        }
+        if (success) {
+            handleCloseItemModal();
+            // El hook useAdminMenuItems ya debería llamar a fetchItems internamente
+            // Si no, puedes llamar a refetchItems() aquí.
+        }
+        setIsSubmittingItemForm(false);
     };
 
     const handleToggleItemAvailable = async (item: MenuItemData) => {
@@ -63,10 +84,10 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryN
         const newStatus = !item.isAvailable;
         try {
             await updateItem(item.id, { isAvailable: newStatus });
-            // Notificación de éxito ya está en el hook useAdminMenuItems
+            // Notificación manejada por el hook
         } catch (error) {
-            // Notificación de error ya está en el hook useAdminMenuItems
             console.error(`Error toggling availability for item ${item.id}:`, error);
+            // Notificación manejada por el hook
         } finally {
             setIsUpdatingItemStatusId(null);
         }
@@ -82,16 +103,16 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryN
             confirmProps: { color: 'red' },
             onConfirm: async () => {
                 setIsDeletingItemId(item.id);
-                await deleteItem(item.id); // Notificación de éxito/error en el hook
+                await deleteItem(item.id); 
                 setIsDeletingItemId(null);
+                // Notificación y refresco manejados por el hook
             },
         });
     };
     
     const handleManageModifiers = (item: MenuItemData) => {
-        alert(t('common.upcomingFeatureTitle') + ` - Gestionar Modificadores para: ${item.name_es}`);
+        alert(t('common.upcomingFeatureTitle') + ` - ${t('adminCamarero.manageMenu.manageModifiersTooltip')}: ${item.name_es}`);
     };
-
 
     const rows = items.map((item) => {
         const displayName = (currentLanguage === 'es' ? item.name_es : item.name_en) || item.name_es || 'N/A';
@@ -103,7 +124,7 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryN
             <Table.Tr key={item.id}>
                 <Table.Td>
                     <AspectRatio ratio={1 / 1} w={50}>
-                        {item.imageUrl ? ( <MantineImage src={item.imageUrl} alt={displayName} radius="xs" fit="cover" fallbackSrc="/placeholder-item.png" /> ) // Usar un placeholder diferente para ítems
+                        {item.imageUrl ? ( <MantineImage src={item.imageUrl} alt={displayName} radius="xs" fit="cover" fallbackSrc="/placeholder-item.png" /> ) 
                          : ( <Center bg="gray.1" h="100%" style={{ borderRadius: 'var(--mantine-radius-xs)' }}> <IconPhoto size={20} color="var(--mantine-color-gray-5)" /> </Center> )}
                     </AspectRatio>
                 </Table.Td>
@@ -160,7 +181,7 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryN
             <Group justify="space-between">
                 <Button
                     leftSection={<IconPlus size={16} />}
-                    onClick={handleOpenAddItemModal}
+                    onClick={handleOpenAddItemModal} 
                     disabled={loadingItems || isSubmittingItemForm || !!isDeletingItemId || !!isUpdatingItemStatusId}
                 >
                     {t('common.add')} {t('adminCamarero.manageMenu.item', 'Ítem')}
@@ -183,11 +204,11 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryN
                     <Table striped highlightOnHover withTableBorder verticalSpacing="sm">
                         <Table.Thead>
                             <Table.Tr>
-                                <Table.Th style={{width: '70px'}}>{t('component.rewardForm.imageLabel')}</Table.Th> {/* Reutilizar clave */}
+                                <Table.Th style={{width: '70px'}}>{t('component.rewardForm.imageLabel')}</Table.Th> 
                                 <Table.Th>{t('common.name')}</Table.Th>
-                                <Table.Th ta="right">{t('adminCamarero.manageMenu.itemPrice', 'Precio')}</Table.Th> {/* Nueva clave */}
-                                <Table.Th>{t('adminCamarero.manageMenu.itemPosition', 'Pos.')}</Table.Th> {/* Nueva clave */}
-                                <Table.Th>{t('adminCamarero.manageMenu.itemAvailability', 'Disponibilidad')}</Table.Th> {/* Nueva clave */}
+                                <Table.Th ta="right">{t('adminCamarero.manageMenu.itemPrice', 'Precio')}</Table.Th> 
+                                <Table.Th>{t('adminCamarero.manageMenu.itemPosition', 'Pos.')}</Table.Th> 
+                                <Table.Th>{t('adminCamarero.manageMenu.itemAvailability', 'Disponibilidad')}</Table.Th> 
                                 <Table.Th style={{ textAlign: 'right' }}>{t('common.actions')}</Table.Th>
                             </Table.Tr>
                         </Table.Thead>
@@ -195,18 +216,18 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryN
                     </Table>
                 </Table.ScrollContainer>
             )}
-
-            {/* 
-            // Placeholder para el futuro MenuItemFormModal
-            <MenuItemFormModal
-                opened={itemModalOpened}
-                onClose={() => { setItemModalOpened(false); setEditingItem(null); }}
-                onSubmit={handleSubmitItemForm} // Definir esta función
-                initialData={editingItem}
-                isSubmitting={isSubmittingItemForm}
-                categoryId={categoryId} // El modal necesitará el categoryId para la creación
-            />
-            */}
+            
+            {/* Renderizar el modal de ítems. Asegúrate de que categoryId siempre tenga un valor válido aquí */}
+            {categoryId && (
+                 <MenuItemFormModal
+                    opened={itemModalOpened}
+                    onClose={handleCloseItemModal}
+                    onSubmit={handleSubmitItemForm} 
+                    initialData={editingItem}
+                    isSubmitting={isSubmittingItemForm}
+                    categoryId={categoryId} 
+                />
+            )}
         </Stack>
     );
 };
