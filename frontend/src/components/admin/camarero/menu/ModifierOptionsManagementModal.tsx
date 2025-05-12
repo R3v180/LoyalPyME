@@ -7,16 +7,17 @@ import {
 } from '@mantine/core';
 import { useForm, zodResolver } from '@mantine/form';
 import { z } from 'zod';
-import { 
+import {
     IconPlus, IconAlertCircle, IconPencil, IconTrash, IconDeviceFloppy, IconCurrencyEuro,
-    IconPlayerPlay, IconPlayerStop // <--- AÑADIR ICONOS
+    IconPlayerPlay, IconPlayerStop
 } from '@tabler/icons-react';
 import { useAdminModifierOptions } from '../../../../hooks/useAdminModifierOptions';
 import { ModifierOptionData, ModifierOptionFormData } from '../../../../types/menu.types';
-// import { notifications } from '@mantine/notifications'; // Ya no se usa aquí
+import { useTranslation } from 'react-i18next'; // Asegurarse de importar
 
-const modifierOptionSchema = z.object({
-    name_es: z.string().min(1, { message: "El nombre en español es obligatorio." }),
+// Schema de validación Zod usando la función t
+const createModifierOptionSchema = (t: Function) => z.object({
+    name_es: z.string().min(1, { message: t('adminCamarero.modifierOptionForm.validation.nameEsRequired') }),
     name_en: z.string().nullable().optional(),
     priceAdjustment: z.coerce.number().default(0),
     position: z.coerce.number().min(0).default(0),
@@ -24,7 +25,7 @@ const modifierOptionSchema = z.object({
     isAvailable: z.boolean().default(true),
 });
 
-type ModifierOptionFormValues = z.infer<typeof modifierOptionSchema>;
+type ModifierOptionFormValues = z.infer<ReturnType<typeof createModifierOptionSchema>>;
 
 interface ModifierOptionsManagementModalProps {
     opened: boolean;
@@ -39,6 +40,9 @@ const ModifierOptionsManagementModal: React.FC<ModifierOptionsManagementModalPro
     modifierGroupId,
     modifierGroupName,
 }) => {
+    const { t, i18n } = useTranslation(); // Añadir i18n para currentLanguage si es necesario
+    const currentLanguage = i18n.language;
+
     const {
         modifierOptions,
         loading: loadingOptions,
@@ -53,16 +57,14 @@ const ModifierOptionsManagementModal: React.FC<ModifierOptionsManagementModalPro
     const [editingOption, setEditingOption] = useState<ModifierOptionData | null>(null);
     const [isSubmittingOptionForm, setIsSubmittingOptionForm] = useState(false);
     const [isDeletingOptionId, setIsDeletingOptionId] = useState<string | null>(null);
-    // --- NUEVO ESTADO PARA TOGGLE ---
     const [isTogglingStatusOptionId, setIsTogglingStatusOptionId] = useState<string | null>(null);
-    // --- FIN NUEVO ESTADO ---
 
     const form = useForm<ModifierOptionFormValues>({
         initialValues: {
             name_es: '', name_en: null, priceAdjustment: 0,
             position: 0, isDefault: false, isAvailable: true,
         },
-        validate: zodResolver(modifierOptionSchema),
+        validate: zodResolver(createModifierOptionSchema(t)), // Pasar t al resolver
     });
 
     useEffect(() => {
@@ -77,13 +79,14 @@ const ModifierOptionsManagementModal: React.FC<ModifierOptionsManagementModalPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [opened, modifierGroupId]);
 
-    const handleOpenAddOptionForm = () => { /* ... sin cambios ... */ 
+    const handleOpenAddOptionForm = () => {
         setEditingOption(null);
         form.reset();
         form.setFieldValue('position', modifierOptions.length > 0 ? Math.max(...modifierOptions.map(o => o.position)) + 1 : 0);
         setShowOptionForm(true);
     };
-    const handleOpenEditOptionForm = (option: ModifierOptionData) => { /* ... sin cambios ... */ 
+
+    const handleOpenEditOptionForm = (option: ModifierOptionData) => {
         setEditingOption(option);
         form.setValues({
             name_es: option.name_es,
@@ -95,7 +98,8 @@ const ModifierOptionsManagementModal: React.FC<ModifierOptionsManagementModalPro
         });
         setShowOptionForm(true);
     };
-    const handleOptionFormSubmit = async (values: ModifierOptionFormValues) => { /* ... sin cambios ... */ 
+
+    const handleOptionFormSubmit = async (values: ModifierOptionFormValues) => {
         if (!modifierGroupId) return;
         setIsSubmittingOptionForm(true);
         const formData: ModifierOptionFormData = {
@@ -121,66 +125,64 @@ const ModifierOptionsManagementModal: React.FC<ModifierOptionsManagementModalPro
         }
         setIsSubmittingOptionForm(false);
     };
-    const handleDeleteOption = async (optionId: string) => { /* ... sin cambios ... */ 
+
+    const handleDeleteOption = async (optionId: string) => {
         setIsDeletingOptionId(optionId);
-        await deleteModifierOption(optionId);
+        await deleteModifierOption(optionId); // El hook maneja la notificación
         setIsDeletingOptionId(null);
     };
 
-    // --- NUEVO HANDLER PARA TOGGLE STATUS ---
     const handleToggleOptionAvailable = async (option: ModifierOptionData) => {
         setIsTogglingStatusOptionId(option.id);
         const newStatus = !option.isAvailable;
         try {
-            // Solo actualizamos el campo isAvailable
             await updateModifierOption(option.id, { isAvailable: newStatus });
-            // La notificación de éxito ya la maneja el hook updateModifierOption
         } catch (error) {
-            // La notificación de error ya la maneja el hook updateModifierOption
             console.error(`Error toggling availability for option ${option.id}:`, error);
         } finally {
             setIsTogglingStatusOptionId(null);
         }
     };
-    // --- FIN NUEVO HANDLER ---
 
 
     const optionRows = modifierOptions.map((option) => {
-        // --- LÓGICA PARA BOTONES DE ACCIÓN ---
+        const optionDisplayName = (currentLanguage === 'es' && option.name_es) ? option.name_es : (option.name_en || option.name_es || t('common.nameNotAvailable'));
         const isLoadingThisStatus = isTogglingStatusOptionId === option.id;
         const isLoadingThisDelete = isDeletingOptionId === option.id;
         const disableActionsGeneral = isSubmittingOptionForm || !!isDeletingOptionId || !!isTogglingStatusOptionId;
+        const optionAvailabilityText = option.isAvailable ? t('adminCamarero.modifierOption.statusAvailable') : t('adminCamarero.modifierOption.statusNotAvailable');
+        const tooltipToggleAvailable = option.isAvailable ? t('adminCamarero.modifierOption.tooltipMarkNotAvailable') : t('adminCamarero.modifierOption.tooltipMarkAvailable');
 
         return (
             <Table.Tr key={option.id}>
                 <Table.Td>
-                    <Text fw={500}>{option.name_es}</Text>
-                    {option.name_en && <Text size="xs" c="dimmed">EN: {option.name_en}</Text>}
+                    <Text fw={500}>{optionDisplayName}</Text>
+                    {optionDisplayName !== option.name_es && option.name_es && <Text size="xs" c="dimmed">ES: {option.name_es}</Text>}
+                    {optionDisplayName !== option.name_en && option.name_en && <Text size="xs" c="dimmed">EN: {option.name_en}</Text>}
                 </Table.Td>
                 <Table.Td ta="right">
                     {option.priceAdjustment.toLocaleString(undefined, { style: 'currency', currency: 'EUR' })}
                 </Table.Td>
                 <Table.Td>{option.position}</Table.Td>
-                <Table.Td>{option.isDefault ? 'Sí' : 'No'}</Table.Td>
+                <Table.Td>{option.isDefault ? t('common.yes') : t('common.no')}</Table.Td>
                 <Table.Td>
                     <Badge color={option.isAvailable ? 'green' : 'gray'} variant="light">
-                        {option.isAvailable ? 'Disponible' : 'No Disp.'}
+                        {optionAvailabilityText}
                     </Badge>
                 </Table.Td>
                 <Table.Td>
                     <Group gap="xs" justify="flex-end" wrap="nowrap">
-                        <Tooltip label="Editar Opción" withArrow>
-                            <ActionIcon variant="subtle" color="blue" 
-                                onClick={() => handleOpenEditOptionForm(option)} 
+                        <Tooltip label={t('adminCamarero.modifierOption.tooltipEditOption')} withArrow>
+                            <ActionIcon variant="subtle" color="blue"
+                                onClick={() => handleOpenEditOptionForm(option)}
                                 disabled={disableActionsGeneral || isLoadingThisStatus || isLoadingThisDelete}
                             >
                                 <IconPencil size={16} />
                             </ActionIcon>
                         </Tooltip>
-                        {/* --- NUEVO BOTÓN TOGGLE --- */}
-                        <Tooltip label={option.isAvailable ? "Marcar No Disponible" : "Marcar Disponible"} withArrow>
-                            <ActionIcon 
-                                variant="subtle" 
+                        <Tooltip label={tooltipToggleAvailable} withArrow>
+                            <ActionIcon
+                                variant="subtle"
                                 color={option.isAvailable ? "orange" : "teal"}
                                 onClick={() => handleToggleOptionAvailable(option)}
                                 loading={isLoadingThisStatus}
@@ -189,11 +191,10 @@ const ModifierOptionsManagementModal: React.FC<ModifierOptionsManagementModalPro
                                 {option.isAvailable ? <IconPlayerStop size={16} /> : <IconPlayerPlay size={16} />}
                             </ActionIcon>
                         </Tooltip>
-                        {/* --- FIN NUEVO BOTÓN TOGGLE --- */}
-                        <Tooltip label="Eliminar Opción" withArrow>
-                            <ActionIcon variant="subtle" color="red" 
-                                onClick={() => handleDeleteOption(option.id)} 
-                                loading={isLoadingThisDelete} 
+                        <Tooltip label={t('adminCamarero.modifierOption.tooltipDeleteOption')} withArrow>
+                            <ActionIcon variant="subtle" color="red"
+                                onClick={() => handleDeleteOption(option.id)}
+                                loading={isLoadingThisDelete}
                                 disabled={disableActionsGeneral || isLoadingThisStatus || (isDeletingOptionId !== null && isDeletingOptionId !== option.id)}
                             >
                                 <IconTrash size={16} />
@@ -209,7 +210,7 @@ const ModifierOptionsManagementModal: React.FC<ModifierOptionsManagementModalPro
         <Modal
             opened={opened && !!modifierGroupId}
             onClose={onClose}
-            title={`Opciones para Grupo: "${modifierGroupName}"`}
+            title={t('adminCamarero.modifierOptionsModal.title', { groupName: modifierGroupName })}
             size="lg"
             centered
             scrollAreaComponent={NativeScrollArea}
@@ -219,26 +220,26 @@ const ModifierOptionsManagementModal: React.FC<ModifierOptionsManagementModalPro
                 {!showOptionForm ? (
                     <>
                         <Group justify="space-between">
-                            <Title order={5}>Opciones Existentes</Title>
+                            <Title order={5}>{t('adminCamarero.modifierOptionsModal.existingOptionsTitle')}</Title>
                             <Button leftSection={<IconPlus size={16} />} onClick={handleOpenAddOptionForm} disabled={loadingOptions}>
-                                Crear Nueva Opción
+                                {t('adminCamarero.modifierOptionsModal.createNewOptionButton')}
                             </Button>
                         </Group>
 
                         {loadingOptions && <Group justify="center" mt="md"><Loader /></Group>}
-                        {errorOptions && !loadingOptions && <Alert title="Error" color="red" icon={<IconAlertCircle />}>{errorOptions}</Alert>}
-                        {!loadingOptions && !errorOptions && modifierOptions.length === 0 && <Text c="dimmed" ta="center" mt="md">No hay opciones para este grupo.</Text>}
+                        {errorOptions && !loadingOptions && <Alert title={t('common.error')} color="red" icon={<IconAlertCircle />}>{errorOptions}</Alert>}
+                        {!loadingOptions && !errorOptions && modifierOptions.length === 0 && <Text c="dimmed" ta="center" mt="md">{t('adminCamarero.modifierOptionsModal.noOptionsForGroup')}</Text>}
                         {!loadingOptions && !errorOptions && modifierOptions.length > 0 && (
                             <Table.ScrollContainer minWidth={500}>
                                 <Table striped highlightOnHover withTableBorder verticalSpacing="sm">
                                     <Table.Thead>
                                         <Table.Tr>
-                                            <Table.Th>Nombre (ES)</Table.Th>
-                                            <Table.Th ta="right">Ajuste Precio</Table.Th>
-                                            <Table.Th>Pos.</Table.Th>
-                                            <Table.Th>Default</Table.Th>
-                                            <Table.Th>Disponible</Table.Th>
-                                            <Table.Th style={{ textAlign: 'right' }}>Acciones</Table.Th>
+                                            <Table.Th>{t('adminCamarero.modifierOptionsModal.tableHeaderName')}</Table.Th>
+                                            <Table.Th ta="right">{t('adminCamarero.modifierOptionsModal.tableHeaderPriceAdjustment')}</Table.Th>
+                                            <Table.Th>{t('adminCamarero.modifierOptionsModal.tableHeaderPosition')}</Table.Th>
+                                            <Table.Th>{t('adminCamarero.modifierOptionsModal.tableHeaderDefault')}</Table.Th>
+                                            <Table.Th>{t('adminCamarero.modifierOptionsModal.tableHeaderAvailable')}</Table.Th>
+                                            <Table.Th style={{ textAlign: 'right' }}>{t('common.actions')}</Table.Th>
                                         </Table.Tr>
                                     </Table.Thead>
                                     <Table.Tbody>{optionRows}</Table.Tbody>
@@ -248,38 +249,38 @@ const ModifierOptionsManagementModal: React.FC<ModifierOptionsManagementModalPro
                     </>
                 ) : (
                     <Paper withBorder p="md" radius="md">
-                        <Title order={5} mb="md">{editingOption ? `Editando Opción: ${editingOption.name_es}` : "Crear Nueva Opción de Modificador"}</Title>
+                        <Title order={5} mb="md">{editingOption ? t('adminCamarero.modifierOptionsModal.formEditTitle', { optionName: (currentLanguage === 'es' && editingOption.name_es) ? editingOption.name_es : (editingOption.name_en || editingOption.name_es || '') }) : t('adminCamarero.modifierOptionsModal.formCreateTitle')}</Title>
                         <form onSubmit={form.onSubmit(handleOptionFormSubmit)}>
                             <Stack gap="sm">
-                                <TextInput label="Nombre (ES)" required {...form.getInputProps('name_es')} disabled={isSubmittingOptionForm} />
-                                <TextInput label="Nombre (EN)" {...form.getInputProps('name_en')} disabled={isSubmittingOptionForm} />
+                                <TextInput label={t('adminCamarero.modifierOptionForm.nameEsLabel')} required {...form.getInputProps('name_es')} disabled={isSubmittingOptionForm} />
+                                <TextInput label={t('adminCamarero.modifierOptionForm.nameEnLabel')} {...form.getInputProps('name_en')} disabled={isSubmittingOptionForm} />
                                 <NumberInput
-                                    label="Ajuste de Precio (€)"
-                                    description="Positivo para aumentar, negativo para disminuir, 0 sin cambio."
+                                    label={t('adminCamarero.modifierOptionForm.priceAdjustmentLabel')}
+                                    description={t('adminCamarero.modifierOptionForm.priceAdjustmentDescription')}
                                     decimalScale={2}
-                                    fixedDecimalScale 
+                                    fixedDecimalScale
                                     step={0.10}
                                     leftSection={<IconCurrencyEuro size={16} />}
                                     {...form.getInputProps('priceAdjustment')}
                                     disabled={isSubmittingOptionForm}
                                 />
-                                <NumberInput 
-                                    label="Posición (Orden)" 
-                                    min={0} 
+                                <NumberInput
+                                    label={t('adminCamarero.modifierOptionForm.positionLabel')}
+                                    min={0}
                                     step={1}
                                     allowDecimal={false}
-                                    {...form.getInputProps('position')} 
-                                    disabled={isSubmittingOptionForm} 
+                                    {...form.getInputProps('position')}
+                                    disabled={isSubmittingOptionForm}
                                 />
-                                <Switch label="Seleccionada por Defecto" {...form.getInputProps('isDefault', { type: 'checkbox' })} disabled={isSubmittingOptionForm} />
-                                <Switch label="Opción Disponible" {...form.getInputProps('isAvailable', { type: 'checkbox' })} disabled={isSubmittingOptionForm} />
+                                <Switch label={t('adminCamarero.modifierOptionForm.isDefaultLabel')} {...form.getInputProps('isDefault', { type: 'checkbox' })} disabled={isSubmittingOptionForm} />
+                                <Switch label={t('adminCamarero.modifierOptionForm.isAvailableLabel')} {...form.getInputProps('isAvailable', { type: 'checkbox' })} disabled={isSubmittingOptionForm} />
 
                                 <Group justify="flex-end" mt="md">
                                     <Button variant="default" onClick={() => { setShowOptionForm(false); setEditingOption(null); form.reset(); }} disabled={isSubmittingOptionForm}>
-                                        Cancelar
+                                        {t('common.cancel')}
                                     </Button>
                                     <Button type="submit" loading={isSubmittingOptionForm} leftSection={<IconDeviceFloppy size={16} />}>
-                                        {editingOption ? "Guardar Cambios" : "Crear Opción"}
+                                        {editingOption ? t('common.saveChanges') : t('adminCamarero.modifierOptionsModal.formCreateButton')}
                                     </Button>
                                 </Group>
                             </Stack>
@@ -288,7 +289,7 @@ const ModifierOptionsManagementModal: React.FC<ModifierOptionsManagementModalPro
                 )}
                  <Divider mt="lg" />
                 <Group justify="flex-end" mt="md">
-                    <Button variant="outline" onClick={onClose}>Cerrar Gestión de Opciones</Button>
+                    <Button variant="outline" onClick={onClose}>{t('adminCamarero.modifierOptionsModal.closeButton')}</Button>
                 </Group>
             </Stack>
         </Modal>

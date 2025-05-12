@@ -21,12 +21,10 @@ import ReactCrop, {
     type PixelCrop,
 } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { canvasPreview, canvasToBlob } from '../../../../utils/canvasPreview'; 
+import { canvasPreview, canvasToBlob } from '../../../../utils/canvasPreview';
 
-// --- CAMBIO: Aspect Ratio a 1:1 ---
-const ASPECT_RATIO_CATEGORY = 1; // Imágenes cuadradas para categorías
-const MIN_DIMENSION_CATEGORY = 150; 
-// --- FIN CAMBIO ---
+const ASPECT_RATIO_CATEGORY = 1;
+const MIN_DIMENSION_CATEGORY = 150;
 
 const createCategoryFormSchema = (t: Function) => z.object({
     name_es: z.string().min(1, { message: t('common.requiredField') }),
@@ -68,7 +66,7 @@ const MenuCategoryFormModal: React.FC<MenuCategoryFormModalProps> = ({
     });
 
     const [imgSrcForCropper, setImgSrcForCropper] = useState<string>('');
-    const [imageFile, setImageFile] = useState<File | null>(null); 
+    const [imageFile, setImageFile] = useState<File | null>(null);
     const [crop, setCrop] = useState<Crop>();
     const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
     const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -97,7 +95,7 @@ const MenuCategoryFormModal: React.FC<MenuCategoryFormModalProps> = ({
         setUploadError(null); setImageFile(file);
         if (file) {
             setCrop(undefined); setCompletedCrop(undefined);
-            form.setFieldValue('imageUrl', null); 
+            form.setFieldValue('imageUrl', null);
             const reader = new FileReader();
             reader.addEventListener('load', () => setImgSrcForCropper(reader.result?.toString() || ''));
             reader.readAsDataURL(file);
@@ -110,24 +108,22 @@ const MenuCategoryFormModal: React.FC<MenuCategoryFormModalProps> = ({
         const { width, height, naturalWidth, naturalHeight } = e.currentTarget;
         setUploadError(null);
         if (naturalWidth < MIN_DIMENSION_CATEGORY || naturalHeight < MIN_DIMENSION_CATEGORY) {
-            setUploadError(t('component.rewardForm.errorImageTooSmall', `La imagen es demasiado pequeña. Debe ser al menos ${MIN_DIMENSION_CATEGORY}x${MIN_DIMENSION_CATEGORY}px.`)); // Usar clave i18n
+            setUploadError(t('common.errorImageTooSmall', { minSize: MIN_DIMENSION_CATEGORY }));
             setImgSrcForCropper(''); return;
         }
         const newCrop = centerCrop(makeAspectCrop({ unit: '%', width: 90 }, ASPECT_RATIO_CATEGORY, width, height), width, height);
         setCrop(newCrop);
-        
-        // Ajustar cálculo para completedCrop inicial, especialmente si el aspect ratio es 1
+
         const imageAspectRatio = naturalWidth / naturalHeight;
         let initialCropWidthPx, initialCropHeightPx;
 
-        if (imageAspectRatio > ASPECT_RATIO_CATEGORY) { // Imagen más ancha que el aspect ratio del crop
-            initialCropHeightPx = naturalHeight * 0.9; // Tomar 90% de la altura
+        if (imageAspectRatio > ASPECT_RATIO_CATEGORY) {
+            initialCropHeightPx = naturalHeight * 0.9;
             initialCropWidthPx = initialCropHeightPx * ASPECT_RATIO_CATEGORY;
-        } else { // Imagen más alta o igual al aspect ratio del crop
-            initialCropWidthPx = naturalWidth * 0.9; // Tomar 90% del ancho
+        } else {
+            initialCropWidthPx = naturalWidth * 0.9;
             initialCropHeightPx = initialCropWidthPx / ASPECT_RATIO_CATEGORY;
         }
-        // Asegurar que el crop no exceda las dimensiones de la imagen
         initialCropWidthPx = Math.min(initialCropWidthPx, naturalWidth);
         initialCropHeightPx = Math.min(initialCropHeightPx, naturalHeight);
 
@@ -139,28 +135,28 @@ const MenuCategoryFormModal: React.FC<MenuCategoryFormModalProps> = ({
              unit: 'px'
         });
     };
-    
+
     const handleConfirmCropAndUpload = async () => {
         if (!imgRef.current || !previewCanvasRef.current || !completedCrop || completedCrop.width === 0 || completedCrop.height === 0) {
-            setUploadError('Recorte o imagen no válida.'); return;
+            setUploadError(t('adminCamarero.menuCategoryForm.errorInvalidCropOrImage')); return;
         }
         setIsUploadingImage(true); setUploadError(null);
         try {
             await canvasPreview(imgRef.current, previewCanvasRef.current, completedCrop);
             const blob = await canvasToBlob(previewCanvasRef.current);
-            if (!blob) { throw new Error('No se pudo crear el archivo de imagen recortada.'); }
+            if (!blob) { throw new Error(t('adminCamarero.menuCategoryForm.errorCreatingCroppedFile')); }
             const formData = new FormData();
             formData.append('image', blob, `category-crop-${Date.now()}.png`);
             const response = await axiosInstance.post<{ url: string }>('/uploads/image', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             if (response.data && response.data.url) {
                form.setFieldValue('imageUrl', response.data.url);
-               notifications.show({ title: t('common.success'), message: t('component.rewardForm.imageUploadSuccess', "Imagen recortada y subida."), color: 'green', icon: <IconCheck /> }); // Clave i18n
+               notifications.show({ title: t('common.success'), message: t('adminCamarero.menuCategoryForm.imageUploadSuccess'), color: 'green', icon: <IconCheck /> });
                setImgSrcForCropper(''); setImageFile(null);
-            } else { throw new Error('La API no devolvió una URL válida.'); }
+            } else { throw new Error(t('adminCamarero.menuCategoryForm.errorApiNoUrl')); }
         } catch (err: any) {
-            const apiError = err.response?.data?.message || err.message || 'Error subiendo imagen.';
-            setUploadError(`Error al subir: ${apiError}`);
-            notifications.show({ title: t('common.error'), message: t('component.rewardForm.imageUploadError', `No se pudo subir: {{error}}`, {error: apiError}), color: 'red', icon: <IconAlertCircle /> }); // Clave i18n
+            const apiError = err.response?.data?.message || err.message || t('common.errorUnknown');
+            setUploadError(t('adminCamarero.menuCategoryForm.errorUploadingWithDetail', { error: apiError }));
+            notifications.show({ title: t('common.error'), message: t('adminCamarero.menuCategoryForm.imageUploadError', {error: apiError}), color: 'red', icon: <IconAlertCircle /> });
         } finally {
             setIsUploadingImage(false);
         }
@@ -182,16 +178,14 @@ const MenuCategoryFormModal: React.FC<MenuCategoryFormModalProps> = ({
         };
         await onSubmit(submitData);
     };
-    
+
     const handleModalClose = () => {
         if (!isSubmitting && !isUploadingImage) { onClose(); }
     }
 
     const displayImageUrl = form.values.imageUrl;
     const showCropper = !!imgSrcForCropper;
-
-    // El texto de instrucciones del crop ahora es el mismo que en RewardForm
-    const cropInstructionsText = t('component.rewardForm.cropInstructions'); 
+    const cropInstructionsText = t('component.rewardForm.cropInstructions');
 
     return (
         <Modal
@@ -210,10 +204,9 @@ const MenuCategoryFormModal: React.FC<MenuCategoryFormModalProps> = ({
                     <Stack gap="xs" mt="sm">
                         <MantineText fw={500} size="sm">{t('component.rewardForm.imageLabel')}</MantineText>
                         {!showCropper && (
-                            // --- CAMBIO: Usar ASPECT_RATIO_CATEGORY para la vista previa ---
-                            <AspectRatio ratio={ASPECT_RATIO_CATEGORY} maw={300}> 
+                            <AspectRatio ratio={ASPECT_RATIO_CATEGORY} maw={300}>
                                 {displayImageUrl ? (
-                                    <MantineImage src={displayImageUrl} alt={t('adminCamarero.manageMenu.categoryImagePreviewAlt')} radius="md" fallbackSrc="/placeholder-category.png" />
+                                    <MantineImage src={displayImageUrl} alt={t('adminCamarero.menuCategoryForm.altPreview')} radius="md" fallbackSrc="/placeholder-category.png" />
                                 ) : (
                                     <Center bg="gray.1" style={{ borderRadius: 'var(--mantine-radius-md)' }}><IconPhoto size={48} color="var(--mantine-color-gray-5)" stroke={1.5} /></Center>
                                 )}
@@ -224,14 +217,13 @@ const MenuCategoryFormModal: React.FC<MenuCategoryFormModalProps> = ({
                         </Group>
                         {showCropper && (
                             <Box mt="md">
-                                {/* Usar texto de instrucciones correcto */}
                                 <MantineText size="sm" mb="xs">{cropInstructionsText}</MantineText>
-                                <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)} 
-                                    aspect={ASPECT_RATIO_CATEGORY} // <-- Usar la constante correcta
-                                    minWidth={MIN_DIMENSION_CATEGORY / 5} 
-                                    minHeight={MIN_DIMENSION_CATEGORY / 5 / ASPECT_RATIO_CATEGORY} // Ajustar también aquí
+                                <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}
+                                    aspect={ASPECT_RATIO_CATEGORY}
+                                    minWidth={MIN_DIMENSION_CATEGORY / 5}
+                                    minHeight={MIN_DIMENSION_CATEGORY / 5 / ASPECT_RATIO_CATEGORY}
                                 >
-                                    <img ref={imgRef} src={imgSrcForCropper} style={{ maxHeight: '400px', display: imgSrcForCropper ? 'block' : 'none' }} onLoad={onImageLoadForCropper} alt="Para recortar" />
+                                    <img ref={imgRef} src={imgSrcForCropper} style={{ maxHeight: '400px', display: imgSrcForCropper ? 'block' : 'none' }} onLoad={onImageLoadForCropper} alt={t('adminCamarero.menuCategoryForm.altCropImage')} />
                                 </ReactCrop>
                                 <Button mt="sm" onClick={handleConfirmCropAndUpload} loading={isUploadingImage} disabled={!completedCrop || isUploadingImage || isSubmitting || !imgSrcForCropper} leftSection={<IconCheck size={16} />} >
                                     {t('component.rewardForm.confirmCropButton')}
@@ -253,7 +245,7 @@ const MenuCategoryFormModal: React.FC<MenuCategoryFormModalProps> = ({
 
                     <NumberInput label={t('adminCamarero.manageMenu.categoryPositionLabel')} placeholder={t('adminCamarero.manageMenu.categoryPositionPlaceholder')} description={t('adminCamarero.manageMenu.categoryPositionDesc')} required min={0} step={1} allowDecimal={false} disabled={isSubmitting || isUploadingImage} {...form.getInputProps('position')} />
                     <Switch label={t('adminCamarero.manageMenu.categoryActiveLabel')} description={t('adminCamarero.manageMenu.categoryActiveDesc')} mt="sm" disabled={isSubmitting || isUploadingImage} {...form.getInputProps('isActive', { type: 'checkbox' })} />
-                    
+
                     <Group justify="flex-end" mt="lg">
                         <Button variant="default" onClick={handleModalClose} disabled={isSubmitting || isUploadingImage}>
                             {t('common.cancel')}

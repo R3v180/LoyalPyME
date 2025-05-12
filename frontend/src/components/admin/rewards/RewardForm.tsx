@@ -86,7 +86,7 @@ const RewardForm: React.FC<RewardFormProps> = ({
         setUploadError(null);
 
         if (naturalWidth < MIN_DIMENSION || naturalHeight < MIN_DIMENSION) {
-            setUploadError(`La imagen es demasiado pequeña. Debe ser al menos ${MIN_DIMENSION}x${MIN_DIMENSION} píxeles.`);
+            setUploadError(t('component.rewardForm.errorImageTooSmall', { minSize: MIN_DIMENSION })); // Clave i18n
             setImgSrc('');
             return;
         }
@@ -104,8 +104,7 @@ const RewardForm: React.FC<RewardFormProps> = ({
         }
 
         const cropWidthPercent = (initialCropWidthPx / naturalWidth) * 100;
-        // const cropHeightPercent = (initialCropHeightPx / naturalHeight) * 100; // <-- ELIMINADO (no usado)
-        
+
         const newCrop = centerCrop(
             makeAspectCrop(
                 {
@@ -131,15 +130,15 @@ const RewardForm: React.FC<RewardFormProps> = ({
 
     const handleConfirmCropAndUpload = async () => {
         if (!imgRef.current || !previewCanvasRef.current || !completedCrop || completedCrop.width === 0 || completedCrop.height === 0) {
-            setUploadError('Selección de recorte o imagen no válida. Asegúrate de que el recorte tiene un tamaño.');
+            setUploadError(t('component.rewardForm.errorInvalidCrop')); // Clave i18n
             return;
         }
         setIsUploading(true); setUploadError(null);
         try {
             await canvasPreview(imgRef.current, previewCanvasRef.current, completedCrop);
             const blob = await canvasToBlob(previewCanvasRef.current, 'image/png', 0.9);
-            if (!blob) { throw new Error('No se pudo crear el archivo de imagen recortada.'); }
-            
+            if (!blob) { throw new Error(t('component.rewardForm.errorCreatingCroppedFile')); } // Clave i18n
+
             const formData = new FormData();
             formData.append('image', blob, `reward-crop-${Date.now()}.png`);
 
@@ -150,13 +149,13 @@ const RewardForm: React.FC<RewardFormProps> = ({
             if (response.data && response.data.url) {
                setImageUrl(response.data.url);
                setImgSrc(''); setCrop(undefined); setCompletedCrop(undefined);
-               notifications.show({ title: t('common.success'), message: 'Imagen recortada y subida correctamente.', color: 'green', icon: <IconCheck size={18} />, });
-            } else { throw new Error('La API no devolvió una URL de imagen válida.'); }
+               notifications.show({ title: t('common.success'), message: t('component.rewardForm.imageUploadSuccess'), color: 'green', icon: <IconCheck size={18} />, });
+            } else { throw new Error(t('component.rewardForm.errorApiNoUrl')); } // Clave i18n
         } catch (err: any) {
             console.error('Error uploading cropped image:', err);
-            const apiError = err.response?.data?.message || err.message || 'Error desconocido durante la subida.';
-            setUploadError(`Error al subir: ${apiError}`);
-            notifications.show({ title: t('common.error'), message: `No se pudo subir la imagen: ${apiError}`, color: 'red', icon: <IconAlertCircle size={18} />, });
+            const apiError = err.response?.data?.message || err.message || t('common.errorUnknown');
+            setUploadError(t('component.rewardForm.errorUploadingWithDetail', { error: apiError })); // Clave i18n
+            notifications.show({ title: t('common.error'), message: t('component.rewardForm.imageUploadError', {error: apiError}), color: 'red', icon: <IconAlertCircle size={18} />, });
         } finally {
             setIsUploading(false);
         }
@@ -186,22 +185,20 @@ const RewardForm: React.FC<RewardFormProps> = ({
                 savedReward = response.data;
                 successMessage = t('adminCommon.createSuccess');
             } else {
-                if (!rewardIdToUpdate) throw new Error("Falta el ID de la recompensa para actualizar.");
+                if (!rewardIdToUpdate) throw new Error(t('component.rewardForm.errorMissingIdForUpdate')); // Clave i18n
                 const response = await axiosInstance.patch<Reward>(`/rewards/${rewardIdToUpdate}`, payload);
                 savedReward = response.data;
                 successMessage = t('adminCommon.updateSuccess');
             }
-            const displayName = savedReward?.name_es || savedReward?.name_en || '';
+            const displayName = savedReward?.name_es || savedReward?.name_en || t('component.rewardForm.rewardFallbackName'); // Clave i18n para fallback
             notifications.show({
                 title: successMessage,
-                // Usamos la clave de la página de gestión para el mensaje de éxito
-                message: t('adminRewardsPage.updateSuccessMessage', { name: displayName }),
+                message: t('adminRewardsPage.updateSuccessMessage', { name: displayName }), // Ya usa t()
                 color: 'green', icon: <IconCheck size={18} />, autoClose: 4000,
             });
             onSubmitSuccess();
         } catch (err: any) {
             console.error(`Error ${mode === 'add' ? 'adding' : 'updating'} reward:`, err);
-            // const actionText = mode === 'add' ? t('common.add') : t('common.edit'); // <-- ELIMINADO actionText
             const errorMessage = t('adminCommon.saveError') + `: ${err.response?.data?.message || err.message || t('common.errorUnknown')}`;
             notifications.show({ title: t('common.error'), message: errorMessage, color: 'red', icon: <IconX size={18} />, autoClose: 6000 });
         } finally {
@@ -225,16 +222,16 @@ const RewardForm: React.FC<RewardFormProps> = ({
 
                     <Stack gap="xs" mt="sm">
                          <Text fw={500} size="sm">{t('component.rewardForm.imageLabel')}</Text>
-                         {displayImageUrlForPreview && !showCropper && ( <AspectRatio ratio={1 / 1} maw={200}><MantineImage src={displayImageUrlForPreview} alt={`Preview ${name_es || name_en || 'recompensa'}`} radius="md" fallbackSrc="/placeholder-reward.png" /></AspectRatio> )}
+                         {displayImageUrlForPreview && !showCropper && ( <AspectRatio ratio={1 / 1} maw={200}><MantineImage src={displayImageUrlForPreview} alt={t('component.rewardForm.altImagePreview', { name: name_es || name_en || t('component.rewardForm.rewardFallbackName') })} radius="md" fallbackSrc="/placeholder-reward.png" /></AspectRatio> )}
                          {!displayImageUrlForPreview && !showCropper && ( <AspectRatio ratio={1 / 1} maw={200}><Center bg="gray.1" style={{ borderRadius: 'var(--mantine-radius-md)' }}><IconPhoto size={48} color="var(--mantine-color-gray-5)" stroke={1.5} /></Center></AspectRatio> )}
                          <Group gap="sm">
                              <FileInput placeholder={t('component.rewardForm.selectImageButton')} accept="image/png,image/jpeg,image/webp,image/gif" onChange={onSelectFile} leftSection={<IconUpload size={16} />} clearable disabled={isSubmitting || isUploading} style={{ flexGrow: 1 }} value={null} />
-                             <Button variant="outline" disabled leftSection={<IconCamera size={16} />} title={t('common.upcomingFeatureTitle')}> {t('common.camera', 'Cámara')} </Button>
+                             <Button variant="outline" disabled leftSection={<IconCamera size={16} />} title={t('common.upcomingFeatureTitle')}> {t('common.camera')} </Button>
                          </Group>
                          {showCropper && (
                             <Box mt="md">
                                 <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)} aspect={ASPECT_RATIO} minWidth={MIN_DIMENSION} minHeight={MIN_DIMENSION} circularCrop={false} >
-                                     <img ref={imgRef} src={imgSrc} style={{ maxHeight: '400px', display: imgSrc ? 'block' : 'none' }} onLoad={onImageLoad} alt="Para recortar" />
+                                     <img ref={imgRef} src={imgSrc} style={{ maxHeight: '400px', display: imgSrc ? 'block' : 'none' }} onLoad={onImageLoad} alt={t('component.rewardForm.altCropImage')} />
                                 </ReactCrop>
                                 <Button mt="sm" onClick={handleConfirmCropAndUpload} loading={isUploading} disabled={!completedCrop || isUploading || isSubmitting || !imgSrc} leftSection={<IconCheck size={16} />} >
                                      {t('component.rewardForm.confirmCropButton')}

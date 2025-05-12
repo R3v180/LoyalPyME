@@ -6,34 +6,30 @@ import {
     Paper, Divider, NativeScrollArea
 } from '@mantine/core';
 import { useForm, zodResolver } from '@mantine/form';
-import { useDisclosure } from '@mantine/hooks'; // <--- AÑADIDO useDisclosure
+import { useDisclosure } from '@mantine/hooks';
 import { z } from 'zod';
-import { 
-    IconPlus, IconAlertCircle, IconPencil, IconTrash, IconDeviceFloppy, IconSettings 
+import {
+    IconPlus, IconAlertCircle, IconPencil, IconTrash, IconDeviceFloppy, IconSettings
 } from '@tabler/icons-react';
 import { useAdminModifierGroups } from '../../../../hooks/useAdminModifierGroups';
 import { ModifierGroupData, ModifierGroupFormData, ModifierUiType } from '../../../../types/menu.types';
-// import { notifications } from '@mantine/notifications'; // Ya no se usa aquí si el hook las maneja
+import ModifierOptionsManagementModal from './ModifierOptionsManagementModal';
+import { useTranslation } from 'react-i18next'; // Asegurarse de importar
 
-// --- AÑADIR IMPORTACIÓN DEL MODAL DE OPCIONES ---
-import ModifierOptionsManagementModal from './ModifierOptionsManagementModal'; 
-// --- FIN IMPORTACIÓN ---
-
-
-const modifierGroupSchema = z.object({
-    name_es: z.string().min(1, { message: "El nombre en español es obligatorio." }),
+const createModifierGroupSchema = (t: Function) => z.object({
+    name_es: z.string().min(1, { message: t('adminCamarero.modifierGroupForm.validation.nameEsRequired') }),
     name_en: z.string().nullable().optional(),
-    uiType: z.nativeEnum(ModifierUiType, { errorMap: () => ({ message: "Selecciona un tipo de UI válido."}) }),
-    minSelections: z.number().min(0, "Debe ser 0 o más.").default(0),
-    maxSelections: z.number().min(1, "Debe ser 1 o más.").default(1),
+    uiType: z.nativeEnum(ModifierUiType, { errorMap: () => ({ message: t('adminCamarero.modifierGroupForm.validation.uiTypeInvalid') }) }),
+    minSelections: z.number().min(0, { message: t('adminCamarero.modifierGroupForm.validation.minSelectionsInvalid') }).default(0),
+    maxSelections: z.number().min(1, { message: t('adminCamarero.modifierGroupForm.validation.maxSelectionsInvalid') }).default(1),
     position: z.number().min(0).default(0),
     isRequired: z.boolean().default(false),
 }).refine(data => data.minSelections <= data.maxSelections, {
-    message: "Mínimo no puede ser mayor que máximo.",
+    message: t('adminCamarero.modifierGroupForm.validation.minMaxMismatch'),
     path: ["maxSelections"],
 });
 
-type ModifierGroupFormValues = z.infer<typeof modifierGroupSchema>;
+type ModifierGroupFormValues = z.infer<ReturnType<typeof createModifierGroupSchema>>;
 
 interface ModifierGroupsManagementModalProps {
     opened: boolean;
@@ -48,6 +44,9 @@ const ModifierGroupsManagementModal: React.FC<ModifierGroupsManagementModalProps
     menuItemId,
     menuItemName,
 }) => {
+    const { t, i18n } = useTranslation(); // Añadir i18n para currentLanguage si es necesario
+    const currentLanguage = i18n.language;
+
     const {
         modifierGroups,
         loading: loadingGroups,
@@ -63,33 +62,30 @@ const ModifierGroupsManagementModal: React.FC<ModifierGroupsManagementModalProps
     const [isSubmittingForm, setIsSubmittingForm] = useState(false);
     const [isDeletingGroupId, setIsDeletingGroupId] = useState<string | null>(null);
 
-    // --- ESTADOS PARA EL MODAL DE OPCIONES ---
     const [optionsModalOpened, { open: openOptionsModal, close: closeOptionsModal }] = useDisclosure(false);
     const [selectedGroupForOptions, setSelectedGroupForOptions] = useState<ModifierGroupData | null>(null);
-    // --- FIN ESTADOS MODAL OPCIONES ---
 
     const form = useForm<ModifierGroupFormValues>({
         initialValues: {
             name_es: '', name_en: null, uiType: ModifierUiType.RADIO,
             minSelections: 0, maxSelections: 1, position: 0, isRequired: false,
         },
-        validate: zodResolver(modifierGroupSchema),
+        validate: zodResolver(createModifierGroupSchema(t)),
     });
 
     useEffect(() => {
         if (opened && menuItemId) {
-            fetchModifierGroups(); 
+            fetchModifierGroups();
         }
         if (!opened) {
             setShowForm(false);
             setEditingGroup(null);
             form.reset();
-            // También cerrar el modal de opciones si el de grupos se cierra
-            closeOptionsModal(); 
+            closeOptionsModal();
             setSelectedGroupForOptions(null);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [opened, menuItemId, closeOptionsModal]); 
+    }, [opened, menuItemId, closeOptionsModal]);
 
     const handleOpenAddForm = () => {
         setEditingGroup(null);
@@ -117,7 +113,7 @@ const ModifierGroupsManagementModal: React.FC<ModifierGroupsManagementModalProps
         setIsSubmittingForm(true);
         const formData: ModifierGroupFormData = {
             name_es: values.name_es,
-            name_en: values.name_en || null, 
+            name_en: values.name_en || null,
             uiType: values.uiType,
             minSelections: values.minSelections,
             maxSelections: values.maxSelections,
@@ -144,57 +140,64 @@ const ModifierGroupsManagementModal: React.FC<ModifierGroupsManagementModalProps
 
     const handleDeleteGroup = async (groupId: string) => {
         setIsDeletingGroupId(groupId);
-        await deleteModifierGroup(groupId);
+        await deleteModifierGroup(groupId); // El hook se encarga de la notificación
         setIsDeletingGroupId(null);
     };
-    
-    // --- ACTUALIZAR handleManageOptions ---
+
     const handleManageOptions = (group: ModifierGroupData) => {
         setSelectedGroupForOptions(group);
         openOptionsModal();
     };
-    // --- FIN ACTUALIZACIÓN ---
 
+    const groupRows = modifierGroups.map((group) => {
+        const groupDisplayName = (currentLanguage === 'es' && group.name_es) ? group.name_es : (group.name_en || group.name_es || t('common.nameNotAvailable'));
+        return (
+            <Table.Tr key={group.id}>
+                <Table.Td>
+                    <Text fw={500}>{groupDisplayName}</Text>
+                    {groupDisplayName !== group.name_es && group.name_es && <Text size="xs" c="dimmed">ES: {group.name_es}</Text>}
+                    {groupDisplayName !== group.name_en && group.name_en && <Text size="xs" c="dimmed">EN: {group.name_en}</Text>}
+                </Table.Td>
+                <Table.Td><Badge color="cyan" variant="light">{group.uiType}</Badge></Table.Td>
+                <Table.Td>{group.minSelections} - {group.maxSelections}</Table.Td>
+                <Table.Td>{group.isRequired ? t('common.yes') : t('common.no')}</Table.Td>
+                <Table.Td>{group.position}</Table.Td>
+                <Table.Td>
+                    <Group gap="xs" justify="flex-end" wrap="nowrap">
+                        <Tooltip label={t('adminCamarero.modifierGroupsModal.tooltipManageOptions')} withArrow>
+                            <ActionIcon variant="subtle" color="green" onClick={() => handleManageOptions(group)} disabled={!!isDeletingGroupId}>
+                                <IconSettings size={16} />
+                            </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label={t('adminCamarero.modifierGroupsModal.tooltipEditGroup')} withArrow>
+                            <ActionIcon variant="subtle" color="blue" onClick={() => handleOpenEditForm(group)} disabled={!!isDeletingGroupId}>
+                                <IconPencil size={16} />
+                            </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label={t('adminCamarero.modifierGroupsModal.tooltipDeleteGroup')} withArrow>
+                            <ActionIcon variant="subtle" color="red" onClick={() => handleDeleteGroup(group.id)} loading={isDeletingGroupId === group.id} disabled={!!isDeletingGroupId && isDeletingGroupId !== group.id}>
+                                <IconTrash size={16} />
+                            </ActionIcon>
+                        </Tooltip>
+                    </Group>
+                </Table.Td>
+            </Table.Tr>
+        );
+    });
 
-    const groupRows = modifierGroups.map((group) => (
-        <Table.Tr key={group.id}>
-            <Table.Td>
-                <Text fw={500}>{group.name_es}</Text>
-                {group.name_en && <Text size="xs" c="dimmed">EN: {group.name_en}</Text>}
-            </Table.Td>
-            <Table.Td><Badge color="cyan" variant="light">{group.uiType}</Badge></Table.Td>
-            <Table.Td>{group.minSelections} - {group.maxSelections}</Table.Td>
-            <Table.Td>{group.isRequired ? 'Sí' : 'No'}</Table.Td>
-            <Table.Td>{group.position}</Table.Td>
-            <Table.Td>
-                <Group gap="xs" justify="flex-end" wrap="nowrap">
-                    <Tooltip label="Gestionar Opciones" withArrow>
-                        <ActionIcon variant="subtle" color="green" onClick={() => handleManageOptions(group)} disabled={!!isDeletingGroupId}>
-                            <IconSettings size={16} />
-                        </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label="Editar Grupo" withArrow>
-                        <ActionIcon variant="subtle" color="blue" onClick={() => handleOpenEditForm(group)} disabled={!!isDeletingGroupId}>
-                            <IconPencil size={16} />
-                        </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label="Eliminar Grupo" withArrow>
-                        <ActionIcon variant="subtle" color="red" onClick={() => handleDeleteGroup(group.id)} loading={isDeletingGroupId === group.id} disabled={!!isDeletingGroupId && isDeletingGroupId !== group.id}>
-                            <IconTrash size={16} />
-                        </ActionIcon>
-                    </Tooltip>
-                </Group>
-            </Table.Td>
-        </Table.Tr>
-    ));
+    const uiTypeOptions = Object.values(ModifierUiType).map(type => ({
+        value: type,
+        label: t(`adminCamarero.modifierGroupForm.uiType.${type}`, type) // Claves como 'adminCamarero.modifierGroupForm.uiType.RADIO'
+    }));
+
 
     return (
-        <> {/* Envolver en Fragment para el modal hermano */}
+        <>
             <Modal
                 opened={opened && !!menuItemId}
                 onClose={onClose}
-                title={`Gestionar Grupos de Modificadores para: "${menuItemName}"`}
-                size="xl" 
+                title={t('adminCamarero.modifierGroupsModal.title', { itemName: menuItemName })}
+                size="xl"
                 centered
                 scrollAreaComponent={NativeScrollArea}
                 overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
@@ -203,26 +206,26 @@ const ModifierGroupsManagementModal: React.FC<ModifierGroupsManagementModalProps
                     {!showForm ? (
                         <>
                             <Group justify="space-between">
-                                <Title order={5}>Grupos Existentes</Title>
+                                <Title order={5}>{t('adminCamarero.modifierGroupsModal.existingGroupsTitle')}</Title>
                                 <Button leftSection={<IconPlus size={16} />} onClick={handleOpenAddForm} disabled={loadingGroups}>
-                                    Crear Nuevo Grupo
+                                    {t('adminCamarero.modifierGroupsModal.createNewGroupButton')}
                                 </Button>
                             </Group>
 
                             {loadingGroups && <Group justify="center" mt="md"><Loader /></Group>}
-                            {errorGroups && !loadingGroups && <Alert title="Error" color="red" icon={<IconAlertCircle />}>{errorGroups}</Alert>}
-                            {!loadingGroups && !errorGroups && modifierGroups.length === 0 && <Text c="dimmed" ta="center" mt="md">No hay grupos de modificadores para este ítem.</Text>}
+                            {errorGroups && !loadingGroups && <Alert title={t('common.error')} color="red" icon={<IconAlertCircle />}>{errorGroups}</Alert>}
+                            {!loadingGroups && !errorGroups && modifierGroups.length === 0 && <Text c="dimmed" ta="center" mt="md">{t('adminCamarero.modifierGroupsModal.noGroupsForItem')}</Text>}
                             {!loadingGroups && !errorGroups && modifierGroups.length > 0 && (
                                 <Table.ScrollContainer minWidth={600}>
                                     <Table striped highlightOnHover withTableBorder verticalSpacing="sm">
                                         <Table.Thead>
                                             <Table.Tr>
-                                                <Table.Th>Nombre (ES)</Table.Th>
-                                                <Table.Th>Tipo UI</Table.Th>
-                                                <Table.Th>Sel. (Min-Max)</Table.Th>
-                                                <Table.Th>Requerido</Table.Th>
-                                                <Table.Th>Pos.</Table.Th>
-                                                <Table.Th style={{ textAlign: 'right' }}>Acciones</Table.Th>
+                                                <Table.Th>{t('adminCamarero.modifierGroupsModal.tableHeaderName')}</Table.Th>
+                                                <Table.Th>{t('adminCamarero.modifierGroupsModal.tableHeaderUiType')}</Table.Th>
+                                                <Table.Th>{t('adminCamarero.modifierGroupsModal.tableHeaderSelections')}</Table.Th>
+                                                <Table.Th>{t('adminCamarero.modifierGroupsModal.tableHeaderRequired')}</Table.Th>
+                                                <Table.Th>{t('adminCamarero.modifierGroupsModal.tableHeaderPosition')}</Table.Th>
+                                                <Table.Th style={{ textAlign: 'right' }}>{t('common.actions')}</Table.Th>
                                             </Table.Tr>
                                         </Table.Thead>
                                         <Table.Tbody>{groupRows}</Table.Tbody>
@@ -232,31 +235,31 @@ const ModifierGroupsManagementModal: React.FC<ModifierGroupsManagementModalProps
                         </>
                     ) : (
                         <Paper withBorder p="md" radius="md">
-                            <Title order={5} mb="md">{editingGroup ? `Editando Grupo: ${editingGroup.name_es}` : "Crear Nuevo Grupo de Modificadores"}</Title>
+                            <Title order={5} mb="md">{editingGroup ? t('adminCamarero.modifierGroupsModal.formEditTitle', { groupName: (currentLanguage === 'es' && editingGroup.name_es) ? editingGroup.name_es : (editingGroup.name_en || editingGroup.name_es || '') }) : t('adminCamarero.modifierGroupsModal.formCreateTitle')}</Title>
                             <form onSubmit={form.onSubmit(handleFormSubmit)}>
                                 <Stack gap="sm">
-                                    <TextInput label="Nombre (ES)" required {...form.getInputProps('name_es')} disabled={isSubmittingForm} />
-                                    <TextInput label="Nombre (EN)" {...form.getInputProps('name_en')} disabled={isSubmittingForm} />
+                                    <TextInput label={t('adminCamarero.modifierGroupForm.nameEsLabel')} required {...form.getInputProps('name_es')} disabled={isSubmittingForm} />
+                                    <TextInput label={t('adminCamarero.modifierGroupForm.nameEnLabel')} {...form.getInputProps('name_en')} disabled={isSubmittingForm} />
                                     <Select
-                                        label="Tipo de Interfaz de Usuario (UI)"
-                                        data={Object.values(ModifierUiType).map(type => ({ value: type, label: type }))}
+                                        label={t('adminCamarero.modifierGroupForm.uiTypeLabel')}
+                                        data={uiTypeOptions}
                                         required
                                         {...form.getInputProps('uiType')}
                                         disabled={isSubmittingForm}
                                     />
                                     <Group grow>
-                                        <NumberInput label="Mínimo Selecciones" min={0} {...form.getInputProps('minSelections')} disabled={isSubmittingForm} />
-                                        <NumberInput label="Máximo Selecciones" min={1} {...form.getInputProps('maxSelections')} disabled={isSubmittingForm} />
+                                        <NumberInput label={t('adminCamarero.modifierGroupForm.minSelectionsLabel')} min={0} {...form.getInputProps('minSelections')} disabled={isSubmittingForm} />
+                                        <NumberInput label={t('adminCamarero.modifierGroupForm.maxSelectionsLabel')} min={1} {...form.getInputProps('maxSelections')} disabled={isSubmittingForm} />
                                     </Group>
-                                    <NumberInput label="Posición (Orden)" min={0} {...form.getInputProps('position')} disabled={isSubmittingForm} />
-                                    <Switch label="Es Requerido" {...form.getInputProps('isRequired', { type: 'checkbox' })} disabled={isSubmittingForm} />
+                                    <NumberInput label={t('adminCamarero.modifierGroupForm.positionLabel')} min={0} {...form.getInputProps('position')} disabled={isSubmittingForm} />
+                                    <Switch label={t('adminCamarero.modifierGroupForm.isRequiredLabel')} {...form.getInputProps('isRequired', { type: 'checkbox' })} disabled={isSubmittingForm} />
 
                                     <Group justify="flex-end" mt="md">
                                         <Button variant="default" onClick={() => { setShowForm(false); setEditingGroup(null); form.reset(); }} disabled={isSubmittingForm}>
-                                            Cancelar
+                                            {t('common.cancel')}
                                         </Button>
                                         <Button type="submit" loading={isSubmittingForm} leftSection={<IconDeviceFloppy size={16} />}>
-                                            {editingGroup ? "Guardar Cambios" : "Crear Grupo"}
+                                            {editingGroup ? t('common.saveChanges') : t('adminCamarero.modifierGroupsModal.formCreateButton')}
                                         </Button>
                                     </Group>
                                 </Stack>
@@ -265,25 +268,23 @@ const ModifierGroupsManagementModal: React.FC<ModifierGroupsManagementModalProps
                     )}
                     <Divider mt="lg" />
                     <Group justify="flex-end" mt="md">
-                        <Button variant="outline" onClick={onClose}>Cerrar Gestión de Grupos</Button>
+                        <Button variant="outline" onClick={onClose}>{t('adminCamarero.modifierGroupsModal.closeButton')}</Button>
                     </Group>
                 </Stack>
             </Modal>
 
-            {/* --- RENDERIZAR MODAL DE OPCIONES --- */}
             {selectedGroupForOptions && (
                 <ModifierOptionsManagementModal
                     opened={optionsModalOpened}
                     onClose={() => {
                         closeOptionsModal();
                         setSelectedGroupForOptions(null);
-                        fetchModifierGroups(); // Opcional: Refrescar la lista de grupos por si algo cambió en las opciones que afecte al grupo (ej: contador de opciones)
+                        fetchModifierGroups();
                     }}
                     modifierGroupId={selectedGroupForOptions.id}
-                    modifierGroupName={selectedGroupForOptions.name_es} // O el nombre en el idioma actual
+                    modifierGroupName={(currentLanguage === 'es' && selectedGroupForOptions.name_es) ? selectedGroupForOptions.name_es : (selectedGroupForOptions.name_en || selectedGroupForOptions.name_es || t('common.nameNotAvailable'))}
                 />
             )}
-            {/* --- FIN RENDERIZAR MODAL DE OPCIONES --- */}
         </>
     );
 };
