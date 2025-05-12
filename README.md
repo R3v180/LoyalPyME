@@ -1,6 +1,5 @@
 # LoyalPyME 🇬🇧
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![GitHub repo size](https://img.shields.io/github/repo-size/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME)
 [![GitHub contributors](https://img.shields.io/github/contributors/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/graphs/contributors)
 [![GitHub last commit](https://img.shields.io/github/last-commit/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/commits/main)
@@ -13,7 +12,7 @@
 
 ---
 
-# LoyalPyME 🇬🇧 (v1.14.0)
+# LoyalPyME 🇬🇧 (v1.15.0)
 
 **LoyalPyME** is a comprehensive and modular full-stack web platform (React Frontend + Node.js Backend) designed for Small and Medium-sized Enterprises (SMEs). The platform consists of different modules that can be activated per business:
 
@@ -48,7 +47,7 @@ _(Note: Screenshots might not reflect the latest features or the Super Admin pan
 **LoyalPyME Core (Loyalty Module - Functional):**
 
 - **Full Authentication:** Business & Admin Registration, Customer Registration, Secure Login with JWT, Password Reset Functionality.
-- **Customer Management (LCo Admin):** Advanced listing with search, filters, and sorting. Customer CRUD, including adding internal notes, manual points adjustment, tier changes, activation/deactivation, and favorites unteren. Bulk actions on customers.
+- **Customer Management (LCo Admin):** Advanced listing with search, filters, and sorting. Customer CRUD, including adding internal notes, manual points adjustment, tier changes, activation/deactivation, and favorites. Bulk actions on customers.
 - **Tier & Benefit Management (LCo Admin):** Loyalty tier CRUD. Definition of specific benefits per tier. Global configuration of the tier system (calculation basis, downgrade policy, inactivity periods).
 - **Reward Management (LCo Admin):** Full CRUD for point-redeemable rewards. Includes image upload and 1:1 cropping (Cloudinary) for each reward. Multi-language support (ES/EN) for reward names and descriptions.
 - **Points & QR Flow (LCo):** Admin generation of unique QR codes for customers to earn points (associated with a sale amount and ticket number). QR validation by the End Customer via manual input or mobile camera scanning (using `html5-qrcode`).
@@ -62,16 +61,20 @@ _(Note: Screenshots might not reflect the latest features or the Super Admin pan
   - Backend API Documentation generated with Swagger and accessible via `/api-docs`.
   - Static logo and constrained header layout for consistent branding.
 
-**LoyalPyME Waiter Module (In Development - Backend Foundations Ready):**
+**LoyalPyME Waiter Module (In Development - Admin Menu Management UI Complete):**
 
 - **Database:** Prisma models defined for Tables (with QR and status), Digital Menu (Categories, Items with i18n, price, image, allergens, tags, availability, etc.), Modifiers (Groups and Options with price adjustments), Orders (with status, items, optional customer/waiter), and Staff (with roles and PINs).
 - **Backend API (Business Admin):** CRUD endpoints implemented for managing Menu Categories, Menu Items, and their Modifiers. These APIs are protected and only accessible if the Waiter module is active for the business.
+- **Frontend UI (Business Admin - Menu Management):** Complete interface for managing digital menu categories (CRUD, reordering), menu items (CRUD with detailed fields, image upload/crop), modifier groups associated with items (CRUD), and modifier options within groups (CRUD).
 
 ## Project Status & Roadmap 🗺️
 
-The project has completed **Phase 1 (LCo Core Functionality)** and the **base implementation of the multi-module architecture and Super Admin Panel**. Current version: **v1.14.0**.
+The project has completed **Phase 1 (LCo Core Functionality)**, the **base implementation of the multi-module architecture and Super Admin Panel**, and a significant part of **Phase 3 (LoyalPyME Waiter Module - Admin Menu Management)**. Current version: **v1.15.0**.
 
-- The primary development focus is now on building the **"LoyalPyME Waiter" module** for the hospitality industry.
+- The primary development focus for the Waiter Module will now shift towards:
+  1.  Customer-facing Digital Menu display.
+  2.  Customer Ordering Flow.
+  3.  Kitchen Display System (KDS).
 - See **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** for **detailed completed milestones** and **key design decisions**.
 - See **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** for the **full backlog** of pending tasks, the detailed roadmap for the Waiter Module, and **future ideas**.
 
@@ -89,7 +92,7 @@ _(A more detailed and continuously updated list can be found in [PROJECT_STATUS.
     - `cd backend && yarn install`
     - Configure the `.env` file completely (copy from `.env.example` and fill in).
     - `npx prisma migrate reset` (This will delete and recreate the database).
-    - `npx prisma db seed` (This will populate the database with a demo business, admin, customer, and sample LCo data).
+    - `npx prisma db seed` (This will populate the database with a demo business, admin, customer, and sample LCo/LC data).
     - `npx ts-node ./scripts/create-superadmin.ts` (This will create the global Super Admin user).
     - Run in two terminals:
       1.  `yarn dev:build` (or `npx tsc --watch`)
@@ -99,7 +102,7 @@ _(A more detailed and continuously updated list can be found in [PROJECT_STATUS.
     - Run: `yarn dev` (or `yarn dev --host` for local network access).
 4.  **Accessing the Applications:**
     - **Customer / Business Admin App:** `https://localhost:5173`
-      - Demo Business Login (LCo): `admin@demo.com` / `password`
+      - Demo Business Login (LCo & LC): `admin@demo.com` / `password`
       - Demo Customer Login (LCo): `cliente@demo.com` / `password`
     - **Super Admin Panel:** `https://localhost:5173/superadmin`
       - Login: `superadmin@loyalpyme.com` / `superadminpassword` (or credentials configured in the script).
@@ -111,12 +114,14 @@ _(A more detailed and continuously updated list can be found in [PROJECT_STATUS.
 
 ## Contributions 🤝
 
-Contributions are welcome! Please follow the standard flow: Fork -> New Branch -> Commit -> Push -> Pull Request. Review the [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for pending tasks or to propose new features or improvements.
+While this project is now transitioning to proprietary software, bug reports or suggestions can still be made via GitHub Issues. Code contributions will be considered on a case-by-case basis and would require a Contributor License Agreement (CLA).
 
 ## License 📜
 
-This project is licensed under the **MIT License**. See the [`LICENSE`](./LICENSE) file for details.
-Copyright (c) 2024-2025 Olivier Hottelet
+This project is proprietary software.
+Copyright (c) 2024-2025 Olivier Hottelet. All rights reserved.
+
+Refer to the [LICENSE.md](./LICENSE.md) file in the root directory for more details.
 
 ## Contact 📧
 

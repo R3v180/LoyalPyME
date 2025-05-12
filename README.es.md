@@ -1,6 +1,5 @@
 # LoyalPyME 🇪🇸
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![GitHub repo size](https://img.shields.io/github/repo-size/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME)
 [![GitHub contributors](https://img.shields.io/github/contributors/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/graphs/contributors)
 [![GitHub last commit](https://img.shields.io/github/last-commit/R3v180/LoyalPyME?style=flat-square)](https://github.com/R3v180/LoyalPyME/commits/main)
@@ -13,7 +12,7 @@
 
 ---
 
-# LoyalPyME 🇪🇸 (v1.14.0)
+# LoyalPyME 🇪🇸 (v1.15.0)
 
 **LoyalPyME** es una plataforma web integral y modular (Frontend React + Backend Node.js) diseñada para Pequeñas y Medianas Empresas (PyMEs). La plataforma se compone de diferentes módulos que pueden ser activados por negocio:
 
@@ -62,16 +61,20 @@ _(Nota: Las capturas de pantalla podrían no reflejar las últimas funcionalidad
   - Documentación de la API Backend generada con Swagger y accesible vía `/api-docs`.
   - Logo estático y diseño de cabecera restringido para una imagen de marca consistente.
 
-**Módulo LoyalPyME Camarero (En Desarrollo - Fundamentos Backend Listos):**
+**Módulo LoyalPyME Camarero (En Desarrollo - UI Gestión Carta Admin Completa):**
 
 - **Base de Datos:** Modelos Prisma definidos para Mesas (con QR y estado), Carta Digital (Categorías, Ítems con i18n, precio, imagen, alérgenos, tags, disponibilidad, etc.), Modificadores (Grupos y Opciones con ajuste de precio), Pedidos (con estado, ítems, cliente/camarero opcional), y Personal (con roles y PINs).
 - **API Backend (Admin Negocio):** Endpoints CRUD implementados para la gestión de Categorías del Menú, Ítems del Menú y sus Modificadores. Estas APIs están protegidas y solo accesibles si el módulo Camarero está activo para el negocio.
+- **UI Frontend (Admin Negocio - Gestión Carta):** Interfaz completa para gestionar categorías de la carta digital (CRUD, reordenación), ítems del menú (CRUD con campos detallados, subida/recorte de imagen), grupos de modificadores asociados a ítems (CRUD), y opciones de modificadores dentro de los grupos (CRUD).
 
 ## Estado Actual y Próximos Pasos 🗺️
 
-La plataforma ha completado la **Fase 1 (Núcleo Funcional de LoyalPyME Core)** y la **implementación base de la arquitectura multi-módulo junto con el Panel Super Admin**. La versión actual es **v1.14.0**.
+La plataforma ha completado la **Fase 1 (Núcleo Funcional de LoyalPyME Core)**, la **implementación base de la arquitectura multi-módulo junto con el Panel Super Admin**, y una parte importante de la **Fase 3 (Módulo LoyalPyME Camarero - UI de Gestión de Carta para Administradores)**. La versión actual es **v1.15.0**.
 
-- El enfoque principal de desarrollo actual es la **construcción del Módulo "LoyalPyME Camarero"**, comenzando por la interfaz de administración para la Carta Digital.
+- El enfoque principal de desarrollo para el Módulo Camarero se centrará ahora en:
+  1.  Visualización de la Carta Digital por parte del cliente final.
+  2.  Flujo de Pedido por parte del cliente final.
+  3.  Sistema de Visualización en Cocina (KDS).
 - Consulta **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** para ver los **hitos completados en detalle** y las **decisiones de diseño clave**.
 - Consulta **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** para ver el **backlog completo** de tareas pendientes, la hoja de ruta detallada para el Módulo Camarero y las **ideas futuras**.
 
@@ -89,7 +92,7 @@ _(Una lista más detallada y continuamente actualizada se encuentra en [PROJECT_
     - `cd backend && yarn install`
     - Configurar el archivo `.env` completamente (copiar de `.env.example` y rellenar).
     - `npx prisma migrate reset` (Esto borrará y recreará la base de datos).
-    - `npx prisma db seed` (Esto poblará la base de datos con un negocio demo, admin, cliente, y datos de ejemplo para LCo).
+    - `npx prisma db seed` (Esto poblará la base de datos con un negocio demo, admin, cliente, y datos de ejemplo para LCo/LC).
     - `npx ts-node ./scripts/create-superadmin.ts` (Esto creará el usuario Super Admin global).
     - Ejecutar en dos terminales:
       1.  `yarn dev:build` (o `npx tsc --watch`)
@@ -99,7 +102,7 @@ _(Una lista más detallada y continuamente actualizada se encuentra en [PROJECT_
     - Ejecutar: `yarn dev` (o `yarn dev --host` para acceso en red local).
 4.  **Acceso a las Aplicaciones:**
     - **Cliente Final / Admin de Negocio:** `https://localhost:5173`
-      - Login Negocio Demo (LCo): `admin@demo.com` / `password`
+      - Login Negocio Demo (LCo & LC): `admin@demo.com` / `password`
       - Login Cliente Demo (LCo): `cliente@demo.com` / `password`
     - **Panel Super Admin:** `https://localhost:5173/superadmin`
       - Login: `superadmin@loyalpyme.com` / `superadminpassword` (o las credenciales configuradas en el script).
@@ -111,12 +114,14 @@ _(Una lista más detallada y continuamente actualizada se encuentra en [PROJECT_
 
 ## Contribuciones 🤝
 
-¡Las contribuciones son bienvenidas! Por favor, sigue el flujo estándar: Fork -> Nueva Branch -> Commit -> Push -> Pull Request. Revisa el [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) para ver las tareas pendientes o si quieres proponer nuevas funcionalidades o mejoras.
+Dado que este proyecto está transicionando a software propietario, los informes de errores o sugerencias pueden seguir haciéndose a través de los Issues de GitHub. Las contribuciones de código se considerarán caso por caso y requerirían un Acuerdo de Licencia de Contribuidor (CLA).
 
 ## Licencia 📜
 
-Este proyecto está bajo la Licencia **MIT**. Consulta el archivo [`LICENSE`](./LICENSE) para más detalles.
-Copyright (c) 2024-2025 Olivier Hottelet
+Este proyecto es software propietario.
+Copyright (c) 2024-2025 Olivier Hottelet. Todos los derechos reservados.
+
+Consulta el archivo [LICENSE.md](./LICENSE.md) en el directorio raíz para más detalles.
 
 ## Contacto 📧
 

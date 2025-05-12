@@ -1,9 +1,9 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
-  "license": "MIT",
+  "license": "SEE LICENSE IN ../LICENSE.md",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
