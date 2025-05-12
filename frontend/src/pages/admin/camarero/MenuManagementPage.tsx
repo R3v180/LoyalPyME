@@ -1,48 +1,68 @@
 // frontend/src/pages/admin/camarero/MenuManagementPage.tsx
-import React from 'react'; // FC ya no es necesario con la nueva sintaxis de componentes
-import { Container, Title, Paper, Stack } from '@mantine/core';
+import React, { useState } from 'react';
+import { 
+    Container, 
+    Title, 
+    Paper, 
+    Stack, 
+    // Text as MantineText, // Sigue sin usarse directamente aquí
+    Button,
+    Group     
+} from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-
-// En el futuro, importaremos aquí los componentes para gestionar categorías, ítems, etc.
-// import MenuCategoryManager from '../../../components/admin/camarero/menu/MenuCategoryManager';
+import MenuCategoryManager from '../../../components/admin/camarero/menu/MenuCategoryManager';
+// --- DESCOMENTAR LA IMPORTACIÓN ---
+import MenuItemManager from '../../../components/admin/camarero/menu/MenuItemManager'; 
+import { MenuCategoryData } from '../../../types/menu.types';
 
 const MenuManagementPage: React.FC = () => {
     const { t } = useTranslation();
+    const [selectedCategory, setSelectedCategory] = useState<MenuCategoryData | null>(null);
+
+    // Log actualizado para diferenciar
+    console.log(`[MenuManagementPage - V7 CON MenuItemManager] Categoría seleccionada: ${selectedCategory?.id || 'ninguna'}`);
+
+    const handleViewItems = (category: MenuCategoryData) => {
+        console.log(`[MenuManagementPage] handleViewItems llamada con categoría: "${category.name_es}" (ID: ${category.id})`);
+        setSelectedCategory(category);
+    };
+    const handleBackToCategories = () => {
+        setSelectedCategory(null);
+    };
 
     return (
         <Container size="xl" py="xl">
             <Stack gap="lg">
                 <Title order={2}>
-                    {t('adminCamarero.manageMenu.title', 'Gestión de Carta Digital')}
+                    {t('adminCamarero.manageMenu.title')}
                 </Title>
 
-                <Paper shadow="sm" p="lg" withBorder radius="lg">
-                    <Title order={4} mb="md">
-                        {t('adminCamarero.manageMenu.categoriesSectionTitle', 'Categorías del Menú')}
-                    </Title>
-                    {/* 
-                        Aquí irá el componente MenuCategoryManager para CRUD de categorías.
-                        Por ahora, un placeholder.
-                    */}
-                    <p>{t('common.upcomingFeatureTitle')} - {t('adminCamarero.manageMenu.categoryManagerPlaceholder', 'Gestor de Categorías aquí...')}</p>
-                </Paper>
-
-                <Paper shadow="sm" p="lg" withBorder radius="lg">
-                     <Title order={4} mb="md">
-                        {t('adminCamarero.manageMenu.itemsSectionTitle', 'Ítems del Menú')}
-                    </Title>
-                    {/* 
-                        Aquí irá el componente para gestionar ítems, probablemente
-                        seleccionando una categoría primero.
-                    */}
-                    <p>{t('common.upcomingFeatureTitle')} - {t('adminCamarero.manageMenu.itemManagerPlaceholder', 'Gestor de Ítems aquí...')}</p>
-                </Paper>
-
-                {/* 
-                    Podríamos tener una sección separada para modificadores globales si aplica,
-                    o se gestionarán directamente desde cada ítem.
-                */}
-
+                {!selectedCategory ? (
+                    <Paper shadow="sm" p="lg" withBorder radius="lg">
+                        <Title order={4} mb="md">
+                            {t('adminCamarero.manageMenu.categoriesSectionTitle')}
+                        </Title>
+                        <MenuCategoryManager 
+                            onSelectCategoryForItems={handleViewItems}
+                        />
+                    </Paper>
+                ) : (
+                    <Paper shadow="sm" p="lg" withBorder radius="lg">
+                        <Group justify="space-between" mb="md">
+                            <Title order={4}>
+                                {t('adminCamarero.manageMenu.itemsSectionTitle')} - {selectedCategory.name_es}
+                            </Title>
+                            <Button variant="outline" onClick={handleBackToCategories}>
+                                {t('common.back')} a Categorías
+                            </Button>
+                        </Group>
+                        {/* --- DESCOMENTAR Y USAR MenuItemManager --- */}
+                        <MenuItemManager 
+                            categoryId={selectedCategory.id} 
+                            categoryName={selectedCategory.name_es} // o el nombre en el idioma actual si lo prefieres
+                        />
+                    </Paper>
+                )}
             </Stack>
         </Container>
     );

@@ -1,4 +1,7 @@
 // frontend/src/routes/index.tsx
+
+console.log("[Routes Index] Archivo src/routes/index.tsx cargado."); // Log #1: Carga del archivo
+
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
 // Layouts y Protección
@@ -28,10 +31,13 @@ import AdminCustomerManagementPage from '../pages/admin/AdminCustomerManagementP
 import SuperAdminPage from '../pages/admin/SuperAdminPage';
 
 // Página de Gestión de Menú (Admin Camarero)
+// ***** ASEGÚRATE QUE ESTA RUTA DE IMPORTACIÓN ES CORRECTA *****
 import MenuManagementPage from '../pages/admin/camarero/MenuManagementPage';
 
 
 function AppRoutes() {
+  console.log("[Routes Index] Función AppRoutes() ejecutándose."); // Log #2: Ejecución de la función
+
   return (
     <Routes>
       {/* Rutas Públicas (usan PublicLayout) */}
@@ -67,7 +73,12 @@ function AppRoutes() {
             <Route path="customers" element={<AdminCustomerManagementPage />} />
 
             {/* Rutas Módulo Camarero (LC) */}
-            <Route path="camarero/menu-editor" element={<MenuManagementPage />} />
+            {/* ***** ESTA ES LA RUTA QUE NOS INTERESA ***** */}
+            <Route 
+                path="camarero/menu-editor" 
+                element={<MenuManagementPage />} // Directamente el componente
+            />
+            
             {/* Ejemplo de futuras rutas para Camarero:
             <Route path="camarero/tables" element={<TableManagementPage />} />
             <Route path="camarero/staff" element={<StaffManagementPage />} />

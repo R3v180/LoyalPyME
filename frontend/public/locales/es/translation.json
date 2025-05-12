@@ -45,7 +45,8 @@
     "nameRequired": "El nombre es obligatorio.",
     "levelMin0": "El nivel debe ser 0 o mayor.",
     "minValueMin0": "El valor mínimo debe ser 0 o mayor.",
-    "mustBePositive": "Debe ser > 0"
+    "mustBePositive": "Debe ser > 0",
+    "invalidUrl": "URL de imagen no válida."
   },
   "loginPage": {
     "title": "Iniciar Sesión",
@@ -214,30 +215,30 @@
     "tabOffers": "Ofertas y Noticias",
     "tabProfile": "Mi Perfil",
     "summary": {
-        "pendingGifts_one": "Tienes {{count}} regalo pendiente:",
-        "pendingGifts_other": "Tienes {{count}} regalos pendientes:",
-        "pendingGiftsDesc": "Tienes regalos esperando ser canjeados.",
-        "nextReward": "Próxima recompensa: {{name}} por {{points}} puntos.",
-        "viewAllButton": "Ver Todas las Recompensas y Regalos",
-        "noRewardsInfo": "Acumula más puntos para conseguir recompensas.",
-        "giftsAndRewardsTitle": "Regalos y Recompensas Disponibles:",
-        "rewardsTitle": "Recompensas Disponibles:",
-        "unknownAssigner": "Desconocido",
-        "redeemButton": "Canjear",
-        "viewAllButtonShort": "Ver Todo"
+      "pendingGifts_one": "Tienes {{count}} regalo pendiente:",
+      "pendingGifts_other": "Tienes {{count}} regalos pendientes:",
+      "pendingGiftsDesc": "Tienes regalos esperando ser canjeados.",
+      "nextReward": "Próxima recompensa: {{name}} por {{points}} puntos.",
+      "viewAllButton": "Ver Todas las Recompensas y Regalos",
+      "noRewardsInfo": "Acumula más puntos para conseguir recompensas.",
+      "giftsAndRewardsTitle": "Regalos y Recompensas Disponibles:",
+      "rewardsTitle": "Recompensas Disponibles:",
+      "unknownAssigner": "Desconocido",
+      "redeemButton": "Canjear",
+      "viewAllButtonShort": "Ver Todo"
     },
     "activityTab": {
-        "noActivity": "Aún no tienes actividad registrada.",
-        "type_POINTS_EARNED_QR": "Puntos Ganados (QR)",
-        "type_POINTS_REDEEMED_REWARD": "Recompensa Canjeada",
-        "type_GIFT_REDEEMED": "Regalo Canjeado",
-        "type_POINTS_ADJUSTED_ADMIN": "Ajuste Manual de Puntos",
-        "totalItems": "{{count}} registro(s) en total",
-        "desc_EARNED": "Puntos por ticket #{{ticketNumber}}",
-        "desc_REDEEMED": "Canje: {{rewardName}}",
-        "desc_GIFT": "Regalo canjeado: {{rewardName}}",
-        "desc_ADJUSTED": "Ajuste manual de puntos",
-        "desc_ADJUSTED_REASON": "Ajuste manual: {{reason}}"
+      "noActivity": "Aún no tienes actividad registrada.",
+      "type_POINTS_EARNED_QR": "Puntos Ganados (QR)",
+      "type_POINTS_REDEEMED_REWARD": "Recompensa Canjeada",
+      "type_GIFT_REDEEMED": "Regalo Canjeado",
+      "type_POINTS_ADJUSTED_ADMIN": "Ajuste Manual de Puntos",
+      "totalItems": "{{count}} registro(s) en total",
+      "desc_EARNED": "Puntos por ticket #{{ticketNumber}}",
+      "desc_REDEEMED": "Canje: {{rewardName}}",
+      "desc_GIFT": "Regalo canjeado: {{rewardName}}",
+      "desc_ADJUSTED": "Ajuste manual de puntos",
+      "desc_ADJUSTED_REASON": "Ajuste manual: {{reason}}"
     }
   },
   "adminCommon": {
@@ -623,16 +624,32 @@
     "businessFallbackName": "el negocio"
   },
   "adminCamarero": {
-    "manageMenu": "Gestionar Carta", 
+    "manageMenu": "Gestionar Carta",
     "manageTables": "Gestionar Mesas",
-    "cardMenuTitle": "Carta Digital", 
-    "cardMenuDesc": "Crea y edita los productos, categorías y modificadores de tu menú.", 
-    "cardMenuButton": "Gestionar Carta", 
-
+    "cardMenuTitle": "Carta Digital",
+    "cardMenuDesc": "Crea y edita los productos, categorías y modificadores de tu menú.",
+    "cardMenuButton": "Gestionar Carta",
     "manageMenu.title": "Gestión de Carta Digital",
     "manageMenu.categoriesSectionTitle": "Categorías del Menú",
     "manageMenu.categoryManagerPlaceholder": "Gestor de Categorías irá aquí...",
     "manageMenu.itemsSectionTitle": "Ítems del Menú",
-    "manageMenu.itemManagerPlaceholder": "Gestor de Ítems (por categoría) irá aquí..."
+    "manageMenu.itemManagerPlaceholder": "Gestor de Ítems (por categoría) irá aquí...",
+    "manageMenu.editCategoryTitle": "Editar Categoría",
+    "manageMenu.addCategoryTitle": "Añadir Nueva Categoría",
+    "manageMenu.categoryNameEsPlaceholder": "Ej: Entrantes, Postres...",
+    "manageMenu.categoryNameEnPlaceholder": "Ej: Starters, Desserts...",
+    "manageMenu.categoryDescEsPlaceholder": "Descripción en español (opcional)",
+    "manageMenu.categoryDescEnPlaceholder": "Descripción en inglés (opcional)",
+    "manageMenu.categoryImagePreviewAlt": "Vista previa de la imagen de categoría",
+    "manageMenu.uploadImageButton": "Subir imagen seleccionada",
+    "manageMenu.categoryPositionLabel": "Posición (Orden)",
+    "manageMenu.categoryPositionPlaceholder": "Ej: 1, 2, 3...",
+    "manageMenu.categoryPositionDesc": "Número para ordenar (0 o mayor). Menor aparece primero.",
+    "manageMenu.categoryActiveLabel": "Categoría Activa",
+    "manageMenu.categoryActiveDesc": "Si está inactiva, no se mostrará a los clientes.",
+    "manageMenu.categoryCreateSuccess": "Categoría '{{name}}' creada con éxito.",
+    "manageMenu.categoryUpdateSuccess": "Categoría '{{name}}' actualizada con éxito.",
+    "manageMenu.categoryDeleteSuccess": "Categoría eliminada con éxito.",
+    "manageMenu.pendingImageUpload": "Por favor, sube la imagen seleccionada o elimínala antes de guardar."
   }
 }

@@ -1,59 +1,46 @@
-// filename: frontend/src/components/PrivateRoute.tsx
-// Version: 1.0.1 (Remove commented logs)
-
+// frontend/src/components/PrivateRoute.tsx
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom'; // Añadir useLocation
 
-// Definimos los roles posibles, coincidiendo con el backend
-// TODO: Considerar mover AppRole a un archivo de tipos compartido
 type AppRole = 'SUPER_ADMIN' | 'BUSINESS_ADMIN' | 'CUSTOMER_FINAL';
 
-// Props que espera este componente PrivateRoute
 interface PrivateRouteProps {
-  roles?: AppRole[]; // Array de roles permitidos para acceder a esta ruta (opcional)
-  children?: React.ReactNode; // Componente a renderizar si está autorizado
+  roles?: AppRole[];
+  children?: React.ReactNode;
 }
 
 function PrivateRoute({ roles, children }: PrivateRouteProps) {
-  // 1. Verificar si el usuario está autenticado (existe token en localStorage)
-  const token = localStorage.getItem('token');
-  // Opcional: verificar si el token es válido o ha expirado (más complejo, requeriría decodificarlo o una llamada API)
+  const location = useLocation(); // Hook para obtener la ruta actual
+  console.log(`[PrivateRoute] Checking route: ${location.pathname}. Required roles: ${roles?.join(', ')}`); // <--- LOG 1
 
-  // Si no hay token, redirigir al usuario a la página de login
+  const token = localStorage.getItem('token');
   if (!token) {
-    // console.log('PrivateRoute: No token found, redirecting to login.'); // Log eliminado
-    return <Navigate to="/login" replace />; // 'replace' evita añadir la ruta protegida al historial
+    console.log(`[PrivateRoute] No token for ${location.pathname}. Redirecting to login.`); // <--- LOG 2
+    return <Navigate to="/login" replace />;
   }
 
-  // 2. Verificar el rol del usuario autenticado (si se especificaron roles permitidos)
   const userJson = localStorage.getItem('user');
   let user = null;
   try {
       if(userJson) user = JSON.parse(userJson);
   } catch (e) {
-      console.error("Failed to parse user from localStorage", e);
-      // Si el usuario está corrupto, limpiar y redirigir
+      console.error("[PrivateRoute] Failed to parse user from localStorage", e);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       return <Navigate to="/login" replace />;
   }
 
+  console.log(`[PrivateRoute] User data for ${location.pathname}:`, user); // <--- LOG 3
 
-  // Si no hay información del usuario O si se requieren roles y el usuario no tiene un rol válido
   if (!user || (roles && roles.length > 0 && (!user.role || !roles.includes(user.role)))) {
-    // console.log('PrivateRoute: User role not allowed or user info missing, redirecting.'); // Log eliminado
-     // Limpiar localStorage por si el token existe pero el usuario/rol es inválido
-     localStorage.removeItem('token');
-     localStorage.removeItem('user');
-    return <Navigate to="/login" replace />; // Redirigir al login
+    console.log(`[PrivateRoute] Role/User check FAILED for ${location.pathname}. User role: ${user?.role}. Required: ${roles?.join(', ')}. Redirecting.`); // <--- LOG 4
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return <Navigate to="/login" replace />;
   }
 
-  // 3. Si el usuario está autenticado y su rol es permitido, renderizar el contenido
-  // Si 'children' se proporciona explícitamente (como en <PrivateRoute><MiPagina /></PrivateRoute>), se renderiza.
-  // Si no, se usa <Outlet /> para renderizar rutas anidadas (como en nuestro AppRoutes).
+  console.log(`[PrivateRoute] Role/User check PASSED for ${location.pathname}. Rendering Outlet/children.`); // <--- LOG 5
   return <>{children || <Outlet />}</>;
 }
 
 export default PrivateRoute;
-
-// End of File: frontend/src/components/PrivateRoute.tsx
