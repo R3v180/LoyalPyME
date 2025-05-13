@@ -1,9 +1,9 @@
-# LoyalPyME 🇪🇸 (v1.15.0)
+# LoyalPyME 🇪🇸 (v1.16.0)
 
 **LoyalPyME** es una plataforma web integral y modular (Frontend React + Backend Node.js) diseñada para Pequeñas y Medianas Empresas (PyMEs). La plataforma se compone de diferentes módulos que pueden ser activados por negocio:
 
 - **LoyalPyME Core:** Un sistema robusto para la gestión de programas de fidelización de clientes digitales (puntos, niveles, recompensas personalizadas, códigos QR para acumulación, panel de cliente, etc.).
-- **LoyalPyME Camarero (En Desarrollo):** Un módulo avanzado enfocado en la digitalización y optimización del servicio en el sector hostelero. Incluirá funcionalidades como carta digital accesible por QR en mesa, toma de comandas por el cliente o camarero, envío a pantallas de cocina/barra (KDS), gestión de mesas e interfaz para camareros.
+- **LoyalPyME Camarero (En Desarrollo Activo):** Un módulo avanzado enfocado en la digitalización y optimización del servicio en el sector hostelero. Actualmente incluye gestión de carta digital por el administrador, visualización de carta por el cliente final, y el inicio del flujo de toma de comandas por el cliente. Próximamente incluirá envío a pantallas de cocina/barra (KDS), gestión de mesas e interfaz para camareros.
 
 La plataforma está diseñada para ser mantenible, escalable y adaptable a las necesidades específicas de cada negocio.
 
@@ -11,7 +11,7 @@ La plataforma está diseñada para ser mantenible, escalable y adaptable a las n
 
 LoyalPyME busca ser el aliado tecnológico de las PyMEs, proporcionando herramientas digitales integradas para potenciar su crecimiento y eficiencia.
 Con **LoyalPyME Core**, las empresas pueden fomentar la lealtad y recurrencia de sus clientes, construyendo relaciones más sólidas y duraderas.
-Con el próximo módulo **LoyalPyME Camarero**, los negocios de hostelería podrán modernizar su operativa, reducir errores, agilizar el servicio, mejorar significativamente la experiencia del cliente final y obtener datos valiosos para la gestión.
+Con el módulo **LoyalPyME Camarero**, los negocios de hostelería podrán modernizar su operativa, reducir errores, agilizar el servicio, mejorar significativamente la experiencia del cliente final y obtener datos valiosos para la gestión.
 La plataforma es versátil, con aplicaciones en retail, servicios diversos (para LoyalPyME Core) y un fuerte enfoque en hostelería (para LoyalPyME Camarero).
 
 _(Consulta [PROJECT_STATUS.md](./PROJECT_STATUS.md) para ver el estado detallado, las decisiones de diseño clave y los hitos completados. Para la hoja de ruta y el backlog de funcionalidades, revisa [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md))._
@@ -47,20 +47,26 @@ _(Nota: Las capturas de pantalla podrían no reflejar las últimas funcionalidad
   - Documentación de la API Backend generada con Swagger y accesible vía `/api-docs`.
   - Logo estático y diseño de cabecera restringido para una imagen de marca consistente.
 
-**Módulo LoyalPyME Camarero (En Desarrollo - UI Gestión Carta Admin Completa):**
+**Módulo LoyalPyME Camarero (En Desarrollo Activo - Funcionalidades Clave del Cliente):**
 
-- **Base de Datos:** Modelos Prisma definidos para Mesas (con QR y estado), Carta Digital (Categorías, Ítems con i18n, precio, imagen, alérgenos, tags, disponibilidad, etc.), Modificadores (Grupos y Opciones con ajuste de precio), Pedidos (con estado, ítems, cliente/camarero opcional), y Personal (con roles y PINs).
-- **API Backend (Admin Negocio):** Endpoints CRUD implementados para la gestión de Categorías del Menú, Ítems del Menú y sus Modificadores. Estas APIs están protegidas y solo accesibles si el módulo Camarero está activo para el negocio.
-- **UI Frontend (Admin Negocio - Gestión Carta):** Interfaz completa para gestionar categorías de la carta digital (CRUD, reordenación), ítems del menú (CRUD con campos detallados, subida/recorte de imagen), grupos de modificadores asociados a ítems (CRUD), y opciones de modificadores dentro de los grupos (CRUD).
+- **Base de Datos:** Modelos Prisma definidos para Mesas (con QR y estado), Carta Digital (Categorías, Ítems con i18n, precio, imagen, alérgenos, tags, disponibilidad, etc.), Modificadores (Grupos y Opciones con ajuste de precio, tipo de UI, reglas de selección), Pedidos (con estado, ítems, cliente/camarero opcional, total calculado), y Personal (con roles y PINs).
+- **API Backend (Admin Negocio - Gestión Carta):** Endpoints CRUD implementados para la gestión de Categorías del Menú, Ítems del Menú y sus Modificadores. Protegidos y condicionados a la activación del módulo.
+- **UI Frontend (Admin Negocio - Gestión Carta):** Interfaz completa para gestionar la carta digital (CRUD para categorías, ítems con detalles y recorte de imagen, grupos de modificadores y sus opciones).
+- ⭐ **Visualización de Carta por Cliente Final (Backend y Frontend):**
+  - API pública (`/public/menu/business/:slug`) para obtener la carta activa y disponible.
+  - Página pública (`/m/:slug`) responsive que muestra la carta, incluyendo categorías (acordeón), ítems con detalles (imagen, precio, i18n) y sus modificadores de forma informativa.
+- ⭐ **Flujo de Pedido por Cliente Final (Backend y Frontend - MVP Inicial):**
+  - API pública (`POST /public/order/:slug`) para la creación de pedidos, con validación de ítems, modificadores, reglas de selección y cálculo de precios. Creación transaccional en BD.
+  - Frontend permite al cliente seleccionar cantidad, personalizar ítems con modificadores (RADIO/CHECKBOX), ver precio dinámico y añadir a un carrito local preliminar.
 
 ## Estado Actual y Próximos Pasos 🗺️
 
-La plataforma ha completado la **Fase 1 (Núcleo Funcional de LoyalPyME Core)**, la **implementación base de la arquitectura multi-módulo junto con el Panel Super Admin**, y una parte importante de la **Fase 3 (Módulo LoyalPyME Camarero - UI de Gestión de Carta para Administradores)**. La versión actual es **v1.15.0**.
+La plataforma ha completado la **Fase 1 (Núcleo Funcional de LoyalPyME Core)**, la **implementación base de la arquitectura multi-módulo con el Panel Super Admin**, la **UI de Gestión de Carta para Administradores del Módulo Camarero**, y un **progreso significativo en el flujo de cliente del Módulo Camarero (visualización de carta y MVP de toma de pedidos)**. La versión actual es **v1.16.0**.
 
 - El enfoque principal de desarrollo para el Módulo Camarero se centrará ahora en:
-  1.  Visualización de la Carta Digital por parte del cliente final.
-  2.  Flujo de Pedido por parte del cliente final.
-  3.  Sistema de Visualización en Cocina (KDS).
+  1.  Completar la UI del **Carrito de Pedido** del cliente final y la lógica de **envío de pedido** al backend.
+  2.  Implementar el Sistema de Visualización en Cocina (**KDS**) básico.
+  3.  Desarrollar la Interfaz de Camarero básica (MVP).
 - Consulta **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** para ver los **hitos completados en detalle** y las **decisiones de diseño clave**.
 - Consulta **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** para ver el **backlog completo** de tareas pendientes, la hoja de ruta detallada para el Módulo Camarero y las **ideas futuras**.
 
@@ -78,7 +84,7 @@ _(Una lista más detallada y continuamente actualizada se encuentra en [PROJECT_
     - `cd backend && yarn install`
     - Configurar el archivo `.env` completamente (copiar de `.env.example` y rellenar).
     - `npx prisma migrate reset` (Esto borrará y recreará la base de datos).
-    - `npx prisma db seed` (Esto poblará la base de datos con un negocio demo, admin, cliente, y datos de ejemplo para LCo/LC).
+    - `npx prisma db seed` (Esto poblará la base de datos con un negocio demo, admin, cliente, y datos de ejemplo para LCo/LC, incluyendo una carta digital).
     - `npx ts-node ./scripts/create-superadmin.ts` (Esto creará el usuario Super Admin global).
     - Ejecutar en dos terminales:
       1.  `yarn dev:build` (o `npx tsc --watch`)
@@ -87,7 +93,8 @@ _(Una lista más detallada y continuamente actualizada se encuentra en [PROJECT_
     - `cd ../frontend && yarn install`
     - Ejecutar: `yarn dev` (o `yarn dev --host` para acceso en red local).
 4.  **Acceso a las Aplicaciones:**
-    - **Cliente Final / Admin de Negocio:** `https://localhost:5173`
+    - **Cliente Final (Visualización de Carta):** `https://localhost:5173/m/restaurante-demo-loyalpyme` (o el slug de tu negocio demo).
+    - **Cliente Final (Dashboard LCo) / Admin de Negocio:** `https://localhost:5173`
       - Login Negocio Demo (LCo & LC): `admin@demo.com` / `password`
       - Login Cliente Demo (LCo): `cliente@demo.com` / `password`
     - **Panel Super Admin:** `https://localhost:5173/superadmin`

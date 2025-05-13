@@ -1,7 +1,7 @@
 # LoyalPyME - Estado del Proyecto y Decisiones Clave
 
-**Versión:** 1.15.0 (Módulo Camarero - UI Gestión Carta Admin Completa, Transición a Licencia Propietaria)
-**Fecha de Última Actualización:** [PON LA FECHA ACTUAL AQUÍ, ej: 11 de Mayo de 2025]
+**Versión:** 1.16.0 (Módulo Camarero - Visualización Carta Cliente y Flujo Pedido Backend/Frontend Inicial)
+**Fecha de Última Actualización:** 13 de Mayo de 2025
 
 ---
 
@@ -14,14 +14,14 @@
   - **Panel Super Admin:** Gestión de negocios y activación de módulos de la plataforma.
   - **Panel de Administración (Business Admin):** Gestión de las funcionalidades del módulo o módulos activos para su negocio (ej: clientes, recompensas, tiers para LCo; carta digital, mesas para LC).
   - **Portal de Cliente (Customer Final - LCo):** Dashboard con puntos, recompensas, historial de actividad (si LCo está activo).
-  - **Interfaces Módulo Camarero (LC):** Carta digital para clientes, app para camareros, KDS (si LC está activo).
+  - **Interfaces Módulo Camarero (LC):** Carta digital para clientes (visualización y pedido), app para camareros, KDS (si LC está activo).
 - **Propósito:** Herramienta digital completa, modular y adaptable para fidelización, optimización de servicio en hostelería, recurrencia y mejora de la relación cliente-negocio.
 
-_(Para una descripción más detallada de la visión a largo plazo, consulta el [README](./README.es.md) y para el plan de desarrollo, [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md))_
+_(Para una descripción más detallada de la visión a largo plazo, consulta el [README](./README.md) y para el plan de desarrollo, [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md))_
 
 ---
 
-## 2. Estado Actual Detallado (Hitos Completados - v1.15.0) ✅
+## 2. Estado Actual Detallado (Hitos Completados - v1.16.0) ✅
 
 - **Fase 1 (Núcleo Operativo LCo + Pulido Inicial):**
 
@@ -47,6 +47,21 @@ _(Para una descripción más detallada de la visión a largo plazo, consulta el 
     - Componente `ModifierGroupsManagementModal.tsx` (accesible desde la edición de un ítem) para CRUD de `ModifierGroup`s asociados al ítem.
     - Componente `ModifierOptionsManagementModal.tsx` (accesible desde la gestión de un grupo) para CRUD de `ModifierOption`s dentro de un grupo.
     - Internacionalización básica de la interfaz de gestión de menú.
+  - ⭐ **LC - Backend: API Pública para Visualización de Carta por Cliente Final:**
+    - Endpoint `/public/menu/business/:businessSlug` que devuelve la carta completa (categorías, ítems, modificadores) activa y disponible, con campos i18n.
+  - ⭐ **LC - Frontend: Página Pública para Visualización de Carta por Cliente Final:**
+    - Ruta `/m/:businessSlug/:tableIdentifier?` implementada.
+    - Consume la API pública y muestra la carta con categorías en acordeón, detalles de ítems (imagen, i18n, precio, etc.) y visualización de grupos/opciones de modificadores.
+  - ⭐ **LC - Backend: API Pública para Creación de Pedidos por Cliente Final:**
+    - Endpoint `POST /public/order/:businessSlug` para recibir pedidos.
+    - Realiza validación de ítems, modificadores, reglas de selección y cálculo de precios.
+    - Crea registros `Order`, `OrderItem`, `OrderItemModifierOption` de forma transaccional. Estado inicial `RECEIVED`.
+  - ⭐ **LC - Frontend: Inicio del Flujo de Pedido por Cliente Final:**
+    - UI en la vista de carta para seleccionar cantidad de ítems.
+    - UI interactiva para seleccionar modificadores (Radio/Checkbox) con actualización de precio en tiempo real.
+    - Validación de reglas de modificadores antes de añadir al carrito.
+    - Lógica para añadir ítems (simples o configurados) a un estado de carrito local.
+    - Visualización preliminar del total del carrito.
 
 ---
 
@@ -61,11 +76,16 @@ _(Para una descripción más detallada de la visión a largo plazo, consulta el 
   - Middleware `checkModuleActive` en backend; UI condicional en frontend.
 - **Estructura de Datos Módulo Camarero (LC):**
   - **Carta Digital:** Jerárquica (`MenuCategory`, `MenuItem`), con i18n, imágenes, precios, disponibilidad, alérgenos, tags, orden.
-  - **Modificadores:** `ModifierGroup` (asociado a `MenuItem`) y `ModifierOption` (dentro de un grupo), con tipos de UI, reglas de selección, ajustes de precio.
-  - (Otros modelos como `Table`, `Order`, `StaffPin` definidos pero aún no completamente integrados en UI/lógica de negocio avanzada).
+  - **Modificadores:** `ModifierGroup` (asociado a `MenuItem`) y `ModifierOption` (dentro de un grupo), con tipos de UI (`RADIO`, `CHECKBOX`), reglas de selección (`minSelections`, `maxSelections`, `isRequired`), ajustes de precio.
+  - **Pedidos:** Modelo `Order` (con `OrderStatus`), `OrderItem` (con `unitPrice`, `totalItemPrice`, `kdsDestination`), y `OrderItemModifierOption` (relacionando el ítem del pedido con la opción de modificador seleccionada).
+  - (Otros modelos como `Table`, `StaffPin` definidos).
 - **LoyalPyME Core (LCo) - Conceptos de Fidelización:**
   - Separación Puntos vs. Nivel. Actualización Nivel (Automática/Manual). Historial Actividad. i18n Recompensas.
 - **Almacenamiento Imágenes:** Cloudinary.
+- **Flujo de Pedido LC (Cliente):**
+  - **DTO de Pedido:** El frontend envía un DTO `CreateOrderPayloadDto` con `items: OrderItemDto[]`. Cada `OrderItemDto` incluye `menuItemId`, `quantity`, `notes?`, y `selectedModifierOptions?: SelectedModifierOptionDto[]`.
+  - **Cálculo de Precios:** El backend recalcula todos los precios al momento de la creación del pedido basándose en los precios actuales en la BD para ítems y modificadores.
+  - **Snapshots:** El backend guarda snapshots de nombres de ítems y modificadores en el pedido para referencia histórica (funcionalidad parcial o planificada).
 
 ---
 
@@ -77,6 +97,8 @@ _(Para una descripción más detallada de la visión a largo plazo, consulta el 
 - **Flujo de Datos Frontend (Hooks y LocalStorage):** Asegurar estructura de datos completa (con flags de módulos) desde API (`/api/profile`) y `localStorage`.
 - **Manejo de Modales Anidados (Frontend):** La gestión del estado `opened` y el paso de datos entre modales anidados (ej. Ítem -> Grupos -> Opciones) requiere una estructura clara de props y callbacks.
 - **Validación de Formularios con Zod y Mantine:** Uso de `z.coerce` para campos numéricos y manejo de errores/estado `dirty`.
+- **Refactorización de Componentes React:** Dividir componentes grandes (como `PublicMenuViewPage`) en subcomponentes más pequeños y manejables mejora la legibilidad y facilita la gestión del estado y la lógica.
+- **Errores de Tipo en Prisma `CreateInput`:** Las relaciones opcionales en Prisma (`tableId?` en `Order`) a veces requieren una construcción más explícita del objeto `data` en lugar de usar propagación condicional directa para evitar errores de tipo.
 
 _(Para una guía más exhaustiva, consulta [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md))_
 
@@ -85,17 +107,23 @@ _(Para una guía más exhaustiva, consulta [TROUBLESHOOTING_GUIDE.md](./TROUBLES
 ## 5. Próximos Pasos Inmediatos / Prioridades ⏳📌
 
 1.  **(Prioridad Principal) Continuación Desarrollo Módulo "LoyalPyME Camarero" (LC):**
-    - **Objetivo:** Avanzar hacia un MVP funcional del módulo Camarero.
-    - **Tareas Inmediatas (LC):**
-      1.  **Visualización de Carta Digital por el Cliente Final (Frontend y Backend):**
-          - API Pública Backend para obtener datos de la carta (solo ítems/categorías activas).
-          - Página Frontend (`/m/:businessSlug/:tableQrValue` o similar) para mostrar la carta.
-      2.  **Flujo de Pedido Básico por el Cliente Final (Frontend y Backend).**
-      3.  **KDS (Kitchen Display System) Básico (Frontend y Backend).**
-      4.  **Interfaz Camarero Básica (MVP) (Frontend y Backend).**
-      5.  Gestión de Personal y Mesas (Backend y luego Frontend Admin).
-2.  **(Paralelo/Continuo) Testing:** Escribir tests para las nuevas funcionalidades.
-3.  **Refinamiento UI/UX:** Mejoras visuales y de usabilidad en la gestión de menú (ej. reordenación drag-and-drop).
+    - **Objetivo:** Avanzar hacia un MVP funcional del módulo Camarero, enfocándose en completar el flujo de pedido del cliente.
+    - **Tareas Inmediatas (LC - Flujo de Pedido Frontend Tarea #9):**
+      1.  **Desarrollar UI Componente "Carrito de Pedido" Detallado:**
+          - Listar ítems con detalles (nombre, cantidad, modificadores seleccionados, precio por línea, subtotal).
+          - Permitir modificar cantidad de un ítem en el carrito.
+          - Permitir eliminar un ítem del carrito.
+      2.  **Permitir añadir notas generales** al pedido.
+      3.  **Implementar botón "Enviar Pedido"** que construya el DTO y llame a la API `POST /public/order/:businessSlug`.
+      4.  **Manejar feedback al usuario** sobre el estado del envío del pedido (éxito, errores).
+    - **Tareas Siguientes (LC - Post Flujo Pedido Cliente):**
+      1.  KDS (Kitchen Display System) Básico (Frontend y Backend - Tarea #10).
+      2.  Interfaz Camarero Básica (MVP) (Frontend y Backend - Tarea #11).
+      3.  Gestión de Personal y Mesas (Backend y luego Frontend Admin - Tareas #12, #13).
+2.  **(Paralelo/Continuo) Testing y Fundamentos Técnicos (Tarea #14):**
+    - Escribir tests para los nuevos endpoints y funcionalidades (especialmente `/public/menu` y `/public/order`).
+    - Continuar con la validación robusta backend (Zod).
+3.  **Refinamiento UI/UX:** Mejoras visuales y de usabilidad en la carta pública y el flujo de pedido.
 
 _(Para ver la hoja de ruta completa y el backlog, consulta [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md))_
 
