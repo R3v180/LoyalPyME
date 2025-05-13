@@ -65,7 +65,10 @@
     "loginButton": "Iniciar Sesión",
     "errorCredentials": "Credenciales inválidas.",
     "errorServer": "Error del servidor durante el inicio de sesión.",
-    "errorUnknown": "Ocurrió un error inesperado."
+    "errorUnknown": "Ocurrió un error inesperado.",
+    "accessMenuDirectlyTitle": "¿Conoces el identificador del negocio?",
+    "businessSlugPlaceholder": "Identificador del negocio (slug)",
+    "goToMenuButton": "Ver Menú"
   },
   "registerPage": {
     "welcomeTitle": "¡Bienvenido a LoyalPyME!",
@@ -230,7 +233,11 @@
       "rewardsTitle": "Recompensas Disponibles:",
       "unknownAssigner": "Desconocido",
       "redeemButton": "Canjear",
-      "viewAllButtonShort": "Ver Todo"
+      "viewAllButtonShort": "Ver Todo",
+      "viewMenuFor": "Ver Menú de {{businessName}}",
+      "viewMenuDefaultTitle": "Ver la Carta y Pedir",
+      "viewMenuSubtitle": "Accede al menú digital y haz tu pedido.",
+      "viewMenuButton": "Ir a la Carta"
     },
     "activityTab": {
       "noActivity": "Aún no tienes actividad registrada.",
@@ -244,6 +251,9 @@
       "desc_GIFT": "Regalo canjeado: {{rewardName}}",
       "desc_ADJUSTED": "Ajuste manual de puntos",
       "desc_ADJUSTED_REASON": "Ajuste manual: {{reason}}"
+    },
+    "rewards": {
+        "affordable": "Asequible"
     }
   },
   "adminCommon": {
@@ -707,6 +717,13 @@
     "manageMenu.markNotAvailable": "Marcar No Disponible",
     "manageMenu.manageModifiersTooltip": "Gestionar Modificadores",
     "manageMenu.viewItemsTooltip": "Ver/Gestionar Ítems de esta Categoría",
+    "manageMenu.previewButton": "Previsualizar Carta Pública",
+    "manageMenu.previewErrorNoSlug": "No se pudo obtener el identificador del negocio para la previsualización.",
+    "manageMenu.previewDisabledTooltip": "Identificador de negocio no disponible para previsualizar.",
+    "manageMenu.toCategories": "a Categorías",
+    "manageMenu.modifierGroupCreateSuccess": "Grupo '{{name}}' creado con éxito.",
+    "manageMenu.modifierGroupUpdateSuccess": "Grupo '{{name}}' actualizado con éxito.",
+    "manageMenu.modifierGroupDeleteSuccess": "Grupo de modificadores eliminado con éxito.",
     "menuCategoryForm": {
         "errorInvalidCropOrImage": "Recorte o imagen no válida.",
         "errorUploadingWithDetail": "Error al subir: {{error}}",
@@ -726,6 +743,26 @@
         "imageUploadError": "No se pudo subir la imagen de ítem: {{error}}",
         "altPreview": "Vista previa del ítem",
         "altCropImage": "Imagen del ítem para recortar"
+    },
+    "menuItem": {
+        "allergen.GLUTEN": "Gluten",
+        "allergen.LACTOSE": "Lactosa",
+        "allergen.NUTS": "Frutos Secos",
+        "allergen.SOY": "Soja",
+        "allergen.FISH": "Pescado",
+        "allergen.CRUSTACEANS": "Crustáceos",
+        "allergen.CELERY": "Apio",
+        "allergen.MUSTARD": "Mostaza",
+        "allergen.SESAME": "Sésamo",
+        "allergen.SULPHITES": "Sulfitos",
+        "allergen.LUPIN": "Altramuces",
+        "allergen.MOLLUSCS": "Moluscos",
+        "tag.VEGAN": "Vegano",
+        "tag.VEGETARIAN": "Vegetariano",
+        "tag.SPICY": "Picante",
+        "tag.NEW": "Nuevo",
+        "tag.POPULAR": "Popular",
+        "tag.HOUSE_SPECIAL": "Especialidad de la Casa"
     },
     "modifierGroupsModal": {
         "title": "Gestionar Grupos de Modificadores para: \"{{itemName}}\"",
@@ -819,5 +856,36 @@
     "menuItemHook": {
       "errorNoCategoryForItem": "No se puede añadir un ítem sin una categoría seleccionada."
     }
+  },
+  "publicMenu": {
+    "unnamedItem": "Ítem sin nombre",
+    "unnamedCategory": "Categoría sin nombre",
+    "noCategories": "No hay categorías de menú disponibles.",
+    "noItemsInCategory": "No hay ítems en esta categoría.",
+    "menuNotAvailable": "Menú no disponible o no encontrado.",
+    "customizeButton": "Personalizar",
+    "optionsTitle": "Personaliza tu elección:",
+    "itemNotesLabel": "Notas para este ítem (opcional)",
+    "itemNotesPlaceholder": "Ej: Sin cebolla, extra picante...",
+    "quantity": "Cantidad",
+    "confirmAndAddToCart": "Confirmar y Añadir",
+    "customizeAndAdd": "Personalizar y Añadir",
+    "addToCart": "Añadir al Carrito",
+    "itemAddedTitle": "¡Añadido!",
+    "itemAddedMessage": "{{itemName}} (x{{quantity}}) añadido al carrito.",
+    "invalidSelectionTitle": "Selección Inválida",
+    "invalidSelectionMsg": "Por favor, completa todas las opciones obligatorias de los modificadores.",
+    "modifier.chooseOneRequired": "Elige 1 (obligatorio)",
+    "modifier.chooseMinUpToMax_required": "Elige de {{min}} a {{max}} (obligatorio)",
+    "modifier.chooseUpToMaxOptional": "Elige hasta {{max}} (opcional)",
+    "modifier.chooseOneOptional": "Elige 1 (opcional)",
+    "modifier.chooseOptional": "Opcional",
+    "modifier.chooseAtLeastOneUpToMax_required": "Elige al menos 1 hasta {{max}} (obligatorio)",
+    "cart.title": "Tu Pedido",
+    "cart.total": "Total"
+  },
+  "error": {
+    "missingBusinessSlug": "Error: Slug del negocio no proporcionado.",
+    "noMenuDataReceived": "No se recibieron datos del menú."
   }
 }

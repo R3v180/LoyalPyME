@@ -1,7 +1,7 @@
 // frontend/src/components/public/menu/MenuItemCard.tsx
-// Version: 1.0.3 (Improved quantity handling for simple add vs. configuring)
+// Version: 1.0.4 (Correct i18n key path for allergens and tags)
 
-import React, { useState, useEffect } from 'react'; // Añadido useState y useEffect
+import React, { useState, useEffect } from 'react';
 import {
     Paper, Title, Text, Stack, Group, Badge, Box, Image,
     NumberInput, Button as MantineButton, TextInput as MantineTextInput
@@ -29,10 +29,10 @@ interface MenuItemCardProps {
     currentConfig: MenuItemCardConfiguringState | null;
     onStartConfigure: () => void;
     onCancelConfiguration: () => void;
-    onQuantityChange: (newQuantity: number) => void; // Para cuando se está configurando
+    onQuantityChange: (newQuantity: number) => void;
     onModifierSelectionChange: (groupId: string, newSelection: string | string[], groupUiType: ModifierUiType) => void;
     onNotesChange: (newNotes: string) => void;
-    onAddToCart: (quantityIfSimple?: number) => void; // Modificado para aceptar cantidad
+    onAddToCart: (quantityIfSimple?: number) => void;
 }
 
 const MenuItemCard: React.FC<MenuItemCardProps> = ({
@@ -47,20 +47,13 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
     onAddToCart,
 }) => {
     const { t, i18n } = useTranslation();
-
-    // Estado local para la cantidad cuando NO se está configurando y no hay modificadores
     const [simpleQuantity, setSimpleQuantity] = useState<number>(1);
 
     useEffect(() => {
-        // Si empezamos a configurar este ítem, y currentConfig tiene una cantidad,
-        // podríamos querer resetear simpleQuantity o no, dependiendo del flujo deseado.
-        // Por ahora, si se está configurando, la cantidad viene de currentConfig.
-        // Si dejamos de configurar, reseteamos simpleQuantity a 1.
         if (!isConfiguringThisItem) {
             setSimpleQuantity(1);
         }
     }, [isConfiguringThisItem]);
-
 
     const displayPrice = isConfiguringThisItem && currentConfig ? currentConfig.currentUnitPrice : item.price;
     const displayQuantity = isConfiguringThisItem && currentConfig ? currentConfig.quantity : simpleQuantity;
@@ -70,15 +63,15 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
     let mainButtonDisabled = false;
 
     if (isConfiguringThisItem && currentConfig) {
-        mainButtonAction = () => onAddToCart(); // El padre usará configuringItem
-        mainButtonText = t('publicMenu.confirmAndAddToCart', 'Confirmar y Añadir');
+        mainButtonAction = () => onAddToCart();
+        mainButtonText = t('publicMenu.confirmAndAddToCart');
         mainButtonDisabled = !currentConfig.areModifiersValid;
     } else if (item.modifierGroups && item.modifierGroups.length > 0) {
         mainButtonAction = onStartConfigure;
-        mainButtonText = t('publicMenu.customizeAndAdd', 'Personalizar y Añadir');
+        mainButtonText = t('publicMenu.customizeAndAdd');
     } else {
-        mainButtonAction = () => onAddToCart(simpleQuantity); // Pasar la cantidad simple
-        mainButtonText = t('publicMenu.addToCart', 'Añadir');
+        mainButtonAction = () => onAddToCart(simpleQuantity);
+        mainButtonText = t('publicMenu.addToCart');
     }
 
     const handleNumberInputChange = (value: number | string) => {
@@ -98,7 +91,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                 )}
                 <Stack gap="xs" style={{ flexGrow: 1 }}>
                     <Title order={5}>
-                        {i18n.language === 'es' && item.name_es ? item.name_es : item.name_en || item.name_es || t('publicMenu.unnamedItem', 'Ítem sin nombre')}
+                        {i18n.language === 'es' && item.name_es ? item.name_es : item.name_en || item.name_es || t('publicMenu.unnamedItem')}
                     </Title>
                     <Text c="blue.7" fw={700} fz="lg">
                         {displayPrice.toLocaleString(i18n.language, { style: 'currency', currency: 'EUR' })}
@@ -114,13 +107,13 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                             leftSection={<IconListDetails size={14}/>}
                             mt="xs"
                         >
-                            {t('publicMenu.customizeButton', 'Personalizar')}
+                            {t('publicMenu.customizeButton')}
                         </MantineButton>
                     )}
 
                     {isConfiguringThisItem && currentConfig && item.modifierGroups && item.modifierGroups.length > 0 && (
                         <Box mt="sm" pl="xs">
-                            <Title order={6} c="dimmed" tt="uppercase" fz="xs" mb="xs">{t('publicMenu.optionsTitle', 'Personaliza tu elección:')}</Title>
+                            <Title order={6} c="dimmed" tt="uppercase" fz="xs" mb="xs">{t('publicMenu.optionsTitle')}</Title>
                             {item.modifierGroups.map((group: PublicMenuModifierGroup) => (
                                 <ModifierGroupInteractiveRenderer
                                     key={group.id}
@@ -130,8 +123,8 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                                 />
                             ))}
                             <MantineTextInput
-                                label={t('publicMenu.itemNotesLabel', 'Notas para este ítem (opcional)')}
-                                placeholder={t('publicMenu.itemNotesPlaceholder', 'Ej: Sin cebolla, extra picante...')}
+                                label={t('publicMenu.itemNotesLabel')}
+                                placeholder={t('publicMenu.itemNotesPlaceholder')}
                                 value={currentConfig.itemNotes}
                                 onChange={(event) => onNotesChange(event.currentTarget.value)}
                                 mt="sm"
@@ -140,22 +133,31 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                         </Box>
                     )}
                     
+                    {/* ---------- CORRECCIÓN AQUÍ ---------- */}
                     {(item.allergens.length > 0 || item.tags.length > 0) && (
                         <Group gap="xs" mt="sm">
-                            {item.allergens.map(allergen => <Badge key={allergen} variant="outline" color="orange" size="xs">{t(`menuItem.allergen.${allergen}`, allergen)}</Badge>)}
-                            {item.tags.map(tag => <Badge key={tag} variant="light" color="grape" size="xs">{t(`menuItem.tag.${tag}`, tag)}</Badge>)}
+                            {item.allergens.map(allergen => (
+                                <Badge key={allergen} variant="outline" color="orange" size="xs">
+                                    {t(`adminCamarero.menuItem.allergen.${allergen}`, allergen)} {/* <--- Añadido adminCamarero. */}
+                                </Badge>
+                            ))}
+                            {item.tags.map(tag => (
+                                <Badge key={tag} variant="light" color="grape" size="xs">
+                                    {t(`adminCamarero.menuItem.tag.${tag}`, tag)} {/* <--- Añadido adminCamarero. */}
+                                </Badge>
+                            ))}
                         </Group>
                     )}
+                    {/* ---------- FIN CORRECCIÓN ---------- */}
+
 
                     <Group mt="md" justify="flex-end" align="flex-end">
                         <NumberInput
-                            // id={`quantity-${item.id}`} // Ya no es estrictamente necesario si no leemos del DOM
-                            label={t('publicMenu.quantity', 'Cantidad')}
-                            value={displayQuantity} // Usa la cantidad correcta según el modo
-                            onChange={handleNumberInputChange} // Nuevo handler unificado
+                            label={t('publicMenu.quantity')}
+                            value={displayQuantity}
+                            onChange={handleNumberInputChange}
                             min={1} max={20} step={1} size="xs"
                             style={{ width: '100px' }}
-                            // No es readOnly si no se está configurando Y no tiene modificadores, O si se está configurando.
                             readOnly={!isConfiguringThisItem && !!(item.modifierGroups && item.modifierGroups.length > 0)}
                         />
                         <MantineButton 
