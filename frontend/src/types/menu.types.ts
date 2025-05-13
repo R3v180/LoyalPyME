@@ -1,6 +1,7 @@
 // frontend/src/types/menu.types.ts
+// Version: (tu versión existente + tipos para menú público)
 
-// --- MENU CATEGORY (ya debería estar similar a esto) ---
+// --- MENU CATEGORY (Existente) ---
 export interface MenuCategoryData {
   id: string;
   businessId: string; 
@@ -13,7 +14,6 @@ export interface MenuCategoryData {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  // _count?: { items?: number }; // Opcional si el backend lo envía
   items?: MenuItemData[]; // Opcional para cargas anidadas
 }
 
@@ -27,7 +27,7 @@ export interface MenuCategoryFormData {
   isActive: boolean;
 }
 
-// --- MENU ITEM (Actualizado y Detallado) ---
+// --- MENU ITEM (Existente) ---
 export interface MenuItemData {
   id: string;
   categoryId: string;
@@ -36,19 +36,19 @@ export interface MenuItemData {
   name_en: string | null;
   description_es: string | null;
   description_en: string | null;
-  price: number; // Prisma usa Decimal, pero en frontend a menudo se maneja como number
+  price: number; 
   imageUrl: string | null;
-  allergens: string[]; // Array de strings, ej: ["GLUTEN", "LACTOSE"]
-  tags: string[];      // Array de strings, ej: ["VEGAN", "SPICY"]
+  allergens: string[];
+  tags: string[];
   isAvailable: boolean;
   position: number;
-  preparationTime: number | null; // en minutos, por ejemplo
+  preparationTime: number | null;
   calories: number | null;
-  kdsDestination: string | null;  // ej: "COCINA_PRINCIPAL", "BARRA"
-  sku: string | null;             // Stock Keeping Unit
+  kdsDestination: string | null;
+  sku: string | null;
   createdAt: string;
   updatedAt: string;
-  // modifierGroups?: ModifierGroupData[]; // Opcional para cargas anidadas
+  modifierGroups?: ModifierGroupData[]; // MODIFICADO: Añadido ? para que sea opcional si no se carga siempre
 }
 
 export interface MenuItemFormData {
@@ -56,24 +56,22 @@ export interface MenuItemFormData {
   name_en: string | null;
   description_es: string | null;
   description_en: string | null;
-  price: number; // El formulario manejará number, el servicio backend convertirá a Decimal si es necesario
+  price: number; 
   imageUrl: string | null;
   allergens: string[];
   tags: string[];
   isAvailable: boolean;
   position: number;
-  preparationTime?: number | null; // Los opcionales aquí también como opcionales
+  preparationTime?: number | null;
   calories?: number | null;
   kdsDestination?: string | null;
   sku?: string | null;
-  // categoryId no es parte del form data del ítem en sí, se pasa por separado al crear/asociar
 }
 
-// --- MODIFIER GROUP (Actualizado y Detallado) ---
-export enum ModifierUiType { // Enum para los tipos de UI
+// --- MODIFIER GROUP (Existente) ---
+export enum ModifierUiType {
     RADIO = 'RADIO',
     CHECKBOX = 'CHECKBOX',
-    // Potenciales futuros: QUANTITY, TEXT_INPUT etc.
 }
 
 export interface ModifierGroupData {
@@ -82,12 +80,12 @@ export interface ModifierGroupData {
   businessId: string;
   name_es: string;
   name_en: string | null;
-  uiType: ModifierUiType; // Usar el Enum
+  uiType: ModifierUiType;
   minSelections: number;
-  maxSelections: number; // Podría ser null para "sin límite" si uiType es CHECKBOX
+  maxSelections: number;
   position: number;
-  isRequired: boolean; // Si el cliente DEBE hacer una selección en este grupo
-  options?: ModifierOptionData[]; // Opcional para cargas anidadas
+  isRequired: boolean;
+  options?: ModifierOptionData[];
   createdAt: string;
   updatedAt: string;
 }
@@ -100,20 +98,19 @@ export interface ModifierGroupFormData {
   maxSelections: number;
   position: number;
   isRequired: boolean;
-  // menuItemId se pasa por separado
 }
 
 
-// --- MODIFIER OPTION (Actualizado y Detallado) ---
+// --- MODIFIER OPTION (Existente) ---
 export interface ModifierOptionData {
   id: string;
   groupId: string;
   name_es: string;
   name_en: string | null;
-  priceAdjustment: number; // Prisma usa Decimal, en frontend number
+  priceAdjustment: number;
   position: number;
-  isDefault: boolean; // Si esta opción viene preseleccionada
-  isAvailable: boolean; // Si la opción está disponible para ser seleccionada
+  isDefault: boolean;
+  isAvailable: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -125,5 +122,58 @@ export interface ModifierOptionFormData {
   position: number;
   isDefault: boolean;
   isAvailable: boolean;
-  // groupId se pasa por separado
+}
+
+// --- Tipos para la Visualización Pública del Menú (NUEVOS) ---
+export interface PublicMenuModifierOption {
+    id: string;
+    name_es: string | null;
+    name_en: string | null;
+    priceAdjustment: number; // En frontend, esperamos un número.
+    position: number;
+    isDefault: boolean;
+}
+
+export interface PublicMenuModifierGroup {
+    id: string;
+    name_es: string | null;
+    name_en: string | null;
+    uiType: ModifierUiType; // Reutilizamos el enum existente
+    minSelections: number;
+    maxSelections: number;
+    isRequired: boolean;
+    position: number;
+    options: PublicMenuModifierOption[];
+}
+
+export interface PublicMenuItem {
+    id: string;
+    name_es: string | null;
+    name_en: string | null;
+    description_es: string | null;
+    description_en: string | null;
+    price: number; // En frontend, esperamos un número.
+    imageUrl: string | null;
+    allergens: string[];
+    tags: string[];
+    position: number;
+    modifierGroups: PublicMenuModifierGroup[];
+}
+
+export interface PublicMenuCategory {
+    id: string;
+    name_es: string | null;
+    name_en: string | null;
+    description_es: string | null;
+    description_en: string | null;
+    imageUrl: string | null;
+    position: number;
+    items: PublicMenuItem[];
+}
+
+export interface PublicDigitalMenuData {
+    businessName: string;
+    businessSlug: string;
+    businessLogoUrl: string | null;
+    categories: PublicMenuCategory[];
 }

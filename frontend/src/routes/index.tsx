@@ -1,4 +1,5 @@
 // frontend/src/routes/index.tsx
+// Version: (tu versión existente + ruta para menú público)
 
 console.log("[Routes Index] Archivo src/routes/index.tsx cargado."); // Log #1: Carga del archivo
 
@@ -15,6 +16,9 @@ import RegisterPage from '../pages/RegisterPage';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/ResetPasswordPage';
 import RegisterBusinessPage from '../pages/RegisterBusinessPage';
+// --- NUEVA IMPORTACIÓN PARA LA PÁGINA DEL MENÚ PÚBLICO ---
+import PublicMenuViewPage from '../pages/PublicMenuViewPage';
+// --- FIN NUEVA IMPORTACIÓN ---
 
 // Página de Cliente
 import CustomerDashboardPage from '../pages/CustomerDashboardPage';
@@ -31,7 +35,6 @@ import AdminCustomerManagementPage from '../pages/admin/AdminCustomerManagementP
 import SuperAdminPage from '../pages/admin/SuperAdminPage';
 
 // Página de Gestión de Menú (Admin Camarero)
-// ***** ASEGÚRATE QUE ESTA RUTA DE IMPORTACIÓN ES CORRECTA *****
 import MenuManagementPage from '../pages/admin/camarero/MenuManagementPage';
 
 
@@ -47,6 +50,14 @@ function AppRoutes() {
         <Route path="/register-business" element={<RegisterBusinessPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        
+        {/* --- NUEVA RUTA PARA EL MENÚ PÚBLICO --- */}
+        {/* Usaremos :tableIdentifier? para hacerlo opcional por ahora */}
+        <Route path="/m/:businessSlug/:tableIdentifier?" element={<PublicMenuViewPage />} />
+        {/* Si prefieres empezar sin tableIdentifier: */}
+        {/* <Route path="/m/:businessSlug" element={<PublicMenuViewPage />} /> */}
+        {/* --- FIN NUEVA RUTA --- */}
+
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Route>
 
@@ -73,10 +84,9 @@ function AppRoutes() {
             <Route path="customers" element={<AdminCustomerManagementPage />} />
 
             {/* Rutas Módulo Camarero (LC) */}
-            {/* ***** ESTA ES LA RUTA QUE NOS INTERESA ***** */}
             <Route 
                 path="camarero/menu-editor" 
-                element={<MenuManagementPage />} // Directamente el componente
+                element={<MenuManagementPage />}
             />
             
             {/* Ejemplo de futuras rutas para Camarero:
