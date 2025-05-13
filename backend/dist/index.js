@@ -1,7 +1,6 @@
 "use strict";
 // backend/src/index.ts
-// Version: 1.6.1 (de tu original)
-// Modificado para incluir superAdminRouter y camareroAdminRouter
+// Version: 1.6.2 (Add public menu router, update Swagger info)
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -27,8 +26,11 @@ const tiers_routes_1 = __importDefault(require("./routes/tiers.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const businesses_routes_1 = __importDefault(require("./routes/businesses.routes"));
 const uploads_routes_1 = __importDefault(require("./routes/uploads.routes"));
-const superadmin_routes_1 = __importDefault(require("./routes/superadmin.routes")); // Ya estaba de antes
-const camarero_admin_routes_1 = __importDefault(require("./routes/camarero-admin.routes")); // <-- NUEVA IMPORTACIÓN
+const superadmin_routes_1 = __importDefault(require("./routes/superadmin.routes"));
+const camarero_admin_routes_1 = __importDefault(require("./routes/camarero-admin.routes"));
+// --- NUEVA IMPORTACIÓN ---
+const public_menu_routes_1 = __importDefault(require("./routes/public-menu.routes")); // Importar el nuevo router
+// --- FIN NUEVA IMPORTACIÓN ---
 // Cron Job Logic
 const tier_logic_service_1 = require("./tiers/tier-logic.service");
 dotenv_1.default.config();
@@ -59,20 +61,20 @@ app.use((req, res, next) => {
     }
     next();
 });
-// --- Configuración de Swagger COMPLETA (DE TU VERSIÓN ORIGINAL) ---
+// --- Configuración de Swagger ---
 const swaggerOptions = {
     definition: {
         openapi: '3.0.0',
         info: {
             title: 'LoyalPyME API',
-            version: '1.8.0', // Actualizada versión para reflejar nuevos módulos
-            description: 'API REST para la plataforma de fidelización LoyalPyME. Permite gestionar clientes, puntos, niveles, recompensas, historial, subidas de archivos, autenticación, funcionalidades de Super Administrador y administración del Módulo Camarero.', // Descripción actualizada
+            version: '1.15.0', // <<--- ACTUALIZADO para coincidir con package.json
+            description: 'API REST para la plataforma de fidelización LoyalPyME. Permite gestionar clientes, puntos, niveles, recompensas, historial, subidas de archivos, autenticación, funcionalidades de Super Administrador, administración del Módulo Camarero, y visualización de menú público.', // Descripción actualizada
             contact: { name: 'Olivier Hottelet', email: 'olivierhottelet1980@gmail.com' },
-            license: { name: 'AGPL-3.0', url: 'https://www.gnu.org/licenses/agpl-3.0.html' }
+            license: { name: 'Software Propietario. Copyright (c) 2024-2025 Olivier Hottelet', url: 'LICENSE.MD' } // <<--- CORREGIDA LA LICENCIA
         },
         servers: [
-            { url: `http://localhost:${port}/api`, description: 'Servidor de Desarrollo Local (API)', },
-            { url: `http://localhost:${port}/public`, description: 'Servidor de Desarrollo Local (Público)', },
+            { url: `http://localhost:${port}/api`, description: 'Servidor de Desarrollo Local (API Protegida)', }, // Descripción actualizada
+            { url: `http://localhost:${port}/public`, description: 'Servidor de Desarrollo Local (API Pública)', }, // Descripción actualizada
         ],
         components: {
             securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', } },
@@ -190,8 +192,8 @@ const swaggerOptions = {
                     }
                 }
             }
-        }, // <-- Esta llave cierra el objeto `paths`
-        security: [{ bearerAuth: [] }], // security a nivel raíz
+        }, // TU BLOQUE PATHS COMPLETO Y ORIGINAL VA AQUÍ
+        security: [{ bearerAuth: [] }],
     },
     apis: [],
 };
@@ -200,23 +202,24 @@ app.use('/api-docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.de
 // --- Montaje de Rutas ---
 // Rutas Públicas
 app.use('/api/auth', auth_routes_1.default);
-app.use('/public/businesses', businesses_routes_1.default);
+app.use('/public/businesses', businesses_routes_1.default); // Lista pública de negocios para registro
+// --- NUEVO MONTAJE DE RUTA PÚBLICA ---
+app.use('/public/menu', public_menu_routes_1.default); // Para la carta digital pública
+// --- FIN NUEVO MONTAJE DE RUTA PÚBLICA ---
 // Rutas de Super Administrador
 app.use('/api/superadmin', superadmin_routes_1.default);
-// --- NUEVO MONTAJE DEL ROUTER DE ADMIN CAMARERO ---
+// Rutas de Admin del Negocio (Módulo Camarero)
 app.use('/api/camarero/admin', camarero_admin_routes_1.default);
-// --- FIN NUEVO MONTAJE ---
-// Rutas Protegidas
-app.use('/api/profile', auth_middleware_1.authenticateToken, protected_routes_1.default);
-app.use('/api/rewards', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), rewards_routes_1.default);
-app.use('/api/points', auth_middleware_1.authenticateToken, points_routes_1.default);
-app.use('/api/customer', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.CUSTOMER_FINAL]), customer_routes_1.default);
-//  Se montará activityRouter dentro de customerRouter o como una ruta separada si es necesario
-//  Por ahora, lo comento aquí si ya está montado en customer.routes.ts
-// app.use('/api/customer/activity', authenticateToken, checkRole([UserRole.CUSTOMER_FINAL]), activityRouter); 
-app.use('/api/tiers', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), tiers_routes_1.default);
-app.use('/api/admin', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), admin_routes_1.default);
-app.use('/api/uploads', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), uploads_routes_1.default);
+// Rutas Protegidas (requieren token)
+app.use('/api/profile', auth_middleware_1.authenticateToken, protected_routes_1.default); // Datos del usuario logueado
+app.use('/api/rewards', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), rewards_routes_1.default); // CRUD Recompensas LCo
+app.use('/api/points', auth_middleware_1.authenticateToken, points_routes_1.default); // Generar QR (admin), Validar QR (cliente), Canjear Recompensa (cliente)
+app.use('/api/customer', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.CUSTOMER_FINAL]), customer_routes_1.default); // Dashboard cliente LCo
+app.use('/api/tiers', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), tiers_routes_1.default); // CRUD Tiers LCo
+app.use('/api/admin', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), admin_routes_1.default); // Estadísticas, Gestión Clientes LCo
+// --- CORRECCIÓN: AÑADIR SUPER_ADMIN A RUTAS DE UPLOADS ---
+app.use('/api/uploads', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN, client_1.UserRole.SUPER_ADMIN]), uploads_routes_1.default);
+// --- FIN CORRECCIÓN ---
 // --- Fin Montaje de Rutas ---
 // Ruta raíz básica
 app.get('/', (req, res) => {
