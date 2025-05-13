@@ -16,10 +16,10 @@ export interface CustomerBusinessConfig {
 // Interfaz para Datos del Beneficio de un Tier
 export interface TierBenefitData {
   id: string;
-  type: string;
+  type: string; // Podría ser un enum si los tipos son fijos: 'POINTS_MULTIPLIER' | 'EXCLUSIVE_REWARD_ACCESS' | 'CUSTOM_BENEFIT'
   value: string;
   description: string | null;
-  // isActive?: boolean; // Si el backend lo devuelve para el cliente
+  // isActive?: boolean; // Si el backend lo devuelve para el cliente y es necesario
 }
 
 // Interfaz para Datos del Tier
@@ -29,7 +29,7 @@ export interface TierData {
     level: number;
     minValue: number;
     isActive: boolean;
-    benefits?: TierBenefitData[]; // Lista de beneficios del tier
+    benefits?: TierBenefitData[];
 }
 
 // --- Interfaz UserData ACTUALIZADA ---
@@ -37,29 +37,32 @@ export interface UserData {
     id: string;
     email: string;
     name?: string | null;
-    role: 'SUPER_ADMIN' | 'BUSINESS_ADMIN' | 'CUSTOMER_FINAL'; // Roles como string literal union
-    businessId: string | null; // Null para SUPER_ADMIN
-    isActive: boolean; // Estado del usuario mismo
+    role: 'SUPER_ADMIN' | 'BUSINESS_ADMIN' | 'CUSTOMER_FINAL';
+    businessId: string | null;
+    isActive: boolean;
 
-    // Campos opcionales que pueden no estar para SUPER_ADMIN
+    // Campos opcionales (principalmente para CUSTOMER_FINAL, pero BUSINESS_ADMIN podría tenerlos si LCo también es para ellos)
     points?: number;
     totalSpend?: number;
     totalVisits?: number;
     currentTier?: {
         id: string;
         name: string;
-        benefits: TierBenefitData[]; // Aseguramos que benefits está aquí si currentTier existe
+        benefits: TierBenefitData[];
     } | null;
 
-    // --- NUEVOS CAMPOS: Flags del negocio asociado (si aplica) ---
-    businessIsActive?: boolean;     // Estado general del negocio
-    isLoyaltyCoreActive?: boolean;  // Flag del módulo LoyalPyME Core
-    isCamareroActive?: boolean;     // Flag del módulo LoyalPyME Camarero
+    // Flags y detalles del negocio asociado (si aplica, ej. no para SUPER_ADMIN)
+    businessIsActive?: boolean;
+    isLoyaltyCoreActive?: boolean;
+    isCamareroActive?: boolean;
+    businessName?: string | null;       // <--- AÑADIDO
+    businessSlug?: string | null;       // <--- AÑADIDO
+    businessLogoUrl?: string | null;    // <--- AÑADIDO
 }
 // --- FIN UserData ACTUALIZADA ---
 
 
-// Interfaz Reward
+// Interfaz Reward (con campos i18n)
 export interface Reward {
     id: string;
     name_es: string | null;
@@ -68,23 +71,23 @@ export interface Reward {
     description_en?: string | null;
     pointsCost: number;
     isActive: boolean;
-    businessId?: string;
+    businessId?: string; // Puede ser útil
     imageUrl?: string | null;
-    createdAt?: string;
-    updatedAt?: string;
+    createdAt?: string;  // Fecha de creación
+    updatedAt?: string;  // Fecha de última actualización
 }
 
-// Interfaz GrantedReward
+// Interfaz GrantedReward (para regalos otorgados)
 export interface GrantedReward {
     id: string;
-    status: string;
-    assignedAt: string;
-    reward: Pick<Reward, 'id' | 'name_es' | 'name_en' | 'description_es' | 'description_en' | 'imageUrl'>;
-    assignedBy?: { name?: string | null; email: string; } | null;
-    business?: { name: string; } | null;
+    status: string; // ej: 'PENDING', 'REDEEMED'
+    assignedAt: string; // Fecha de asignación
+    reward: Pick<Reward, 'id' | 'name_es' | 'name_en' | 'description_es' | 'description_en' | 'imageUrl'>; // Info básica de la recompensa
+    assignedBy?: { name?: string | null; email: string; } | null; // Quién la asignó (si es admin)
+    business?: { name: string; } | null; // Nombre del negocio (útil si se muestran regalos de varios negocios)
 }
 
-// Tipo DisplayReward
+// Tipo DisplayReward (para unificar la visualización de recompensas y regalos)
 export type DisplayReward =
     {
         isGift: false;
@@ -95,23 +98,24 @@ export type DisplayReward =
         description_en?: string | null;
         pointsCost: number;
         imageUrl?: string | null;
-        grantedRewardId?: undefined;
+        grantedRewardId?: undefined; // Para diferenciar
         assignedByString?: undefined;
         assignedAt?: undefined;
     } |
     {
         isGift: true;
-        grantedRewardId: string;
-        id: string;
+        grantedRewardId: string; // ID único del regalo otorgado
+        id: string; // ID de la recompensa base
         name_es: string | null;
         name_en: string | null;
         description_es?: string | null;
         description_en?: string | null;
-        pointsCost: 0;
+        pointsCost: 0; // Los regalos no cuestan puntos
         imageUrl?: string | null;
-        assignedByString: string;
-        assignedAt: string;
+        assignedByString: string; // Nombre/email de quien lo asignó
+        assignedAt: string; // Fecha de asignación
     };
+
 
 // Interface para el resultado del hook useUserProfileData
 export interface UseProfileResult {
@@ -119,16 +123,16 @@ export interface UseProfileResult {
     loading: boolean;
     error: string | null;
     refetch: () => Promise<void>;
-    setUserData: React.Dispatch<React.SetStateAction<UserData | null>>;
+    setUserData: React.Dispatch<React.SetStateAction<UserData | null>>; // Para actualizar desde fuera si es necesario
 }
 
 // Interfaz para Resultado del Hook useCustomerTierData
 export interface UseCustomerTierDataResult {
-    allTiers: TierData[] | null;
-    businessConfig: CustomerBusinessConfig | null;
+    allTiers: TierData[] | null; // Todos los tiers activos del negocio del cliente
+    businessConfig: CustomerBusinessConfig | null; // Configuración del negocio para tiers
     loading: boolean;
     error: string | null;
-    refetch: () => Promise<void>;
+    refetch: () => Promise<void>; // Para recargar datos
 }
 
 // Tipos para Historial de Actividad
@@ -144,6 +148,10 @@ export interface ActivityLogItem {
   pointsChanged: number | null;
   description: string | null;
   createdAt: string;
+  // Podrías añadir más campos si el backend los devuelve y son útiles:
+  // relatedQrId?: string | null;
+  // relatedRewardId?: string | null;
+  // relatedGrantedRewardId?: string | null;
 }
 
 export interface PaginatedActivityResponse {
