@@ -1,12 +1,11 @@
 // filename: backend/src/admin/admin-stats.service.ts
-// Version: 1.2.0 (Refactor: Extract queries into helper functions)
+// Version: 1.2.1 (Count points-based redemptions from ActivityLog)
 
-import { PrismaClient, UserRole, QrCodeStatus, Prisma } from '@prisma/client';
+import { PrismaClient, UserRole, QrCodeStatus, Prisma, ActivityType } from '@prisma/client';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 
 const prisma = new PrismaClient();
 
-// Interface (sin cambios)
 export interface AdminOverviewStatsData {
     totalActiveCustomers: number;
     newCustomersLast7Days: number;
@@ -17,23 +16,19 @@ export interface AdminOverviewStatsData {
     rewardsRedeemedPrevious7Days: number;
 }
 
-// --- Helper Functions ---
-
-// Obtiene el número total de clientes activos
+// Helper Functions (sin cambios respecto a tu versión anterior que funcionaba parcialmente)
 async function _getTotalActiveCustomers(businessId: string): Promise<number> {
     return prisma.user.count({
         where: { businessId, isActive: true, role: UserRole.CUSTOMER_FINAL }
     });
 }
 
-// Obtiene el número de nuevos clientes en un rango de fechas
 async function _getNewCustomersCount(businessId: string, startDate: Date, endDate: Date): Promise<number> {
     return prisma.user.count({
         where: { businessId, role: UserRole.CUSTOMER_FINAL, createdAt: { gte: startDate, lte: endDate } }
     });
 }
 
-// Obtiene la suma de puntos otorgados en un rango de fechas
 async function _getPointsIssuedSum(businessId: string, startDate: Date, endDate: Date): Promise<number> {
     const result = await prisma.qrCode.aggregate({
         _sum: { pointsEarned: true },
@@ -42,47 +37,68 @@ async function _getPointsIssuedSum(businessId: string, startDate: Date, endDate:
     return result._sum.pointsEarned ?? 0;
 }
 
-// Obtiene el número de recompensas (regalos) canjeadas en un rango de fechas
+// --- FUNCIÓN MODIFICADA PARA CONTAR TODOS LOS CANJES ---
 async function _getRewardsRedeemedCount(businessId: string, startDate: Date, endDate: Date): Promise<number> {
-    // Nota: Solo cuenta regalos canjeados ('GrantedReward') actualmente
-    return prisma.grantedReward.count({
-        where: { businessId, status: 'REDEEMED', redeemedAt: { gte: startDate, lte: endDate } }
-    });
-}
-
-// --- Fin Helper Functions ---
-
-
-/**
- * Calcula las estadísticas clave y los datos del periodo anterior para el overview.
- * (Ahora usa funciones helper para las consultas)
- * @param businessId - El ID del negocio.
- * @returns Un objeto con las estadísticas calculadas (periodo actual y anterior).
- * @throws Error si ocurre un problema al consultar la base de datos.
- */
-export const getOverviewStats = async (businessId: string): Promise<AdminOverviewStatsData> => {
-    console.log(`[AdminStatsService] Calculating overview stats (using helpers) for businessId: ${businessId}`);
+    let giftedRedeemedCount = 0;
+    let pointsRedeemedCount = 0;
 
     try {
-        // Definir Rangos de Fechas (sin cambios)
+        // Contar regalos canjeados (como estaba antes)
+        giftedRedeemedCount = await prisma.grantedReward.count({
+            where: { businessId, status: 'REDEEMED', redeemedAt: { gte: startDate, lte: endDate } }
+        });
+    } catch (error) {
+        console.error(`[AdminStatsService] Error counting gifted redeemed rewards:`, error);
+        // Continuar para intentar contar los otros canjes, pero loguear el error
+    }
+
+    try {
+        // Contar recompensas canjeadas por puntos (usando ActivityLog)
+        pointsRedeemedCount = await prisma.activityLog.count({
+            where: {
+                businessId,
+                type: ActivityType.POINTS_REDEEMED_REWARD, // Usar el tipo de actividad correcto
+                createdAt: { gte: startDate, lte: endDate } // Usar createdAt del log
+            }
+        });
+    } catch (error) {
+        console.error(`[AdminStatsService] Error counting points redeemed rewards:`, error);
+        // Continuar, pero loguear el error
+    }
+    
+    // Log más seguro para depuración
+    const startDateStr = startDate ? startDate.toISOString() : 'N/A';
+    const endDateStr = endDate ? endDate.toISOString() : 'N/A';
+    console.log(`[AdminStatsService DEBUG] Period: ${startDateStr} to ${endDateStr}. Gifted redeemed: ${giftedRedeemedCount}, Points redeemed: ${pointsRedeemedCount}`);
+    
+    return giftedRedeemedCount + pointsRedeemedCount;
+}
+// --- FIN FUNCIÓN MODIFICADA ---
+
+
+export const getOverviewStats = async (businessId: string): Promise<AdminOverviewStatsData> => {
+    console.log(`[AdminStatsService] Calculating overview stats for businessId: ${businessId}`);
+
+    try {
         const now = new Date();
-        const startOfLast7Days = startOfDay(subDays(now, 6));
-        const endOfLast7Days = now;
-        const startOfPrevious7Days = startOfDay(subDays(now, 13));
-        const endOfPrevious7Days = endOfDay(subDays(now, 7));
+        // Definición precisa de los rangos de fechas
+        const startOfLast7Days = startOfDay(subDays(now, 6)); // Incluye hoy y los 6 días anteriores
+        const endOfLast7Days = endOfDay(now);                 // Hasta el final del día de hoy
 
-        console.log(`[AdminStatsService] Date Ranges - Last 7: ${startOfLast7Days.toISOString()} - ${endOfLast7Days.toISOString()}`);
-        console.log(`[AdminStatsService] Date Ranges - Prev 7: ${startOfPrevious7Days.toISOString()} - ${endOfPrevious7Days.toISOString()}`);
+        const startOfPrevious7Days = startOfDay(subDays(now, 13)); // Empieza hace 13 días
+        const endOfPrevious7Days = endOfDay(subDays(now, 7));   // Termina al final del día hace 7 días
 
-        // Ejecutar Helpers en Paralelo
+        console.log(`[AdminStatsService DEBUG] Date Ranges - Last 7: ${startOfLast7Days.toISOString()} - ${endOfLast7Days.toISOString()}`);
+        console.log(`[AdminStatsService DEBUG] Date Ranges - Prev 7: ${startOfPrevious7Days.toISOString()} - ${endOfPrevious7Days.toISOString()}`);
+
         const [
             totalActiveCustomers,
             newCustomersLast7Days,
             pointsIssuedLast7Days,
-            rewardsRedeemedLast7Days,
+            rewardsRedeemedLast7Days, // Usará la función modificada
             newCustomersPrevious7Days,
             pointsIssuedPrevious7Days,
-            rewardsRedeemedPrevious7Days,
+            rewardsRedeemedPrevious7Days, // Usará la función modificada
         ] = await Promise.all([
             _getTotalActiveCustomers(businessId),
             _getNewCustomersCount(businessId, startOfLast7Days, endOfLast7Days),
@@ -93,7 +109,6 @@ export const getOverviewStats = async (businessId: string): Promise<AdminOvervie
             _getRewardsRedeemedCount(businessId, startOfPrevious7Days, endOfPrevious7Days),
         ]);
 
-        // Construir resultado (sin cambios)
         const result = {
             totalActiveCustomers,
             newCustomersLast7Days,
@@ -104,14 +119,12 @@ export const getOverviewStats = async (businessId: string): Promise<AdminOvervie
             rewardsRedeemedPrevious7Days,
         };
 
-        console.log(`[AdminStatsService] Stats calculated (using helpers) for ${businessId}:`, result);
+        console.log(`[AdminStatsService] Stats calculated successfully for ${businessId}:`, result);
         return result;
 
     } catch (error) {
-        console.error(`[AdminStatsService] Error calculating overview stats (using helpers) for business ${businessId}:`, error);
-        // Relanzar el error para que el controlador lo maneje
-        throw new Error('Error al obtener las estadísticas del dashboard.');
+        console.error(`[AdminStatsService] CRITICAL Error calculating overview stats for business ${businessId}:`, error);
+        // Es importante que el error se propague para que el controlador lo maneje
+        throw new Error('Error crítico al obtener las estadísticas del dashboard.');
     }
 };
-
-// End of file: backend/src/admin/admin-stats.service.ts
