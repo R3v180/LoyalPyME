@@ -903,8 +903,12 @@
       "orderSuccessTitle": "¡Pedido Enviado!",
       "orderSuccessMsg": "Tu pedido #{{orderNumber}} ha sido recibido y se está preparando.",
       "orderErrorTitle": "Error al Enviar",
-      "orderErrorMsg": "No se pudo enviar tu pedido. Por favor, inténtalo de nuevo o contacta con el personal."
-    }
+      "orderErrorMsg": "No se pudo enviar tu pedido. Por favor, inténtalo de nuevo o contacta con el personal.",
+      "clearCartButton": "Vaciar Carrito",
+      "clearedTitle": "Carrito Vacío",
+      "clearedMsg": "Se han eliminado todos los ítems de tu pedido."
+    },
+    "unnamedModifier": "Modificador sin nombre"
   },
   "error": {
     "missingBusinessSlug": "Error: Slug del negocio no proporcionado.",

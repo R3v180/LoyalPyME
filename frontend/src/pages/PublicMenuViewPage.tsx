@@ -1,12 +1,12 @@
 // frontend/src/pages/PublicMenuViewPage.tsx
-// Version: 1.5.1 (Re-integrating cart persistence, clear cart, and ensuring cart bar is a button)
+// Version: 1.5.2 (Correct top spacing for sticky cart bar, ensure numeric value)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
     Container, Title, Loader, Alert, Text, Stack, Paper, Image, Group,
-    useMantineTheme, Button // Asegúrate de que Button está importado
+    useMantineTheme, Button
 } from '@mantine/core';
 import {
     IconAlertCircle, IconShoppingCartPlus, IconShoppingCart
@@ -19,8 +19,8 @@ import {
     PublicDigitalMenuData,
     PublicMenuItem,
     ModifierUiType,
-    // PublicMenuModifierGroup, // No se usa directamente aquí
-} from '../types/menu.types'; // Asumiendo que SelectedModifierFE y OrderItemFE no están aquí
+    // PublicMenuModifierGroup, // No se usa directamente aquí si está en los otros tipos
+} from '../types/menu.types';
 
 // Importar componentes hijos
 import CategoryAccordion from '../components/public/menu/CategoryAccordion';
@@ -28,7 +28,6 @@ import { MenuItemCardConfiguringState } from '../components/public/menu/MenuItem
 import ShoppingCartModal from '../components/public/menu/ShoppingCartModal';
 
 // --- TIPOS PARA EL CARRITO Y PAYLOAD ---
-// (Considera moverlos a un archivo de tipos dedicado, ej: src/types/order.types.ts)
 export interface SelectedModifierFE {
     modifierOptionId: string;
     name_es?: string | null;
@@ -62,7 +61,7 @@ interface CreateOrderItemDto {
 }
 interface CreateOrderPayloadDto {
     tableIdentifier?: string | null;
-    customerId?: string | null; // Si el usuario está logueado
+    customerId?: string | null;
     orderNotes?: string | null;
     items: CreateOrderItemDto[];
 }
@@ -79,7 +78,7 @@ interface ConfiguringItemState {
     areModifiersValid: boolean;
 }
 
-const LOCAL_STORAGE_CART_KEY_PREFIX = 'loyalpyme_public_cart_'; // Añadir prefijo
+const LOCAL_STORAGE_CART_KEY_PREFIX = 'loyalpyme_public_cart_';
 const LOCAL_STORAGE_ORDER_NOTES_KEY_PREFIX = 'loyalpyme_public_order_notes_';
 
 const PublicMenuViewPage: React.FC = () => {
@@ -88,10 +87,8 @@ const PublicMenuViewPage: React.FC = () => {
     const { businessSlug, tableIdentifier } = useParams<{ businessSlug: string; tableIdentifier?: string }>();
     const navigate = useNavigate();
 
-    // Claves únicas para localStorage por negocio (y opcionalmente por mesa)
     const cartStorageKey = `${LOCAL_STORAGE_CART_KEY_PREFIX}${businessSlug || 'default'}${tableIdentifier ? `_${tableIdentifier}` : ''}`;
     const notesStorageKey = `${LOCAL_STORAGE_ORDER_NOTES_KEY_PREFIX}${businessSlug || 'default'}${tableIdentifier ? `_${tableIdentifier}` : ''}`;
-
 
     const [menuData, setMenuData] = useState<PublicDigitalMenuData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -111,7 +108,6 @@ const PublicMenuViewPage: React.FC = () => {
     const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
     const [configuringItem, setConfiguringItem] = useState<ConfiguringItemState | null>(null);
 
-    // Guardar en localStorage cuando cambie el carrito o las notas
     useEffect(() => {
         localStorage.setItem(cartStorageKey, JSON.stringify(currentOrderItems));
     }, [currentOrderItems, cartStorageKey]);
@@ -162,8 +158,6 @@ const PublicMenuViewPage: React.FC = () => {
         }
     }, [configuringItem?.itemDetails, configuringItem?.selectedOptionsByGroup, calculatePriceAndValidate, configuringItem?.currentUnitPrice, configuringItem?.areModifiersValid]);
 
-    // No necesitamos el useEffect de [CART ITEMS] aquí si no es para guardar
-
     const handleStartConfigureItem = (item: PublicMenuItem) => {
         const initialSelectedOptions: Record<string, string[] | string> = {};
         if (item.modifierGroups) {
@@ -198,7 +192,6 @@ const PublicMenuViewPage: React.FC = () => {
         notifications.show({ title: t('publicMenu.itemAddedTitle'), message: t('publicMenu.itemAddedMessage', { itemName: itemDetails.name_es || itemDetails.name_en || 'Ítem', quantity: quantity }), color: 'green', icon: <IconShoppingCartPlus size={18} /> });
         setConfiguringItem(null);
     };
-
     const handleSimpleAddToCart = (item: PublicMenuItem, quantity: number) => {
         const cartItemId = item.id; const existingCartItemIndex = currentOrderItems.findIndex(ci => ci.cartItemId === cartItemId && (!ci.selectedModifiers || ci.selectedModifiers.length === 0) && !ci.notes);
         if (existingCartItemIndex > -1) { const updatedItems = [...currentOrderItems]; const existing = updatedItems[existingCartItemIndex]; existing.quantity += quantity; existing.totalPriceForItem = existing.currentPricePerUnit * existing.quantity; setCurrentOrderItems(updatedItems);
@@ -228,7 +221,6 @@ const PublicMenuViewPage: React.FC = () => {
             message: t('publicMenu.cart.clearedMsg'),
             color: 'blue',
         });
-        // No cerramos el modal aquí, se puede cerrar manualmente o después de enviar pedido
     }, [t]);
 
     const handleSubmitOrder = useCallback(async () => {
@@ -279,6 +271,10 @@ const PublicMenuViewPage: React.FC = () => {
     const totalCartItems = currentOrderItems.reduce((sum, item) => sum + item.quantity, 0);
     const totalCartAmount = currentOrderItems.reduce((sum, item) => sum + item.totalPriceForItem, 0);
 
+    // --- CORRECCIÓN PARA EL VALOR 'top' ---
+    const topOffsetForCartBar = typeof theme.spacing.md === 'number' ? theme.spacing.md + 10 : 26; // 16 (fallback) + 10 = 26
+    // --- FIN CORRECCIÓN ---
+
     return (
         <>
             <Container size="lg" py="xl">
@@ -288,25 +284,22 @@ const PublicMenuViewPage: React.FC = () => {
                         <Title order={1} ta="center" style={{ flexShrink: 1, minWidth: 0 }}>{menuData.businessName}</Title>
                     </Group>
 
-                    {/* Barra/Botón del Carrito - Renderizado como Botón si hay ítems */}
                     {currentOrderItems.length > 0 && (
                         <Paper 
-                            p={0} // Quitamos padding interno del Paper
+                            p={0} 
                             shadow="xs" 
-                            withBorder={false} // Sin borde para que parezca más un botón/barra
+                            withBorder={false} 
                             radius="md" 
                             style={{ 
                                 position: 'sticky', 
-                                top: parseFloat(String(theme.spacing.md)) + 10,
-                                zIndex: 200,
-                                // backgroundColor: theme.fn.primaryColor(), // Usar color primario como fondo
-                                // color: theme.white, // Texto blanco
+                                top: topOffsetForCartBar, // <--- Usar la variable corregida
+                                zIndex: 200, 
                             }} 
                         >
                             <Button
                                 fullWidth
                                 size="lg"
-                                variant="gradient" // O 'filled'
+                                variant="gradient"
                                 gradient={{ from: theme.primaryColor, to: theme.colors[theme.primaryColor][4], deg: 105 }}
                                 onClick={openCart}
                                 disabled={isCartOpen}
@@ -318,11 +311,11 @@ const PublicMenuViewPage: React.FC = () => {
                                 <Group justify="space-between" style={{ width: '100%' }}>
                                     <Group gap="xs">
                                         <IconShoppingCart size={22} stroke={1.8} />
-                                        <Text fw={500} inherit> {/* inherit para color del botón */}
+                                        <Text fw={500} inherit>
                                             {t('publicMenu.cart.viewOrderItems', { count: totalCartItems })}
                                         </Text>
                                     </Group>
-                                    <Text fw={700} inherit> {/* inherit para color del botón */}
+                                    <Text fw={700} inherit>
                                         {t('publicMenu.cart.total')}: {totalCartAmount.toLocaleString(i18n.language, { style: 'currency', currency: 'EUR' })}
                                     </Text>
                                 </Group>

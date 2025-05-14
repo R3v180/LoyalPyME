@@ -899,12 +899,16 @@
       "increaseQuantity": "Increase quantity of {{itemName}}",
       "removeItemFromOrder": "Remove {{itemName}} from order",
       "errorTitle": "Order Error",
-      "errorEmpty": "Your cart is empty. Add some items before submitting.",
+      "errorEmpty": "Your cart is empty. Please add some items before submitting.",
       "orderSuccessTitle": "Order Sent!",
       "orderSuccessMsg": "Your order #{{orderNumber}} has been received and is being prepared.",
-      "orderErrorTitle": "Error Sending Order",
-      "orderErrorMsg": "Could not send your order. Please try again or contact staff."
-    }
+      "orderErrorTitle": "Submission Error",
+      "orderErrorMsg": "Could not submit your order. Please try again or contact staff.",
+      "clearCartButton": "Clear Cart",
+      "clearedTitle": "Cart Emptied",
+      "clearedMsg": "All items have been removed from your order."
+    },
+    "unnamedModifier": "Unnamed modifier"
   },
   "error": {
     "missingBusinessSlug": "Error: Business slug not provided.",
