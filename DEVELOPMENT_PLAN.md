@@ -1,247 +1,229 @@
 # LoyalPyME - Plan de Desarrollo y Futuras Funcionalidades
 
-**Última Actualización:** 13 de Mayo de 2025
+**Última Actualización:** 14 de Mayo de 2025 (Refleja flujos detallados para LC y prioridades actualizadas)
 
-Este documento detalla las tareas pendientes inmediatas, el alcance definido para las próximas versiones operativas, la deuda técnica y las ideas para la evolución futura, con un enfoque actual en el Módulo Camarero.
+Este documento detalla las tareas pendientes inmediatas, el alcance definido para las próximas versiones operativas (con énfasis en el Módulo Camarero - LC), la deuda técnica y las ideas para la evolución futura. Se busca un máximo detalle para guiar el desarrollo.
 
 ---
 
 ## A. TRABAJO RECIENTEMENTE COMPLETADO / CORRECCIONES ✅
 
-1.  ⭐ **[COMPLETADO - MVP Base]** Panel Super Admin y Gestión Negocios/Módulos (`backend`, `frontend`)
+1.  ⭐ **[COMPLETADO - MVP Base Plataforma]** Panel Super Admin y Gestión de Negocios/Módulos (`backend`, `frontend`)
 
     - **Detalles Alcanzados:**
-      - Backend: Modelos `Business` actualizados con flags `isLoyaltyCoreActive`, `isCamareroActive`. API Endpoints para Super Admin (`/api/superadmin/*`) para listar negocios y activar/desactivar sus módulos y estado general.
+      - Backend: Modelo `Business` con flags `isActive`, `isLoyaltyCoreActive`, `isCamareroActive`. API Endpoints para Super Admin (`/api/superadmin/*`) para listar negocios y activar/desactivar su estado general y sus módulos específicos. Lógica para que el perfil de usuario (`/api/profile`) incluya el `slug` y `name` del negocio asociado para roles `BUSINESS_ADMIN` y `CUSTOMER_FINAL`.
       - Frontend: Página `/superadmin` con tabla de negocios, switches para gestionar estado y activación de módulos. Lógica de datos y UI implementada.
-      - Middleware `checkModuleActive` en backend y lógica condicional en UI frontend para respetar la activación de módulos.
+      - Middleware `checkModuleActive` en backend y lógica condicional en UI frontend (ej. `AdminNavbar`, `CustomerDashboardPage`) para respetar la activación de módulos y mostrar/ocultar funcionalidades pertinentes.
 
-2.  **[COMPLETADO]** Módulo Camarero (LC) - Fundamentos Backend (Modelos BD y API Gestión Carta Base)
+2.  ⭐ **[COMPLETADO - Módulo Camarero - Gestión de Carta]** LC - Backend (Modelos BD y API) y Frontend (UI Admin) para Gestión Completa de Carta Digital.
 
-    - **Detalles Alcanzados:**
-      - **BD:** Modelos Prisma implementados y migrados para `Table`, `MenuCategory`, `MenuItem`, `ModifierGroup`, `ModifierOption`, `Order`, `OrderItem`, `OrderItemModifierOption`, y `StaffPin`. Roles de personal (`WAITER`, etc.) añadidos a `UserRole` enum. Relaciones actualizadas.
-      - **API Gestión Carta (Admin):** Endpoints CRUD backend (`/api/camarero/admin/*`) para `MenuCategory`, `MenuItem`, `ModifierGroup`, y `ModifierOption`, protegidos por rol y activación del módulo LC.
-
-3.  ⭐ **[COMPLETADO - Módulo Camarero]** LC - Frontend: UI para Gestión de Carta Digital por el Admin del Negocio (`frontend`)
-
-    - **Prioridad (Original):** CRÍTICA
-    - **Objetivo Alcanzado:** Interfaz de usuario completa en el panel de `BUSINESS_ADMIN` (`/admin/dashboard/camarero/menu-editor`) para gestionar la carta digital.
-    - **Detalles de Implementación:**
-      - Componente `MenuCategoryManager.tsx`: UI para listar, crear, editar (en modal con subida/recorte de imagen), eliminar y reordenar (futuro) categorías.
-      - Componente `MenuItemManager.tsx`: UI para listar ítems dentro de una categoría seleccionada.
-      - Modal `MenuItemFormModal.tsx`: Formulario completo para CRUD de ítems (i18n para nombre/descripción, precio, subida/recorte de imagen, alérgenos, tags, disponibilidad, posición, tiempo prep., calorías, SKU, destino KDS).
-      - Modal `ModifierGroupsManagementModal.tsx` (accesible desde `MenuItemFormModal`): UI para listar, crear, editar y eliminar `ModifierGroup`s asociados a un ítem de menú.
-      - Modal `ModifierOptionsManagementModal.tsx` (accesible desde `ModifierGroupsManagementModal`): UI para listar, crear, editar y eliminar `ModifierOption`s dentro de un grupo.
-      - Hooks `useAdminMenuCategories`, `useAdminMenuItems`, `useAdminModifierGroups`, `useAdminModifierOptions` para la lógica de datos.
-      - Tipos definidos en `menu.types.ts`.
-      - Internacionalización básica de la interfaz.
-
-4.  **[COMPLETADO]** Arreglar Tipo `TierData` (`frontend`)
-
-    - **Problema:** El tipo `TierData` en `customer.ts` no incluía `benefits?: TierBenefitData[]`, lo que causaba errores al intentar acceder a `userData.currentTier.benefits`.
-    - **Solución:** Se añadió `benefits: TierBenefitData[];` al tipo `TierData` (o a la estructura anidada dentro de `UserData` para `currentTier`).
-
-5.  **[COMPLETADO]** Fix Mobile Popover Click en Barra de Progreso (`frontend`)
-
-    - **Problema:** En móvil, el popover de "Próximo Nivel" en la barra de progreso del dashboard de cliente no se abría/cerraba bien al hacer clic en el icono de ayuda.
-    - **Solución:** Ajustada la lógica de `onMouseEnter`/`onMouseLeave` y `onClick` para el `ActionIcon` del popover, asegurando que `useDisclosure` maneje el estado correctamente en interacciones táctiles/clic.
-
-6.  **[COMPLETADO]** Fix Backend Build Error (`uploads.service.ts`) (`backend`)
-
-    - **Problema:** Error de TypeScript `TS2307: Cannot find module '../utils/cloudinary.config.js'` o similar porque la importación en `uploads.service.ts` podría tener una extensión incorrecta o la ruta era inválida tras alguna reestructuración.
-    - **Solución:** Corregida la ruta de importación a `import cloudinary from '../utils/cloudinary.config';` asumiendo que `cloudinary.config.ts` exporta por defecto la instancia configurada.
-
-7.  **[COMPLETADO]** Feature: Botones Canje en Resumen Cliente (`frontend`)
-
-    - **Problema:** Faltaba acción directa para canjear regalos o recompensas desde el resumen.
-    - **Solución:** Añadidos botones "Canjear Regalo" / "Canjear Recompensa" en las tarjetas de ítems de la sección "Recompensas y Regalos Disponibles" en la pestaña de Resumen del Dashboard de Cliente.
-
-8.  ⭐ **[COMPLETADO - MVP Visualización Carta Cliente]** LC - Backend & Frontend: Visualización de Carta Digital por el Cliente Final (`backend`, `frontend`)
-
-    - **Prioridad (Original):** CRÍTICA
-    - **Objetivo Alcanzado:** Un cliente puede visualizar la carta digital completa y actualizada del negocio accediendo a una URL pública.
     - **Detalles Alcanzados (Backend):**
-      - Endpoint público `/public/menu/business/:businessSlug` implementado.
-      - Devuelve la estructura completa de la carta: categorías (activas, ordenadas), ítems (activos y disponibles, ordenados) y para cada ítem, sus grupos de modificadores (activos, ordenados) con sus opciones (disponibles, ordenadas).
-      - Devuelve todos los campos de idioma (ej. `name_es`, `name_en`) para que el frontend seleccione.
-      - Consulta Prisma optimizada para obtener todos los datos necesarios.
-    - **Detalles Alcanzados (Frontend):**
-      - Nueva página/ruta pública `/m/:businessSlug/:tableIdentifier?` implementada que consume la API del backend.
-      - Diseño responsive básico con categorías en formato `Accordion`.
-      - Muestra nombre (i18n), descripción (i18n), precio, imagen, alérgenos y tags de los ítems.
-      - Muestra los grupos de modificadores y sus opciones para cada ítem, incluyendo precio de ajuste y reglas de selección (informativo).
-      - Estado de carga y manejo de errores implementados.
-    - **Estado:** Funcionalidad base de visualización completada. Búsqueda/filtros básicos aún pendientes (ver Tarea #33).
+      - **BD:** Modelos Prisma (`Table`, `MenuCategory`, `MenuItem`, `ModifierGroup`, `ModifierOption`, `Order`, `OrderItem`, `OrderItemModifierOption`, `StaffPin`) implementados y migrados. Enum `UserRole` extendido (`WAITER`, `KITCHEN_STAFF`, `BAR_STAFF`). Enum `ModifierUiType` (`RADIO`, `CHECKBOX`). Enum `OrderStatus` (`RECEIVED`, etc.). Campos i18n (`name_es`, `description_es`, etc.) en modelos de carta. Campos detallados en `MenuItem` (precio, imagen, alérgenos, tags, disponibilidad, posición, tiempo prep., calorías, SKU, destino KDS).
+      - **API Gestión Carta (Admin):** Endpoints CRUD backend (`/api/camarero/admin/*`) para `MenuCategory`, `MenuItem`, `ModifierGroup`, y `ModifierOption`, protegidos por rol `BUSINESS_ADMIN` y activación del módulo LC.
+    - **Detalles Alcanzados (Frontend - Admin):**
+      - Página `/admin/dashboard/camarero/menu-editor` (`MenuManagementPage.tsx`).
+      - Componente `MenuCategoryManager.tsx`: CRUD de categorías, incluyendo subida/recorte de imágenes (Cloudinary).
+      - Componente `MenuItemManager.tsx`: Listado de ítems por categoría.
+      - Modal `MenuItemFormModal.tsx`: Formulario CRUD completo para ítems.
+      - Modal `ModifierGroupsManagementModal.tsx`: CRUD de grupos de modificadores asociados a un ítem.
+      - Modal `ModifierOptionsManagementModal.tsx`: CRUD de opciones dentro de un grupo.
+      - Hooks de datos (`useAdminMenuCategories`, etc.) y tipos (`menu.types.ts`).
+      - Botón "Previsualizar Carta Pública" en `MenuManagementPage.tsx` para admins (usa `businessSlug` del `userData`).
 
-9.  ⭐ **[EN PROGRESO - Flujo de Pedido]** LC - Backend & Frontend: Flujo de Pedido Básico por el Cliente Final (`backend`, `frontend`)
-    - **Prioridad (Original):** ALTA
-    - **Objetivo (Parcialmente Alcanzado):** Desde la carta digital, el cliente puede seleccionar ítems, configurar cantidad y modificadores, y añadirlos a un carrito local. El envío del pedido al backend está implementado y probado.
-    - **Detalles Alcanzados (Backend):**
-      - API `POST /public/order/:businessSlug` implementada para recibir el objeto `Order` con `OrderItem`s y `OrderItemModifierOption`s seleccionadas (DTO definido).
-      - Validación de la estructura del pedido.
-      - Validación de existencia y disponibilidad de `MenuItem` y `ModifierOption`.
-      - Validación de reglas de selección de `ModifierGroup` (`minSelections`, `maxSelections`, `isRequired`).
-      - Cálculo del precio total del pedido, incluyendo ajustes de modificadores.
-      - Creación transaccional de los registros `Order`, `OrderItem`, y `OrderItemModifierOption` en la BD.
-      - Estado inicial del pedido `RECEIVED`.
-      - Generación de `orderNumber` simple.
-    - **Detalles Alcanzados (Frontend - Vista de Carta):**
-      - **Selección de Cantidad:** UI (`NumberInput`) para que el cliente seleccione la cantidad de cada ítem.
-      - **Selección de Modificadores:** UI interactiva (`Radio.Group`, `Checkbox.Group`) para seleccionar opciones de modificadores.
-      - **Cálculo de Precio Dinámico:** El precio del ítem se actualiza en tiempo real según los modificadores seleccionados.
-      - **Validación de Modificadores:** Se valida si se cumplen las reglas de los grupos (obligatorios, min/max) antes de permitir añadir al carrito.
-      - **"Añadir al Carrito":** Funcionalidad para añadir el ítem configurado (con cantidad, modificadores, notas) a un estado de carrito local (`currentOrderItems`).
-      - **Carrito Preliminar:** Visualización básica del total del pedido en la parte superior de la página.
-    - **Siguientes Sub-Tareas para este Hito:**
-      - **Frontend:**
-        - Desarrollar un componente "Carrito de Pedido" detallado (modal o panel lateral) para ver, editar cantidades, y eliminar ítems del pedido.
-        - Permitir añadir notas generales al pedido.
-        - Implementar el botón "Enviar Pedido" que construya el DTO final y lo envíe al backend.
-        - Manejo de feedback al usuario sobre el estado del envío del pedido (éxito, error).
-      - **Backend:**
-        - Refinar la validación exhaustiva de la orden (considerar Zod - Tarea #14).
-        - Lógica para determinar el destino del pedido (ej. KDS, aunque la visualización KDS es Tarea #10).
+3.  ⭐ **[COMPLETADO - Módulo Camarero - Vista Cliente y Pedido Básico]** LC - Backend y Frontend: Visualización de Carta y Flujo de Pedido Inicial por Cliente Final.
+
+    - **Detalles Alcanzados (Backend - Vista Carta):** Endpoint público `/public/menu/business/:businessSlug` devuelve carta completa, activa, i18n, con modificadores.
+    - **Detalles Alcanzados (Frontend - Vista Carta):** Página `/m/:businessSlug/:tableIdentifier?` (`PublicMenuViewPage.tsx`) muestra la carta (acordeones, `MenuItemCard.tsx` con detalles, `ModifierGroupInteractiveRenderer.tsx` para visualización y personalización).
+    - **Detalles Alcanzados (Backend - Creación Pedido):** API `POST /public/order/:businessSlug` recibe `CreateOrderPayloadDto`, valida ítems/modificadores/reglas, calcula precio, crea `Order` (con `tableId` y `customerId` opcionales, `orderNotes`, `orderNumber`, `status: RECEIVED`), `OrderItem`, `OrderItemModifierOption` transaccionalmente. Devuelve el objeto `Order` creado.
+    - **Detalles Alcanzados (Frontend - Flujo Pedido):**
+      - Selección de cantidad, personalización de modificadores con precio dinámico.
+      - Añadir a carrito local (`currentOrderItems` en `PublicMenuViewPage.tsx`).
+      - Persistencia del carrito y notas generales del pedido en `localStorage` (por `businessSlug` y `tableIdentifier`).
+      - Barra superior sticky muestra resumen del carrito y abre modal.
+      - Modal del Carrito (`ShoppingCartModal.tsx`): Lista ítems, permite modificar cantidad, eliminar ítems, añadir notas generales, vaciar carrito.
+      - Envío del pedido al backend y manejo de notificaciones de éxito (con `orderNumber`) o error. Limpieza del carrito tras éxito.
+    - **Detalles Alcanzados (Frontend - Acceso Cliente Logueado):** Tarjeta "Ver la Carta y Pedir" en `SummaryTab.tsx` del `CustomerDashboardPage.tsx` si LC está activo y `businessSlug` disponible en `userData`.
+
+4.  **[COMPLETADO - Varios LCo y Plataforma]** Fixes y Features Menores Anteriores (Tipo `TierData`, Popover Móvil, Error Build Backend, Botones Canje Resumen Cliente).
 
 ---
 
-## B. PRIORIDAD ACTUAL: Módulo "LoyalPyME Camarero" (LC) - Desarrollo del MVP (Continuación Funcionalidades Cliente y Operativas) 🧑‍🍳📱
+## B. PRIORIDADES ACTUALES: Módulo "LoyalPyME Camarero" (LC) - Hacia un MVP Operativo 🚀
 
-_(Funcionalidades y requisitos técnicos mínimos para un primer lanzamiento operativo del módulo Camarero)._
+El objetivo es alcanzar un estado donde el ciclo completo de pedido (cliente -> KDS -> camarero -> cliente) sea funcional y robusto.
 
-_(La Tarea #8 se movió a la sección A como "COMPLETADO - MVP Visualización Carta Cliente")_
+### **BLOQUE 1: KDS (Kitchen Display System) - FUNDAMENTAL**
 
-**9. ⭐ [EN PROGRESO - Flujo de Pedido]** LC - Backend & Frontend: Flujo de Pedido Básico por el Cliente Final (`backend`, `frontend`) - **Prioridad Actual:** **CRÍTICA** - **Dificultad Estimada (Restante):** Media-Alta (Principalmente Frontend: UI Carrito, envío y feedback) - **Objetivo Restante:** Completar la interfaz de usuario del carrito de pedido, permitir al cliente enviar el pedido al backend, y recibir confirmación o errores. - **Sub-Tareas Backend (Pendientes/Refinar):** - Refinar validación exhaustiva de la orden (considerar Zod - Tarea #14). - Asegurar que la lógica de destino KDS se almacena correctamente (para Tarea #10). - **Sub-Tareas Frontend (Pendientes CRÍTICAS):** - UI **Componente "Carrito de Pedido"** visible y actualizable: - Listar ítems con detalles (nombre, cantidad, modificadores, precio por línea, subtotal). - Permitir modificar cantidad de un ítem en el carrito. - Permitir eliminar un ítem del carrito. - UI para añadir notas al pedido general. - Botón "Enviar Pedido" / "Confirmar Pedido". - Lógica para construir el DTO `CreateOrderPayload` final desde el estado del carrito. - Llamada API `POST /public/order/:businessSlug` con el payload. - Pantalla de confirmación del pedido / Manejo de feedback al usuario sobre el estado del envío (éxito, errores de validación del backend, errores de servidor). - **Consideraciones:** Manejo robusto del estado del carrito. Flujo de usuario intuitivo para el checkout.
+**B1.1. ⭐ [CRÍTICO] LC - KDS Backend: API para Gestión de Estados de `OrderItem`**
+_ **Dependencia:** Completado el Flujo de Pedido Básico del Cliente (A9).
+_ **Objetivo:** Permitir que las pantallas de KDS (cocina, barra, etc.) obtengan los ítems de pedido que les corresponden y puedan actualizar su estado de preparación.
+_ **Sub-Tareas Detalladas (Backend):** 1. **Actualizar Modelo Prisma `OrderItem`:**
+_ Añadir enum `OrderItemStatus`: `PENDING_KDS` (default), `PREPARING`, `READY` (listo en cocina/barra), `SERVED` (entregado al cliente por camarero), `CANCELLED`.
+_ Añadir campo `status: OrderItemStatus @default(PENDING_KDS)` al modelo `OrderItem`.
+_ Asegurar que `kdsDestination: String?` se está guardando correctamente en `OrderItem` (copiado desde `MenuItem.kdsDestination`).
+_ Considerar añadir `preparedAt: DateTime?`, `servedAt: DateTime?` a `OrderItem` para métricas de tiempo.
+_ (Reflexión) El `Order` general también tiene un `status` (`OrderStatus`). Este debe reflejar el estado general (ej. `RECEIVED`, `IN_PROGRESS`, `PARTIALLY_READY`, `ALL_ITEMS_READY`, `COMPLETED`, `PAID`, `CANCELLED`). La actualización del `OrderStatus` general podría ser un efecto secundario de los cambios en `OrderItemStatus`. 2. **API Endpoint `GET /api/camarero/kds/items` (Protegido por rol `KITCHEN_STAFF`/`BAR_STAFF` o token KDS):**
+_ Query param `destination: String` (ej. "COCINA", "BARRA") para filtrar por `OrderItem.kdsDestination`.
+_ Query param opcional `status: OrderItemStatus` (o lista de estados) para filtrar. Por defecto, debería devolver ítems en `PENDING_KDS` y `PREPARING`.
+_ Devolver un array de `OrderItem`s incluyendo:
+_ `id` (del OrderItem), `quantity`, `status` actual, `notes` (del ítem).
+_ Información anidada del `MenuItem`: `name_es`, `name_en`.
+_ Información anidada de `SelectedModifiers`: `modifierOption.name_es`, `modifierOption.name_en`.
+_ Información anidada del `Order`: `id` (del Order), `orderNumber`, `createdAt` (del Order), `table.identifier` (si `tableId` no es null).
+_ Ordenar por `Order.createdAt` (ascendente, los más antiguos primero). 3. **API Endpoint `PATCH /api/camarero/kds/items/:orderItemId/status` (Protegido):**
+_ Body: `{ newStatus: OrderItemStatus }`.
+_ Validar que `orderItemId` existe y pertenece al negocio del staff.
+_ Validar que la transición de estado es permitida (ej. de `PENDING_KDS` a `PREPARING`, no directamente a `SERVED`).
+_ Actualizar `OrderItem.status` y, si aplica, `OrderItem.preparedAt`.
+_ (Lógica Secundaria) Si todos los `OrderItem`s de un `Order` pasan a `READY`, actualizar `Order.status` a `ALL_ITEMS_READY`. Si algunos están `READY` y otros `PREPARING`/`PENDING_KDS`, podría ser `PARTIALLY_READY`.
+_ Devolver el `OrderItem` actualizado. 4. **(Opcional MVP, Recomendado Post-MVP) WebSockets/Server-Sent Events (SSE) para KDS:**
+_ Implementar un canal para que el backend notifique a los KDS conectados (por `businessId` y `kdsDestination`) cuando:
+_ Llega un nuevo `OrderItem` para su destino.
+_ (Avanzado) Un cliente solicita cancelar un ítem.
+_ Esto evita la necesidad de polling constante desde el frontend del KDS. \* **Consideraciones de Seguridad:** ¿Cómo se autenticarán las pantallas KDS? ¿Login de staff, token de dispositivo?
 
-10. ⭐ **LC - Backend & Frontend: KDS (Kitchen Display System) Básico** (`backend`, `frontend`)
+**B1.2. ⭐ [CRÍTICO] LC - KDS Frontend: Interfaz Visual y Funcional Básica**
+_ **Dependencia:** KDS Backend API (B1.1).
+_ **Objetivo:** Una aplicación/vista web simple, clara y usable en tablets para cocina/barra.
+_ **Sub-Tareas Detalladas (Frontend):** 1. **Autenticación/Selección de Destino:**
+_ Si el KDS es una app genérica, debe permitir seleccionar el `kdsDestination` al inicio (ej. "Soy KDS Cocina", "Soy KDS Barra").
+_ Login si se requiere autenticación de staff. 2. **Layout Principal:**
+_ Columnas (ej. "PENDIENTE", "EN PREPARACIÓN") o una lista unificada con filtros/ordenación por estado. 3. **Tarjeta de `OrderItem` (`KdsOrderItemCard.tsx`):**
+_ Mostrar claramente: `orderNumber`, `table.identifier`, hora del pedido.
+_ `menuItem.name` (i18n), `quantity`.
+_ Lista de modificadores seleccionados.
+_ Notas del ítem (si las hay).
+_ Estado actual del ítem. 4. **Interacción con Tarjetas:**
+_ Botones para cambiar estado (ej. "Empezar", "Listo"), que llamen al `PATCH /api/camarero/kds/items/:orderItemId/status`.
+_ La tarjeta debería actualizar su apariencia o moverse de columna según el nuevo estado. 5. **Carga y Actualización de Datos:**
+_ Llamada inicial a `GET /api/camarero/kds/items` al cargar.
+_ Polling periódico para refrescar si no se usan WebSockets/SSE.
+_ Si se usan WebSockets/SSE, lógica para recibir y mostrar nuevos ítems o actualizaciones de estado. 6. **Alertas Visuales/Sonoras (Mínimas):**
+_ Una indicación clara (ej. un sonido suave, un banner) cuando llegan nuevos ítems a `PENDING_KDS`.
+_ **Consideraciones de Usabilidad:** Interfaz táctil, fuentes grandes, alto contraste, mínima distracción.
 
-    - **Prioridad:** Alta (Después de que el Flujo de Pedido #9 sea funcional)
-    - **Dificultad Estimada:** Alta
-    - **Objetivo:** Una o varias pantallas (para cocina, barra, etc.) muestran las nuevas comandas (o ítems individuales) en tiempo real y permiten gestionar su estado (ej: Pendiente -> En Preparación -> Listo para Servir).
-    - **Sub-Tareas Backend:**
-      - API para que el KDS obtenga los `OrderItem`s relevantes según su `kdsDestination`.
-      - API para actualizar el estado de un `OrderItem` (ej: `OrderItemStatus`).
-      - Considerar WebSockets/Server-Sent Events para actualizaciones en tiempo real en el KDS.
-    - **Sub-Tareas Frontend:**
-      - Interfaz de KDS clara y funcional, optimizada para tablets.
-      - Organización de comandas/ítems (tarjetas, columnas por estado).
-      - Alertas visuales/sonoras para nuevas comandas.
-      - Botones para cambiar estado de ítems/comandas.
-    - **Consideraciones:** Fiabilidad de la comunicación en tiempo real. Usabilidad en entornos de cocina/barra.
+### **BLOQUE 2: VISUALIZACIÓN Y GESTIÓN BÁSICA POR CAMARERO Y CLIENTE**
 
-11. ⭐ **LC - Backend & Frontend: Interfaz Camarero Básica (MVP)** (`backend`, `frontend`)
+**B2.1. ⭐ [ALTA] LC - Cliente: Visualización del Estado del Pedido**
+_ **Dependencia:** KDS puede actualizar `OrderItem.status`.
+_ **Objetivo:** Permitir al cliente ver el progreso de su pedido después de enviarlo.
+_ **Sub-Tareas Detalladas:** 1. **Backend - Endpoint Público de Estado:**
+_ `GET /public/order/:orderId/status` (o por `orderNumber`). El `orderId` se puede obtener de la respuesta del `POST /public/order` y guardarse en `localStorage` del cliente junto con el `orderNumber` para esta sesión.
+_ Devolver el `Order.status` general y un array de sus `OrderItem`s con su `id`, `menuItem.name_es/en`, `quantity`, y `status` (`OrderItemStatus`).
+_ **(Opcional MVP) SSE/WebSockets:** Para enviar actualizaciones de estado en tiempo real a la vista del cliente. 2. **Frontend - Página de Confirmación/Estado del Pedido (`OrderConfirmationPage.tsx` o similar):**
+_ Mostrar el `orderNumber` y mensaje de "Pedido Recibido".
+_ Listar los ítems del pedido.
+_ Para cada ítem, mostrar su `status` actual (ej. "Recibido", "En Cocina", "Listo en Barra").
+_ Lógica para llamar al endpoint de estado (polling si no hay SSE) o suscribirse a SSE para actualizar los estados. \* Botón "Volver al Menú" (a `/m/:businessSlug`).
 
-    - **Prioridad:** Media-Alta (Después de KDS funcional o en paralelo si es posible)
-    - **Dificultad Estimada:** Alta
-    - **Objetivo:** Una interfaz simple para que el personal (camareros) pueda ver notificaciones (ej: "Pedido Listo desde Cocina"), marcar ítems/pedidos como "Servidos" (requiriendo PIN de staff si está configurado).
-    - **Sub-Tareas Backend:**
-      - API para login de camarero (posiblemente con `StaffPin`).
-      - API para obtener notificaciones relevantes para el camarero.
-      - API para marcar un `Order` o `OrderItem` como `SERVED`.
-    - **Sub-Tareas Frontend:**
-      - Interfaz optimizada para tablet/móvil.
-      - Lista de mesas con estados (si se implementa gestión de mesas).
-      - Notificaciones claras.
-      - Acciones rápidas para marcar como servido.
-    - **Consideraciones:** Autenticación del personal. Flujo de trabajo eficiente.
+**B2.KDS1. ⭐ [ALTA] LC - KDS Avanzado: Visualización de Tiempos y Alertas de Retraso (Fase 1)**
+_ **Dependencia:** KDS Básico (B1.1, B1.2).
+_ **Objetivo:** Proporcionar a cocina/barra información visual sobre los tiempos de preparación.
+_ **Sub-Tareas Detalladas (KDS Frontend):** 1. **Mostrar Tiempo Estimado:** En cada `KdsOrderItemCard.tsx`, mostrar el `preparationTime` (que viene del `MenuItem`). 2. **Temporizador Visual:** Cuando un ítem pasa a `PREPARING`, iniciar un temporizador visible en su tarjeta que muestre el tiempo transcurrido. 3. **Alerta Visual de Retraso Simple:**
+_ Si `tiempo_transcurrido > preparationTime`, cambiar el color del borde de la tarjeta o mostrar un icono de alerta (ej. reloj de arena amarillo).
+_ Si `tiempo_transcurrido > preparationTime _ 1.X`(ej. 1.2 para +20%), cambiar a un color más urgente (ej. rojo) o un icono más llamativo.
+        4.  **(Opcional MVP) Sonido de Alerta de Retraso:** Un sonido discreto si un ítem lleva mucho tiempo en`PREPARING`o`PENDING_KDS`.
 
-12. **LC - Backend: Gestión de Personal y Mesas por Admin del Negocio** (`backend`)
+**B2.2. ⭐ [ALTA] LC - Interfaz Camarero (MVP): Notificaciones y Marcar como Servido**
+_ **Dependencia:** KDS puede marcar ítems como `READY`.
+_ **Objetivo:** Que el camarero sepa qué ítems están listos y pueda marcarlos como entregados.
+_ **Sub-Tareas Detalladas:** 1. **Backend - API para Camarero (Protegido por rol `WAITER` y/o PIN):**
+_ **(Opcional) Login de Camarero:** Endpoint para autenticar camarero con email/pass o `StaffPin`.
+_ `GET /api/camarero/staff/notifications/ready-items`: Devuelve `OrderItem`s que están en estado `READY` y aún no `SERVED`, para el `businessId` del camarero. Incluir `orderNumber`, `table.identifier`, `menuItem.name_es/en`, `quantity`.
+_ `PATCH /api/camarero/staff/order-items/:orderItemId/status`: Permite al camarero cambiar el `status` de un `OrderItem` a `SERVED`. Actualizar `OrderItem.servedAt`.
+_ (Lógica Secundaria) Si todos los `OrderItem`s de un `Order` están `SERVED`, actualizar `Order.status` a `COMPLETED` (o un estado similar). 2. **Frontend - Interfaz Camarero (Vista simple, puede ser parte del panel admin o PWA):**
+_ **Lista de "Ítems Listos para Servir":** Tarjetas o lista mostrando la información de los ítems `READY`.
+_ Botón "Marcar como Servido" en cada ítem/grupo de ítems del mismo pedido.
+_ Actualización de esta lista (polling o SSE si se implementó para KDS). \* **(Post-MVP) Sonido de notificación para nuevos ítems listos.**
 
-    - **Prioridad:** Media (Necesario para funcionalidad completa de Camarero y KDS)
-    - **Dificultad Estimada:** Media
-    - **Objetivo:** APIs para que el `BUSINESS_ADMIN` gestione:
-      - Usuarios tipo `Staff` (roles `WAITER`, `KITCHEN_STAFF`, etc.).
-      - `StaffPin`s para acceso rápido del personal.
-      - `Table`s (CRUD, asignación de QR único, zonas, capacidad).
-    - **Pasos:** Rutas (`/api/camarero/admin/staff`, `/api/camarero/admin/tables`), controladores y servicios.
+### **BLOQUE 3: FUNCIONALIDADES ADICIONALES Y MEJORAS OPERATIVAS**
 
-13. **LC - Frontend: UI para Gestión de Personal y Mesas por Admin del Negocio** (`frontend`)
+**B3.1. [MEDIA] LC - Cliente: Interacciones Adicionales con la Mesa**
+_ **Objetivo:** Permitir al cliente solicitar asistencia o la cuenta.
+_ **Sub-Tareas Detalladas:** 1. **Botón "Llamar Camarero" (UI Cliente - `PublicMenuViewPage.tsx` o `OrderConfirmationPage.tsx`):**
+_ Al pulsar, abre un modal/confirmación opcional para añadir un motivo breve.
+_ **Backend:** Endpoint `POST /api/camarero/table/:tableId/call` (o por `tableIdentifier`). Registra la llamada (ej. en `Table.needsAttention = true` o una tabla `TableNotification`).
+_ **Interfaz Camarero:** Recibe notificación (SSE o polling) "Mesa X Llama" con el motivo. 2. **Botón "Pedir la Cuenta" (UI Cliente):**
+_ Al pulsar, abre modal para que el cliente indique:
+_ Método de pago preferido: (Radio) "Efectivo" / "Tarjeta".
+_ Si Efectivo: Input opcional "Pagaré con (ej. €50)".
+_ **Backend:** Endpoint `POST /api/camarero/table/:tableId/request-bill`. Guarda la preferencia de pago y el importe si se indicó.
+_ **Interfaz Camarero:** Recibe notificación "Mesa X Pide Cuenta (Prefiere: {Método}, Paga con: {Importe})"
 
-    - **Prioridad:** Media
-    - **Dificultad Estimada:** Media
-    - **Objetivo:** UI en el panel de admin (`/admin/dashboard/camarero/*`) para que el `BUSINESS_ADMIN` pueda realizar CRUD de su personal y de las mesas del local.
-    - **Pasos:** Nuevas secciones/páginas en el panel de admin. Formularios para creación/edición. Tablas para listar. Generación e impresión de QRs de mesa.
+**B3.2. [MEDIA] LC - Interfaz Camarero: Toma de Pedidos Manual y Gestión de Mesas Básica**
+_ **Objetivo:** Capacidades operativas esenciales para el camarero.
+_ **Sub-Tareas Detalladas (Interfaz Camarero Frontend/Backend):** 1. **Visualización de Mesas:**
+_ Lista/cuadrícula de mesas del negocio (obtenidas de `Table`).
+_ Mostrar estado básico de la mesa (ej. "Libre", "Ocupada con Pedido Activo", "Cuenta Solicitada") derivado del estado de los `Order`s asociados. 2. **Toma de Pedidos Manual:**
+_ Seleccionar una mesa.
+_ Acceder a una UI de la carta similar a la del cliente.
+_ Añadir ítems, configurar modificadores, cantidad, notas.
+_ **"Ítem Fuera de Carta":** Opción para añadir un ítem con nombre y precio manuales (se guarda en `OrderItem` con `menuItemId: null` pero con `itemNameSnapshot` y `itemPriceSnapshot` rellenados). \* Enviar el pedido al KDS (asociado a la mesa y al camarero que lo tomó, si hay login de camarero). 3. **(Post-MVP) Gestión de Estado de Mesa:** Marcar mesa como "Necesita Limpieza".
 
-14. **LC - Fundamentos Técnicos Esenciales (Pre-Lanzamiento LC)** (`backend`, `frontend`, `infra`)
-    - **Prioridad:** **CRÍTICA** (Paralelo al desarrollo de funcionalidades)
-    - **Tareas Mínimas:**
-      - **Testing Backend:** Unitario e Integración para los nuevos endpoints (Carta Cliente, Pedidos, KDS, Camarero). _(Pendiente para endpoints de Pedido y Carta Cliente)_
-      - **Validación Robusta Backend:** Aplicar Zod (o similar) a todas las entradas de las nuevas APIs de LC. _(En progreso para Pedidos)_
-      - **Seguridad LC:** Revisar autenticación y autorización para todas las nuevas interfaces y APIs de LC. _(Pendiente revisión formal)_
-      - **Logging y Monitoring Básico LC:** Asegurar que los flujos críticos (pedidos, cambios de estado) generan logs útiles. _(Revisar logs de creación de pedidos)_
-      - **Decisión y Prototipo Gateway Local (si se opta por modelo híbrido para impresión/hardware):** Investigar y prototipar si es necesario para funcionalidades como impresión de tickets en local.
+**B3.3. [MEDIA] LC - Admin: Gestión de Personal y Mesas (Tareas #12, #13 del Plan Original)**
+_ **Objetivo:** Permitir al `BUSINESS_ADMIN` configurar los elementos básicos para la operativa de LC.
+_ **Sub-Tareas Detalladas (Backend API y Frontend UI Admin):** 1. **Gestión de Personal (`Staff`):**
+_ CRUD para usuarios con roles `WAITER`, `KITCHEN_STAFF`, `BAR_STAFF`.
+_ Asignación de `StaffPin`s para login rápido. 2. **Gestión de Mesas (`Table`):**
+_ CRUD para mesas: nombre/identificador, capacidad, zona (opcional).
+_ **Generación de QR para Mesas:** Funcionalidad para generar la URL `/m/:businessSlug/:tableIdentifier` y mostrar el QR para imprimir. 3. **Configuración de Destinos KDS:** UI para que el admin defina los `kdsDestination` (ej. "Cocina Principal", "Barra"). Estos se usarán al crear/editar `MenuItem`s.
+
+**B3.4. [MEDIA] LC - Cliente/KDS: Solicitud de Cancelación de Pedido (con confirmación KDS)**
+_ **Objetivo:** Permitir al cliente intentar cancelar un pedido/ítem si no se ha empezado a preparar.
+_ **Sub-Tareas Detalladas:** 1. **Frontend (Cliente - Vista de Estado del Pedido):**
+_ Si `OrderItem.status` es `PENDING_KDS`, mostrar botón "Solicitar Cancelar Ítem".
+_ Al pulsar, llamar a API `POST /public/order/items/:orderItemId/request-cancellation`. 2. **Backend:**
+_ Endpoint para `request-cancellation`: Cambia `OrderItem.status` a `CANCELLATION_REQUESTED`. Notifica al KDS (vía SSE idealmente).
+_ Endpoint `PATCH /api/camarero/kds/items/:orderItemId/resolve-cancellation`: Body `{ resolution: 'ACCEPT' | 'REJECT' }`. Actualiza `OrderItem.status` a `CANCELLED` o revierte a `PENDING_KDS`/`PREPARING`. Notifica al cliente (SSE). 3. **Frontend (KDS):**
+_ Mostrar alerta/indicación para ítems con `CANCELLATION_REQUESTED`.
+_ Botones "Aceptar Cancelación" / "Rechazar Cancelación". 4. **Frontend (Cliente):** Actualizar vista de estado para reflejar si la cancelación fue aceptada/rechazada.
 
 ---
 
-## C. FUNCIONALIDADES LOYALPYME CORE (LCo) Y MEJORAS PLATAFORMA - POST-LC MVP 📝
+## C. FUNDAMENTOS TÉCNICOS ESENCIALES LC (Paralelo y Continuo - Tarea #14 Plan Original)
 
-_(Funcionalidades valiosas que estaban en el plan V1.0 original de LCo o como mejoras generales. Su prioridad se re-evaluará después del MVP de LC)._
-
-15. **Plataforma - Personalización Negocio - Logo (Upload)** (`backend`, `frontend`)
-
-    - **Objetivo:** Permitir al `BUSINESS_ADMIN` subir el logo de su negocio, que se mostrará en el header de su panel y en el dashboard del cliente final.
-    - **Pasos:** Endpoint backend para subida (Cloudinary), UI en panel admin.
-
-16. **Plataforma - Personalización Negocio - Theming Básico** (`backend`, `frontend`)
-
-    - **Objetivo:** Permitir al `BUSINESS_ADMIN` elegir un color primario y secundario para su marca, que se apliquen sutilmente en el dashboard del cliente y, opcionalmente, en el header del admin.
-    - **Pasos:** Campos en modelo `Business`, UI en panel admin, carga dinámica de estilos/variables CSS en frontend.
-
-17. **[YA IMPLEMENTADO]** LCo - Historial de Actividad Cliente (`backend`, `frontend`)
-
-    - **Detalles:** Ya existe `/api/customer/activity` y una pestaña en el dashboard de cliente.
-
-18. **LCo - Feature: "Mi Perfil" Cliente (con Foto)** (`backend`, `frontend`)
-
-    - **Objetivo:** Página donde el cliente pueda ver/editar sus datos (nombre, teléfono, DNI/NIE, email, contraseña) y subir una foto de perfil.
-    - **Pasos:** Endpoints backend para actualizar perfil y subir foto, UI en dashboard cliente.
-
-19. **LCo - Feature: "Ofertas y Noticias" (Comunicación Básica)** (`backend`, `frontend`)
-
-    - **Objetivo:** Sección en el dashboard de cliente donde el negocio pueda publicar ofertas, noticias o anuncios simples.
-    - **Pasos:** Modelo `Announcement` (o similar) en BD, CRUD para admin, UI para cliente.
-
-20. **LCo - Fidelización Avanzada (Más Tipos de Beneficios para Tiers)** (`backend`, `frontend`)
-    - **Objetivo:** Expandir `BenefitType` enum y la lógica asociada para incluir beneficios como "Descuento % en próxima compra", "Producto Gratis X", "Acceso Anticipado a Ofertas", etc.
-    - **Pasos:** Modificar enum, actualizar UI de gestión de tiers, actualizar lógica de aplicación de beneficios.
+- **C1. [CRÍTICA] Testing Backend:** Unitario e Integración para todos los nuevos endpoints de KDS, estado de pedido, notificaciones de camarero, gestión de personal/mesas.
+- **C2. [CRÍTICA] Validación Robusta Backend (Zod):** Aplicar Zod a todas las entradas de las nuevas APIs de LC (payloads, params, query).
+- **C3. [ALTA] Seguridad LC:** Revisión formal de autenticación (tokens API para KDS? PINs para staff?) y autorización (roles `KITCHEN_STAFF`, `WAITER` etc.) para todas las nuevas interfaces y APIs de LC.
+- **C4. [ALTA] Logging y Monitoring Básico LC:** Asegurar que los flujos críticos (creación de pedidos, cambios de estado en KDS, notificaciones a camarero, acciones de admin LC) generan logs detallados y útiles.
+- **C5. [MEDIA] Internacionalización (i18n) Completa:** Asegurar que todas las nuevas interfaces (KDS, Camarero, Cliente-Estado Pedido, Admin LC) estén completamente traducidas. (Tarea #34 Plan Original).
 
 ---
 
-## D. DEUDA TÉCNICA Y MEJORAS CONTINUAS (Transversales) 🛠️
+## D. FUNCIONALIDADES LOYALPYME CORE (LCo) Y MEJORAS PLATAFORMA - (Prioridad Re-evaluada Post-LC MVP)
 
-21. Usar Variables Entorno para Credenciales Tests (`backend`)
-22. Completar Pruebas Backend (LCo y LC) (`backend`) _(Énfasis en LC ahora)_
-23. Iniciar/Completar Pruebas Frontend (LCo y LC) (`frontend`) _(Énfasis en LC ahora)_
-24. **[EN PROGRESO - LC]** Validación Robusta Backend con Zod (Todos los módulos) (`backend`)
-25. Estrategia Deployment & CI/CD (Avanzada) (`infra`)
-26. Logging/Monitoring Avanzado (Producción) (`backend`, `frontend`)
-27. Optimización Base de Datos (`backend`)
-28. Tipado Centralizado (`common` package) (`infra`, `backend`, `frontend`)
-29. **LC - Integración Opcional y Completa con Fidelización (LoyalPyME Core)** (`backend`, `frontend`)
-    - **Prioridad:** Alta (Después de que LC MVP esté funcional)
-    - **Dificultad:** Media-Alta
-    - **Objetivo:** Sincronización de puntos por pedidos en LC, canje de recompensas LCo desde LC.
-30. **Añadir Captura desde Cámara en `RewardForm.tsx`** (`frontend`, LCo)
-    - **Objetivo:** Además de seleccionar archivo, permitir al admin tomar una foto directamente para la imagen de la recompensa.
-    - **Pasos:** Integrar `MediaDevices.getUserMedia()` o una librería para acceso a cámara en el formulario.
-31. **Refinar Espaciado/Diseño `RewardList.tsx`** (`frontend`, LCo)
-    - **Objetivo:** Mejorar la apariencia visual y el espaciado de las tarjetas de recompensa en el dashboard del cliente.
-    - **Pasos:** Ajustes CSS/Mantine.
-32. **Refinar UI y UX de Gestión de Menú y Modificadores (LC Admin):**
-    - **Prioridad:** Media (Post-MVP LC funcional)
-    - **Dificultad:** Media
-    - **Objetivo:** Mejorar la usabilidad, añadir drag-and-drop para reordenar categorías/ítems/grupos/opciones. Mejorar la visualización de la jerarquía de modificadores. Añadir vista previa de cómo verá el cliente el ítem con sus modificadores.
-33. **[NUEVO - PENDIENTE]** **Frontend (LC - Visualización Carta):** Implementar búsqueda de ítems y filtros básicos (ej. alérgenos, tags) en la vista pública de la carta. _(Parte final de la Tarea #8 original)_.
-34. **[NUEVO - PENDIENTE]** **Traducciones (i18n):** Completar todas las claves de traducción faltantes en el frontend, especialmente para la nueva vista de menú público y el flujo de pedido.
+_(Se mantienen las tareas #15 a #20, y #30, #31 del plan original. Su desarrollo se retomará después de alcanzar un MVP funcional del Módulo Camarero o si surgen oportunidades de integración temprana)._
+
+- **D1. [MEDIA] LC - Integración Completa con Fidelización LCo (Tarea #29 Plan Original):**
+  - **Objetivo Detallado:**
+    1.  **Acumulación Automática de Puntos:** Cuando un `Order` LC (asociado a un `customerId` LCo) se marca como `PAID`, el sistema LCo automáticamente otorga puntos basados en el `finalAmount` y la configuración de `pointsPerEuro` (o una específica para LC).
+    2.  **Registro en `ActivityLog` LCo:** Se crea una entrada `POINTS_EARNED_ORDER_LC`.
+    3.  `totalSpend` y `totalVisits` del cliente LCo se actualizan.
+    4.  Se recalcula el `Tier` del cliente LCo.
+    5.  **(Avanzado)** Canje de Recompensas LCo (ej. "Producto Gratis") directamente desde el flujo de pedido LC.
+    6.  **(Avanzado)** Aplicación de Beneficios de Nivel LCo (ej. descuentos) al total del pedido LC.
+  - **Dependencias:** Funcionalidad de marcar pedidos LC como `PAID`. Definición clara de cómo se configuran los puntos por pedidos LC.
 
 ---
 
-## E. VISIÓN FUTURA / MÓDULOS ADICIONALES (Post-LC MVP y Mejoras LCo) 🚀
+## E. DEUDA TÉCNICA Y MEJORAS CONTINUAS (Transversales) 🛠️
 
-33. **LC - Funcionalidades Avanzadas:** Pago Online, División Cuentas, Reservas, Inventario, Informes Avanzados.
-34. Módulo Pedidos Online / Take Away / Delivery (Extensión de LC).
-35. App Móvil Dedicada (PWA/Nativa) para Cliente LCo y/o Personal de LC.
-36. E2E Tests Automatizados.
-37. Monetización Avanzada y Planes de Suscripción Detallados.
-38. Personalización y CRM Avanzado (Transversal).
-39. Gamificación Avanzada (LCo).
+_(Se mantienen las tareas #21, #22, #23, #25, #26, #27, #28, #32, #33 del plan original. Su priorización dependerá de la capacidad y necesidad)._
+
+- **E1. [EN PROGRESO - LC] Validación Robusta Backend con Zod (Tarea #24 Plan Original):** Continuar aplicando a todos los módulos.
+
+---
+
+## F. VISIÓN FUTURA / MÓDULOS ADICIONALES (Post-LC MVP y Mejoras LCo) 🚀
+
+_(Se mantienen las tareas #33 a #39 del plan original, ahora numeradas como F1 a F7)._
+
+- **F1. LC - Funcionalidades Muy Avanzadas:** Pago Online integrado en la app del cliente, División de Cuentas avanzada, Sistema de Reservas, Gestión de Inventario Básico, Informes Avanzados LC.
+- **F2.** Módulo Pedidos Online / Take Away / Delivery (como extensión natural de LC).
+- **F3.** App Móvil Dedicada (PWA y/o Nativa) para Cliente LCo y/o Personal de LC.
+- **F4.** E2E Tests Automatizados (Cypress/Playwright).
+- **F5.** Monetización Avanzada y Planes de Suscripción Detallados para los negocios.
+- **F6.** Personalización y CRM Avanzado (Transversal).
+- **F7.** Gamificación Avanzada (LCo).
 
 ---

@@ -1,15 +1,15 @@
 // frontend/src/pages/PublicMenuViewPage.tsx
-// Version: 1.5.2 (Correct top spacing for sticky cart bar, ensure numeric value)
+// Version: 1.5.3 (Use orderNumber/id from backend response in success notification)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axios from 'axios'; // Usamos axios base para llamadas públicas
 import {
     Container, Title, Loader, Alert, Text, Stack, Paper, Image, Group,
     useMantineTheme, Button
 } from '@mantine/core';
 import {
-    IconAlertCircle, IconShoppingCartPlus, IconShoppingCart
+    IconAlertCircle, IconShoppingCartPlus, IconShoppingCart, IconCheck // Añadido IconCheck para notificación
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { notifications } from '@mantine/notifications';
@@ -64,6 +64,12 @@ interface CreateOrderPayloadDto {
     customerId?: string | null;
     orderNotes?: string | null;
     items: CreateOrderItemDto[];
+}
+// Interfaz para la respuesta esperada del backend al crear un pedido
+interface BackendOrderResponse {
+    id: string;
+    orderNumber?: string | null; // El backend podría o no devolverlo siempre
+    // ... otros campos del pedido que el backend devuelva y te interesen
 }
 // --- FIN TIPOS CARRITO ---
 
@@ -189,14 +195,14 @@ const PublicMenuViewPage: React.FC = () => {
         const existingCartItemIndex = currentOrderItems.findIndex(ci => ci.cartItemId === cartItemId);
         if (existingCartItemIndex > -1) { const updatedItems = [...currentOrderItems]; const existing = updatedItems[existingCartItemIndex]; existing.quantity += quantity; existing.totalPriceForItem = existing.currentPricePerUnit * existing.quantity; setCurrentOrderItems(updatedItems);
         } else { const newCartItem: OrderItemFE = { cartItemId: cartItemId, menuItemId: itemDetails.id, menuItemName_es: itemDetails.name_es, menuItemName_en: itemDetails.name_en, quantity: quantity, basePrice: itemDetails.price, currentPricePerUnit: currentUnitPrice, totalPriceForItem: currentUnitPrice * quantity, notes: itemNotes || undefined, selectedModifiers: flatSelectedModifiers, }; setCurrentOrderItems(prev => [...prev, newCartItem]); }
-        notifications.show({ title: t('publicMenu.itemAddedTitle'), message: t('publicMenu.itemAddedMessage', { itemName: itemDetails.name_es || itemDetails.name_en || 'Ítem', quantity: quantity }), color: 'green', icon: <IconShoppingCartPlus size={18} /> });
+        notifications.show({ title: t('publicMenu.itemAddedTitle'), message: t('publicMenu.itemAddedMessage', { itemName: itemDetails.name_es || itemDetails.name_en || t('publicMenu.unnamedItem'), quantity: quantity }), color: 'green', icon: <IconShoppingCartPlus size={18} /> });
         setConfiguringItem(null);
     };
     const handleSimpleAddToCart = (item: PublicMenuItem, quantity: number) => {
         const cartItemId = item.id; const existingCartItemIndex = currentOrderItems.findIndex(ci => ci.cartItemId === cartItemId && (!ci.selectedModifiers || ci.selectedModifiers.length === 0) && !ci.notes);
         if (existingCartItemIndex > -1) { const updatedItems = [...currentOrderItems]; const existing = updatedItems[existingCartItemIndex]; existing.quantity += quantity; existing.totalPriceForItem = existing.currentPricePerUnit * existing.quantity; setCurrentOrderItems(updatedItems);
         } else { const newCartItem: OrderItemFE = { cartItemId: cartItemId, menuItemId: item.id, menuItemName_es: item.name_es, menuItemName_en: item.name_en, quantity: quantity, basePrice: item.price, currentPricePerUnit: item.price, totalPriceForItem: item.price * quantity, selectedModifiers: [], }; setCurrentOrderItems(prev => [...prev, newCartItem]); }
-        notifications.show({ title: t('publicMenu.itemAddedTitle'), message: t('publicMenu.itemAddedMessage', { itemName: item.name_es || item.name_en || 'Ítem', quantity: quantity }), color: 'green', icon: <IconShoppingCartPlus size={18} /> });
+        notifications.show({ title: t('publicMenu.itemAddedTitle'), message: t('publicMenu.itemAddedMessage', { itemName: item.name_es || item.name_en || t('publicMenu.unnamedItem'), quantity: quantity }), color: 'green', icon: <IconShoppingCartPlus size={18} /> });
     };
 
     const handleUpdateItemQuantityInCart = useCallback((cartItemId: string, newQuantity: number) => {
@@ -219,7 +225,7 @@ const PublicMenuViewPage: React.FC = () => {
         notifications.show({
             title: t('publicMenu.cart.clearedTitle'),
             message: t('publicMenu.cart.clearedMsg'),
-            color: 'blue',
+            color: 'blue', // Mantine 'blue' o tu color de info
         });
     }, [t]);
 
@@ -244,21 +250,36 @@ const PublicMenuViewPage: React.FC = () => {
         };
         console.log("[PublicMenuViewPage] Submitting order:", JSON.stringify(orderPayload, null, 2));
         try {
-            const response = await axios.post(`${API_BASE_URL}/order/${businessSlug}`, orderPayload);
+            const response = await axios.post<BackendOrderResponse>(`${API_BASE_URL}/order/${businessSlug}`, orderPayload);
+            
+            const orderDisplayId = response.data.orderNumber || response.data.id; // Usar orderNumber si existe, sino id
+            
             notifications.show({
                 title: t('publicMenu.cart.orderSuccessTitle'),
-                message: t('publicMenu.cart.orderSuccessMsg', { orderNumber: response.data.orderNumber || response.data.id }),
-                color: 'green', autoClose: 7000,
+                message: t('publicMenu.cart.orderSuccessMsg', { orderNumber: orderDisplayId }),
+                color: 'green',
+                autoClose: 7000,
+                icon: <IconCheck size={18} />
             });
-            setCurrentOrderItems([]); setOrderNotes(''); closeCart();
+
+            setCurrentOrderItems([]); 
+            setOrderNotes('');      
+            closeCart();            
+            // Opcional: navigate(`/order-confirmation/${response.data.id}`, { state: { orderNumber: orderDisplayId, businessSlug: businessSlug } }); 
+        
         } catch (err: any) {
             console.error("Error submitting order:", err);
             const errMsg = err.response?.data?.message || err.message || t('publicMenu.cart.orderErrorMsg');
-            notifications.show({ title: t('publicMenu.cart.orderErrorTitle'), message: errMsg, color: 'red' });
+            notifications.show({ 
+                title: t('publicMenu.cart.orderErrorTitle'), 
+                message: errMsg, 
+                color: 'red',
+                // icon: <IconAlertCircle size={18} /> // IconAlertCircle ya debería estar importado
+            });
         } finally {
             setIsSubmittingOrder(false);
         }
-    }, [businessSlug, currentOrderItems, orderNotes, tableIdentifier, t, closeCart, navigate]);
+    }, [businessSlug, currentOrderItems, orderNotes, tableIdentifier, t, closeCart, navigate]); // navigate añadido aquí
     
     if (loading) { return ( <Container size="md" py="xl" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}> <Loader size="xl" /> </Container> ); }
     if (error) { return ( <Container size="md" py="xl"> <Alert icon={<IconAlertCircle size="1rem" />} title={t('common.error')} color="red" radius="md"> {error} </Alert> </Container> ); }
@@ -271,9 +292,7 @@ const PublicMenuViewPage: React.FC = () => {
     const totalCartItems = currentOrderItems.reduce((sum, item) => sum + item.quantity, 0);
     const totalCartAmount = currentOrderItems.reduce((sum, item) => sum + item.totalPriceForItem, 0);
 
-    // --- CORRECCIÓN PARA EL VALOR 'top' ---
-    const topOffsetForCartBar = typeof theme.spacing.md === 'number' ? theme.spacing.md + 10 : 26; // 16 (fallback) + 10 = 26
-    // --- FIN CORRECCIÓN ---
+    const topOffsetForCartBar = typeof theme.spacing.md === 'number' ? theme.spacing.md + 10 : 26;
 
     return (
         <>
@@ -288,18 +307,18 @@ const PublicMenuViewPage: React.FC = () => {
                         <Paper 
                             p={0} 
                             shadow="xs" 
-                            withBorder={false} 
+                            withBorder={false}
                             radius="md" 
                             style={{ 
                                 position: 'sticky', 
-                                top: topOffsetForCartBar, // <--- Usar la variable corregida
+                                top: topOffsetForCartBar,
                                 zIndex: 200, 
                             }} 
                         >
                             <Button
                                 fullWidth
                                 size="lg"
-                                variant="gradient"
+                                variant="gradient" 
                                 gradient={{ from: theme.primaryColor, to: theme.colors[theme.primaryColor][4], deg: 105 }}
                                 onClick={openCart}
                                 disabled={isCartOpen}
@@ -311,7 +330,7 @@ const PublicMenuViewPage: React.FC = () => {
                                 <Group justify="space-between" style={{ width: '100%' }}>
                                     <Group gap="xs">
                                         <IconShoppingCart size={22} stroke={1.8} />
-                                        <Text fw={500} inherit>
+                                        <Text fw={500} inherit> 
                                             {t('publicMenu.cart.viewOrderItems', { count: totalCartItems })}
                                         </Text>
                                     </Group>
