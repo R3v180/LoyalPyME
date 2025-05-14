@@ -1,5 +1,5 @@
 // frontend/src/components/customer/dashboard/tabs/SummaryTab.tsx
-// Version: 1.5.2 (Consolidated and reviewed for syntax and props)
+// Version: 1.5.3 (Remove "Next Reward" display from summary)
 
 import React, { useMemo } from 'react';
 import {
@@ -55,16 +55,19 @@ const SummaryTab: React.FC<SummaryTabProps> = ({
     const rewardsSummary = useMemo(() => {
         const pendingGifts = displayRewards?.filter(r => r.isGift) ?? [];
         const pointsRewards = displayRewards?.filter(r => !r.isGift && r.pointsCost > 0) ?? [];
-        pointsRewards.sort((a, b) => (a.pointsCost ?? 0) - (b.pointsCost ?? 0));
-        const nextReward = pointsRewards.length > 0 ? pointsRewards[0] : null;
+        // No necesitamos ordenar pointsRewards si no vamos a usar nextReward
+        // pointsRewards.sort((a, b) => (a.pointsCost ?? 0) - (b.pointsCost ?? 0)); 
+        // const nextReward = pointsRewards.length > 0 ? pointsRewards[0] : null; // <-- ELIMINADO
+        
+        // Aseguramos que previewItems no intente acceder a nextReward si fue eliminado
         const previewItems = [...pendingGifts, ...pointsRewards].slice(0, MAX_PREVIEW_ITEMS);
         return {
             pendingGiftsCount: pendingGifts.length,
-            nextReward,
+            // nextReward, // <-- ELIMINADO
             previewItems,
             hasAnyRewards: !!displayRewards && displayRewards.length > 0
         };
-    }, [displayRewards]);
+    }, [displayRewards]); // Ya no depende de currentLanguage o t aquí directamente
 
     if (loadingUser && !userData) {
         return <Group justify="center" p="xl"><Loader /></Group>;
@@ -102,7 +105,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({
                     {userData?.isCamareroActive && userData?.businessSlug && (
                         <Paper withBorder p="lg" radius="md" shadow="sm">
                             <Group justify="space-between" align="center">
-                                <Stack gap={0} style={{ flex: 1, minWidth: 0 }}> {/* Asegurar que el Stack pueda encogerse */}
+                                <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
                                     <Text fw={500} size="lg" truncate>
                                         {userData.businessName 
                                             ? t('customerDashboard.summary.viewMenuFor', { businessName: userData.businessName }) 
@@ -119,7 +122,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({
                                     variant="gradient"
                                     gradient={{ from: 'teal', to: 'lime', deg: 105 }}
                                     size="sm"
-                                    style={{ flexShrink: 0 }} // Evitar que el botón se encoja demasiado
+                                    style={{ flexShrink: 0 }}
                                 >
                                     {t('customerDashboard.summary.viewMenuButton')}
                                 </Button>
@@ -197,14 +200,12 @@ const SummaryTab: React.FC<SummaryTabProps> = ({
                                 )}
                                 
                                 <Box mt="auto">
-                                    {rewardsSummary.nextReward && (
-                                        <Text size="sm">{t('customerDashboard.summary.nextReward', { name: (currentLanguage === 'es' ? rewardsSummary.nextReward.name_es : rewardsSummary.nextReward.name_en) || rewardsSummary.nextReward.name_es || rewardsSummary.nextReward.name_en || t('common.nameNotAvailable'), points: rewardsSummary.nextReward.pointsCost.toLocaleString() })}</Text>
-                                    )}
+                                    {/* --- BLOQUE DE "PRÓXIMA RECOMPENSA" ELIMINADO --- */}
                                     {rewardsSummary.hasAnyRewards && (
                                         <Button
                                             variant="light"
                                             fullWidth
-                                            mt="sm"
+                                            mt="sm" 
                                             onClick={() => setActiveTab('rewards')}
                                             radius="lg"
                                             rightSection={<IconArrowRight size={16} />}

@@ -103,7 +103,7 @@
     "errorConfirmPassword": "Confirm the password.",
     "errorPhoneFormat": "Invalid format (e.g., +346...).",
     "errorDocType": "Select a document type.",
-    "errorDNIFormat": "Invalid DNI format (8 numbers and 1 letter).",
+    "errorDNIFormat": "Invalid ID format (8 numbers and 1 letter).",
     "errorNIEFormat": "Invalid NIE format (letter, 7 numbers, letter).",
     "errorBusinessRequired": "You must select a business.",
     "successMessage": "Your account has been created. You will be redirected to the login page."
@@ -881,8 +881,30 @@
     "modifier.chooseOneOptional": "Choose 1 (optional)",
     "modifier.chooseOptional": "Optional",
     "modifier.chooseAtLeastOneUpToMax_required": "Choose at least 1 up to {{max}} (required)",
-    "cart.title": "Your Order",
-    "cart.total": "Total"
+    "cart": {
+      "title": "Your Order",
+      "total": "Total",
+      "empty": "Your shopping cart is empty.",
+      "itemNotesLabel": "Notes:",
+      "removeItem": "Remove item",
+      "orderNotesLabel": "Order Notes (Optional)",
+      "orderNotesPlaceholder": "E.g.: General allergies, delivery preference...",
+      "totalOrder": "Order Total:",
+      "continueShopping": "Continue Shopping",
+      "submitOrder": "Submit Order",
+      "viewOrderItems_one": "View your order ({{count}} item)",
+      "viewOrderItems_other": "View your order ({{count}} items)",
+      "decreaseQuantity": "Decrease quantity of {{itemName}}",
+      "itemQuantity": "Quantity for {{itemName}}",
+      "increaseQuantity": "Increase quantity of {{itemName}}",
+      "removeItemFromOrder": "Remove {{itemName}} from order",
+      "errorTitle": "Order Error",
+      "errorEmpty": "Your cart is empty. Add some items before submitting.",
+      "orderSuccessTitle": "Order Sent!",
+      "orderSuccessMsg": "Your order #{{orderNumber}} has been received and is being prepared.",
+      "orderErrorTitle": "Error Sending Order",
+      "orderErrorMsg": "Could not send your order. Please try again or contact staff."
+    }
   },
   "error": {
     "missingBusinessSlug": "Error: Business slug not provided.",
