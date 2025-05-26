@@ -1,18 +1,26 @@
 // backend/src/public/order.service.ts
-// Version: 1.0.3 (Corrected type assignment for optional relations in Order creation)
+// Version: 1.1.0 (Add getOrderStatusById function and related types)
 
-import { PrismaClient, Prisma, Order, OrderItem, OrderItemModifierOption, OrderStatus } from '@prisma/client';
+import { 
+    PrismaClient, 
+    Prisma, 
+    Order, 
+    OrderItem, // No se usa directamente, pero es parte del modelo
+    OrderItemModifierOption, // No se usa directamente
+    OrderStatus, 
+    OrderItemStatus // Necesario para los tipos de respuesta
+} from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Definición local de ModifierUiType
-const ModifierUiTypeEnum = {
-    RADIO: 'RADIO',
-    CHECKBOX: 'CHECKBOX',
-} as const;
-type LocalModifierUiType = typeof ModifierUiTypeEnum[keyof typeof ModifierUiTypeEnum];
+// Definición local de ModifierUiType (o importar desde @prisma/client si está disponible y se usa)
+enum ModifierUiTypeEnum {
+    RADIO = 'RADIO',
+    CHECKBOX = 'CHECKBOX',
+}
+// type LocalModifierUiType = typeof ModifierUiTypeEnum[keyof typeof ModifierUiTypeEnum]; // No usado directamente en este archivo
 
-// DTOs
+// --- DTOs para la creación de Pedidos (Existentes) ---
 interface SelectedModifierOptionDto {
     modifierOptionId: string;
 }
@@ -25,13 +33,40 @@ interface OrderItemDto {
 }
 
 export interface CreateOrderPayloadDto {
-    tableIdentifier?: string | null; // Este sería el ID de un registro Table
+    tableIdentifier?: string | null; 
     customerId?: string | null;
     orderNotes?: string | null;
     items: OrderItemDto[];
 }
+// --- Fin DTOs para creación ---
 
 
+// --- ESTRUCTURAS DE DATOS PARA LA RESPUESTA DEL ESTADO DEL PEDIDO (NUEVO) ---
+export interface PublicOrderItemStatusInfo {
+    id: string; // OrderItem ID
+    menuItemName_es: string | null;
+    menuItemName_en: string | null; // Si tuvieras itemNameSnapshot_en, lo usarías.
+    quantity: number;
+    status: OrderItemStatus; // El estado específico del ítem
+}
+
+export interface PublicOrderStatusInfo {
+    orderId: string;
+    orderNumber: string;
+    orderStatus: OrderStatus; // El estado general del pedido
+    items: PublicOrderItemStatusInfo[];
+    tableIdentifier?: string | null; // Opcional: identificador de la mesa
+    orderNotes?: string | null;      // Opcional: notas generales del pedido
+    createdAt: Date;                // Fecha de creación del pedido
+}
+// --- FIN ESTRUCTURAS DE DATOS PARA ESTADO ---
+
+
+/**
+ * Crea un nuevo pedido público para un negocio.
+ * (Función existente, sin cambios lógicos internos respecto a la V1.0.4 que te pasé,
+ *  pero la incluyo completa para que el archivo esté autocontenido)
+ */
 export const createPublicOrder = async (
     businessSlug: string,
     payload: CreateOrderPayloadDto
@@ -106,7 +141,9 @@ export const createPublicOrder = async (
                     currentItemTotalModifierPrice = currentItemTotalModifierPrice.add(optionFull.priceAdjustment);
                     
                     orderItemModifierOptionsData.push({
-                        modifierOptionId: optionFull.id
+                        modifierOptionId: optionFull.id,
+                        optionNameSnapshot: optionFull.name_es, 
+                        optionPriceAdjustmentSnapshot: optionFull.priceAdjustment,
                     });
                 }
 
@@ -115,7 +152,7 @@ export const createPublicOrder = async (
                     if (group.isRequired && selectedCountInGroup < group.minSelections) {
                         throw new Error(`Para el grupo '${group.name_es}', se requiere al menos ${group.minSelections} selección(es).`);
                     }
-                    if (selectedCountInGroup < group.minSelections && group.minSelections > 0) {
+                    if (selectedCountInGroup < group.minSelections && group.minSelections > 0) { 
                         throw new Error(`Para el grupo '${group.name_es}', se deben seleccionar al menos ${group.minSelections} opción(es). Seleccionadas: ${selectedCountInGroup}.`);
                     }
                     if (selectedCountInGroup > group.maxSelections) {
@@ -137,17 +174,19 @@ export const createPublicOrder = async (
                 }
             }
 
-            const finalPricePerItem = itemBasePrice.add(currentItemTotalModifierPrice);
-            const subtotalForItem = finalPricePerItem.mul(itemDto.quantity);
-            calculatedTotalAmount = calculatedTotalAmount.add(subtotalForItem);
+            const priceAtPurchaseValue = itemBasePrice.add(currentItemTotalModifierPrice);
+            const totalItemPriceValue = priceAtPurchaseValue.mul(itemDto.quantity); // Este es el total del ítem
+            calculatedTotalAmount = calculatedTotalAmount.add(totalItemPriceValue);
 
             orderItemsToCreate.push({
                 menuItem: { connect: { id: menuItem.id } },
                 quantity: itemDto.quantity,
-                unitPrice: finalPricePerItem,
-                totalItemPrice: subtotalForItem,
+                priceAtPurchase: priceAtPurchaseValue,
+                totalItemPrice: totalItemPriceValue, // Asumiendo que el schema lo permite y es requerido
                 notes: itemDto.notes,
                 kdsDestination: menuItem.kdsDestination,
+                itemNameSnapshot: menuItem.name_es, 
+                itemDescriptionSnapshot: menuItem.description_es, 
                 ...(orderItemModifierOptionsData.length > 0 && {
                     selectedModifiers: {
                         createMany: {
@@ -161,32 +200,109 @@ export const createPublicOrder = async (
         const orderCount = await tx.order.count({ where: { businessId: business.id } });
         const orderNumber = `P-${String(orderCount + 1).padStart(6, '0')}`;
 
-        // --- CORRECCIÓN EN LA CONSTRUCCIÓN DEL OBJETO 'data' PARA 'tx.order.create' ---
         const orderCreateData: Prisma.OrderCreateInput = {
             business: { connect: { id: business.id } },
             notes: payload.orderNotes,
-            totalAmount: calculatedTotalAmount,
-            finalAmount: calculatedTotalAmount, // Asumimos que no hay descuentos iniciales
+            totalAmount: calculatedTotalAmount, 
+            finalAmount: calculatedTotalAmount, 
             status: OrderStatus.RECEIVED,
             orderNumber: orderNumber,
-            items: { // 'items' es el nombre de la relación en tu schema Order
-                create: orderItemsToCreate
-            }
+            items: { create: orderItemsToCreate }
         };
 
         if (payload.tableIdentifier) {
-            orderCreateData.table = { connect: { id: payload.tableIdentifier } };
+            const tableRecord = await tx.table.findUnique({
+                where: { businessId_identifier: { businessId: business.id, identifier: payload.tableIdentifier } },
+                select: { id: true }
+            });
+            if (tableRecord) {
+                orderCreateData.table = { connect: { id: tableRecord.id } };
+            } else {
+                console.warn(`[PublicOrder SVC] Table with identifier '${payload.tableIdentifier}' not found for business ${business.id}. Order will be created without table linkage.`);
+            }
         }
 
         if (payload.customerId) {
             orderCreateData.customerLCo = { connect: { id: payload.customerId } };
         }
-        // --- FIN CORRECCIÓN ---
 
-        const newOrder = await tx.order.create({
-            data: orderCreateData, // Usar el objeto construido
-        });
-        console.log(`[PublicOrder SVC] Order ${newOrder.id} created successfully. Total: ${newOrder.totalAmount}`);
+        const newOrder = await tx.order.create({ data: orderCreateData, });
+        console.log(`[PublicOrder SVC] Order ${newOrder.id} (Number: ${newOrder.orderNumber}) created successfully. Total: ${newOrder.totalAmount}`);
         return newOrder;
     });
 };
+
+
+// --- NUEVA FUNCIÓN PARA OBTENER ESTADO DEL PEDIDO ---
+/**
+ * Obtiene el estado de un pedido específico por su ID, incluyendo el estado de sus ítems.
+ * Este endpoint es PÚBLICO.
+ * @param orderId - El ID del pedido (UUID).
+ * @returns PublicOrderStatusInfo o null si el pedido no se encuentra.
+ */
+export const getOrderStatusById = async (orderId: string): Promise<PublicOrderStatusInfo | null> => {
+    console.log(`[PublicOrder SVC] Fetching status for order ID: ${orderId}`);
+    try {
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            select: {
+                id: true,
+                orderNumber: true,
+                status: true,         // OrderStatus general
+                notes: true,          // Notas generales del pedido
+                createdAt: true,      // Fecha de creación del pedido
+                table: {              // Para obtener el identificador de la mesa
+                    select: { identifier: true }
+                },
+                items: {              // Ítems del pedido
+                    select: {
+                        id: true,                         // ID del OrderItem
+                        itemNameSnapshot: true,           // Nombre del ítem en el momento del pedido
+                        // Si también guardas name_en en snapshot, inclúyelo aquí
+                        quantity: true,
+                        status: true,                     // OrderItemStatus (PENDING_KDS, PREPARING, etc.)
+                        // Opcional: si quieres el nombre actual del MenuItem de la carta
+                        // menuItem: { select: { name_es: true, name_en: true } } 
+                    },
+                    orderBy: { 
+                        createdAt: 'asc' // O por alguna otra lógica si tienes 'positionInOrder'
+                    } 
+                }
+            }
+        });
+
+        if (!order) {
+            console.log(`[PublicOrder SVC] Order with ID ${orderId} not found.`);
+            return null;
+        }
+
+        // Mapear los ítems al formato deseado para la respuesta
+        const itemsInfo: PublicOrderItemStatusInfo[] = order.items.map(item => ({
+            id: item.id,
+            menuItemName_es: item.itemNameSnapshot, 
+            menuItemName_en: null, // Asumiendo que itemNameSnapshot solo guarda un idioma.
+                                   // Si tuvieras itemNameSnapshot_en, lo usarías aquí.
+                                   // O si usaras item.menuItem.name_en (si lo incluyes arriba).
+            quantity: item.quantity,
+            status: item.status,
+        }));
+
+        const orderStatusInfo: PublicOrderStatusInfo = {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            orderStatus: order.status,
+            items: itemsInfo,
+            tableIdentifier: order.table?.identifier || null,
+            orderNotes: order.notes,
+            createdAt: order.createdAt,
+        };
+        
+        console.log(`[PublicOrder SVC] Status for order ${orderId} (Number: ${order.orderNumber}): ${order.status}, Items: ${itemsInfo.length}`);
+        return orderStatusInfo;
+
+    } catch (error) {
+        console.error(`[PublicOrder SVC] Error fetching status for order ID ${orderId}:`, error);
+        throw new Error('Error al obtener el estado del pedido desde la base de datos.');
+    }
+};
+// --- FIN NUEVA FUNCIÓN ---

@@ -1,10 +1,10 @@
 // backend/src/index.ts
-// Version: 1.6.3 (Add publicOrderRouter)
+// Version: 1.6.4 (Add camareroKdsRouter, full Swagger definition)
 
 import express, { Express, Request, Response, NextFunction, RequestHandler } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { UserRole, TierCalculationBasis, TierDowngradePolicy, BenefitType, Prisma } from '@prisma/client';
+import { UserRole, TierCalculationBasis, TierDowngradePolicy, BenefitType, Prisma } from '@prisma/client'; // BenefitType es usado en Swagger
 import { PrismaClient } from '@prisma/client';
 import cron from 'node-cron';
 import swaggerJsdoc from 'swagger-jsdoc';
@@ -23,13 +23,14 @@ import customerRouter from './routes/customer.routes';
 import tierRouter from './routes/tiers.routes';
 import adminRouter from './routes/admin.routes';
 import businessRouter from './routes/businesses.routes';
-import activityRouter from './routes/activity.routes'; // Ya estaba
+import activityRouter from './routes/activity.routes';
 import uploadsRouter from './routes/uploads.routes';
 import superAdminRouter from './routes/superadmin.routes';
 import camareroAdminRouter from './routes/camarero-admin.routes';
 import publicMenuRouter from './routes/public-menu.routes';
-// --- NUEVA IMPORTACIÓN ---
-import publicOrderRouter from './routes/public-order.routes'; // Importar el router de pedidos públicos
+import publicOrderRouter from './routes/public-order.routes';
+// --- NUEVA IMPORTACIÓN PARA KDS ROUTER ---
+import camareroKdsRouter from './routes/camarero-kds.routes';
 // --- FIN NUEVA IMPORTACIÓN ---
 
 // Cron Job Logic
@@ -41,7 +42,7 @@ const prisma = new PrismaClient();
 const app: Express = express();
 const port = process.env.PORT || 3000;
 
-// Middlewares globales (sin cambios)
+// Middlewares globales
 app.use(cors());
 app.use(express.json());
 app.use((req, res, next) => {
@@ -59,14 +60,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Configuración de Swagger (sin cambios respecto a la v1.6.2 que te pasé)
+// Configuración de Swagger
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'LoyalPyME API',
-      version: '1.15.0',
-      description: 'API REST para la plataforma de fidelización LoyalPyME. Permite gestionar clientes, puntos, niveles, recompensas, historial, subidas de archivos, autenticación, funcionalidades de Super Administrador, administración del Módulo Camarero, y visualización de menú público y creación de pedidos.', // Actualizada
+      version: '1.16.0', // Actualizado para reflejar KDS
+      description: 'API REST para la plataforma de fidelización LoyalPyME. Permite gestionar clientes, puntos, niveles, recompensas, historial, subidas de archivos, autenticación, funcionalidades de Super Administrador, administración del Módulo Camarero (gestión de carta, KDS), y visualización de menú público y creación de pedidos.', // Actualizada
        contact: { name: 'Olivier Hottelet', email: 'olivierhottelet1980@gmail.com' },
        license: { name: 'Software Propietario. Copyright (c) 2024-2025 Olivier Hottelet', url: 'LICENSE.MD' }
     },
@@ -74,7 +75,8 @@ const swaggerOptions = {
         { url: `http://localhost:${port}/api`, description: 'Servidor de Desarrollo Local (API Protegida)', },
         { url: `http://localhost:${port}/public`, description: 'Servidor de Desarrollo Local (API Pública)', },
     ],
-    components: { /* ... tu bloque components ... */
+    // --- INICIO BLOQUE COMPONENTS COMPLETO (DE TU VERSIÓN ANTERIOR) ---
+    components: {
         securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', } },
         schemas: {
              ActivityLogItem: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, type: { type: 'string', enum: ['POINTS_EARNED_QR', 'POINTS_REDEEMED_REWARD', 'GIFT_REDEEMED', 'POINTS_ADJUSTED_ADMIN'], readOnly: true }, pointsChanged: { type: 'integer', nullable: true, readOnly: true, description: 'Cambio en puntos (+/-), null si no aplica.' }, description: { type: 'string', nullable: true, readOnly: true, description: 'Descripción del evento.' }, createdAt: { type: 'string', format: 'date-time', readOnly: true, description: 'Fecha y hora del evento.' } } },
@@ -135,7 +137,9 @@ const swaggerOptions = {
              ImageUploadResponse: { type: 'object', properties: { url: { type: 'string', format: 'url', description: 'URL de la imagen subida a Cloudinary.' } } }
          }
     },
-    paths: { /* ... tu bloque paths ... */
+    // --- FIN BLOQUE COMPONENTS COMPLETO ---
+    // --- INICIO BLOQUE PATHS COMPLETO (DE TU VERSIÓN ANTERIOR) ---
+    paths: {
          '/public/businesses/public-list': { get: { tags: ['Public', 'Businesses'], summary: 'Obtiene la lista pública de negocios (ID y Nombre).', description: 'Devuelve un array con el ID y el nombre de todos los negocios registrados, útil para el formulario de registro de clientes. No requiere autenticación.', responses: { '200': { description: 'Lista de negocios obtenida con éxito.', content: { 'application/json': { schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' } } } } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
          '/api/auth/login': { post: { tags: ['Authentication'], summary: 'Autentica un usuario y devuelve un token JWT.', description: 'Verifica las credenciales (email y contraseña) y, si son correctas y el usuario está activo, devuelve los datos del usuario (sin contraseña) y un token JWT.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/LoginCredentials' } } } }, responses: { '200': { description: 'Autenticación exitosa.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/LoginResponse' } } } }, '400': { description: 'Error de validación (falta email o contraseña).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado (credenciales inválidas o usuario inactivo).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
          '/api/auth/register': { post: { tags: ['Registration'], summary: 'Registra un nuevo usuario cliente.', description: 'Crea una cuenta para un cliente final asociándolo a un negocio existente.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/RegisterUserDto' } } } }, responses: { '201': { description: 'Usuario cliente creado con éxito.', content: { 'application/json': { schema: { type: 'object', properties: { user: { '$ref': '#/components/schemas/UserResponse' } } } } } }, '400': { description: 'Error de validación (campos faltantes, formato inválido, rol incorrecto).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (email, teléfono o documento ya existen, o el negocio no existe).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
@@ -191,38 +195,53 @@ const swaggerOptions = {
              }
          }
     },
+    // --- FIN BLOQUE PATHS COMPLETO ---
     security: [{ bearerAuth: [] }],
   },
-  apis: [],
+  // Asegúrate de que apis incluya los archivos de rutas que contienen anotaciones JSDoc para Swagger
+  apis: [
+    './src/routes/*.ts', 
+    './src/auth/*.ts', 
+    './src/admin/*.ts', 
+    './src/camarero/*.ts', // <--- AÑADIDO para KDS y otros controladores de camarero
+    './src/public/*.ts',
+    './src/rewards/*.ts',
+    './src/points/*.ts',
+    './src/customer/*.ts',
+    './src/tiers/*.ts',
+    './src/uploads/*.ts',
+    './src/superadmin/*.ts',
+    // Añade otras rutas de controladores si es necesario
+  ], 
 };
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec) as RequestHandler);
 
 // --- Montaje de Rutas ---
 
-// Rutas Públicas
-app.use('/api/auth', authRouter);
-app.use('/public/businesses', businessRouter); // Lista pública de negocios para registro
-app.use('/public/menu', publicMenuRouter); // Para la carta digital pública
-// --- NUEVO MONTAJE DE RUTA PÚBLICA ---
-app.use('/public/order', publicOrderRouter); // Para la creación de pedidos públicos
-// --- FIN NUEVO MONTAJE DE RUTA PÚBLICA ---
+// Rutas Públicas (sin autenticación requerida)
+app.use('/api/auth', authRouter); 
+app.use('/public/businesses', businessRouter); 
+app.use('/public/menu', publicMenuRouter);     
+app.use('/public/order', publicOrderRouter);   
 
+// Rutas de Super Administrador (requieren token SUPER_ADMIN)
+app.use('/api/superadmin', superAdminRouter); 
 
-// Rutas de Super Administrador
-app.use('/api/superadmin', superAdminRouter);
+// Rutas del Módulo Camarero (requieren token y que el módulo esté activo)
+app.use('/api/camarero/admin', camareroAdminRouter); 
+// --- NUEVO MONTAJE PARA EL ROUTER KDS ---
+app.use('/api/camarero/kds', camareroKdsRouter);   
+// --- FIN NUEVO MONTAJE ---
 
-// Rutas de Admin del Negocio (Módulo Camarero)
-app.use('/api/camarero/admin', camareroAdminRouter);
-
-// Rutas Protegidas (requieren token)
-app.use('/api/profile', authenticateToken, protectedRouter);
-app.use('/api/rewards', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), rewardsRouter);
-app.use('/api/points', authenticateToken, pointsRouter);
-app.use('/api/customer', authenticateToken, checkRole([UserRole.CUSTOMER_FINAL]), customerRouter);
-app.use('/api/tiers', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), tierRouter);
-app.use('/api/admin', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), adminRouter);
-app.use('/api/uploads', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN, UserRole.SUPER_ADMIN]), uploadsRouter);
+// Rutas de Módulo de Fidelización y Generales Protegidas
+app.use('/api/profile', authenticateToken, protectedRouter); 
+app.use('/api/rewards', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), rewardsRouter); 
+app.use('/api/points', authenticateToken, pointsRouter); 
+app.use('/api/customer', authenticateToken, checkRole([UserRole.CUSTOMER_FINAL]), customerRouter); 
+app.use('/api/tiers', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), tierRouter); 
+app.use('/api/admin', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN]), adminRouter); 
+app.use('/api/uploads', authenticateToken, checkRole([UserRole.BUSINESS_ADMIN, UserRole.SUPER_ADMIN]), uploadsRouter); 
 
 // --- Fin Montaje de Rutas ---
 
@@ -231,7 +250,7 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Welcome to LoyalPyME API! Docs available at /api-docs');
 });
 
-// Manejador de errores global (sin cambios)
+// Manejador de errores global
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error('[GLOBAL ERROR HANDLER]', err.stack);
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
@@ -248,7 +267,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     res.status(statusCode).json({ message: statusCode === 500 ? 'Error Interno del Servidor' : 'Error en la Petición', error: errorMessage });
 });
 
-// Cron Job (sin cambios)
+// Cron Job
 if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
     const cronSchedule = process.env.TIER_UPDATE_CRON_SCHEDULE || '0 3 * * *';
     console.log(`Scheduling Tier update/downgrade job with schedule: [${cronSchedule}]`);
@@ -267,7 +286,7 @@ if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
      console.log("ℹ️ Cron job scheduling skipped in test/Vitest environment.");
 }
 
-// Iniciar servidor (sin cambios)
+// Iniciar servidor
 if (!process.env.VITEST) {
      app.listen(port, () => {
          console.log(`\n🚀 [server]: Server is running at http://localhost:${port}`);
