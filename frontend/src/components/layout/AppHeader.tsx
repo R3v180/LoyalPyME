@@ -1,20 +1,32 @@
-// filename: frontend/src/components/layout/AppHeader.tsx
-// Version: 1.5.1 (Constrain header content width using Container)
+// frontend/src/components/layout/AppHeader.tsx
+// Version: 1.6.1 (Remove unused IconHome import and navigate variable)
 
 import React from 'react';
-// Imports necesarios
 import {
     Group, Burger, Skeleton, Button, Menu, UnstyledButton, Box, Text,
-    Container // <--- AÑADIR Container
+    Container
 } from '@mantine/core';
-import { IconUserCircle, IconLogout, IconChevronDown } from '@tabler/icons-react';
+import { 
+    IconUserCircle, 
+    IconLogout, 
+    IconChevronDown, 
+    // IconHome // <--- ELIMINADO IconHome
+} from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { useTranslation } from 'react-i18next';
 import ReactCountryFlag from 'react-country-flag';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link 
+    // , useNavigate // <--- ELIMINADO useNavigate si no se usa
+} from 'react-router-dom';
 
-// Interfaces (sin cambios)
-interface LayoutUserData { name?: string | null; email: string; role: string; }
+// Interfaz LayoutUserData
+interface LayoutUserData {
+    id: string;
+    name?: string | null;
+    email: string;
+    role: 'SUPER_ADMIN' | 'BUSINESS_ADMIN' | 'CUSTOMER_FINAL';
+}
+
 interface AppHeaderProps {
     userData: LayoutUserData | null;
     loadingUser: boolean;
@@ -24,9 +36,13 @@ interface AppHeaderProps {
     showAdminNavbar?: boolean;
 }
 
-// Componente Logo (sin cambios desde la versión con imagen)
-const Logo = () => (
-    <Link to="/" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+// Componente Logo
+const Logo: React.FC<{ homePath: string }> = ({ homePath }) => (
+    <Link 
+        to={homePath} 
+        style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }} 
+        aria-label={homePath === "/" || homePath === "/login" ? "Ir a la página de inicio de sesión" : "Ir a mi panel principal"}
+    >
         <img
             src="/loyalpymelogo.jpg"
             alt="LoyalPyME Logo"
@@ -40,15 +56,32 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
     const { i18n, t } = useTranslation();
     const [mobileMenuOpened, { toggle: toggleMobileMenu, close: closeMobileMenu }] = useDisclosure(false);
-    const navigate = useNavigate();
+    // const navigate = useNavigate(); // <--- ELIMINADO SI NO SE USA
 
-    // --- Lógica interna (changeLanguage, onLogoutClick, etc. sin cambios) ---
-    const changeLanguage = (lang: string) => { /* ... */ i18n.changeLanguage(lang); closeMobileMenu(); };
+    let logoLinkPath = "/"; 
+
+    if (userData) {
+        if (userData.role === 'CUSTOMER_FINAL') {
+            logoLinkPath = "/customer/dashboard";
+        } else if (userData.role === 'BUSINESS_ADMIN') {
+            logoLinkPath = "/admin/dashboard";
+        } else if (userData.role === 'SUPER_ADMIN') {
+            logoLinkPath = "/superadmin";
+        }
+    }
+
+    const changeLanguage = (lang: string) => { i18n.changeLanguage(lang); closeMobileMenu(); };
     const currentCountryCode = i18n.resolvedLanguage === 'es' ? 'ES' : 'GB';
     const languages = [ { code: 'es', name: 'Español', country: 'ES' }, { code: 'en', name: 'English', country: 'GB' }, ];
-    const onLogoutClick = () => { /* ... */ handleLogout(); closeMobileMenu(); navigate('/login', { replace: true }); };
+    
+    const onLogoutClick = () => { 
+        handleLogout(); 
+        closeMobileMenu(); 
+    };
+
     const LogoutButtonInternal = () => ( <Button onClick={onLogoutClick} variant="light" color="red" size="sm" leftSection={<IconLogout size={16}/>}>{t('header.logoutButton')}</Button> );
-    const LanguageSwitcherDesktop = () => ( /* ... código sin cambios ... */
+    
+    const LanguageSwitcherDesktop = () => (
          <Menu shadow="md" width={150} trigger="hover" openDelay={100} closeDelay={200}>
             <Menu.Target>
                  <UnstyledButton style={{ display: 'flex', alignItems: 'center', padding: '5px', borderRadius: 'var(--mantine-radius-sm)'}}>
@@ -62,35 +95,30 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             </Menu.Dropdown>
         </Menu>
     );
-    // --- FIN Lógica interna ---
 
-    // --- JSX Principal MODIFICADO ---
     return (
-        // El Box exterior ya no necesita controlar el layout principal
         <Box component="header" h="100%">
-            {/* Añadimos el Container aquí */}
             <Container size="lg" h="100%" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                {/* Grupo Izquierda (sin cambios internos) */}
                 <Group gap="xs">
                     {showAdminNavbar && toggleNavbar && ( <Burger opened={navbarOpened ?? false} onClick={toggleNavbar} hiddenFrom="sm" size="sm"/> )}
-                    <Logo />
+                    <Logo homePath={logoLinkPath} />
                 </Group>
 
-                {/* Grupo Derecha (sin cambios internos) */}
                 {loadingUser ? ( <Skeleton height={30} width={120} /> )
                  : userData ? (
                     <Group gap="sm">
-                        {/* Controles Escritorio */}
                         <Group visibleFrom="sm" gap="sm">
-                            <Text size="sm" truncate> <IconUserCircle size={18} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> {t('header.greeting', { name: userData.name || userData.email })} </Text>
+                            <Text size="sm" truncate> 
+                                <IconUserCircle size={18} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> 
+                                {t('header.greeting', { name: userData.name || userData.email })} 
+                            </Text>
                             <LanguageSwitcherDesktop />
                             <LogoutButtonInternal />
                         </Group>
-                         {/* Menú Burger Móvil */}
                          <Box hiddenFrom="sm">
                              <Menu shadow="md" width={200} opened={mobileMenuOpened} onChange={toggleMobileMenu} position="bottom-end">
                                 <Menu.Target>
-                                     <Burger opened={mobileMenuOpened} onClick={toggleMobileMenu} aria-label="Toggle navigation" size="sm"/>
+                                     <Burger opened={mobileMenuOpened} onClick={toggleMobileMenu} aria-label={t('header.toggleNavigation', 'Toggle navigation')} size="sm"/>
                                 </Menu.Target>
                                 <Menu.Dropdown>
                                      <Menu.Label>{userData.name || userData.email}</Menu.Label>
@@ -109,14 +137,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                             </Menu>
                          </Box>
                     </Group>
-                ) : null }
-            {/* Fin Grupo Derecha */}
+                ) : (
+                    <Group>
+                        <LanguageSwitcherDesktop /> 
+                    </Group>
+                )}
             </Container>
-             {/* Fin Container */}
         </Box>
-         // Fin Box exterior
     );
-    // --- FIN JSX MODIFICADO ---
 };
 
 export default AppHeader;

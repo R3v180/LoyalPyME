@@ -1,4 +1,6 @@
 // frontend/src/pages/admin/camarero/MenuManagementPage.tsx
+// Version 1.0.1 (Remove categoryName prop from MenuItemManager call)
+
 import React, { useState } from 'react';
 import { 
     Container, 
@@ -9,8 +11,8 @@ import {
     Group     
 } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { notifications } from '@mantine/notifications'; // Para notificaciones
-import { IconExternalLink } from '@tabler/icons-react'; // Icono para el botón
+import { notifications } from '@mantine/notifications'; 
+import { IconExternalLink } from '@tabler/icons-react'; 
 
 // Componentes hijos
 import MenuCategoryManager from '../../../components/admin/camarero/menu/MenuCategoryManager';
@@ -18,16 +20,13 @@ import MenuItemManager from '../../../components/admin/camarero/menu/MenuItemMan
 
 // Tipos y Hooks
 import { MenuCategoryData } from '../../../types/menu.types';
-import { useLayoutUserData } from '../../../hooks/useLayoutUserData'; // Hook para obtener userData
+import { useLayoutUserData } from '../../../hooks/useLayoutUserData'; 
 
 const MenuManagementPage: React.FC = () => {
     const { t } = useTranslation();
     const [selectedCategory, setSelectedCategory] = useState<MenuCategoryData | null>(null);
     
-    // Obtener userData para acceder a isCamareroActive y businessSlug
     const { userData, loadingUser: loadingLayoutUser } = useLayoutUserData();
-
-    // console.log(`[MenuManagementPage] Render. SelectedCategory: ${selectedCategory?.id}. UserData loading: ${loadingLayoutUser}, CamareroActive: ${userData?.isCamareroActive}, Slug: ${userData?.businessSlug}`);
 
     const handleViewItems = (category: MenuCategoryData) => {
         setSelectedCategory(category);
@@ -43,14 +42,11 @@ const MenuManagementPage: React.FC = () => {
             console.error("[MenuManagementPage] Business slug no disponible para previsualizar el menú.");
             notifications.show({
                  title: t('common.error'),
-                 message: t('adminCamarero.manageMenu.previewErrorNoSlug', "No se pudo obtener el identificador del negocio para la previsualización."), // Nueva clave i18n
+                 message: t('adminCamarero.manageMenu.previewErrorNoSlug'),
                  color: 'red'
             });
         }
     };
-
-    // Clave de traducción para el botón de previsualización
-    // adminCamarero.manageMenu.previewButton = "Previsualizar Carta Pública"
 
     return (
         <Container size="xl" py="xl">
@@ -59,16 +55,15 @@ const MenuManagementPage: React.FC = () => {
                     <Title order={2}>
                         {t('adminCamarero.manageMenu.title')}
                     </Title>
-                    {/* Botón de Previsualización */}
-                    {userData?.isCamareroActive && !loadingLayoutUser && ( // Mostrar solo si el módulo está activo y no estamos cargando datos de usuario
+                    {userData?.isCamareroActive && !loadingLayoutUser && (
                         <Button
                             variant="outline"
                             leftSection={<IconExternalLink size={16} />}
                             onClick={handlePreviewMenu}
-                            disabled={!userData?.businessSlug} // Deshabilitar si no hay slug
-                            title={!userData?.businessSlug ? t('adminCamarero.manageMenu.previewDisabledTooltip', "Identificador de negocio no disponible") : undefined} // Nueva clave i18n
+                            disabled={!userData?.businessSlug}
+                            title={!userData?.businessSlug ? t('adminCamarero.manageMenu.previewDisabledTooltip') : undefined}
                         >
-                            {t('adminCamarero.manageMenu.previewButton', 'Previsualizar Carta')}
+                            {t('adminCamarero.manageMenu.previewButton')}
                         </Button>
                     )}
                 </Group>
@@ -89,12 +84,12 @@ const MenuManagementPage: React.FC = () => {
                                 {t('adminCamarero.manageMenu.itemsSectionTitle')} - {selectedCategory.name_es || selectedCategory.name_en}
                             </Title>
                             <Button variant="outline" onClick={handleBackToCategories}>
-                                {t('common.back')} {t('adminCamarero.manageMenu.toCategories', 'a Categorías')} {/* Nueva clave i18n */}
+                                {t('common.back')} {t('adminCamarero.manageMenu.toCategories')}
                             </Button>
                         </Group>
                         <MenuItemManager 
                             categoryId={selectedCategory.id} 
-                            categoryName={selectedCategory.name_es || selectedCategory.name_en || ''}
+                            // categoryName={selectedCategory.name_es || selectedCategory.name_en || ''} // <-- LÍNEA ELIMINADA
                         />
                     </Paper>
                 )}

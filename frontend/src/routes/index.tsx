@@ -1,5 +1,5 @@
 // frontend/src/routes/index.tsx
-// Version: (tu versión existente + ruta para menú público)
+// Version: (tu versión existente + ruta para OrderStatusPage)
 
 console.log("[Routes Index] Archivo src/routes/index.tsx cargado."); // Log #1: Carga del archivo
 
@@ -16,8 +16,9 @@ import RegisterPage from '../pages/RegisterPage';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/ResetPasswordPage';
 import RegisterBusinessPage from '../pages/RegisterBusinessPage';
-// --- NUEVA IMPORTACIÓN PARA LA PÁGINA DEL MENÚ PÚBLICO ---
-import PublicMenuViewPage from '../pages/PublicMenuViewPage';
+import PublicMenuViewPage from '../pages/PublicMenuViewPage'; // Ya estaba
+// --- NUEVA IMPORTACIÓN PARA LA PÁGINA DE ESTADO DEL PEDIDO ---
+import OrderStatusPage from '../pages/OrderStatusPage'; 
 // --- FIN NUEVA IMPORTACIÓN ---
 
 // Página de Cliente
@@ -51,11 +52,10 @@ function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         
-        {/* --- NUEVA RUTA PARA EL MENÚ PÚBLICO --- */}
-        {/* Usaremos :tableIdentifier? para hacerlo opcional por ahora */}
         <Route path="/m/:businessSlug/:tableIdentifier?" element={<PublicMenuViewPage />} />
-        {/* Si prefieres empezar sin tableIdentifier: */}
-        {/* <Route path="/m/:businessSlug" element={<PublicMenuViewPage />} /> */}
+        
+        {/* --- NUEVA RUTA PARA LA PÁGINA DE ESTADO DEL PEDIDO --- */}
+        <Route path="/order-status/:orderId" element={<OrderStatusPage />} />
         {/* --- FIN NUEVA RUTA --- */}
 
         <Route path="/" element={<Navigate to="/login" replace />} />
@@ -103,7 +103,7 @@ function AppRoutes() {
 
       </Route>
 
-      {/* <Route path="*" element={<NotFoundPage />} /> */}
+      {/* <Route path="*" element={<NotFoundPage />} /> // Considera añadir una página 404 */}
     </Routes>
   );
 }

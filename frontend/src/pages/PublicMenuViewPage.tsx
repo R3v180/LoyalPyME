@@ -1,15 +1,17 @@
 // frontend/src/pages/PublicMenuViewPage.tsx
-// Version: 1.5.3 (Use orderNumber/id from backend response in success notification)
+// Version: 1.6.1 (Corrected background for active order Paper)
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios'; // Usamos axios base para llamadas públicas
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
 import {
     Container, Title, Loader, Alert, Text, Stack, Paper, Image, Group,
     useMantineTheme, Button
 } from '@mantine/core';
 import {
-    IconAlertCircle, IconShoppingCartPlus, IconShoppingCart, IconCheck // Añadido IconCheck para notificación
+    IconAlertCircle, IconShoppingCartPlus, IconShoppingCart, IconCheck,
+    IconInfoCircle, 
+    // IconPlus // No se usa directamente si el botón está comentado
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { notifications } from '@mantine/notifications';
@@ -19,10 +21,8 @@ import {
     PublicDigitalMenuData,
     PublicMenuItem,
     ModifierUiType,
-    // PublicMenuModifierGroup, // No se usa directamente aquí si está en los otros tipos
 } from '../types/menu.types';
 
-// Importar componentes hijos
 import CategoryAccordion from '../components/public/menu/CategoryAccordion';
 import { MenuItemCardConfiguringState } from '../components/public/menu/MenuItemCard';
 import ShoppingCartModal from '../components/public/menu/ShoppingCartModal';
@@ -61,15 +61,13 @@ interface CreateOrderItemDto {
 }
 interface CreateOrderPayloadDto {
     tableIdentifier?: string | null;
-    customerId?: string | null;
+    customerId?: string | null; 
     orderNotes?: string | null;
     items: CreateOrderItemDto[];
 }
-// Interfaz para la respuesta esperada del backend al crear un pedido
 interface BackendOrderResponse {
     id: string;
-    orderNumber?: string | null; // El backend podría o no devolverlo siempre
-    // ... otros campos del pedido que el backend devuelva y te interesen
+    orderNumber?: string | null;
 }
 // --- FIN TIPOS CARRITO ---
 
@@ -86,6 +84,7 @@ interface ConfiguringItemState {
 
 const LOCAL_STORAGE_CART_KEY_PREFIX = 'loyalpyme_public_cart_';
 const LOCAL_STORAGE_ORDER_NOTES_KEY_PREFIX = 'loyalpyme_public_order_notes_';
+const ACTIVE_ORDER_INFO_KEY_PREFIX = 'loyalpyme_active_order_info_'; 
 
 const PublicMenuViewPage: React.FC = () => {
     const { t, i18n } = useTranslation();
@@ -95,6 +94,7 @@ const PublicMenuViewPage: React.FC = () => {
 
     const cartStorageKey = `${LOCAL_STORAGE_CART_KEY_PREFIX}${businessSlug || 'default'}${tableIdentifier ? `_${tableIdentifier}` : ''}`;
     const notesStorageKey = `${LOCAL_STORAGE_ORDER_NOTES_KEY_PREFIX}${businessSlug || 'default'}${tableIdentifier ? `_${tableIdentifier}` : ''}`;
+    const activeOrderKey = businessSlug ? `${ACTIVE_ORDER_INFO_KEY_PREFIX}${businessSlug}${tableIdentifier ? `_${tableIdentifier}` : ''}` : null;
 
     const [menuData, setMenuData] = useState<PublicDigitalMenuData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -113,14 +113,35 @@ const PublicMenuViewPage: React.FC = () => {
     const [isCartOpen, { open: openCart, close: closeCart }] = useDisclosure(false);
     const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
     const [configuringItem, setConfiguringItem] = useState<ConfiguringItemState | null>(null);
+    const [activeOrderIdForTable, setActiveOrderIdForTable] = useState<string | null>(null);
+    const [activeOrderNumberForTable, setActiveOrderNumberForTable] = useState<string | null>(null);
 
     useEffect(() => {
-        localStorage.setItem(cartStorageKey, JSON.stringify(currentOrderItems));
-    }, [currentOrderItems, cartStorageKey]);
+        if (activeOrderKey) {
+            const storedActiveOrderInfo = localStorage.getItem(activeOrderKey);
+            if (storedActiveOrderInfo) {
+                try {
+                    const parsedInfo = JSON.parse(storedActiveOrderInfo);
+                    if (parsedInfo.orderId && parsedInfo.orderNumber) {
+                        setActiveOrderIdForTable(parsedInfo.orderId);
+                        setActiveOrderNumberForTable(parsedInfo.orderNumber);
+                        console.log(`[PublicMenuViewPage] Active order found: ID=${parsedInfo.orderId}, Number=${parsedInfo.orderNumber}`);
+                        setCurrentOrderItems([]);
+                        setOrderNotes('');
+                    } else { localStorage.removeItem(activeOrderKey); }
+                } catch (e) { console.error("Error parsing active order info", e); localStorage.removeItem(activeOrderKey); }
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeOrderKey]); 
 
     useEffect(() => {
-        localStorage.setItem(notesStorageKey, orderNotes);
-    }, [orderNotes, notesStorageKey]);
+        if (!activeOrderIdForTable) { localStorage.setItem(cartStorageKey, JSON.stringify(currentOrderItems)); }
+    }, [currentOrderItems, cartStorageKey, activeOrderIdForTable]);
+
+    useEffect(() => {
+        if (!activeOrderIdForTable) { localStorage.setItem(notesStorageKey, orderNotes); }
+    }, [orderNotes, notesStorageKey, activeOrderIdForTable]);
 
     const fetchPublicMenu = useCallback(async () => {
         if (!businessSlug) { setError(t('error.missingBusinessSlug')); setLoading(false); return; }
@@ -133,11 +154,15 @@ const PublicMenuViewPage: React.FC = () => {
                     categories: response.data.categories.map(c => ({...c, items: c.items.map(i => ({...i, price: parseFloat(String(i.price)), modifierGroups: i.modifierGroups.map(g => ({...g, options: g.options.map(o => ({...o, priceAdjustment: parseFloat(String(o.priceAdjustment)) }))})) }))}))
                 };
                 setMenuData(parsedMenuData);
-                if (parsedMenuData.categories.length > 0) setActiveAccordionItems([parsedMenuData.categories[0].id]);
+                if (parsedMenuData.categories.length > 0 && !activeOrderIdForTable) { 
+                    setActiveAccordionItems([parsedMenuData.categories[0].id]);
+                } else if (activeOrderIdForTable) {
+                    setActiveAccordionItems([]); 
+                }
             } else { throw new Error(t('error.noMenuDataReceived')); }
         } catch (err: any) { setError(err.response?.data?.message || err.message || t('common.errorUnknown')); setMenuData(null); } 
         finally { setLoading(false); }
-    }, [businessSlug, t]);
+    }, [businessSlug, t, activeOrderIdForTable]);
 
     useEffect(() => { fetchPublicMenu(); }, [fetchPublicMenu]);
 
@@ -148,7 +173,7 @@ const PublicMenuViewPage: React.FC = () => {
                 const selections = selectedOptions[group.id]; const count = Array.isArray(selections) ? selections.length : (selections ? 1 : 0);
                 if (group.isRequired && count < group.minSelections) isValid = false;
                 if (count > group.maxSelections) isValid = false;
-                if (group.uiType === ModifierUiType.RADIO && count > 1) isValid = false;
+                if (group.uiType === ModifierUiType.RADIO && count > 1) isValid = false; 
                 const idsToSum = Array.isArray(selections) ? selections : (selections ? [selections] : []);
                 idsToSum.forEach(optionId => { const option = group.options.find(opt => opt.id === optionId); if (option) newPrice += option.priceAdjustment; else console.warn(`Option ID ${optionId} not found in group ${group.id}`); });
             }
@@ -169,7 +194,7 @@ const PublicMenuViewPage: React.FC = () => {
         if (item.modifierGroups) {
             item.modifierGroups.forEach(group => {
                 const defaultOptions = group.options.filter(opt => opt.isDefault);
-                if (group.uiType === ModifierUiType.RADIO) {
+                if (group.uiType === ModifierUiType.RADIO) { 
                     const defaultRadioOptionId = defaultOptions.length > 0 ? defaultOptions[0].id : (group.options.length > 0 && group.isRequired && group.minSelections === 1 ? group.options[0].id : '');
                     initialSelectedOptions[group.id] = defaultRadioOptionId;
                 } else { initialSelectedOptions[group.id] = defaultOptions.map(opt => opt.id); }
@@ -191,7 +216,6 @@ const PublicMenuViewPage: React.FC = () => {
         const sortedModifierOptionIds = flatSelectedModifiers.map(m => m.modifierOptionId).sort().join(',');
         const notesHash = itemNotes ? `_notes-${itemNotes.toLocaleLowerCase().replace(/\s/g, '')}` : '';
         const cartItemId = `${itemDetails.id}${flatSelectedModifiers.length > 0 ? `-[${sortedModifierOptionIds}]` : ''}${notesHash}`;
-        
         const existingCartItemIndex = currentOrderItems.findIndex(ci => ci.cartItemId === cartItemId);
         if (existingCartItemIndex > -1) { const updatedItems = [...currentOrderItems]; const existing = updatedItems[existingCartItemIndex]; existing.quantity += quantity; existing.totalPriceForItem = existing.currentPricePerUnit * existing.quantity; setCurrentOrderItems(updatedItems);
         } else { const newCartItem: OrderItemFE = { cartItemId: cartItemId, menuItemId: itemDetails.id, menuItemName_es: itemDetails.name_es, menuItemName_en: itemDetails.name_en, quantity: quantity, basePrice: itemDetails.price, currentPricePerUnit: currentUnitPrice, totalPriceForItem: currentUnitPrice * quantity, notes: itemNotes || undefined, selectedModifiers: flatSelectedModifiers, }; setCurrentOrderItems(prev => [...prev, newCartItem]); }
@@ -206,13 +230,7 @@ const PublicMenuViewPage: React.FC = () => {
     };
 
     const handleUpdateItemQuantityInCart = useCallback((cartItemId: string, newQuantity: number) => {
-        setCurrentOrderItems(prevItems =>
-            prevItems.map(item =>
-                item.cartItemId === cartItemId
-                    ? { ...item, quantity: newQuantity, totalPriceForItem: item.currentPricePerUnit * newQuantity }
-                    : item
-            ).filter(item => item.quantity > 0) 
-        );
+        setCurrentOrderItems(prevItems => prevItems.map(item => item.cartItemId === cartItemId ? { ...item, quantity: newQuantity, totalPriceForItem: item.currentPricePerUnit * newQuantity } : item ).filter(item => item.quantity > 0));
     }, []);
 
     const handleRemoveItemFromCart = useCallback((cartItemId: string) => {
@@ -220,13 +238,8 @@ const PublicMenuViewPage: React.FC = () => {
     }, []);
 
     const handleClearCart = useCallback(() => {
-        setCurrentOrderItems([]);
-        setOrderNotes('');
-        notifications.show({
-            title: t('publicMenu.cart.clearedTitle'),
-            message: t('publicMenu.cart.clearedMsg'),
-            color: 'blue', // Mantine 'blue' o tu color de info
-        });
+        setCurrentOrderItems([]); setOrderNotes('');
+        notifications.show({ title: t('publicMenu.cart.clearedTitle'), message: t('publicMenu.cart.clearedMsg'), color: 'blue', });
     }, [t]);
 
     const handleSubmitOrder = useCallback(async () => {
@@ -243,30 +256,54 @@ const PublicMenuViewPage: React.FC = () => {
                 ? feItem.selectedModifiers.map(sm => ({ modifierOptionId: sm.modifierOptionId }))
                 : null,
         }));
+        let customerIdForPayload: string | null = null;
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            try {
+                const parsedUser = JSON.parse(storedUser);
+                if (parsedUser && parsedUser.id && parsedUser.role === 'CUSTOMER_FINAL') {
+                    customerIdForPayload = parsedUser.id;
+                }
+            } catch (e) { console.warn("Could not parse user from localStorage for order submission:", e); }
+        }
         const orderPayload: CreateOrderPayloadDto = {
             items: payloadItems,
             orderNotes: orderNotes.trim() || null,
             tableIdentifier: tableIdentifier || null,
+            customerId: customerIdForPayload, 
         };
         console.log("[PublicMenuViewPage] Submitting order:", JSON.stringify(orderPayload, null, 2));
         try {
             const response = await axios.post<BackendOrderResponse>(`${API_BASE_URL}/order/${businessSlug}`, orderPayload);
-            
-            const orderDisplayId = response.data.orderNumber || response.data.id; // Usar orderNumber si existe, sino id
-            
+            const orderIdFromResponse = response.data.id; 
+            const orderNumberFromResponse = response.data.orderNumber; 
             notifications.show({
                 title: t('publicMenu.cart.orderSuccessTitle'),
-                message: t('publicMenu.cart.orderSuccessMsg', { orderNumber: orderDisplayId }),
-                color: 'green',
-                autoClose: 7000,
-                icon: <IconCheck size={18} />
+                message: t('publicMenu.cart.orderSuccessMsg', { orderNumber: orderNumberFromResponse || orderIdFromResponse }), 
+                color: 'green', autoClose: 4000, icon: <IconCheck size={18} />
             });
-
+            if (activeOrderKey && orderIdFromResponse && orderNumberFromResponse) {
+                const activeOrderData = { 
+                    orderId: orderIdFromResponse, 
+                    orderNumber: orderNumberFromResponse,
+                    savedAt: Date.now() 
+                };
+                localStorage.setItem(activeOrderKey, JSON.stringify(activeOrderData));
+                setActiveOrderIdForTable(orderIdFromResponse); 
+                setActiveOrderNumberForTable(orderNumberFromResponse);
+                console.log(`[PublicMenuViewPage] Active order info saved: Key=${activeOrderKey}`);
+            }
             setCurrentOrderItems([]); 
             setOrderNotes('');      
             closeCart();            
-            // Opcional: navigate(`/order-confirmation/${response.data.id}`, { state: { orderNumber: orderDisplayId, businessSlug: businessSlug } }); 
-        
+            console.log(`[PublicMenuViewPage] Navigating to /order-status/${orderIdFromResponse}`);
+            navigate(`/order-status/${orderIdFromResponse}`, { 
+                state: { 
+                    orderNumber: orderNumberFromResponse, 
+                    businessSlug: businessSlug,
+                    tableIdentifier: tableIdentifier 
+                } 
+            });
         } catch (err: any) {
             console.error("Error submitting order:", err);
             const errMsg = err.response?.data?.message || err.message || t('publicMenu.cart.orderErrorMsg');
@@ -274,12 +311,12 @@ const PublicMenuViewPage: React.FC = () => {
                 title: t('publicMenu.cart.orderErrorTitle'), 
                 message: errMsg, 
                 color: 'red',
-                // icon: <IconAlertCircle size={18} /> // IconAlertCircle ya debería estar importado
+                icon: <IconAlertCircle size={18} /> 
             });
         } finally {
             setIsSubmittingOrder(false);
         }
-    }, [businessSlug, currentOrderItems, orderNotes, tableIdentifier, t, closeCart, navigate]); // navigate añadido aquí
+    }, [businessSlug, currentOrderItems, orderNotes, tableIdentifier, t, closeCart, navigate, setCurrentOrderItems, setOrderNotes, setIsSubmittingOrder, activeOrderKey]);
     
     if (loading) { return ( <Container size="md" py="xl" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}> <Loader size="xl" /> </Container> ); }
     if (error) { return ( <Container size="md" py="xl"> <Alert icon={<IconAlertCircle size="1rem" />} title={t('common.error')} color="red" radius="md"> {error} </Alert> </Container> ); }
@@ -303,29 +340,66 @@ const PublicMenuViewPage: React.FC = () => {
                         <Title order={1} ta="center" style={{ flexShrink: 1, minWidth: 0 }}>{menuData.businessName}</Title>
                     </Group>
 
-                    {currentOrderItems.length > 0 && (
+                    {activeOrderIdForTable && activeOrderNumberForTable && !configuringItem && (
                         <Paper 
-                            p={0} 
-                            shadow="xs" 
-                            withBorder={false}
-                            radius="md" 
-                            style={{ 
-                                position: 'sticky', 
-                                top: topOffsetForCartBar,
-                                zIndex: 200, 
-                            }} 
+                            shadow="md" p="lg" radius="md" withBorder mb="xl" 
+                            bg={theme.colors.blue[0]} // Fondo corregido
+                        >
+                            <Group justify="space-between" align="center">
+                                <Group>
+                                    <IconInfoCircle size={24} color={theme.colors.blue[6]} />
+                                    <Stack gap={0}>
+                                        <Text fw={500}>
+                                            {t('publicMenu.activeOrder.title')}
+                                        </Text>
+                                        <Text size="sm">
+                                            {t('publicMenu.activeOrder.number', { orderNumber: activeOrderNumberForTable })}
+                                        </Text>
+                                    </Stack>
+                                </Group>
+                                <Group>
+                                    <Button
+                                        variant="outline"
+                                        size="xs"
+                                        component={Link}
+                                        to={`/order-status/${activeOrderIdForTable}`}
+                                        state={{ 
+                                            orderNumber: activeOrderNumberForTable,
+                                            businessSlug: businessSlug,
+                                            tableIdentifier: tableIdentifier
+                                        }}
+                                    >
+                                        {t('publicMenu.activeOrder.viewStatusButton')}
+                                    </Button>
+                                    {/* 
+                                    <Button
+                                        variant="filled"
+                                        size="xs"
+                                        leftSection={<IconPlus size={14} />} // IconPlus necesita importarse si se usa
+                                        onClick={() => {
+                                            notifications.show({ message: "Funcionalidad 'Añadir a pedido' pendiente."});
+                                        }}
+                                        disabled 
+                                    >
+                                        {t('publicMenu.activeOrder.addItemButton')}
+                                    </Button>
+                                    */}
+                                </Group>
+                            </Group>
+                        </Paper>
+                    )}
+
+                    {!activeOrderIdForTable && currentOrderItems.length > 0 && !configuringItem && (
+                        <Paper 
+                            p={0} shadow="xs" withBorder={false} radius="md" 
+                            style={{ position: 'sticky', top: topOffsetForCartBar, zIndex: 200 }} 
                         >
                             <Button
-                                fullWidth
-                                size="lg"
-                                variant="gradient" 
+                                fullWidth size="lg" variant="gradient" 
                                 gradient={{ from: theme.primaryColor, to: theme.colors[theme.primaryColor][4], deg: 105 }}
                                 onClick={openCart}
-                                disabled={isCartOpen}
-                                styles={{
-                                    root: { height: 'auto', padding: `${theme.spacing.sm} ${theme.spacing.md}` },
-                                    label: { width: '100%' }
-                                }}
+                                disabled={isCartOpen || !!activeOrderIdForTable} 
+                                styles={{ root: { height: 'auto', padding: `${theme.spacing.sm} ${theme.spacing.md}` }, label: { width: '100%' } }}
                             >
                                 <Group justify="space-between" style={{ width: '100%' }}>
                                     <Group gap="xs">
@@ -359,18 +433,20 @@ const PublicMenuViewPage: React.FC = () => {
                 </Stack>
             </Container>
 
-            <ShoppingCartModal
-                opened={isCartOpen}
-                onClose={closeCart}
-                orderItems={currentOrderItems}
-                orderNotes={orderNotes}
-                onUpdateItemQuantity={handleUpdateItemQuantityInCart}
-                onRemoveItem={handleRemoveItemFromCart}
-                onUpdateOrderNotes={setOrderNotes}
-                onSubmitOrder={handleSubmitOrder}
-                isSubmittingOrder={isSubmittingOrder}
-                onClearCart={handleClearCart}
-            />
+            {!activeOrderIdForTable && (
+                <ShoppingCartModal
+                    opened={isCartOpen}
+                    onClose={closeCart}
+                    orderItems={currentOrderItems}
+                    orderNotes={orderNotes}
+                    onUpdateItemQuantity={handleUpdateItemQuantityInCart}
+                    onRemoveItem={handleRemoveItemFromCart}
+                    onUpdateOrderNotes={setOrderNotes}
+                    onSubmitOrder={handleSubmitOrder}
+                    isSubmittingOrder={isSubmittingOrder}
+                    onClearCart={handleClearCart}
+                />
+            )}
         </>
     );
 };

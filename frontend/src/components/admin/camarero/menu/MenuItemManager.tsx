@@ -1,4 +1,6 @@
 // frontend/src/components/admin/camarero/menu/MenuItemManager.tsx
+// Version 1.0.1 (Remove unused categoryName prop)
+
 import React, { useState } from 'react';
 import {
     Box, Button, Text, Stack, Group, Loader, Alert,
@@ -11,6 +13,7 @@ import {
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { useModals } from '@mantine/modals';
+import { notifications } from '@mantine/notifications'; // Añadido para handleManageModifiers
 
 import { useAdminMenuItems } from '../../../../hooks/useAdminMenuItems';
 import { MenuItemData, MenuItemFormData } from '../../../../types/menu.types';
@@ -18,10 +21,11 @@ import MenuItemFormModal from './MenuItemFormModal';
 
 interface MenuItemManagerProps {
     categoryId: string;
-    categoryName: string;
+    // categoryName: string; // <-- PROP ELIMINADA
 }
 
-const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryName }) => {
+// --- CORRECCIÓN: Quitar categoryName de la desestructuración ---
+const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId /*, categoryName*/ }) => {
     const { t, i18n } = useTranslation();
     const modals = useModals();
     const currentLanguage = i18n.language;
@@ -33,13 +37,11 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryN
         addItem,
         updateItem,
         deleteItem,
-        // fetchItems: refetchItems, // No se usa directamente aquí, ya que el hook se actualiza
     } = useAdminMenuItems(categoryId);
 
     const [itemModalOpened, setItemModalOpened] = useState(false);
     const [editingItem, setEditingItem] = useState<MenuItemData | null>(null);
     const [isSubmittingItemForm, setIsSubmittingItemForm] = useState(false);
-
     const [isUpdatingItemStatusId, setIsUpdatingItemStatusId] = useState<string | null>(null);
     const [isDeletingItemId, setIsDeletingItemId] = useState<string | null>(null);
 
@@ -78,44 +80,52 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryN
         setIsUpdatingItemStatusId(item.id);
         const newStatus = !item.isAvailable;
         try {
+            // Asegurarse de que solo se envía el campo que se quiere actualizar
             await updateItem(item.id, { isAvailable: newStatus });
         } catch (error) {
             console.error(`Error toggling availability for item ${item.id}:`, error);
+            // La notificación de error ya la maneja el hook si ocurre
         } finally {
             setIsUpdatingItemStatusId(null);
         }
     };
 
     const handleDeleteItemClick = (item: MenuItemData) => {
-        const itemName = (currentLanguage === 'es' ? item.name_es : item.name_en) || item.name_es || t('adminCamarero.manageMenu.itemFallbackName'); // Usar fallback
+        const itemName = (currentLanguage === 'es' && item.name_es) ? item.name_es : (item.name_en || item.name_es || t('adminCamarero.manageMenu.itemFallbackName'));
         modals.openConfirmModal({
             title: t('adminCommon.confirmDeleteTitle'),
             centered: true,
-            children: ( <Text size="sm"> {t('adminCommon.confirmDeleteMessage')}{' '} {t('adminCamarero.manageMenu.itemLabel')}: <strong>"{itemName}"</strong>? </Text> ), // Usar clave para "Ítem:"
+            children: ( <Text size="sm"> {t('adminCommon.confirmDeleteMessage')}{' '} {t('adminCamarero.manageMenu.itemLabel')}: <strong>"{itemName}"</strong>? </Text> ),
             labels: { confirm: t('common.delete'), cancel: t('common.cancel') },
             confirmProps: { color: 'red' },
             onConfirm: async () => {
                 setIsDeletingItemId(item.id);
-                await deleteItem(item.id);
+                await deleteItem(item.id); // El hook maneja la notificación
                 setIsDeletingItemId(null);
             },
         });
     };
-
-    // TODO: Implementar correctamente la lógica de abrir el modal de modificadores
+    
     const handleManageModifiers = (item: MenuItemData) => {
-        const itemName = (currentLanguage === 'es' ? item.name_es : item.name_en) || item.name_es || t('adminCamarero.manageMenu.itemFallbackName');
-        alert(t('common.upcomingFeatureTitle') + ` - ${t('adminCamarero.manageMenu.manageModifiersTooltip')}: ${itemName}`);
+        const itemName = (currentLanguage === 'es' && item.name_es) ? item.name_es : (item.name_en || item.name_es || t('adminCamarero.manageMenu.itemFallbackName'));
+        // Implementación real para abrir el modal de modificadores
+        // Esto es solo un placeholder:
+        notifications.show({
+             title: t('common.upcomingFeatureTitle'),
+             message: `${t('adminCamarero.manageMenu.manageModifiersTooltip')} para: ${itemName} (ID: ${item.id})`,
+             color: 'blue'
+        });
+        console.log("Abrir modal de modificadores para el ítem:", item.id, itemName);
     };
 
+
     const rows = items.map((item) => {
-        const displayName = (currentLanguage === 'es' ? item.name_es : item.name_en) || item.name_es || t('common.nameNotAvailable');
+        const displayName = (currentLanguage === 'es' && item.name_es) ? item.name_es : (item.name_en || item.name_es || t('common.nameNotAvailable'));
         const isLoadingThisRowStatus = isUpdatingItemStatusId === item.id;
         const isLoadingThisRowDelete = isDeletingItemId === item.id;
         const disableActions = isSubmittingItemForm || !!isDeletingItemId || !!isUpdatingItemStatusId;
         const itemAvailabilityText = item.isAvailable ? t('adminCamarero.manageMenu.itemAvailable') : t('adminCamarero.manageMenu.itemNotAvailable');
         const tooltipToggleAvailable = item.isAvailable ? t('adminCamarero.manageMenu.markNotAvailable') : t('adminCamarero.manageMenu.markAvailable');
-
 
         return (
             <Table.Tr key={item.id}>
@@ -130,7 +140,7 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryN
                     {displayName !== item.name_es && item.name_es && <Text size="xs" c="dimmed">ES: {item.name_es}</Text>}
                     {displayName !== item.name_en && item.name_en && <Text size="xs" c="dimmed">EN: {item.name_en}</Text>}
                 </Table.Td>
-                <Table.Td ta="right">{item.price.toLocaleString(currentLanguage, { style: 'currency', currency: 'EUR' })}</Table.Td>
+                <Table.Td ta="right">{Number(item.price).toLocaleString(currentLanguage, { style: 'currency', currency: 'EUR' })}</Table.Td>
                 <Table.Td>{item.position}</Table.Td>
                 <Table.Td>
                     <Badge color={item.isAvailable ? 'green' : 'gray'} variant="light">
@@ -226,7 +236,7 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({ categoryId, categoryN
                 </Table.ScrollContainer>
             )}
 
-            {categoryId && (
+            {categoryId && ( // categoryId existe porque es una prop requerida
                  <MenuItemFormModal
                     opened={itemModalOpened}
                     onClose={handleCloseItemModal}

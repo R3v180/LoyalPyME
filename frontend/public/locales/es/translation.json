@@ -170,7 +170,8 @@
   "header": {
     "greeting": "Hola, {{name}}!",
     "logoutButton": "Cerrar Sesión",
-    "languageLabel": "Idioma"
+    "languageLabel": "Idioma",
+    "toggleNavigation": "Alternar navegación"
   },
   "customerDashboard": {
     "title": "Panel de Cliente",
@@ -210,6 +211,7 @@
     "successRedeemGiftMessage": "Has canjeado \"{{rewardName}}\".",
     "errorLoadingProfileTitle": "Error de Perfil",
     "errorLoadingProfileDefault": "No se pudieron cargar los datos del usuario.",
+    "noUserDataError": "No se pudieron cargar los datos del usuario.",
     "tierBenefitsTitle": "Beneficios del Nivel: {{tierName}}",
     "progressUnitVisits": "visitas",
     "progressLabel": "{{currentValue}} / {{targetValue}} {{unit}} para alcanzar {{nextTierName}}",
@@ -253,7 +255,7 @@
       "desc_ADJUSTED_REASON": "Ajuste manual: {{reason}}"
     },
     "rewards": {
-      "affordable": "Asequible"
+        "affordable": "Asequible"
     }
   },
   "adminCommon": {
@@ -913,5 +915,41 @@
   "error": {
     "missingBusinessSlug": "Error: Slug del negocio no proporcionado.",
     "noMenuDataReceived": "No se recibieron datos del menú."
+  },
+  "orderStatusPage": {
+    "title": "Estado de tu Pedido",
+    "error": {
+      "missingOrderId": "No se especificó un ID de pedido.",
+      "noData": "No se recibieron datos del estado del pedido.",
+      "notFound": "Pedido no encontrado o no disponible.",
+      "updateFailed": "No se pudo actualizar el estado: {{message}}"
+    },
+    "generalStatus": "Estado General:",
+    "table": "Mesa:",
+    "placedAt": "Realizado el:",
+    "itemsTitle": "Ítems del Pedido",
+    "quantity": "Cantidad:",
+    "orderNotesLabel": "Notas Generales del Pedido",
+    "refreshButton": "Actualizar Estado",
+    "backToMenuButton": "Volver al Menú",
+    "itemStatus": {
+      "pending_kds": "Recibido en cocina",
+      "preparing": "En preparación",
+      "ready": "Listo para servir",
+      "served": "Entregado",
+      "cancelled": "Cancelado",
+      "cancellation_requested": "Cancelación Solicitada"
+    },
+    "orderStatus": {
+      "received": "Recibido",
+      "in_progress": "En Progreso",
+      "partially_ready": "Parcialmente Listo",
+      "all_items_ready": "Todos los Ítems Listos",
+      "completed": "Completado",
+      "pending_payment": "Pendiente de Pago",
+      "paid": "Pagado",
+      "cancelled": "Cancelado",
+      "payment_failed": "Pago Fallido"
+    }
   }
 }
