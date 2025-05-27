@@ -1,28 +1,35 @@
 // frontend/src/types/customer.ts
-import React from 'react'; // React se usa para UseProfileResult
+// Version: 1.1.1 (Ensure all Staff roles and consistency)
 
-// Enum para TierCalculationBasis
+import React from 'react';
+
+export enum UserRole {
+    SUPER_ADMIN = 'SUPER_ADMIN',
+    BUSINESS_ADMIN = 'BUSINESS_ADMIN',
+    CUSTOMER_FINAL = 'CUSTOMER_FINAL',
+    WAITER = 'WAITER',
+    KITCHEN_STAFF = 'KITCHEN_STAFF',
+    BAR_STAFF = 'BAR_STAFF'
+}
+
 export enum TierCalculationBasis {
     SPEND = 'SPEND',
     VISITS = 'VISITS',
     POINTS_EARNED = 'POINTS_EARNED'
 }
 
-// Interfaz para Configuración del Negocio que ve el cliente
 export interface CustomerBusinessConfig {
     tierCalculationBasis: TierCalculationBasis | null;
 }
 
-// Interfaz para Datos del Beneficio de un Tier
 export interface TierBenefitData {
   id: string;
-  type: string; // Podría ser un enum si los tipos son fijos: 'POINTS_MULTIPLIER' | 'EXCLUSIVE_REWARD_ACCESS' | 'CUSTOM_BENEFIT'
+  type: string; 
   value: string;
   description: string | null;
-  // isActive?: boolean; // Si el backend lo devuelve para el cliente y es necesario
+  isActive?: boolean; // Confirmar si este campo es enviado por el backend para el cliente
 }
 
-// Interfaz para Datos del Tier
 export interface TierData {
     id: string;
     name: string;
@@ -32,35 +39,29 @@ export interface TierData {
     benefits?: TierBenefitData[];
 }
 
-// --- Interfaz UserData ACTUALIZADA ---
 export interface UserData {
     id: string;
     email: string;
     name?: string | null;
-    role: 'SUPER_ADMIN' | 'BUSINESS_ADMIN' | 'CUSTOMER_FINAL';
+    role: UserRole; // Usa el enum definido arriba
     businessId: string | null;
     isActive: boolean;
-
-    // Campos opcionales (principalmente para CUSTOMER_FINAL, pero BUSINESS_ADMIN podría tenerlos si LCo también es para ellos)
     points?: number;
     totalSpend?: number;
     totalVisits?: number;
     currentTier?: {
         id: string;
         name: string;
-        benefits: TierBenefitData[];
+        benefits: TierBenefitData[]; // Asumiendo que TierBenefitData es el tipo correcto aquí
     } | null;
-
-    // Flags y detalles del negocio asociado (si aplica, ej. no para SUPER_ADMIN)
     businessIsActive?: boolean;
     isLoyaltyCoreActive?: boolean;
     isCamareroActive?: boolean;
-    businessName?: string | null;       // <--- AÑADIDO
-    businessSlug?: string | null;       // <--- AÑADIDO
-    businessLogoUrl?: string | null;    // <--- AÑADIDO
+    businessName?: string | null;      
+    businessSlug?: string | null;      
+    businessLogoUrl?: string | null;   
 }
-// --- FIN UserData ACTUALIZADA ---
-
+// ... (El resto de tipos: Reward, GrantedReward, DisplayReward, etc., se mantienen como en la versión 1.1.0 que te di)
 
 // Interfaz Reward (con campos i18n)
 export interface Reward {
@@ -71,20 +72,20 @@ export interface Reward {
     description_en?: string | null;
     pointsCost: number;
     isActive: boolean;
-    businessId?: string; // Puede ser útil
+    businessId?: string; 
     imageUrl?: string | null;
-    createdAt?: string;  // Fecha de creación
-    updatedAt?: string;  // Fecha de última actualización
+    createdAt?: string;  
+    updatedAt?: string;  
 }
 
 // Interfaz GrantedReward (para regalos otorgados)
 export interface GrantedReward {
     id: string;
-    status: string; // ej: 'PENDING', 'REDEEMED'
-    assignedAt: string; // Fecha de asignación
-    reward: Pick<Reward, 'id' | 'name_es' | 'name_en' | 'description_es' | 'description_en' | 'imageUrl'>; // Info básica de la recompensa
-    assignedBy?: { name?: string | null; email: string; } | null; // Quién la asignó (si es admin)
-    business?: { name: string; } | null; // Nombre del negocio (útil si se muestran regalos de varios negocios)
+    status: string; 
+    assignedAt: string; 
+    reward: Pick<Reward, 'id' | 'name_es' | 'name_en' | 'description_es' | 'description_en' | 'imageUrl'>; 
+    assignedBy?: { name?: string | null; email: string; } | null; 
+    business?: { name: string; } | null; 
 }
 
 // Tipo DisplayReward (para unificar la visualización de recompensas y regalos)
@@ -98,44 +99,40 @@ export type DisplayReward =
         description_en?: string | null;
         pointsCost: number;
         imageUrl?: string | null;
-        grantedRewardId?: undefined; // Para diferenciar
+        grantedRewardId?: undefined; 
         assignedByString?: undefined;
         assignedAt?: undefined;
     } |
     {
         isGift: true;
-        grantedRewardId: string; // ID único del regalo otorgado
+        grantedRewardId: string; 
         id: string; // ID de la recompensa base
         name_es: string | null;
         name_en: string | null;
         description_es?: string | null;
         description_en?: string | null;
-        pointsCost: 0; // Los regalos no cuestan puntos
+        pointsCost: 0; 
         imageUrl?: string | null;
-        assignedByString: string; // Nombre/email de quien lo asignó
-        assignedAt: string; // Fecha de asignación
+        assignedByString: string; 
+        assignedAt: string; 
     };
 
-
-// Interface para el resultado del hook useUserProfileData
 export interface UseProfileResult {
     userData: UserData | null;
     loading: boolean;
     error: string | null;
     refetch: () => Promise<void>;
-    setUserData: React.Dispatch<React.SetStateAction<UserData | null>>; // Para actualizar desde fuera si es necesario
+    setUserData: React.Dispatch<React.SetStateAction<UserData | null>>; 
 }
 
-// Interfaz para Resultado del Hook useCustomerTierData
 export interface UseCustomerTierDataResult {
-    allTiers: TierData[] | null; // Todos los tiers activos del negocio del cliente
-    businessConfig: CustomerBusinessConfig | null; // Configuración del negocio para tiers
+    allTiers: TierData[] | null; 
+    businessConfig: CustomerBusinessConfig | null; 
     loading: boolean;
     error: string | null;
-    refetch: () => Promise<void>; // Para recargar datos
+    refetch: () => Promise<void>; 
 }
 
-// Tipos para Historial de Actividad
 export type ActivityType =
     | 'POINTS_EARNED_QR'
     | 'POINTS_REDEEMED_REWARD'
@@ -148,10 +145,6 @@ export interface ActivityLogItem {
   pointsChanged: number | null;
   description: string | null;
   createdAt: string;
-  // Podrías añadir más campos si el backend los devuelve y son útiles:
-  // relatedQrId?: string | null;
-  // relatedRewardId?: string | null;
-  // relatedGrantedRewardId?: string | null;
 }
 
 export interface PaginatedActivityResponse {

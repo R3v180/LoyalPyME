@@ -950,6 +950,31 @@
       "paid": "Pagado",
       "cancelled": "Cancelado",
       "payment_failed": "Pago Fallido"
+    },
+      "kdsPage": {
+    "title": "Pantalla de Cocina (KDS)",
+    "destination": {
+      "kitchen": "COCINA",
+      "bar": "BARRA"
+    },
+    "unknownItem": "Ítem Desconocido",
+    "noItems": "No hay ítems pendientes para este destino.",
+    "quantity": "Cantidad",
+    "notes": "Notas",
+    "noTable": "Sin Mesa",
+    "createdAt": "Recibido KDS",
+    "modifiers": "Modificadores:",
+    "statusUpdateSuccessTitle": "Estado Actualizado",
+    "statusUpdateSuccessMsg": "El ítem \"{{itemName}}\" se actualizó a {{status}}.",
+    "statusUpdateErrorMsg": "Error al actualizar estado del ítem.",
+    "updateInProgressTitle": "Actualización en Progreso",
+    "updateInProgressMsg": "Espera a que finalice la acción actual antes de iniciar otra.",
+    "refreshManual": "Refrescar Manualmente",
+    "action": {
+      "startPreparing": "Empezar Preparación",
+      "markReady": "Marcar como Listo",
+      "cancelItem": "Cancelar Ítem"
     }
+  }
   }
 }

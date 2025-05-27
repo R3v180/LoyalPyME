@@ -1,4 +1,6 @@
 // frontend/src/pages/LoginPage.tsx
+// Version: 1.6.4 (Use imported UserRole enum and KDS Staff redirection)
+
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axiosInstance from '../services/axiosInstance';
@@ -10,14 +12,9 @@ import {
 import { IconAlertCircle } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
-interface UserResponse {
-    id: string;
-    email: string;
-    name?: string | null;
-    role: 'BUSINESS_ADMIN' | 'CUSTOMER_FINAL' | 'SUPER_ADMIN'; // Añadir SUPER_ADMIN al tipo
-    businessId: string | null; // Puede ser null para SUPER_ADMIN
-    points?: number;
-}
+// Importar UserData y el ENUM UserRole
+import type { UserData } from '../types/customer'; 
+import { UserRole } from '../types/customer'; // Importar el ENUM UserRole
 
 function LoginPage() {
     const { t } = useTranslation();
@@ -33,33 +30,33 @@ function LoginPage() {
         setError(null);
         const loginPath = '/auth/login';
         try {
-            const response = await axiosInstance.post<{ user: UserResponse; token: string }>(
+            const response = await axiosInstance.post<{ user: UserData; token: string }>(
                 loginPath, { email, password }
             );
             const { user, token } = response.data;
 
             if (user && token) {
                 localStorage.setItem('token', token);
-                localStorage.setItem('user', JSON.stringify(user)); // user ya incluye el rol del backend
+                localStorage.setItem('user', JSON.stringify(user));
 
-                // --- MODIFICACIÓN AQUÍ ---
-                if (user.role === 'BUSINESS_ADMIN') {
-                    console.log("[LoginPage] Redirecting to /admin/dashboard");
-                    navigate('/admin/dashboard');
-                } else if (user.role === 'CUSTOMER_FINAL') {
-                    console.log("[LoginPage] Redirecting to /customer/dashboard");
-                    navigate('/customer/dashboard');
-                } else if (user.role === 'SUPER_ADMIN') { // <-- AÑADIR ESTA CONDICIÓN
-                    console.log("[LoginPage] Redirecting to /superadmin");
-                    navigate('/superadmin');
+                if (user.role === UserRole.KITCHEN_STAFF || user.role === UserRole.BAR_STAFF) { 
+                    console.log("[LoginPage] Redirecting KDS staff to /admin/kds");
+                    navigate('/admin/kds', { replace: true });
+                } else if (user.role === UserRole.BUSINESS_ADMIN) {
+                    console.log("[LoginPage] Redirecting BUSINESS_ADMIN to /admin/dashboard");
+                    navigate('/admin/dashboard', { replace: true });
+                } else if (user.role === UserRole.CUSTOMER_FINAL) {
+                    console.log("[LoginPage] Redirecting CUSTOMER_FINAL to /customer/dashboard");
+                    navigate('/customer/dashboard', { replace: true });
+                } else if (user.role === UserRole.SUPER_ADMIN) {
+                    console.log("[LoginPage] Redirecting SUPER_ADMIN to /superadmin");
+                    navigate('/superadmin', { replace: true });
                 } else {
-                    console.error("[LoginPage] Unknown user role:", user.role);
-                    setError(t('loginPage.errorUnknown', { ns: 'translation' })); // Usar clave i18n correcta
+                    console.error("[LoginPage] Unknown user role after login:", user.role);
+                    setError(t('loginPage.errorUnknown', { ns: 'translation' }));
                 }
-                // --- FIN MODIFICACIÓN ---
-
             } else {
-                console.error("[LoginPage] No user or token in response.");
+                console.error("[LoginPage] Login response did not include user or token.");
                 setError(t('loginPage.errorServer', { ns: 'translation' }));
             }
         } catch (err: unknown) {
@@ -69,9 +66,9 @@ function LoginPage() {
             } else if (err instanceof AxiosError && err.response) {
                 setError(err.response.data?.message || t('loginPage.errorServer', { ns: 'translation' }));
             } else if (err instanceof Error) {
-                 setError(err.message);
+                setError(err.message);
             } else {
-                 setError(t('loginPage.errorUnknown', { ns: 'translation' }));
+                setError(t('loginPage.errorUnknown', { ns: 'translation' }));
             }
         } finally {
             setLoading(false);
@@ -91,7 +88,7 @@ function LoginPage() {
                             placeholder={t('loginPage.emailPlaceholder')}
                             value={email}
                             onChange={(event) => setEmail(event.currentTarget.value)}
-                            error={!!error}
+                            error={!!error} 
                             radius="lg"
                         />
                         <PasswordInput
@@ -100,7 +97,7 @@ function LoginPage() {
                             placeholder={t('loginPage.passwordPlaceholder')}
                             value={password}
                             onChange={(event) => setPassword(event.currentTarget.value)}
-                            error={!!error}
+                            error={!!error} 
                             radius="lg"
                         />
                         {error && (
