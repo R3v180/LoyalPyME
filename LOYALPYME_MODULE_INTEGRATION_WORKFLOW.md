@@ -1,10 +1,10 @@
 # LoyalPyME: Fidelización y Servicio, ¡Una Alianza Estratégica para tu Negocio! 🤝🌟🍽️
 
-**Última Actualización:** 27 de Mayo de 2025 (Refina el flujo de identificación del cliente, el disparador de acumulación de puntos y las funcionalidades avanzadas).
+**Última Actualización:** 28 de Mayo de 2025 (Refleja el rol del camarero en el ciclo de pedido LC y su impacto en el futuro trigger de integración con LCo)
 
 Cuando un negocio decide activar tanto el módulo de fidelización **LoyalPyME Core (LCo)** para la gestión de la lealtad de sus clientes, como el módulo de operativa de servicio **LoyalPyME Camarero (LC)** para digitalizar la experiencia en el local, se desbloquea un potencial extraordinario. La integración fluida y pensada entre ambos módulos crea una experiencia de cliente superior, cohesiva y gratificante, al mismo tiempo que proporciona al negocio herramientas más potentes para la gestión, el análisis y el crecimiento.
 
-Este documento detalla los puntos de contacto, las sinergias y los flujos de trabajo específicos que surgen cuando LCo y LC operan conjuntamente.
+Este documento detalla los puntos de contacto, las sinergias y los flujos de trabajo específicos que surgen cuando LCo y LC operan conjuntamente, considerando el ciclo completo del pedido en LC, incluyendo la intervención del personal (KDS y Camarero).
 
 ---
 
@@ -12,193 +12,130 @@ Este documento detalla los puntos de contacto, las sinergias y los flujos de tra
 
 Para un cliente que interactúa con un establecimiento que ha activado y sincronizado LoyalPyME Core y LoyalPyME Camarero, el recorrido se enriquece, ofreciendo conveniencia operativa y recompensas por su lealtad de manera integrada.
 
-### 1. 📲 **Acceso a la Carta LC con Identidad LCo (Opcional pero Clave para Beneficios)**
+### 1. 📲 **Acceso a la Carta LC con Identidad LCo (Opcional pero Clave para Beneficios Futuros)**
 
-- **Punto de Entrada Principal (LC):**
-  - El cliente escanea el código QR en su mesa, lo que lo dirige a la carta digital pública del Módulo Camarero (`/m/:businessSlug/:tableIdentifier`), como se detalla en `LOYALPYME_CAMARERO_WORKFLOW.md`.
-  - Desde aquí, puede visualizar el menú completo, personalizar ítems y prepararse para hacer un pedido (ya sea uno nuevo o añadir a uno existente si la lógica está implementada).
-- **Integración Visible de LCo:**
-  - En puntos estratégicos de la interfaz de la carta LC (ej. en el encabezado, cerca del resumen del carrito/pedido activo, o como un paso antes de finalizar el pedido/adición), se le presentan al cliente opciones claras y atractivas para conectar con su perfil de LoyalPyME Core:
-    - **Botón/Enlace "Iniciar Sesión":** Si el cliente ya posee una cuenta LoyalPyME asociada a ESE negocio específico.
-    - **Botón/Enlace "Registrarse":** Si es un nuevo cliente para el programa de fidelización del negocio y desea crear una cuenta para empezar a acumular puntos y beneficios.
-  - **Mensajes Incentivadores:** Se pueden mostrar mensajes contextuales para fomentar la identificación, por ejemplo:
-    - "¿Ya eres miembro? ¡Inicia sesión para ganar **{{puntosEstimados}} puntos** con este pedido!" (Los puntos estimados podrían calcularse en base al carrito actual).
-    - "Regístrate gratis y podrías obtener un **[Beneficio de Bienvenida LCo configurado por el negocio]** en tu próximo pedido o al alcanzar tu primer nivel."
-
-Interfaz de Carta/Carrito LC con Promoción LCo (Ejemplo Conceptual):
-+------------------------------------------------+
-| ... (Ítems del menú, categorías, carrito) ... |
-| O (Aviso de pedido activo #P-XXXXX) |
-|------------------------------------------------|
-| [ Icono Programa Fidelidad / Logo LCo ] |
-| ¡Tu Lealtad Vale Oro en [Nombre Negocio]! |
-| |
-| Inicia sesión con tu cuenta LoyalPyME o |
-| regístrate ahora para: |
-| ✓ Ganar puntos con cada pedido pagado. |
-| ✓ Acceder a descuentos de nivel. |
-| ✓ Canjear recompensas exclusivas. |
-| |
-| [ 👤 Iniciar Sesión ] [ ✨ Registrarse ] |
-+------------------------------------------------+
+    *   **Punto de Entrada Principal (LC):** El cliente escanea el QR de mesa (`/m/:businessSlug/:tableIdentifier`), explora la carta, personaliza ítems y prepara su pedido. Este flujo es gestionado por `PublicMenuViewPage.tsx`.
+    *   **Integración Visible de LCo (Opcional, configurable por el negocio):**
+        *   En la interfaz de la carta LC, se pueden presentar opciones para "Iniciar Sesión" (si ya tiene cuenta LCo en ese negocio) o "Registrarse" (para crear una nueva cuenta LCo).
+        *   **Objetivo:** Asociar un `customerId` de LCo al `Order` que se cree en LC.
+        *   **Incentivo:** Mensajes como "¿Ya eres miembro? ¡Inicia sesión para que este pedido sume a tus beneficios!" o "Regístrate y este pedido podría ayudarte a alcanzar tu primer nivel."
+    *   _(La UI para esta promoción de LCo en LC es una mejora futura; la funcionalidad de asociar `customerId` al `Order` si el cliente se loguea por otros medios (ej. desde dashboard LCo y luego va a la carta) ya está implementada en el backend de creación de `Order` LC)._
 
 ### 2. 💳 **Proceso de Identificación LCo Durante el Flujo de Pedido LC**
 
-- **Flujo de Login/Registro No Intrusivo:**
-- Al seleccionar "Iniciar Sesión" o "Registrarse" desde la interfaz de LC, idealmente se presenta un **modal o una vista superpuesta** con los formularios estándar de login/registro de LCo. Esto evita sacar completamente al cliente del contexto de su pedido en LC.
-- Los campos requeridos son los habituales: email/contraseña para login; email, contraseña, confirmación, nombre (opcional), teléfono, tipo/número de documento para registro (el `businessId` ya estaría preseleccionado o inferido del `businessSlug` de la URL).
-- **Sincronización de Sesión y Datos del Cliente:**
-- Tras una autenticación o registro exitoso a través de este flujo integrado:
-  - El frontend (específicamente la lógica de `PublicMenuViewPage.tsx` o un contexto/estado de usuario global) almacena de forma segura el `customerId` y el token JWT del usuario LCo en `localStorage` (o el medio de persistencia de sesión elegido).
-  - Se puede hacer una llamada a `/api/profile` para obtener los datos completos del usuario LCo (incluyendo puntos actuales, nivel, etc.) si no se devolvieron directamente en la respuesta de login/registro.
-  - Se devuelve al cliente al punto exacto donde estaba en el flujo de pedido LC (ej. su carrito con los ítems que ya había añadido, o la vista de la carta si estaba explorando).
-- El cliente ahora navega y finaliza su pedido LC (o añade ítems a uno existente) como un usuario LCo identificado. La UI podría reflejar esto (ej. "Hola, [NombreCliente]").
+    *   **Flujo de Login/Registro (Idealmente No Intrusivo):** Si se implementa el punto anterior, al seleccionar "Iniciar Sesión" o "Registrarse" desde LC, se usarían modales o vistas superpuestas para los formularios de LCo, manteniendo al cliente en el contexto del pedido.
+    *   **Sincronización de Sesión:** Tras una autenticación/registro exitoso, el frontend (ej. `PublicMenuViewPage.tsx` o un contexto global) almacena el `customerId` y token JWT de LCo.
+    *   El cliente finaliza su pedido LC (o añade ítems) como un usuario LCo identificado.
+    *   _(La lógica de login/registro de LCo es funcional. Su integración visual directa en el flujo de pedido LC es una mejora de UX futura)._
 
-### 3. 🛍️ **Envío de Pedido LC (Nuevo o Adición) y Asociación Automática al Cliente LCo**
+### 3. 🛍️ **Envío de Pedido LC (Nuevo o Adición) y Asociación al Cliente LCo**
 
-- El cliente configura su pedido o los ítems a añadir en la interfaz de LC y procede al envío.
-- **Payload del Pedido LC Enriquecido con `customerId`:**
-- Si el cliente se identificó con LCo (paso 2), el `customerId` obtenido se incluye en el objeto `CreateOrderPayloadDto` (para pedidos nuevos) o en el payload del endpoint de adición de ítems (para `POST /public/order/:existingOrderId/add-items`).
-- **Procesamiento Backend (Servicios de LC y LCo):**
-- El servicio `public/order.service.ts` del Módulo Camarero, al crear el registro `Order` o al añadir `OrderItem`s a un `Order` existente, asocia el `customerId` proporcionado al campo `Order.customerLCoId`.
-- Este enlace `Order.customerLCoId` es la clave para todas las operaciones de integración posteriores.
+    *   El cliente configura su pedido en la interfaz LC y procede al envío.
+    *   **Payload del Pedido LC:** Si el cliente se identificó con LCo, el `customerId` se incluye en el `CreateOrderPayloadDto` (o en el DTO de "Añadir Ítems").
+    *   **Procesamiento Backend (LC):** El servicio `public/order.service.ts` asocia este `customerId` al campo `Order.customerLCoId`. Este enlace es fundamental para la integración.
+    *   _(Esta asociación ya está implementada en el backend de creación de `Order` LC)._
 
-### 4. 💯 **Acumulación Automática de Puntos LCo por Consumo en LC (Post-Pago)**
+### 4. 💯 **[FUTURO - POST-MVP LC COMPLETO] Acumulación Automática de Puntos LCo por Consumo en LC (Post-Pago)**
 
-- **Evento Disparador (Trigger Clave):** La acumulación de puntos LCo se produce cuando un `Order` del Módulo Camarero, que tiene un `customerLCoId` asociado, cambia su `OrderStatus` a **`PAID`**.
-- Este cambio a `PAID` es realizado típicamente por:
-  - Un camarero desde su interfaz de gestión de mesas/pedidos (después de cobrar al cliente).
-  - (Futuro) Un sistema de TPV integrado que se comunica con LoyalPyME.
-  - (Futuro Muy Avanzado) El propio cliente si se implementa pago online dentro de la app LC y el pago es exitoso.
-- **Lógica de Backend para la Integración (Idealmente en un "listener de eventos de Order" o dentro del servicio que actualiza `Order.status` a `PAID`):**
+    *   **Evento Disparador Clave:** La acumulación de puntos LCo se producirá cuando un `Order` del Módulo Camarero, que tiene un `customerLCoId` asociado, cambie su `OrderStatus` a **`PAID`**.
+    *   **¿Quién marca el pedido como `PAID`?**
+        1.  **Camarero (Flujo Actual en Desarrollo):** Desde su interfaz de gestión de mesas/pedidos (aún por implementar), el camarero, después de que el cliente haya pagado físicamente (efectivo, tarjeta externa), marcará el/los `Order`(s) correspondientes como `PAID`.
+        2.  **(Futuro) Sistema de TPV Integrado:** Si se desarrolla un TPV LoyalPyME o se integra con uno existente, el cierre y pago de la cuenta en el TPV actualizaría el `Order.status` a `PAID`.
+        3.  **(Futuro Muy Avanzado) Pago Online por Cliente:** Si se implementa pago online directamente en la app/vista web del cliente LC, un pago exitoso a través de la pasarela cambiaría el `Order.status` a `PAID`.
+    *   **Lógica de Backend para la Integración LCo-LC (a implementar cuando el estado `PAID` sea gestionable):**
+        1.  **Detección del Evento:** Un listener de eventos de cambio de estado en `Order` o una lógica dentro del servicio que actualiza el `Order.status` a `PAID`.
+        2.  **Verificación:** Comprobar que `Order.customerLCoId` no es nulo.
+        3.  **Cálculo de Puntos:**
+            *   Obtener `Order.finalAmount`.
+            *   Consultar `Business.pointsPerEuro` (o `Business.pointsPerEuroCamarero` si se diferencia).
+            *   Aplicar multiplicadores de puntos del `Tier` actual del cliente LCo (obtenido de `User.currentTier.benefits`).
+            *   Calcular puntos LCo (`Math.floor(...)`).
+        4.  **Actualización de Datos en LCo (Transaccional o como efecto secundario robusto):**
+            *   Crear registro en `ActivityLog` (LCo): `type: POINTS_EARNED_ORDER_LC`, `pointsChanged: +XX`, `description: "Puntos por pedido LC #P-XXXXXX"`, `relatedOrderId: order.id`.
+            *   Actualizar `User.points` (LCo).
+            *   Actualizar `User.lastActivityAt` (LCo).
+            *   Incrementar `User.totalSpend` y `User.totalVisits` (LCo).
+            *   Disparar `updateUserTier(customerLCoId)` para recalcular el nivel del cliente en LCo.
+    *   **Notificación al Cliente (LCo):** Email o notificación push (si hay app) informando los puntos ganados.
 
-1.  **Detección del Evento:** Cuando un `Order` LC cambia su estado a `PAID`.
-2.  **Verificación de Cliente LCo:** El sistema comprueba si el `Order.customerLCoId` no es nulo.
-3.  **Cálculo de Puntos:**
-    - Si hay `customerLCoId`, se obtiene el `finalAmount` del `Order` LC que se acaba de pagar. (Si un cliente paga varios `Order`s de una mesa, esta lógica se aplicaría a cada `Order` individualmente si cada uno tiene `customerLCoId`).
-    - Se consulta la configuración del `Business` (LCo) para obtener el ratio `pointsPerEuro` (o una configuración específica para "puntos por gasto en LC" si se implementa).
-    - Se calculan los puntos LCo a otorgar (ej. `Math.floor(finalAmount * pointsPerEuro)`). Se considera si se deben aplicar multiplicadores de puntos por nivel de LCo.
-4.  **Actualización de Datos en LCo (Transaccional con la actualización del `Order` a `PAID` si es posible, o como un efecto secundario robusto):**
-    - Se crea un nuevo registro en la tabla `ActivityLog` de LCo para el `customerLCoId`:
-      - `type: ActivityType.POINTS_EARNED_ORDER_LC` (valor del enum `ActivityType`).
-      - `pointsChanged`: los puntos calculados (positivos).
-      - `description`: ej. "Puntos por pedido #P-000123 en [Nombre del Restaurante]".
-      - `relatedOrderId`: el `id` del `Order` del Módulo Camarero que originó estos puntos, para trazabilidad.
-    - Se actualiza el saldo de `points` del `User` (LCo).
-    - Se actualiza `lastActivityAt` del `User`.
-    - Se incrementa `totalSpend` (con `finalAmount` del pedido LC) y `totalVisits` (se cuenta como una visita si es un nuevo día o según la lógica de visitas del negocio) del `User` (LCo).
-    - Se dispara la lógica `updateUserTier` (del servicio de tiers LCo) para recalcular el nivel del cliente en LCo basado en su nuevo `totalSpend`/`totalVisits`/`pointsEarned`.
+### 5. 🌟 **[FUTURO - POST-MVP LC COMPLETO E INTEGRACIÓN BÁSICA LCo] Aplicación de Beneficios de Nivel LCo y Canje de Recompensas LCo en Pedidos LC**
 
-- **Notificación al Cliente (Idealmente a través de LCo):**
-- El cliente podría recibir una notificación (push si hay app, email, o un mensaje destacado en su próximo login a su dashboard LCo) indicando los puntos ganados por su reciente pedido.
+    *   Esta es una funcionalidad avanzada que se construirá sobre la acumulación de puntos.
+    *   **Visualización de Beneficios LCo en Interfaz LC (`PublicMenuViewPage.tsx`):**
+        *   Si el cliente está identificado con LCo, la UI de LC podría mostrar sutilmente los beneficios de su nivel aplicables a pedidos LC (ej. "¡Nivel Oro! Disfruta de un 10% de descuento.").
+    *   **Aplicación de Descuentos de Nivel LCo:**
+        *   **Configuración LCo:** `TierBenefit` de tipo `PERCENTAGE_DISCOUNT` o `FIXED_AMOUNT_DISCOUNT` marcado como "Aplicable en Módulo Camarero".
+        *   **Lógica LC (Backend/Frontend):** Al calcular el total del pedido LC, si el cliente tiene un descuento de nivel aplicable, éste se resta del `Order.totalAmount`, actualizando `Order.discountAmount` y `Order.finalAmount`. Visible en carrito y confirmación.
+    *   **Canje de Recompensas LCo (ej. "Producto Gratis", "Descuento X€") en Flujo LC:**
+        *   **Configuración LCo:** `Reward` marcada como "Canjeable en Módulo Camarero". Mapeo de "Producto Gratis" a `MenuItem.id` de LC.
+        *   **Interfaz Cliente LC (`ShoppingCartModal.tsx`):** Sección "Aplicar Recompensas LoyalPyME" para que el cliente seleccione una recompensa LCo canjeable.
+        *   **Lógica LC:** Si es producto gratis, se añade al carrito LC con precio 0. Si es descuento, se aplica al total.
+        *   **Sincronización Backend:** El pedido LC enviado incluye `appliedLcoRewardId`. El backend de LC se comunica con LCo para marcar la `Reward` como `REDEEMED` y crear el `ActivityLog` en LCo.
+    *   _(Tarea D7 en `DEVELOPMENT_PLAN.md`)._
 
-### 5. 🌟 **Aplicación de Beneficios de Nivel LCo y Canje de Recompensas LCo en Pedidos LC (Funcionalidades Avanzadas - Post-MVP de Integración - Tarea D7 en `DEVELOPMENT_PLAN.md`)**
+### 6. 📜 **[PARCIALMENTE IMPLEMENTADO - SE COMPLETARÁ CON INTEGRACIÓN] Historial de Actividad Unificado (Visión Cliente en Dashboard LCo)**
 
-- **Visualización de Beneficios LCo en la Interfaz LC (`PublicMenuViewPage.tsx`):**
-- Si el cliente está identificado con LCo y su `User.currentTier` tiene beneficios activos aplicables a LC:
-  - La interfaz de la carta o el carrito LC podría mostrar sutilmente estos beneficios (ej. "¡Nivel Oro! Disfruta de un 10% de descuento en este pedido." o "Puedes canjear tu 'Bebida Gratis' aquí.").
-- **Aplicación de Descuentos de Nivel LCo (Beneficio de Tier):**
-- **Configuración:** En LCo, un `TierBenefit` de tipo `PERCENTAGE_DISCOUNT` o `FIXED_AMOUNT_DISCOUNT` debe poder marcarse como "Aplicable en Módulo Camarero".
-- **Lógica en LC (al calcular el total del carrito/pedido):**
-  - Si el cliente está identificado y su nivel LCo tiene un descuento aplicable, este se calcula sobre el subtotal del pedido LC (antes de otros descuentos o impuestos).
-  - El `discountAmount` en el `Order` LC se actualiza, y el `finalAmount` se recalcula.
-  - Esto debe ser visible para el cliente en el carrito y en el `OrderConfirmationPage`/`OrderStatusPage`.
-- **Canje de Recompensas LCo (ej. "Producto Gratis", "Descuento de X€") en el Flujo LC:**
-- **Configuración:** En LCo, una `Reward` debe poder marcarse como "Canjeable en Módulo Camarero". Si es un "Producto Gratis", se debe poder mapear a un `MenuItem.id` específico del catálogo LC (o a una categoría/tag).
-- **Interfaz Cliente LC (`ShoppingCartModal.tsx` o similar):**
-  - Podría haber una sección "Aplicar Mis Recompensas/Beneficios LoyalPyME".
-  - Se listan las recompensas LCo del cliente que son "canjeables en LC" y para las cuales tiene suficientes puntos (si aplica) o que son beneficios de nivel.
-- **Al seleccionar una recompensa LCo (ej. "Café Gratis"):**
-  - Si la recompensa LCo se mapea a un `MenuItem.id` de LC:
-    - El `MenuItem` correspondiente se añade al carrito LC con precio €0.00.
-    - O, si el ítem ya está en el carrito, se aplica un descuento de línea que anule su precio.
-  - Si es un descuento monetario ("Descuento de 5€ en el total"):
-    - Se aplica al `Order.discountAmount` y se actualiza el `Order.finalAmount`.
-- **Sincronización Backend (al enviar el pedido LC o la adición):**
-  - La información de la recompensa LCo canjeada (ej. `appliedLcoRewardId`) se incluye en el payload del `Order` LC.
-  - El backend del Módulo Camarero (ej. en `public/order.service.ts`), al procesar el pedido:
-    - Se comunica con el backend de LCo (o un servicio compartido/lógica de eventos) para:
-      - Marcar la `Reward` LCo como `REDEEMED` (descontando `pointsCost` del `User` si era por puntos, o actualizando el estado de un `GrantedReward` si era un regalo).
-      - Crear el `ActivityLog` correspondiente en LCo (ej. `ActivityType.REWARD_REDEEMED_IN_LC_ORDER`, descripción: "Recompensa 'Café Gratis' canjeada en pedido #P-XXXXXX").
-  - El campo `Order.appliedLcoRewardDiscountAmount` podría registrar el valor del descuento aplicado por esta recompensa.
-
-### 6. 📜 **Historial de Actividad Unificado y Detallado (Visión Cliente en Dashboard LCo)**
-
-- El `ActivityLog` del cliente en su dashboard LCo (`CustomerDashboardPage.tsx` -> `ActivityTab.tsx`) debe ser la fuente central de verdad para todas sus interacciones de lealtad:
-- **Entradas Tradicionales de LCo:** `POINTS_EARNED_QR`, `POINTS_REDEEMED_REWARD` (canje desde dashboard LCo), `GIFT_REDEEMED` (canje de regalo desde dashboard LCo), `POINTS_ADJUSTED_ADMIN`.
-- **Nuevas Entradas Específicas de la Integración LC+LCo:**
-  - `POINTS_EARNED_ORDER_LC`: Detallando "Puntos ganados por pedido #P-XXXXXX en [Nombre Restaurante]: +YY Puntos". El `relatedOrderId` enlaza al `Order.id` de LC.
-  - `REWARD_REDEEMED_IN_LC_ORDER` (o un tipo similar): Detallando "Recompensa '[Nombre Recompensa LCo]' canjeada en pedido #P-XXXXXX de [Nombre Restaurante]". El `relatedOrderId` y `relatedRewardId` son clave.
+    *   El `ActivityLog` del cliente en su dashboard LCo (`ActivityTab.tsx`) será la fuente central.
+    *   **Actualmente Muestra:** `POINTS_EARNED_QR`, `POINTS_REDEEMED_REWARD` (canje desde dashboard LCo), `GIFT_REDEEMED`, `POINTS_ADJUSTED_ADMIN`.
+    *   **Futuras Entradas de Integración LC+LCo:**
+        *   `POINTS_EARNED_ORDER_LC`: Detallando puntos ganados por pedidos LC.
+        *   `REWARD_REDEEMED_IN_LC_ORDER`: Detallando recompensas LCo canjeadas en pedidos LC.
 
 ---
 
 ## ⚙️ **II. La Visión del Negocio (`BUSINESS_ADMIN`): Gestión Integrada, Datos Enriquecidos y Sinergias**
 
-Para el `BUSINESS_ADMIN`, la activación conjunta de LCo y LC, con una integración bien definida, ofrece una gestión más eficiente y oportunidades estratégicas.
+### 1. 🔗 **[PENDIENTE] Configuración de la Integración LCo <-> LC (Panel Admin)**
 
-### 1. 🔗 **Configuración de la Integración LCo <-> LC (Panel Admin)**
+    *   **Ubicación:** Nueva sección en el panel de admin "Configuración de Módulos" o sub-secciones en LCo/LC.
+    *   **Parámetros Configurables por el `BUSINESS_ADMIN`:**
+        *   **Acumulación de Puntos:**
+            *   Interruptor: "Habilitar/Deshabilitar Acumulación de Puntos LCo desde Pedidos LC".
+            *   Campo (opcional): "Ratio de Puntos Específico para Pedidos LC" (si es diferente de `Business.pointsPerEuro` global).
+            *   (Informativo, no editable por admin) "Estado del Pedido LC que Otorga Puntos": Se fijará a `PAID`.
+        *   **Canje de Recompensas/Beneficios LCo en LC (Avanzado):**
+            *   Interruptor: "Habilitar/Deshabilitar Canje de Recompensas/Beneficios LCo en el Módulo Camarero".
+            *   **Mapeo de Recompensas LCo:** UI para que el admin marque qué `Reward`s de LCo son "Canjeables en Módulo Camarero". Si la recompensa es tipo "Producto Gratis", permitir seleccionar el `MenuItem.id` (o categoría/tag) de LC al que corresponde.
+            *   **Configuración de Beneficios de Nivel LCo:** UI para que el admin marque qué `TierBenefit`s (ej. descuentos porcentuales) son "Aplicables en Módulo Camarero" y si se aplican automáticamente o requieren una acción del cliente en la UI de LC.
 
-- **Ubicación:** Una nueva sección en el panel de admin "Configuración de Módulos" o sub-secciones dentro de las configuraciones de LCo y LC.
-- **Parámetros Configurables:**
-- **Habilitar/Deshabilitar Acumulación de Puntos LCo desde Pedidos LC:** Un interruptor maestro.
-- **Ratio de Puntos Específico para Pedidos LC:**
-  - Opción: "Usar el mismo ratio que los QR de LCo (`Business.pointsPerEuro` global)".
-  - Opción: "Definir un ratio diferente para pedidos del Módulo Camarero" (ej. para incentivar más el auto-servicio). Campo para introducir este ratio específico.
-- **Estado del Pedido LC que Otorga Puntos LCo:** Configurar qué `OrderStatus` de LC (debe ser **`PAID`**) dispara la asignación de puntos LCo.
-- **(Avanzado) Configuración de Canje de Recompensas/Beneficios LCo en LC:**
-  - Switch global para habilitar/deshabilitar esta funcionalidad.
-  - **Mapeo de Recompensas LCo:** Interfaz para marcar qué `Reward`s de LCo son "Canjeables en Módulo Camarero".
-    - Para recompensas tipo "Producto Gratis", permitir seleccionar el `MenuItem.id` (o categoría/tag) de LC al que corresponde.
-  - **Configuración de Beneficios de Nivel LCo:** Permitir marcar qué `TierBenefit`s (ej. descuentos porcentuales) son "Aplicables en Módulo Camarero" y si se aplican automáticamente o requieren una acción del cliente en la UI de LC.
+### 2. 📊 **[PENDIENTE - POST-MVP LC COMPLETO E INTEGRACIÓN] Visión 360º del Cliente y Reportes Combinados**
 
-### 2. 📊 **Visión 360º del Cliente y Reportes Combinados**
+    *   **Perfil de Cliente Unificado (Admin LCo - `AdminCustomerManagementPage`):**
+        *   Al ver un cliente LCo, mostrar una nueva pestaña/sección "Actividad en Módulo Camarero":
+            *   Resumen: Nº total de pedidos LC, gasto total LC, fecha último pedido LC.
+            *   (Opcional) Lista de los N últimos pedidos LC con enlace a sus detalles (si se implementa un panel de admin para ver `Order`s individuales de LC).
+    *   **Sincronización de Métricas Clave LCo:** `User.totalSpend` y `User.totalVisits` (LCo) se actualizarán no solo por QR LCo, sino también por `Order`s LC pagados y asociados al cliente.
+    *   **Reportes de LCo Enriquecidos:**
+        *   Posibilidad de segmentar/filtrar informes LCo (clientes valiosos, actividad de puntos) por origen de la actividad (QR LCo vs. Pedido LC).
+        *   Análisis del impacto de LC en la progresión de niveles LCo.
+    *   **Reportes de LC con Perspectiva LCo:**
+        *   Informes de LC (ventas por ítem, ticket medio) podrían incluir: % de ventas de clientes LCo, distribución de ventas por nivel LCo, impacto de descuentos/recompensas LCo en totales LC.
 
-- **Perfil de Cliente Unificado en Admin LCo (`AdminCustomerManagementPage`):**
-- Al visualizar un cliente en la gestión de clientes de LCo, el admin verá, además de su información de fidelización (puntos, nivel, historial LCo), una pestaña o sección de "Actividad en Módulo Camarero":
-  - Número total de pedidos realizados vía LC.
-  - Gasto total a través de LC.
-  - Fecha del último pedido LC.
-  - (Opcional) Lista de los últimos N pedidos LC con enlace a sus detalles (si existe un panel de gestión de pedidos LC para el admin donde pueda ver `Order`s individuales).
-- **Sincronización de Métricas Clave:**
-- El `User.totalSpend` y `User.totalVisits` en LCo se actualizan automáticamente no solo por los QR de LCo, sino también por los `Order`s de LC que son marcados como `PAID` y están asociados a ese cliente.
-- **Reportes de LCo Enriquecidos:**
-- Los informes de LCo (ej. clientes más valiosos, actividad de puntos, efectividad de recompensas) podrán segmentarse o filtrar por el origen de la actividad (QR de LCo vs. Pedido LC).
-- Análisis del impacto de los pedidos LC en la progresión de niveles LCo y en el canje de recompensas.
-- **Reportes de LC con Perspectiva LCo:**
-- Los informes del Módulo Camarero (ej. ventas por ítem, ticket medio por mesa/periodo) podrían incluir información sobre:
-  - Porcentaje de ventas generadas por clientes LCo identificados.
-  - Distribución de ventas por nivel LCo de los clientes.
-  - Impacto de los descuentos de nivel LCo o recompensas LCo canjeadas en los totales de los pedidos LC.
+### 3. 📢 **[PENDIENTE - POST-MVP LC COMPLETO E INTEGRACIÓN] Estrategias de Marketing y Promoción Cruzada Mejoradas**
 
-### 3. 📢 **Estrategias de Marketing y Promoción Cruzada Mejoradas**
+    *   **Incentivos Dirigidos:** Crear Recompensas LCo específicas (ej. "Doble Puntos en tu primer pedido LC") o Beneficios de Nivel LCo atractivos para usar con LC.
+    *   **Promoción de LCo dentro de la Experiencia LC:** Mensajes/banners configurables por el admin en `PublicMenuViewPage` para incentivar registro/login en LCo.
+    *   **Campañas Segmentadas:** Usar datos combinados LCo+LC para enviar comunicaciones más efectivas.
 
-- **Incentivos Dirigidos Basados en Comportamiento Combinado:**
-- Crear Recompensas LCo específicas como "Doble Puntos en tu primer pedido usando el QR de mesa en el local" o "Descuento exclusivo en [Plato Estrella de LC] si pides desde la app en el local y eres Nivel X de LCo".
-- Ofrecer Beneficios de Nivel LCo que sean especialmente atractivos cuando se usan con el Módulo Camarero (ej. "Postre gratis en pedidos LC para miembros Oro y Platino").
-- **Promoción de LCo dentro de la Experiencia LC:**
-- El admin puede configurar mensajes o banners personalizables que aparecen en la `PublicMenuViewPage` (LC) para incentivar el registro o login en LCo, destacando los beneficios inmediatos (como ganar puntos con el pedido actual una vez pagado).
-- **Campañas de Marketing y Comunicación Segmentadas:**
-- Utilizar los datos de ambos módulos para segmentar clientes de forma más precisa y enviar comunicaciones más efectivas (ej. email a clientes LCo de alto valor que no han usado el Módulo Camarero recientemente, ofreciéndoles un incentivo para probarlo).
-- Notificar a clientes sobre nuevos ítems en la carta LC que podrían gustarles basados en su historial de pedidos (si se almacena y analiza).
+### 4. ⚙️ **Operativa y Sincronización de Estados Clave (Flujo Backend - Consideraciones Importantes)**
 
-### 4. ⚙️ **Operativa y Sincronización de Estados Clave (Flujo Backend)**
-
-- **Fiabilidad del Estado `PAID` en `Order` LC:** Es fundamental que el mecanismo para marcar un `Order` LC como pagado (ya sea por el camarero, TPV, o pago online futuro) sea robusto y preciso. Este estado es el principal disparador para la concesión de puntos LCo y otras lógicas de negocio.
-- **Gestión de Canjes LCo en Pedidos LC (Transaccionalidad):** Si se implementa el canje de recompensas/beneficios LCo directamente en el flujo de LC, la comunicación entre el backend de LC y LCo para marcar la recompensa LCo como canjeada (o un beneficio como aplicado) y ajustar puntos/estados en LCo debe ser **transaccional o, como mínimo, idempotente y con mecanismos de reintento/compensación** para evitar inconsistencias (ej. que se aplique un descuento en LC pero no se registre el canje en LCo, o viceversa).
-- **Consistencia de Datos del Cliente:** Si un cliente actualiza sus datos personales en LCo (ej. email, nombre), y ese cliente también está asociado a `Order`s en LC (a través de `Order.customerLCoId`), se debe considerar cómo mantener la consistencia de la información de identificación del cliente a través de los módulos. Los pedidos LC realizados de forma anónima (sin `customerLCoId`) no tendrían este problema de sincronización de datos de perfil.
+    *   **Estado `PAID` en `Order` LC (CRUCIAL):** El mecanismo para marcar un `Order` LC como `PAID` (sea por camarero, TPV futuro, o pago online futuro) debe ser extremadamente robusto y preciso, ya que es el disparador principal para la integración con LCo.
+        *   **Actualmente:** Esta funcionalidad depende de la implementación de la interfaz de camarero (Bloque B1 del `DEVELOPMENT_PLAN.md`).
+    *   **Transaccionalidad en Canjes LCo en Pedidos LC:** Si se implementa el canje de recompensas/beneficios LCo en el flujo LC, la comunicación entre los servicios de LC y LCo para marcar la recompensa como canjeada y ajustar datos en LCo debe ser transaccional o, como mínimo, idempotente con mecanismos de reintento/compensación para asegurar la consistencia de datos entre módulos.
+    *   **Consistencia de Datos del Cliente:** Si un cliente actualiza sus datos personales en LCo (a través de la futura `ProfileTab.tsx`), y ese cliente está asociado a `Order`s en LC, se debe considerar cómo se refleja esta información si se visualizan datos históricos de pedidos LC (los snapshots en `Order` y `OrderItem` son clave para esto).
 
 ---
 
 **La Sinergia Estratégica:**
 
-La integración de **LoyalPyME Camarero (LC)** con **LoyalPyME Core (LCo)** no es solo una suma de funcionalidades, sino una multiplicación de valor. LC moderniza y agiliza la experiencia de servicio en el local, capturando datos de consumo y comportamiento valiosos. LCo toma estos datos y los transforma en programas de lealtad personalizados y efectivos que incentivan la recurrencia y aumentan el valor del cliente.
+La integración de **LoyalPyME Camarero (LC)** con **LoyalPyME Core (LCo)** no es solo una suma de funcionalidades, sino una **multiplicación de valor** para el negocio y sus clientes. LC moderniza y agiliza la experiencia de servicio en el local, capturando datos de consumo y comportamiento detallados. LCo utiliza estos datos (y los datos de otras interacciones de fidelización) para construir programas de lealtad personalizados y efectivos que incentivan la recurrencia, aumentan el valor de vida del cliente y fortalecen la relación.
 
-Esta combinación permite a los negocios:
+Esta combinación permitirá a los negocios:
 
-- **Mejorar la satisfacción del cliente** con un servicio más rápido, personalizado, y con opciones de recompensa integradas.
-- **Aumentar la frecuencia de visitas y el gasto promedio** mediante incentivos de lealtad contextuales y beneficios aplicables directamente en el punto de servicio.
-- **Obtener una comprensión 360º del cliente** al unificar datos de servicio (qué, cuándo y cómo piden en el local) con datos de lealtad (su nivel, puntos, recompensas, actividad general).
-- **Optimizar la operativa del personal** al reducir la carga de trabajo manual en la toma de pedidos, cobros, y aplicación de promociones de lealtad.
-- **Diferenciarse de la competencia** ofreciendo una experiencia digital integrada, moderna y que premia la fidelidad de forma transparente y atractiva.
+- **Mejorar la satisfacción del cliente:** Con un servicio más rápido, personalizado, autónomo y con opciones de recompensa integradas y visibles.
+- **Aumentar la frecuencia de visitas y el gasto promedio:** Mediante incentivos de lealtad contextuales (ej. "Gana puntos con este pedido") y la aplicación directa de beneficios en el punto de servicio.
+- **Obtener una comprensión 360º del cliente:** Al unificar datos de servicio en el local (qué, cuándo y cómo piden) con datos de su actividad en el programa de fidelización (nivel, puntos, recompensas canjeadas, interacciones con QR).
+- **Optimizar la operativa del personal:** El flujo digital reduce la carga de trabajo manual en la toma de pedidos (cliente), comunicación con cocina/barra (KDS), y (futuramente) aplicación de promociones de lealtad o cobros.
+- **Diferenciarse de la competencia:** Ofreciendo una experiencia digital integrada, moderna, eficiente y que premia la fidelidad de forma transparente y atractiva.
 
-La clave del éxito de esta integración reside en una comunicación fluida, lógica y robusta entre los datos y procesos de ambos módulos, tanto a nivel de arquitectura backend (servicios, eventos, colas de mensajes si fuera necesario para desacoplar) como en la presentación de una experiencia de usuario cohesiva y sin fricciones en el frontend.
+El éxito de esta integración reside en una **comunicación lógica, robusta y potencialmente transaccional** entre los datos y procesos de ambos módulos. Esto implica una arquitectura backend bien diseñada (servicios cohesivos, posible uso de eventos o colas de mensajes para desacoplar procesos críticos como la asignación de puntos post-pago) y una presentación de una experiencia de usuario cohesiva y sin fricciones en el frontend.
