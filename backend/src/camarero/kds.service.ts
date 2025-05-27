@@ -1,4 +1,6 @@
 // backend/src/camarero/kds.service.ts
+// Version: 1.0.5 (Corrected type assignment for local currentOrderItem date fields - FULL FILE)
+
 import { PrismaClient, Prisma, OrderItem, OrderItemStatus, OrderStatus, UserRole } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -22,8 +24,7 @@ export interface KdsOrderItemData {
         createdAt: Date;
         tableIdentifier: string | null;
     };
-    // Campos opcionales para tiempos
-    preparationTime?: number | null; // Del MenuItem (snapshot o directo)
+    preparationTime?: number | null; 
     preparedAt?: Date | null;
     servedAt?: Date | null;
 }
@@ -50,9 +51,11 @@ export const getItemsForKds = async (
     try {
         const orderItems = await prisma.orderItem.findMany({
             where: {
-                order: {
-                    businessId: businessId,
-                    // Podríamos filtrar por OrderStatus también si es necesario (ej. solo pedidos 'RECEIVED' o 'IN_PROGRESS')
+                order: { 
+                    businessId: businessId, 
+                    status: { 
+                        notIn: [OrderStatus.COMPLETED, OrderStatus.PAID, OrderStatus.CANCELLED] 
+                    }
                 },
                 kdsDestination: kdsDestination,
                 status: {
@@ -60,14 +63,14 @@ export const getItemsForKds = async (
                 },
             },
             include: {
-                menuItem: { // Para obtener nombre y tiempo de preparación
+                menuItem: { 
                     select: {
                         name_es: true,
                         name_en: true,
                         preparationTime: true,
                     }
                 },
-                selectedModifiers: { // Para obtener los nombres de los modificadores seleccionados
+                selectedModifiers: { 
                     include: {
                         modifierOption: {
                             select: {
@@ -77,12 +80,12 @@ export const getItemsForKds = async (
                         }
                     }
                 },
-                order: { // Para obtener info del pedido
+                order: { 
                     select: {
                         id: true,
                         orderNumber: true,
                         createdAt: true,
-                        table: { // Para obtener el identificador de la mesa
+                        table: { 
                             select: {
                                 identifier: true,
                             }
@@ -92,20 +95,19 @@ export const getItemsForKds = async (
             },
             orderBy: {
                 order: {
-                    createdAt: 'asc', // Pedidos más antiguos primero
+                    createdAt: 'asc', 
                 }
             }
         });
 
-        // Mapear al formato KdsOrderItemData
         const kdsItems: KdsOrderItemData[] = orderItems.map(item => ({
             id: item.id,
             quantity: item.quantity,
             status: item.status,
             notes: item.notes,
             kdsDestination: item.kdsDestination,
-            menuItemName_es: item.menuItem?.name_es || item.itemNameSnapshot, // Fallback a snapshot
-            menuItemName_en: item.menuItem?.name_en || null, // Fallback a snapshot si itemNameSnapshot fuera bilingüe
+            menuItemName_es: item.menuItem?.name_es || item.itemNameSnapshot,
+            menuItemName_en: item.menuItem?.name_en || null, 
             selectedModifiers: item.selectedModifiers.map(sm => ({
                 optionName_es: sm.modifierOption?.name_es || sm.optionNameSnapshot,
                 optionName_en: sm.modifierOption?.name_en || null,
@@ -135,106 +137,144 @@ export const getItemsForKds = async (
  * Actualiza el estado de un OrderItem específico.
  * También maneja la lógica para actualizar el estado del Order general.
  * @param orderItemId - ID del OrderItem a actualizar.
- * @param newStatus - El nuevo OrderItemStatus.
+ * @param newOrderItemStatus - El nuevo OrderItemStatus.
  * @param businessId - ID del negocio (para verificación de pertenencia).
- * @returns El OrderItem actualizado.
+ * @returns El OrderItem actualizado con sus relaciones (order, menuItem, selectedModifiers).
  */
 export const updateOrderItemStatus = async (
     orderItemId: string,
-    newStatus: OrderItemStatus,
+    newOrderItemStatus: OrderItemStatus,
     businessId: string
 ): Promise<OrderItem> => {
-    console.log(`[KDS SVC] Updating status for OrderItem ${orderItemId} to ${newStatus} for business ${businessId}`);
+    console.log(`[KDS SVC] Attempting to update OrderItem ${orderItemId} to ${newOrderItemStatus} for business ${businessId}`);
 
-    // Validaciones de transición de estado (simplificado por ahora, expandir según sea necesario)
     const allowedTransitions: Partial<Record<OrderItemStatus, OrderItemStatus[]>> = {
         [OrderItemStatus.PENDING_KDS]: [OrderItemStatus.PREPARING, OrderItemStatus.CANCELLED, OrderItemStatus.CANCELLATION_REQUESTED],
-        [OrderItemStatus.PREPARING]: [OrderItemStatus.READY, OrderItemStatus.CANCELLED, OrderItemStatus.CANCELLATION_REQUESTED], // Podría volver a PENDING_KDS?
-        [OrderItemStatus.READY]: [OrderItemStatus.SERVED, OrderItemStatus.PREPARING], // PREPARING si se devuelve a cocina
-        [OrderItemStatus.CANCELLATION_REQUESTED]: [OrderItemStatus.CANCELLED, OrderItemStatus.PREPARING, OrderItemStatus.PENDING_KDS], // Puede aceptarse o rechazarse
-        // SERVED y CANCELLED son estados finales para este flujo KDS
+        [OrderItemStatus.PREPARING]: [OrderItemStatus.READY, OrderItemStatus.CANCELLED, OrderItemStatus.CANCELLATION_REQUESTED, OrderItemStatus.PENDING_KDS],
+        [OrderItemStatus.READY]: [OrderItemStatus.SERVED, OrderItemStatus.PREPARING], 
+        [OrderItemStatus.CANCELLATION_REQUESTED]: [OrderItemStatus.CANCELLED, OrderItemStatus.PENDING_KDS, OrderItemStatus.PREPARING],
     };
 
-    return prisma.$transaction(async (tx) => {
-        const orderItem = await tx.orderItem.findFirst({
-            where: {
-                id: orderItemId,
-                order: { businessId: businessId }
-            },
-            include: { order: { select: { id: true } } } // Incluir ID del pedido
+    const finalUpdatedOrderItem = await prisma.$transaction(async (tx) => {
+        let currentOrderItem = await tx.orderItem.findFirst({ // Usar let para poder modificar sus propiedades
+            where: { id: orderItemId, order: { businessId: businessId } },
+            include: { order: { select: { id: true, status: true } } } 
         });
 
-        if (!orderItem) {
+        if (!currentOrderItem) {
             throw new Error(`Ítem de pedido con ID ${orderItemId} no encontrado o no pertenece a este negocio.`);
         }
-        if (!orderItem.order?.id) { // Chequeo de seguridad
+        if (!currentOrderItem.order?.id) { 
              throw new Error(`Error interno: El ítem de pedido ${orderItemId} no está asociado a un pedido.`);
         }
 
-        const currentStatus = orderItem.status;
-        if (currentStatus === newStatus) {
-            console.log(`[KDS SVC] OrderItem ${orderItemId} ya está en estado ${newStatus}. No se requiere actualización.`);
-            return orderItem;
+        const currentOrderItemStatusValue = currentOrderItem.status;
+        
+        if (currentOrderItemStatusValue !== newOrderItemStatus) {
+            if (allowedTransitions[currentOrderItemStatusValue] && !allowedTransitions[currentOrderItemStatusValue]?.includes(newOrderItemStatus)) {
+                throw new Error(`Transición de estado no permitida para el ítem de '${currentOrderItemStatusValue}' a '${newOrderItemStatus}'.`);
+            }
+            
+            const dataToUpdateForOrderItem: Prisma.OrderItemUpdateInput = { status: newOrderItemStatus };
+            let newPreparedAtDate: Date | null = currentOrderItem.preparedAt; // Para la variable local
+            let newServedAtDate: Date | null = currentOrderItem.servedAt;     // Para la variable local
+
+            if (newOrderItemStatus === OrderItemStatus.PREPARING && !currentOrderItem.preparedAt) {
+                newPreparedAtDate = new Date();
+                dataToUpdateForOrderItem.preparedAt = newPreparedAtDate;
+            } else if (newOrderItemStatus === OrderItemStatus.SERVED && !currentOrderItem.servedAt) {
+                 newServedAtDate = new Date();
+                 dataToUpdateForOrderItem.servedAt = newServedAtDate;
+            } else if (newOrderItemStatus === OrderItemStatus.READY && !currentOrderItem.preparedAt) {
+                newPreparedAtDate = new Date();
+                dataToUpdateForOrderItem.preparedAt = newPreparedAtDate;
+            }
+
+            await tx.orderItem.update({
+                where: { id: orderItemId },
+                data: dataToUpdateForOrderItem,
+            });
+            console.log(`[KDS SVC] OrderItem ${orderItemId} status updated to ${newOrderItemStatus} in DB.`);
+            
+            // Reflejar el cambio en nuestra variable local para la lógica siguiente
+            currentOrderItem.status = newOrderItemStatus; 
+            currentOrderItem.preparedAt = newPreparedAtDate; // Asignar el Date o null
+            currentOrderItem.servedAt = newServedAtDate;   // Asignar el Date o null
+
+        } else {
+            console.log(`[KDS SVC] OrderItem ${orderItemId} ya está en estado ${newOrderItemStatus}. No se requiere actualización de ítem.`);
         }
 
-        if (allowedTransitions[currentStatus] && !allowedTransitions[currentStatus]?.includes(newStatus)) {
-            throw new Error(`Transición de estado no permitida de '${currentStatus}' a '${newStatus}'.`);
+        // --- LÓGICA DE ACTUALIZACIÓN DEL ESTADO DEL PEDIDO (Order.status) CON LOGS ---
+        const orderId = currentOrderItem.order.id;
+        const currentOrderStatusInDb = currentOrderItem.order.status; 
+
+        const allItemsOfThisOrder = await tx.orderItem.findMany({
+            where: { orderId: orderId },
+            select: { status: true, id: true } 
+        });
+        
+        console.log(`[KDS SVC - OrderStatusLogic] For Order ${orderId} - Current Order Status in DB: ${currentOrderStatusInDb}`);
+        console.log(`[KDS SVC - OrderStatusLogic] All items for order ${orderId} (after potential item update):`, allItemsOfThisOrder.map(i => ({id: i.id, status: i.status})));
+
+        const activeItems = allItemsOfThisOrder.filter(item => item.status !== OrderItemStatus.CANCELLED);
+        let determinedNewOrderStatus: OrderStatus = currentOrderStatusInDb; 
+        console.log(`[KDS SVC - OrderStatusLogic] Initial determinedNewOrderStatus set to: ${determinedNewOrderStatus}`);
+
+        if (activeItems.length === 0 && allItemsOfThisOrder.length > 0) { 
+            determinedNewOrderStatus = OrderStatus.CANCELLED;
+            console.log(`[KDS SVC - OrderStatusLogic] Condition met: All items cancelled. New OrderStatus -> ${determinedNewOrderStatus}`);
+        } else if (activeItems.every(item => item.status === OrderItemStatus.SERVED)) {
+            determinedNewOrderStatus = OrderStatus.COMPLETED;
+            console.log(`[KDS SVC - OrderStatusLogic] Condition met: All active items SERVED. New OrderStatus -> ${determinedNewOrderStatus}`);
+        } else if (activeItems.every(item => item.status === OrderItemStatus.READY || item.status === OrderItemStatus.SERVED)) {
+            determinedNewOrderStatus = OrderStatus.ALL_ITEMS_READY;
+            console.log(`[KDS SVC - OrderStatusLogic] Condition met: All active items READY or SERVED. New OrderStatus -> ${determinedNewOrderStatus}`);
+        } else if (activeItems.some(item => item.status === OrderItemStatus.READY)) {
+            determinedNewOrderStatus = OrderStatus.PARTIALLY_READY;
+            console.log(`[KDS SVC - OrderStatusLogic] Condition met: Some items READY. New OrderStatus -> ${determinedNewOrderStatus}`);
+        } else if (activeItems.some(item => item.status === OrderItemStatus.PREPARING)) {
+            determinedNewOrderStatus = OrderStatus.IN_PROGRESS;
+            console.log(`[KDS SVC - OrderStatusLogic] Condition met: Some items PREPARING. New OrderStatus -> ${determinedNewOrderStatus}`);
+        } else if (activeItems.every(item => item.status === OrderItemStatus.PENDING_KDS)) {
+            determinedNewOrderStatus = OrderStatus.RECEIVED;
+            console.log(`[KDS SVC - OrderStatusLogic] Condition met: All active items PENDING_KDS. New OrderStatus -> ${determinedNewOrderStatus}`);
+        } else {
+             console.log(`[KDS SVC - OrderStatusLogic] No primary condition met. Current OrderStatus in DB: ${currentOrderStatusInDb}`);
+            if (currentOrderStatusInDb === OrderStatus.RECEIVED && 
+                activeItems.some(item => 
+                       item.status === OrderItemStatus.PREPARING || 
+                       item.status === OrderItemStatus.READY || 
+                       item.status === OrderItemStatus.SERVED
+                   )
+            ) {
+                 determinedNewOrderStatus = OrderStatus.IN_PROGRESS;
+                 console.log(`[KDS SVC - OrderStatusLogic] Fallback condition: Was RECEIVED, now has active non-PENDING_KDS items. New OrderStatus -> ${determinedNewOrderStatus}`);
+            } else {
+                console.log(`[KDS SVC - OrderStatusLogic] Fallback: No specific status change detected based on current item states. Order status would remain: ${determinedNewOrderStatus}`);
+            }
         }
         
-        const dataToUpdate: Prisma.OrderItemUpdateInput = { status: newStatus };
-        if (newStatus === OrderItemStatus.PREPARING && !orderItem.preparedAt) {
-            dataToUpdate.preparedAt = new Date();
-        } else if (newStatus === OrderItemStatus.SERVED && !orderItem.servedAt) {
-             dataToUpdate.servedAt = new Date();
+        if (currentOrderStatusInDb !== determinedNewOrderStatus) {
+            await tx.order.update({
+                where: { id: orderId },
+                data: { status: determinedNewOrderStatus }
+            });
+            console.log(`[KDS SVC - DB UPDATE] Order ${orderId} status was ${currentOrderStatusInDb}, NOW UPDATED to ${determinedNewOrderStatus}.`);
+        } else {
+            console.log(`[KDS SVC - NO DB UPDATE] Order ${orderId} status REMAINS ${currentOrderStatusInDb}. (Determined new status was also: ${determinedNewOrderStatus})`);
         }
-        // Considerar si al pasar a READY también se debe actualizar preparedAt si aún no está seteado.
-
-        const updatedOrderItem = await tx.orderItem.update({
+        // --- FIN LÓGICA DE ACTUALIZACIÓN DEL ESTADO DEL PEDIDO ---
+        
+        const finalOrderItemResult = await tx.orderItem.findUniqueOrThrow({
             where: { id: orderItemId },
-            data: dataToUpdate,
-        });
-        console.log(`[KDS SVC] OrderItem ${updatedOrderItem.id} status updated to ${updatedOrderItem.status}.`);
-
-        // Ahora, actualiza el estado del Order general
-        const orderId = orderItem.order.id;
-        const allItemsOfOrder = await tx.orderItem.findMany({
-            where: { orderId: orderId },
-            select: { status: true }
-        });
-
-        let newOrderStatus: OrderStatus | null = null;
-
-        if (allItemsOfOrder.every(item => item.status === OrderItemStatus.SERVED)) {
-            newOrderStatus = OrderStatus.COMPLETED; // O quizás PAID si el pago es después del servicio total
-        } else if (allItemsOfOrder.every(item => item.status === OrderItemStatus.READY || item.status === OrderItemStatus.SERVED || item.status === OrderItemStatus.CANCELLED )) {
-            // Si todos están listos, servidos o cancelados (pero no todos servidos aún)
-            if (allItemsOfOrder.some(item => item.status === OrderItemStatus.READY)) {
-                 newOrderStatus = OrderStatus.ALL_ITEMS_READY;
-            } else if (allItemsOfOrder.every(item => item.status === OrderItemStatus.CANCELLED)) {
-                newOrderStatus = OrderStatus.CANCELLED;
+            include: { 
+                order: true, 
+                menuItem: true, 
+                selectedModifiers: { include: { modifierOption: true }}
             }
-            // Podría haber otros casos aquí
-        } else if (allItemsOfOrder.some(item => item.status === OrderItemStatus.READY) && allItemsOfOrder.some(item => item.status === OrderItemStatus.PENDING_KDS || item.status === OrderItemStatus.PREPARING)) {
-            newOrderStatus = OrderStatus.PARTIALLY_READY;
-        } else if (allItemsOfOrder.some(item => item.status === OrderItemStatus.PREPARING || item.status === OrderItemStatus.PENDING_KDS || item.status === OrderItemStatus.READY)) {
-            newOrderStatus = OrderStatus.IN_PROGRESS;
-        }
-        // Si todos los ítems son CANCELLED, el pedido es CANCELLED
-        else if (allItemsOfOrder.every(item => item.status === OrderItemStatus.CANCELLED)) {
-            newOrderStatus = OrderStatus.CANCELLED;
-        }
-
-
-        if (newOrderStatus) {
-            const currentOrder = await tx.order.findUnique({ where: {id: orderId}, select: {status: true}});
-            if(currentOrder && currentOrder.status !== newOrderStatus) {
-                await tx.order.update({
-                    where: { id: orderId },
-                    data: { status: newOrderStatus }
-                });
-                console.log(`[KDS SVC] Order ${orderId} status updated to ${newOrderStatus}.`);
-            }
-        }
-        return updatedOrderItem;
+        });
+        return finalOrderItemResult;
     });
+    return finalUpdatedOrderItem; 
 };
