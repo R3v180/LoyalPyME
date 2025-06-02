@@ -1,28 +1,34 @@
-// backend/src/routes/public-order.routes.ts
-// Version: 1.1.0 (Add route for getting order status)
+// Copia Gemini/backend/src/routes/public-order.routes.ts
+// Versión actualizada para usar los handlers exportados y añadir nueva ruta
 
 import { Router } from 'express';
-// Importar ambos handlers del controlador
 import { 
     createPublicOrderHandler,
-    getPublicOrderStatusHandler // <-- Asegurarse que este está importado
-} from '../public/order.controller'; // Ajustar ruta si la estructura de carpetas es diferente
+    getPublicOrderStatusHandler,
+    addItemsToExistingOrderHandler // <-- Importar el nuevo handler
+} from '../public/order.controller'; // Asegúrate que la ruta es correcta
 
 const publicOrderRouter = Router();
 
-// Ruta existente para crear un pedido
-// POST /public/order/:businessSlug
+// Ruta para crear un pedido
+// POST /:businessSlug  (el prefijo /api/public/order se aplica en index.ts)
 publicOrderRouter.post(
     '/:businessSlug', 
     createPublicOrderHandler
 );
 
-// NUEVA RUTA para obtener el estado del pedido
-// GET /public/order/:orderId/status 
-// (El prefijo /public/order ya se aplica en index.ts)
+// Ruta para obtener el estado del pedido
+// GET /:orderId/status
 publicOrderRouter.get(
-    '/:orderId/status', // :orderId es el UUID del pedido
+    '/:orderId/status',
     getPublicOrderStatusHandler
+);
+
+// NUEVA RUTA para añadir ítems a un pedido existente
+// POST /:orderId/items
+publicOrderRouter.post(
+    '/:orderId/items', // :orderId es el UUID del pedido
+    addItemsToExistingOrderHandler
 );
 
 export default publicOrderRouter;

@@ -132,6 +132,7 @@ export interface PublicMenuModifierOption {
     priceAdjustment: number; // En frontend, esperamos un número.
     position: number;
     isDefault: boolean;
+    isAvailable: boolean;
 }
 
 export interface PublicMenuModifierGroup {

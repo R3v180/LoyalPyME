@@ -1,5 +1,5 @@
 // frontend/src/components/public/menu/ShoppingCartModal.tsx
-// Version: 0.1.3 (Corrected - Add onClearCart to props)
+// Version: 0.1.4 (Add new props for "add to existing order" context)
 
 import React from 'react';
 import {
@@ -23,7 +23,7 @@ import {
     IconSend,
     IconCirclePlus,
     IconCircleMinus,
-    IconShoppingCartOff // Icono para vaciar carrito
+    IconShoppingCartOff
 } from '@tabler/icons-react';
 
 // Interfaz OrderItemFE (debe coincidir con la de PublicMenuViewPage o importarse de un tipo común)
@@ -45,7 +45,6 @@ interface OrderItemFE {
     }[];
 }
 
-// --- MODIFICACIÓN: AÑADIR onClearCart A ShoppingCartModalProps ---
 interface ShoppingCartModalProps {
     opened: boolean;
     onClose: () => void;
@@ -56,9 +55,11 @@ interface ShoppingCartModalProps {
     onUpdateOrderNotes: (notes: string) => void;
     onSubmitOrder: () => Promise<void>;
     isSubmittingOrder: boolean;
-    onClearCart: () => void; // <--- AÑADIDO AQUÍ
+    onClearCart: () => void;
+    // --- NUEVAS PROPS AÑADIDAS ---
+    isAddingToExistingOrder?: boolean; 
+    activeOrderNumber?: string | null;
 }
-// --- FIN MODIFICACIÓN ---
 
 const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({
     opened,
@@ -70,7 +71,10 @@ const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({
     onUpdateOrderNotes,
     onSubmitOrder,
     isSubmittingOrder,
-    onClearCart, // <--- RECIBIR LA PROP AQUÍ
+    onClearCart,
+    // --- RECIBIR NUEVAS PROPS ---
+    isAddingToExistingOrder,
+    activeOrderNumber,
 }) => {
     const { t, i18n } = useTranslation();
     const currentLanguage = i18n.language;
@@ -87,11 +91,21 @@ const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({
         onUpdateItemQuantity(cartItemId, Math.max(1, newQuantity));
     };
 
+    // Determinar el título del modal y el texto del botón de envío
+    const modalTitle = isAddingToExistingOrder 
+        ? t('publicMenu.cart.titleAddToOrder', { orderNumber: activeOrderNumber || '' })
+        : t('publicMenu.cart.title', 'Tu Pedido');
+    
+    const submitButtonText = isAddingToExistingOrder
+        ? t('publicMenu.cart.submitAddToOrder', 'Añadir al Pedido')
+        : t('publicMenu.cart.submitOrder', 'Enviar Pedido');
+
+
     return (
         <Modal
             opened={opened}
             onClose={onClose}
-            title={t('publicMenu.cart.title', 'Tu Pedido')}
+            title={modalTitle} // <-- Título dinámico
             size="lg"
             overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
             scrollAreaComponent={ScrollArea.Autosize}
@@ -105,7 +119,7 @@ const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({
                             color="red"
                             size="xs"
                             leftSection={<IconShoppingCartOff size={14} />}
-                            onClick={onClearCart} // <--- USAR LA PROP AQUÍ
+                            onClick={onClearCart}
                             disabled={isSubmittingOrder}
                         >
                             {t('publicMenu.cart.clearCartButton', 'Vaciar Carrito')}
@@ -115,7 +129,10 @@ const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({
 
                 {orderItems.length === 0 ? (
                     <Text c="dimmed" ta="center" py="xl">
-                        {t('publicMenu.cart.empty', 'Tu carrito de pedido está vacío.')}
+                        {isAddingToExistingOrder 
+                            ? t('publicMenu.cart.emptyAddToOrder', 'Selecciona ítems para añadir a tu pedido.')
+                            : t('publicMenu.cart.empty', 'Tu carrito de pedido está vacío.')
+                        }
                     </Text>
                 ) : (
                     <ScrollArea.Autosize mah="40vh">
@@ -215,7 +232,12 @@ const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({
                 <Divider my="sm" />
 
                 <Group justify="space-between">
-                    <Text fw={700} size="lg">{t('publicMenu.cart.totalOrder', 'Total del Pedido:')}</Text>
+                    <Text fw={700} size="lg">
+                        {isAddingToExistingOrder 
+                            ? t('publicMenu.cart.totalAddItems', 'Total a Añadir:')
+                            : t('publicMenu.cart.totalOrder', 'Total del Pedido:')
+                        }
+                    </Text>
                     <Text fw={700} size="lg">
                         {totalOrderAmount.toLocaleString(currentLanguage, { style: 'currency', currency: 'EUR' })}
                     </Text>
@@ -232,7 +254,7 @@ const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({
                         leftSection={<IconSend size={16} />}
                         color="green"
                     >
-                        {t('publicMenu.cart.submitOrder', 'Enviar Pedido')}
+                        {submitButtonText} {/* <-- Texto dinámico del botón */}
                     </Button>
                 </Group>
             </Stack>

@@ -1,14 +1,15 @@
 "use strict";
 // backend/src/index.ts
-// Version: 1.6.4 (Add camareroKdsRouter, full Swagger definition)
+// Version: 1.7.0 (Add waiterRouter for Camarero Staff Interface)
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
+require("reflect-metadata");
 const cors_1 = __importDefault(require("cors"));
-const client_1 = require("@prisma/client"); // BenefitType es usado en Swagger
+const client_1 = require("@prisma/client");
 const client_2 = require("@prisma/client");
 const node_cron_1 = __importDefault(require("node-cron"));
 const swagger_jsdoc_1 = __importDefault(require("swagger-jsdoc"));
@@ -30,9 +31,8 @@ const superadmin_routes_1 = __importDefault(require("./routes/superadmin.routes"
 const camarero_admin_routes_1 = __importDefault(require("./routes/camarero-admin.routes"));
 const public_menu_routes_1 = __importDefault(require("./routes/public-menu.routes"));
 const public_order_routes_1 = __importDefault(require("./routes/public-order.routes"));
-// --- NUEVA IMPORTACIÓN PARA KDS ROUTER ---
 const camarero_kds_routes_1 = __importDefault(require("./routes/camarero-kds.routes"));
-// --- FIN NUEVA IMPORTACIÓN ---
+const waiter_routes_1 = __importDefault(require("./routes/waiter.routes")); // Router para la interfaz de camarero
 // Cron Job Logic
 const tier_logic_service_1 = require("./tiers/tier-logic.service");
 dotenv_1.default.config();
@@ -69,8 +69,8 @@ const swaggerOptions = {
         openapi: '3.0.0',
         info: {
             title: 'LoyalPyME API',
-            version: '1.16.0', // Actualizado para reflejar KDS
-            description: 'API REST para la plataforma de fidelización LoyalPyME. Permite gestionar clientes, puntos, niveles, recompensas, historial, subidas de archivos, autenticación, funcionalidades de Super Administrador, administración del Módulo Camarero (gestión de carta, KDS), y visualización de menú público y creación de pedidos.', // Actualizada
+            version: '1.17.0',
+            description: 'API REST para la plataforma de fidelización LoyalPyME. Permite gestionar clientes, puntos, niveles, recompensas, historial, subidas de archivos, autenticación, funcionalidades de Super Administrador, administración del Módulo Camarero (gestión de carta, KDS, interfaz de camarero), y visualización de menú público y creación de pedidos.',
             contact: { name: 'Olivier Hottelet', email: 'olivierhottelet1980@gmail.com' },
             license: { name: 'Software Propietario. Copyright (c) 2024-2025 Olivier Hottelet', url: 'LICENSE.MD' }
         },
@@ -78,7 +78,6 @@ const swaggerOptions = {
             { url: `http://localhost:${port}/api`, description: 'Servidor de Desarrollo Local (API Protegida)', },
             { url: `http://localhost:${port}/public`, description: 'Servidor de Desarrollo Local (API Pública)', },
         ],
-        // --- INICIO BLOQUE COMPONENTS COMPLETO (DE TU VERSIÓN ANTERIOR) ---
         components: {
             securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', } },
             schemas: {
@@ -137,12 +136,54 @@ const swaggerOptions = {
                 BulkStatusUpdateDto: { type: 'object', required: ['customerIds', 'isActive'], properties: { customerIds: { type: 'array', items: { type: 'string', format: 'uuid' }, minItems: 1 }, isActive: { type: 'boolean' } } },
                 BulkPointsAdjustDto: { type: 'object', required: ['customerIds', 'amount'], properties: { customerIds: { type: 'array', items: { type: 'string', format: 'uuid' }, minItems: 1 }, amount: { type: 'number', not: { const: 0 } }, reason: { type: 'string', nullable: true } } },
                 BulkOperationResponse: { type: 'object', properties: { message: { type: 'string' }, count: { type: 'integer' } } },
-                ImageUploadResponse: { type: 'object', properties: { url: { type: 'string', format: 'url', description: 'URL de la imagen subida a Cloudinary.' } } }
+                ImageUploadResponse: { type: 'object', properties: { url: { type: 'string', format: 'url', description: 'URL de la imagen subida a Cloudinary.' } } },
+                // DTOs para Camarero Staff
+                ReadyPickupItemDto: {
+                    type: 'object',
+                    properties: {
+                        orderItemId: { type: 'string', format: 'uuid', description: "ID del OrderItem" },
+                        orderId: { type: 'string', format: 'uuid', description: "ID del Order al que pertenece" },
+                        orderNumber: { type: 'string', description: "Número legible del Order" },
+                        orderCreatedAt: { type: 'string', format: 'date-time', description: "Fecha de creación del Order" },
+                        tableIdentifier: { type: 'string', nullable: true, description: "Identificador de la mesa" },
+                        itemNameSnapshot_es: { type: 'string', nullable: true, description: "Nombre del ítem en español (snapshot)" },
+                        itemNameSnapshot_en: { type: 'string', nullable: true, description: "Nombre del ítem en inglés (snapshot)" },
+                        quantity: { type: 'integer', description: "Cantidad del ítem" },
+                        itemNotes: { type: 'string', nullable: true, description: "Notas específicas del OrderItem" },
+                        kdsDestination: { type: 'string', nullable: true, description: "Destino KDS (COCINA, BARRA)" },
+                        selectedModifiers: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    optionName_es: { type: 'string', nullable: true },
+                                    optionName_en: { type: 'string', nullable: true },
+                                }
+                            }
+                        },
+                        currentOrderItemStatus: { type: 'string', enum: Object.values(client_1.OrderItemStatus) }
+                    }
+                },
+                MarkOrderItemServedPayloadDto: {
+                    type: 'object',
+                    required: ['newStatus'],
+                    properties: {
+                        newStatus: { type: 'string', enum: [client_1.OrderItemStatus.SERVED], description: 'Debe ser "SERVED"' }
+                    }
+                },
+                OrderItemStatusUpdateResponseDto: {
+                    type: 'object',
+                    properties: {
+                        message: { type: 'string' },
+                        orderItemId: { type: 'string', format: 'uuid' },
+                        newStatus: { type: 'string', enum: Object.values(client_1.OrderItemStatus) },
+                        orderStatus: { type: 'string', enum: Object.values(client_1.OrderStatus), nullable: true }
+                    }
+                }
             }
         },
-        // --- FIN BLOQUE COMPONENTS COMPLETO ---
-        // --- INICIO BLOQUE PATHS COMPLETO (DE TU VERSIÓN ANTERIOR) ---
         paths: {
+            // Paths existentes (se mantienen como en tu archivo original)
             '/public/businesses/public-list': { get: { tags: ['Public', 'Businesses'], summary: 'Obtiene la lista pública de negocios (ID y Nombre).', description: 'Devuelve un array con el ID y el nombre de todos los negocios registrados, útil para el formulario de registro de clientes. No requiere autenticación.', responses: { '200': { description: 'Lista de negocios obtenida con éxito.', content: { 'application/json': { schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' } } } } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
             '/api/auth/login': { post: { tags: ['Authentication'], summary: 'Autentica un usuario y devuelve un token JWT.', description: 'Verifica las credenciales (email y contraseña) y, si son correctas y el usuario está activo, devuelve los datos del usuario (sin contraseña) y un token JWT.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/LoginCredentials' } } } }, responses: { '200': { description: 'Autenticación exitosa.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/LoginResponse' } } } }, '400': { description: 'Error de validación (falta email o contraseña).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '401': { description: 'No autorizado (credenciales inválidas o usuario inactivo).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
             '/api/auth/register': { post: { tags: ['Registration'], summary: 'Registra un nuevo usuario cliente.', description: 'Crea una cuenta para un cliente final asociándolo a un negocio existente.', requestBody: { required: true, content: { 'application/json': { schema: { '$ref': '#/components/schemas/RegisterUserDto' } } } }, responses: { '201': { description: 'Usuario cliente creado con éxito.', content: { 'application/json': { schema: { type: 'object', properties: { user: { '$ref': '#/components/schemas/UserResponse' } } } } } }, '400': { description: 'Error de validación (campos faltantes, formato inválido, rol incorrecto).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '409': { description: 'Conflicto (email, teléfono o documento ya existen, o el negocio no existe).', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } }, '500': { description: 'Error interno del servidor.', content: { 'application/json': { schema: { '$ref': '#/components/schemas/ErrorResponse' } } } } } } },
@@ -198,15 +239,13 @@ const swaggerOptions = {
                 }
             }
         },
-        // --- FIN BLOQUE PATHS COMPLETO ---
         security: [{ bearerAuth: [] }],
     },
-    // Asegúrate de que apis incluya los archivos de rutas que contienen anotaciones JSDoc para Swagger
     apis: [
         './src/routes/*.ts',
         './src/auth/*.ts',
         './src/admin/*.ts',
-        './src/camarero/*.ts', // <--- AÑADIDO para KDS y otros controladores de camarero
+        './src/camarero/*.ts',
         './src/public/*.ts',
         './src/rewards/*.ts',
         './src/points/*.ts',
@@ -214,24 +253,20 @@ const swaggerOptions = {
         './src/tiers/*.ts',
         './src/uploads/*.ts',
         './src/superadmin/*.ts',
-        // Añade otras rutas de controladores si es necesario
     ],
 };
 const swaggerSpec = (0, swagger_jsdoc_1.default)(swaggerOptions);
 app.use('/api-docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swaggerSpec));
 // --- Montaje de Rutas ---
-// Rutas Públicas (sin autenticación requerida)
 app.use('/api/auth', auth_routes_1.default);
 app.use('/public/businesses', businesses_routes_1.default);
 app.use('/public/menu', public_menu_routes_1.default);
 app.use('/public/order', public_order_routes_1.default);
-// Rutas de Super Administrador (requieren token SUPER_ADMIN)
 app.use('/api/superadmin', superadmin_routes_1.default);
-// Rutas del Módulo Camarero (requieren token y que el módulo esté activo)
+// Rutas del Módulo Camarero
 app.use('/api/camarero/admin', camarero_admin_routes_1.default);
-// --- NUEVO MONTAJE PARA EL ROUTER KDS ---
 app.use('/api/camarero/kds', camarero_kds_routes_1.default);
-// --- FIN NUEVO MONTAJE ---
+app.use('/api/camarero/staff', waiter_routes_1.default); // Montado bajo /api/camarero/staff
 // Rutas de Módulo de Fidelización y Generales Protegidas
 app.use('/api/profile', auth_middleware_1.authenticateToken, protected_routes_1.default);
 app.use('/api/rewards', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), rewards_routes_1.default);
@@ -240,11 +275,8 @@ app.use('/api/customer', auth_middleware_1.authenticateToken, (0, role_middlewar
 app.use('/api/tiers', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), tiers_routes_1.default);
 app.use('/api/admin', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN]), admin_routes_1.default);
 app.use('/api/uploads', auth_middleware_1.authenticateToken, (0, role_middleware_1.checkRole)([client_1.UserRole.BUSINESS_ADMIN, client_1.UserRole.SUPER_ADMIN]), uploads_routes_1.default);
-// --- Fin Montaje de Rutas ---
 // Ruta raíz básica
-app.get('/', (req, res) => {
-    res.send('Welcome to LoyalPyME API! Docs available at /api-docs');
-});
+app.get('/', (req, res) => { res.send('Welcome to LoyalPyME API! Docs available at /api-docs'); });
 // Manejador de errores global
 app.use((err, req, res, next) => {
     console.error('[GLOBAL ERROR HANDLER]', err.stack);
@@ -260,7 +292,6 @@ app.use((err, req, res, next) => {
     if (err instanceof client_1.Prisma.PrismaClientValidationError) {
         return res.status(400).json({ message: 'Error de validación de datos Prisma.', error: 'Los datos proporcionados no cumplen con el formato esperado por la base de datos.' });
     }
-    // @ts-ignore
     const statusCode = err.status || 500;
     const errorMessage = statusCode === 500 && process.env.NODE_ENV === 'production' ? 'Ocurrió un error interno en el servidor.' : err.message || 'Error desconocido.';
     res.status(statusCode).json({ message: statusCode === 500 ? 'Error Interno del Servidor' : 'Error en la Petición', error: errorMessage });

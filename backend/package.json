@@ -17,11 +17,15 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
+    "@nestjs/common": "^11.1.2",
+    "@nestjs/core": "^11.1.2",
     "@prisma/client": "^6.6.0",
     "@types/multer": "^1.4.12",
     "@types/node-cron": "^3.0.11",
     "@types/streamifier": "^0.1.2",
     "bcryptjs": "^2.4.3",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
     "cloudinary": "^2.6.0",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
@@ -30,6 +34,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.2",
     "node-cron": "^3.0.3",
+    "reflect-metadata": "^0.2.2",
     "streamifier": "^0.1.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

@@ -1,5 +1,5 @@
 // frontend/src/pages/LoginPage.tsx
-// Version: 1.6.4 (Use imported UserRole enum and KDS Staff redirection)
+// Version: 1.6.5 (Handles WAITER role redirection)
 
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -13,7 +13,7 @@ import { IconAlertCircle } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
 // Importar UserData y el ENUM UserRole
-import type { UserData } from '../types/customer'; 
+import type { UserData } from '../types/customer';
 import { UserRole } from '../types/customer'; // Importar el ENUM UserRole
 
 function LoginPage() {
@@ -39,7 +39,7 @@ function LoginPage() {
                 localStorage.setItem('token', token);
                 localStorage.setItem('user', JSON.stringify(user));
 
-                if (user.role === UserRole.KITCHEN_STAFF || user.role === UserRole.BAR_STAFF) { 
+                if (user.role === UserRole.KITCHEN_STAFF || user.role === UserRole.BAR_STAFF) {
                     console.log("[LoginPage] Redirecting KDS staff to /admin/kds");
                     navigate('/admin/kds', { replace: true });
                 } else if (user.role === UserRole.BUSINESS_ADMIN) {
@@ -51,6 +51,9 @@ function LoginPage() {
                 } else if (user.role === UserRole.SUPER_ADMIN) {
                     console.log("[LoginPage] Redirecting SUPER_ADMIN to /superadmin");
                     navigate('/superadmin', { replace: true });
+                } else if (user.role === UserRole.WAITER) { // Condición añadida para WAITER
+                    console.log("[LoginPage] Redirecting WAITER to /admin/camarero/pickup");
+                    navigate('/admin/camarero/pickup', { replace: true });
                 } else {
                     console.error("[LoginPage] Unknown user role after login:", user.role);
                     setError(t('loginPage.errorUnknown', { ns: 'translation' }));
@@ -88,7 +91,7 @@ function LoginPage() {
                             placeholder={t('loginPage.emailPlaceholder')}
                             value={email}
                             onChange={(event) => setEmail(event.currentTarget.value)}
-                            error={!!error} 
+                            error={!!error}
                             radius="lg"
                         />
                         <PasswordInput
@@ -97,7 +100,7 @@ function LoginPage() {
                             placeholder={t('loginPage.passwordPlaceholder')}
                             value={password}
                             onChange={(event) => setPassword(event.currentTarget.value)}
-                            error={!!error} 
+                            error={!!error}
                             radius="lg"
                         />
                         {error && (

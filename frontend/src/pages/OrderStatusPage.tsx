@@ -1,5 +1,5 @@
 // frontend/src/pages/OrderStatusPage.tsx
-// Version 1.0.6 (Restore full conditional rendering blocks and previous fixes)
+// Version 1.0.7 (Add "Add More Items" button)
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useLocation, Link, useNavigate } from 'react-router-dom';
@@ -10,7 +10,8 @@ import {
 } from '@mantine/core';
 import { 
     IconAlertCircle, IconClipboardList, IconToolsKitchen, IconChefHat, 
-    IconCircleCheck, IconCircleX, IconReload, IconArrowLeft, IconShoppingCart
+    IconCircleCheck, IconCircleX, IconReload, IconArrowLeft, IconShoppingCart,
+    IconPlus // <-- Icono Nuevo
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
@@ -60,12 +61,22 @@ const OrderStatusPage: React.FC = () => {
 
     const isOrderConsideredFinal = (status: OrderStatus | undefined): boolean => {
         if (!status) return false;
-        return [OrderStatus.PAID, OrderStatus.CANCELLED].includes(status);
+        return [OrderStatus.PAID, OrderStatus.CANCELLED, OrderStatus.PENDING_PAYMENT, OrderStatus.PAYMENT_FAILED].includes(status);
+    };
+
+    // NUEVA FUNCIÓN para determinar si se pueden añadir más ítems
+    const canAddMoreItemsToOrder = (status: OrderStatus | undefined): boolean => {
+        if (!status) return false;
+        return [
+            OrderStatus.RECEIVED,
+            OrderStatus.IN_PROGRESS,
+            OrderStatus.PARTIALLY_READY,
+            OrderStatus.ALL_ITEMS_READY,
+            OrderStatus.COMPLETED 
+        ].includes(status);
     };
     
-    // Derivar isPollingActive del estado actual
     const shouldPoll = !isOrderConsideredFinal(orderStatusData?.orderStatus) && !loading && !error;
-
 
     const fetchOrderStatus = useCallback(async (isInitialFetch = false) => {
         if (!orderId) {
@@ -82,7 +93,7 @@ const OrderStatusPage: React.FC = () => {
             const response = await axios.get<PublicOrderStatusInfo>(`${API_BASE_URL_PUBLIC}/order/${orderId}/status`);
             if (response.data) {
                 setOrderStatusData(response.data);
-                if (isInitialFetch || error) setError(null); // Limpiar error si la llamada fue exitosa
+                if (isInitialFetch || error) setError(null);
             } else {
                 throw new Error(t('orderStatusPage.error.noData'));
             }
@@ -96,14 +107,14 @@ const OrderStatusPage: React.FC = () => {
         } finally {
             if (isInitialFetch) setLoading(false);
         }
-    }, [orderId, t, error]); // Añadido 'error' a las dependencias para que se limpie al tener éxito
+    }, [orderId, t, error]);
 
     useEffect(() => {
         fetchOrderStatus(true); 
     }, [fetchOrderStatus]);
 
     useEffect(() => {
-        if (shouldPoll) { // Usar la variable derivada
+        if (shouldPoll) {
             console.log(`[OrderStatusPage] Setting up polling for order ${orderId}... Interval: ${POLLING_INTERVAL}ms`);
             pollingTimeoutRef.current = window.setTimeout(() => { 
                 console.log(`[OrderStatusPage] Polling for order ${orderId}...`);
@@ -122,7 +133,7 @@ const OrderStatusPage: React.FC = () => {
                 console.log(`[OrderStatusPage] Polling timeout cleared on unmount/re-render for order ${orderId}.`);
             }
         };
-    }, [shouldPoll, fetchOrderStatus, orderId]); // Depender de shouldPoll
+    }, [shouldPoll, fetchOrderStatus, orderId]);
 
     useEffect(() => {
         const currentOrderIsFinal = isOrderConsideredFinal(orderStatusData?.orderStatus);
@@ -142,8 +153,8 @@ const OrderStatusPage: React.FC = () => {
         }
     }, [orderStatusData?.orderStatus, activeOrderKey, orderId]);
 
-
     const getOrderItemStatusInfo = (status: OrderItemStatus): { text: string; color: string; icon: React.ReactNode } => {
+        // ... (sin cambios en esta función)
         switch (status) {
             case OrderItemStatus.PENDING_KDS: return { text: t('orderStatusPage.itemStatus.pending_kds'), color: 'gray', icon: <IconClipboardList size={16}/> };
             case OrderItemStatus.PREPARING: return { text: t('orderStatusPage.itemStatus.preparing'), color: 'blue', icon: <IconToolsKitchen size={16}/> };
@@ -160,6 +171,7 @@ const OrderStatusPage: React.FC = () => {
     };
     
     const handleStartNewOrder = () => {
+        // ... (sin cambios en esta función)
         const cartKey = businessSlugForReturn ? `${LOCAL_STORAGE_CART_KEY_PREFIX}${businessSlugForReturn}${currentTableIdentifierForReturn ? `_${currentTableIdentifierForReturn}` : ''}` : null;
         const notesKey = businessSlugForReturn ? `${LOCAL_STORAGE_ORDER_NOTES_KEY_PREFIX}${businessSlugForReturn}${currentTableIdentifierForReturn ? `_${currentTableIdentifierForReturn}` : ''}` : null;
 
@@ -184,13 +196,12 @@ const OrderStatusPage: React.FC = () => {
         }
     };
 
-    // --- RENDERIZADO ---
     if (loading && !orderStatusData) { 
         return <Container size="sm" py="xl" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 60px)' }}><Loader size="xl" /></Container>;
     }
 
-    // --- BLOQUE DE ERROR RESTAURADO ---
     if (error && !orderStatusData) { 
+        // ... (sin cambios en este bloque)
         return (
             <Container size="sm" py="xl">
                 <Alert icon={<IconAlertCircle size="1rem" />} title={t('common.error')} color="red" radius="md">{error}</Alert>
@@ -202,9 +213,9 @@ const OrderStatusPage: React.FC = () => {
                         {t('orderStatusPage.backToMenuButton')}
                     </Button>
                 )}
-                 {!businessSlugForReturn && ( // Si no hay slug, botón genérico de volver (podría ir a /login o /)
+                 {!businessSlugForReturn && ( 
                     <Button
-                        onClick={() => navigate('/login')} // O navigate(-1) si se quiere un "atrás" simple
+                        onClick={() => navigate('/login')} 
                         variant="light" mt="lg" leftSection={<IconArrowLeft size={16}/>}>
                         {t('common.back')}
                     </Button>
@@ -212,10 +223,9 @@ const OrderStatusPage: React.FC = () => {
             </Container>
         );
     }
-    // --- FIN BLOQUE DE ERROR ---
     
-    // --- BLOQUE DE "NO ENCONTRADO" RESTAURADO ---
     if (!orderStatusData && !loading) { 
+        // ... (sin cambios en este bloque)
         return (
             <Container size="sm" py="xl">
                 <Text ta="center" c="dimmed">{t('orderStatusPage.error.notFound')}</Text>
@@ -241,11 +251,11 @@ const OrderStatusPage: React.FC = () => {
             </Container>
         );
     }
-    // --- FIN BLOQUE "NO ENCONTRADO" ---
     
-    // Si hay datos (orderStatusData existe)
     const { orderNumber, orderStatus, items, tableIdentifier: orderTableIdentifier, orderNotes: generalOrderNotes, createdAt } = orderStatusData!;
     const isCurrentOrderFinal = isOrderConsideredFinal(orderStatus);
+    const showAddMoreItemsButton = !isCurrentOrderFinal && canAddMoreItemsToOrder(orderStatus);
+
 
     return (
         <Container size="md" py="xl">
@@ -254,13 +264,14 @@ const OrderStatusPage: React.FC = () => {
                     <Title order={2} ta="center">{t('orderStatusPage.title')}</Title>
                     <Text ta="center" fz="xl" fw={700}>#{orderNumber || displayOrderNumber}</Text>
                     
-                    {error && ( // Mostrar errores de polling/actualización aquí si hay datos previos
+                    {error && (
                         <Alert icon={<IconAlertCircle size="1rem" />} title={t('common.error')} color="orange" radius="md" withCloseButton onClose={() => setError(null)}>
                             {String(t('orderStatusPage.error.updateFailed', { message: error }))}
                         </Alert>
                     )}
 
                     <Paper withBorder p="md" radius="sm" bg={i18n.language === 'dark' ? "dark.6" : "gray.0"}>
+                        {/* ... (sin cambios en la info del pedido) */}
                         <Group justify="space-between">
                             <Text fw={500}>{t('orderStatusPage.generalStatus')}</Text>
                             <Badge size="lg" color={getOrderItemStatusInfo(items[0]?.status || OrderItemStatus.PENDING_KDS).color} variant="filled">
@@ -280,6 +291,7 @@ const OrderStatusPage: React.FC = () => {
                     <Divider my="sm" label={t('orderStatusPage.itemsTitle')} labelPosition="center" />
                     
                     <Box> 
+                        {/* ... (sin cambios en la lista de ítems) */}
                         <List spacing="md" listStyleType="none" p={0}>
                             {items.map(item => {
                                 const statusInfo = getOrderItemStatusInfo(item.status);
@@ -309,6 +321,7 @@ const OrderStatusPage: React.FC = () => {
                     </Box>
 
                     {generalOrderNotes && (
+                        // ... (sin cambios en las notas del pedido)
                         <>
                             <Divider my="sm" label={t('orderStatusPage.orderNotesLabel')} labelPosition="center" />
                             <Paper withBorder p="sm" radius="sm" bg={i18n.language === 'dark' ? "dark.6" : "gray.0"}>
@@ -317,29 +330,49 @@ const OrderStatusPage: React.FC = () => {
                         </>
                     )}
 
+                    {/* --- SECCIÓN DE BOTONES MODIFICADA --- */}
                     <Group justify="space-between" mt="xl">
-                        {!isCurrentOrderFinal ? (
-                            <Button
-                                variant="outline"
-                                onClick={() => fetchOrderStatus(false)} 
-                                leftSection={<IconReload size={16}/>}
-                                loading={loading && !!orderStatusData} 
-                                disabled={loading && !orderStatusData} 
-                            >
-                                {t('orderStatusPage.refreshButton')}
-                            </Button>
-                        ) : (
-                            <Button
-                                variant="filled"
-                                color="green" 
-                                onClick={handleStartNewOrder}
-                                leftSection={<IconShoppingCart size={16} />}
-                            >
-                                {t('publicMenu.activeOrder.startNewButton', 'Empezar Nuevo Pedido')} 
-                            </Button>
-                        )}
+                        <Box> {/* Contenedor para botones del lado izquierdo */}
+                            {showAddMoreItemsButton && businessSlugForReturn && (
+                                <Button
+                                    component={Link}
+                                    to={`/m/${businessSlugForReturn}${currentTableIdentifierForReturn ? `/${currentTableIdentifierForReturn}` : ''}`}
+                                    variant="filled" // Botón primario para esta acción
+                                    leftSection={<IconPlus size={16} />}
+                                    mr="md" // Margen si hay más botones a la derecha de este
+                                >
+                                    {t('orderStatusPage.addMoreItemsButton', 'Añadir más ítems')}
+                                </Button>
+                            )}
 
-                        {businessSlugForReturn ? (
+                            {!isCurrentOrderFinal ? (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => fetchOrderStatus(false)} 
+                                    leftSection={<IconReload size={16}/>}
+                                    loading={loading && !!orderStatusData} 
+                                    disabled={loading && !orderStatusData} 
+                                >
+                                    {t('orderStatusPage.refreshButton')}
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="filled"
+                                    color="green" 
+                                    onClick={handleStartNewOrder}
+                                    leftSection={<IconShoppingCart size={16} />}
+                                >
+                                    {t('publicMenu.activeOrder.startNewButton', 'Empezar Nuevo Pedido')} 
+                                </Button>
+                            )}
+                        </Box>
+                        
+                        {/* Botón "Volver al Menú" o "Volver" a la derecha, si no se muestra "Añadir más" o como opción secundaria */}
+                        {/* Podríamos hacer que "Volver al Menú" solo aparezca si NO se muestra "Añadir más ítems" para evitar redundancia,
+                            o mantenerlo si su propósito es solo "ver menú" sin necesariamente "añadir".
+                            Por ahora, lo mantenemos como estaba, pero "Añadir más ítems" es más específico.
+                        */}
+                        {businessSlugForReturn && !showAddMoreItemsButton && ( // Solo muestra si no está el de "Añadir más"
                             <Button
                                 component={Link}
                                 to={`/m/${businessSlugForReturn}${currentTableIdentifierForReturn ? `/${currentTableIdentifierForReturn}`: ''}`}
@@ -348,7 +381,8 @@ const OrderStatusPage: React.FC = () => {
                             >
                                 {t('orderStatusPage.backToMenuButton')}
                             </Button>
-                        ) : ( 
+                        )}
+                        {!businessSlugForReturn && ( 
                              <Button
                                  onClick={() => navigate('/login')} 
                                  variant="light"

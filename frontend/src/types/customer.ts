@@ -1,7 +1,7 @@
 // frontend/src/types/customer.ts
-// Version: 1.1.1 (Ensure all Staff roles and consistency)
+// Version: 1.1.2 (Add OrderItemStatus and OrderStatus enums) // O la versión que corresponda
 
-import React from 'react';
+import React from 'react'; // Mantén esta si la usas en otros tipos de este archivo
 
 export enum UserRole {
     SUPER_ADMIN = 'SUPER_ADMIN',
@@ -12,6 +12,30 @@ export enum UserRole {
     BAR_STAFF = 'BAR_STAFF'
 }
 
+// --- AÑADIR ESTOS ENUMS AQUÍ (o asegurarse de que ya están y se exportan) ---
+export enum OrderItemStatus {
+    PENDING_KDS = 'PENDING_KDS',
+    PREPARING = 'PREPARING',
+    READY = 'READY',
+    SERVED = 'SERVED',
+    CANCELLED = 'CANCELLED',
+    CANCELLATION_REQUESTED = 'CANCELLATION_REQUESTED',
+}
+
+export enum OrderStatus {
+    RECEIVED = 'RECEIVED',
+    IN_PROGRESS = 'IN_PROGRESS',
+    PARTIALLY_READY = 'PARTIALLY_READY',
+    ALL_ITEMS_READY = 'ALL_ITEMS_READY',
+    COMPLETED = 'COMPLETED',
+    PENDING_PAYMENT = 'PENDING_PAYMENT',
+    PAID = 'PAID',
+    CANCELLED = 'CANCELLED',
+    PAYMENT_FAILED = 'PAYMENT_FAILED',
+}
+// --- FIN AÑADIR ENUMS ---
+
+// ... (resto de tus tipos existentes en customer.ts como UserData, TierData, etc.)
 export enum TierCalculationBasis {
     SPEND = 'SPEND',
     VISITS = 'VISITS',
@@ -27,7 +51,7 @@ export interface TierBenefitData {
   type: string; 
   value: string;
   description: string | null;
-  isActive?: boolean; // Confirmar si este campo es enviado por el backend para el cliente
+  isActive?: boolean; 
 }
 
 export interface TierData {
@@ -43,7 +67,7 @@ export interface UserData {
     id: string;
     email: string;
     name?: string | null;
-    role: UserRole; // Usa el enum definido arriba
+    role: UserRole; 
     businessId: string | null;
     isActive: boolean;
     points?: number;
@@ -52,7 +76,7 @@ export interface UserData {
     currentTier?: {
         id: string;
         name: string;
-        benefits: TierBenefitData[]; // Asumiendo que TierBenefitData es el tipo correcto aquí
+        benefits: TierBenefitData[]; 
     } | null;
     businessIsActive?: boolean;
     isLoyaltyCoreActive?: boolean;
@@ -61,9 +85,6 @@ export interface UserData {
     businessSlug?: string | null;      
     businessLogoUrl?: string | null;   
 }
-// ... (El resto de tipos: Reward, GrantedReward, DisplayReward, etc., se mantienen como en la versión 1.1.0 que te di)
-
-// Interfaz Reward (con campos i18n)
 export interface Reward {
     id: string;
     name_es: string | null;
@@ -77,8 +98,6 @@ export interface Reward {
     createdAt?: string;  
     updatedAt?: string;  
 }
-
-// Interfaz GrantedReward (para regalos otorgados)
 export interface GrantedReward {
     id: string;
     status: string; 
@@ -87,8 +106,6 @@ export interface GrantedReward {
     assignedBy?: { name?: string | null; email: string; } | null; 
     business?: { name: string; } | null; 
 }
-
-// Tipo DisplayReward (para unificar la visualización de recompensas y regalos)
 export type DisplayReward =
     {
         isGift: false;
@@ -106,7 +123,7 @@ export type DisplayReward =
     {
         isGift: true;
         grantedRewardId: string; 
-        id: string; // ID de la recompensa base
+        id: string; 
         name_es: string | null;
         name_en: string | null;
         description_es?: string | null;

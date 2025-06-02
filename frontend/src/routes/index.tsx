@@ -1,16 +1,16 @@
 // frontend/src/routes/index.tsx
-// Version: 1.1.0 (Corrected KDS routing structure)
+// Version: 1.1.1 (Add WaiterPickupPage route)
 
-console.log("[Routes Index] Archivo src/routes/index.tsx cargado."); 
+console.log("[Routes Index] Archivo src/routes/index.tsx cargado. v1.1.1");
 
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
 // Layouts y Protección
-import PrivateRoute from '../components/PrivateRoute'; 
+import PrivateRoute from '../components/PrivateRoute';
 import MainLayout from '../components/layout/MainLayout';
 import PublicLayout from '../components/layout/PublicLayout';
 
-// Importar UserRole desde la ubicación correcta (probablemente types/customer)
+// Importar UserRole
 import { UserRole } from '../types/customer'; // Asegúrate que esta ruta es correcta
 
 // Páginas Públicas
@@ -19,8 +19,8 @@ import RegisterPage from '../pages/RegisterPage';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/ResetPasswordPage';
 import RegisterBusinessPage from '../pages/RegisterBusinessPage';
-import PublicMenuViewPage from '../pages/PublicMenuViewPage'; 
-import OrderStatusPage from '../pages/OrderStatusPage'; 
+import PublicMenuViewPage from '../pages/PublicMenuViewPage';
+import OrderStatusPage from '../pages/OrderStatusPage';
 
 // Página de Cliente
 import CustomerDashboardPage from '../pages/CustomerDashboardPage';
@@ -36,13 +36,13 @@ import AdminCustomerManagementPage from '../pages/admin/AdminCustomerManagementP
 // Página Super Admin
 import SuperAdminPage from '../pages/admin/SuperAdminPage';
 
-// Páginas Módulo Camarero (Admin y KDS)
+// Páginas Módulo Camarero (Admin, KDS y Nueva Página de Camarero)
 import MenuManagementPage from '../pages/admin/camarero/MenuManagementPage';
-import KitchenDisplayPage from '../pages/admin/camarero/KitchenDisplayPage'; 
-
+import KitchenDisplayPage from '../pages/admin/camarero/KitchenDisplayPage';
+import WaiterPickupPage from '../pages/admin/camarero/WaiterPickupPage'; // <--- NUEVA IMPORTACIÓN
 
 function AppRoutes() {
-  console.log("[Routes Index] Función AppRoutes() ejecutándose."); 
+  console.log("[Routes Index] Función AppRoutes() ejecutándose. v1.1.1");
 
   return (
     <Routes>
@@ -66,11 +66,11 @@ function AppRoutes() {
             element={ <PrivateRoute allowedRoles={[UserRole.SUPER_ADMIN]}><SuperAdminPage /></PrivateRoute> }
         />
 
-        {/* --- ESTRUCTURA DE RUTAS /admin REVISADA --- */}
+        {/* --- ESTRUCTURA DE RUTAS /admin --- */}
         <Route path="/admin" element={<Outlet />}> {/* Ruta padre /admin */}
-            
+
             {/* Rutas bajo /admin/dashboard (solo BUSINESS_ADMIN) */}
-            <Route 
+            <Route
                 path="dashboard" // Relativa a /admin -> /admin/dashboard
                 element={<PrivateRoute allowedRoles={[UserRole.BUSINESS_ADMIN]}><Outlet /></PrivateRoute>}
             >
@@ -81,41 +81,62 @@ function AppRoutes() {
                 <Route path="tiers/manage" element={<TierManagementPage />} />
                 <Route path="customers" element={<AdminCustomerManagementPage />} />
                 <Route path="camarero/menu-editor" element={<MenuManagementPage />} />
+                 {/*
+                   La ruta para camarero/pickup-station la pondremos fuera de /dashboard
+                   para que pueda tener sus propios permisos (WAITER y BUSINESS_ADMIN)
+                   sin estar anidada bajo una ruta que solo permite BUSINESS_ADMIN.
+                 */}
             </Route>
 
-            {/* Ruta KDS bajo /admin/kds (roles KDS) */}
-            <Route 
+            {/* Ruta KDS bajo /admin/kds (roles KDS y BUSINESS_ADMIN) */}
+            <Route
                 path="kds" // Relativa a /admin -> /admin/kds
                 element={
                     <PrivateRoute allowedRoles={[UserRole.KITCHEN_STAFF, UserRole.BAR_STAFF, UserRole.BUSINESS_ADMIN]}>
                         <KitchenDisplayPage />
                     </PrivateRoute>
-                } 
+                }
             />
-            
+
+            {/* --- NUEVA RUTA PARA INTERFAZ DE CAMARERO --- */}
+            {/* La montaremos bajo /admin/waiter/ para agrupar funcionalidades de staff */}
+            <Route
+                path="camarero/pickup" // Resulta en /admin/camarero/pickup
+                element={
+                    <PrivateRoute allowedRoles={[UserRole.WAITER, UserRole.BUSINESS_ADMIN]}>
+                        <WaiterPickupPage />
+                    </PrivateRoute>
+                }
+            />
+            {/* --- FIN NUEVA RUTA --- */}
+
+            {/* Redirección para /admin (si no es BUSINESS_ADMIN, KDS o WAITER, PrivateRoute se encarga) */}
             <Route index element={
-                <PrivateRoute allowedRoles={[UserRole.BUSINESS_ADMIN, UserRole.KITCHEN_STAFF, UserRole.BAR_STAFF]}>
-                    {/* Lógica de redirección inteligente podría ir aquí si es necesario, o simplemente redirigir a la primera opción */}
-                    {/* Por ahora, si se accede a /admin sin subruta y el usuario es KITCHEN_STAFF o BAR_STAFF pero no BUSINESS_ADMIN,
-                        podríamos redirigir a /admin/kds. Si es BUSINESS_ADMIN, a /admin/dashboard.
-                        De momento, una redirección genérica a dashboard si tiene alguno de esos roles.
-                        Si no es BUSINESS_ADMIN pero sí KDS_STAFF, PrivateRoute ya lo gestionará para "dashboard".
-                        Podemos dejar que el PrivateRoute de "dashboard" falle para KDS_STAFF y que el de "kds" permita.
-                        La navegación directa a /admin/kds desde el login es el flujo principal para KDS_STAFF.
+                <PrivateRoute allowedRoles={[UserRole.BUSINESS_ADMIN, UserRole.KITCHEN_STAFF, UserRole.BAR_STAFF, UserRole.WAITER]}>
+                    {/*
+                        Redirección inteligente:
+                        - Si es BUSINESS_ADMIN -> /admin/dashboard
+                        - Si es KITCHEN_STAFF o BAR_STAFF (y no BUSINESS_ADMIN) -> /admin/kds
+                        - Si es WAITER (y no BUSINESS_ADMIN) -> /admin/waiter/pickup
+                        Por ahora, una simple a /admin/dashboard es suficiente si es BUSINESS_ADMIN,
+                        y los otros roles deberían ser redirigidos a sus páginas específicas al hacer login.
+                        Si un usuario KDS o WAITER llega a /admin, la redirección a 'dashboard' fallará el PrivateRoute
+                        de 'dashboard' y lo dejará en una página en blanco o error de ruta.
+                        La navegación directa desde el login a su página correcta es la mejor aproximación.
                     */}
-                    <Navigate to="dashboard" replace /> 
+                    <Navigate to="dashboard" replace />
                 </PrivateRoute>
             } />
         </Route>
-        {/* --- FIN ESTRUCTURA /admin REVISADA --- */}
+        {/* --- FIN ESTRUCTURA /admin --- */}
 
         <Route
             path="/customer/dashboard"
             element={ <PrivateRoute allowedRoles={[UserRole.CUSTOMER_FINAL]}><CustomerDashboardPage /></PrivateRoute> }
         />
-        
+
       </Route>
-      
+
     </Routes>
   );
 }
