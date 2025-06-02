@@ -1,6 +1,6 @@
-// Copia Gemini/backend/src/public/order.service.ts
-// Versión CORREGIDA para usar 'groupId' según tu schema.prisma
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+// backend/src/public/order.service.ts
+// Versión 1.6.19 (Corregido para usar 'groupId' según schema.prisma)
+import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { 
     PrismaClient,
     Prisma, 
@@ -8,23 +8,22 @@ import {
     OrderStatus, 
     OrderItemStatus, 
     ModifierGroup,
-    Table
 } from '@prisma/client';
 import { AddItemsToOrderDto } from './order.dto'; 
 
-// --- DTOs para la creación de Pedidos (Interfaces internas del servicio, usadas por createOrder) ---
+// --- DTOs internos ---
 interface SelectedModifierOptionInternalDto {
   modifierOptionId: string;
 }
 
-interface OrderItemInternalDto {
+interface OrderItemInternalDto { 
   menuItemId: string;
   quantity: number;
   notes?: string | null;
   selectedModifierOptions?: SelectedModifierOptionInternalDto[] | null;
 }
 
-export interface CreateOrderPayloadInternalDto {
+export interface CreateOrderPayloadInternalDto { 
   tableIdentifier?: string | null;
   customerId?: string | null;
   orderNotes?: string | null;
@@ -32,7 +31,7 @@ export interface CreateOrderPayloadInternalDto {
 }
 // --- Fin DTOs internos ---
 
-// --- ESTRUCTURAS DE DATOS PARA LA RESPUESTA DEL ESTADO DEL PEDIDO (Existente) ---
+// --- Estructuras para estado ---
 export interface PublicOrderItemStatusInfo {
   id: string;
   menuItemName_es: string | null;
@@ -50,26 +49,47 @@ export interface PublicOrderStatusInfo {
   orderNotes?: string | null;
   createdAt: Date;
 }
-// --- FIN ESTRUCTURAS DE DATOS PARA ESTADO ---
+// --- Fin Estructuras para estado ---
 
-// Interfaz para la forma seleccionada de ModifierOption
 interface SelectedModifierOptionShape {
     id: string;
-    name_es: string;
+    name_es: string | null; 
     priceAdjustment: Prisma.Decimal;
     isAvailable: boolean;
-    groupId: string; // <-- CORREGIDO: Volvemos a usar groupId
+    // CORREGIDO: Usar groupId y asumir que es string (no null) para una opción válida de un grupo
+    // ya que en tu schema.prisma, ModifierOption.groupId es 'String' (no opcional).
+    groupId: string; 
 }
 
-// Tipo para ModifierGroup cuando incluye las opciones seleccionadas
 type ModifierGroupWithSelectedOptions = ModifierGroup & { 
     options: SelectedModifierOptionShape[]; 
 };
+
+const menuItemWithFullModifiersArgs = Prisma.validator<Prisma.MenuItemDefaultArgs>()({
+  include: {
+    modifierGroups: {
+      include: {
+        options: {
+          where: { isAvailable: true },
+          select: { 
+            id: true,
+            name_es: true,
+            priceAdjustment: true,
+            isAvailable: true,
+            groupId: true, // <-- CORRECCIÓN: Usar groupId según tu schema.prisma
+          },
+        },
+      },
+    },
+  },
+});
+type MenuItemWithFullModifiers = Prisma.MenuItemGetPayload<typeof menuItemWithFullModifiersArgs>;
 
 
 @Injectable()
 export class OrderService {
   private prisma: PrismaClient;
+  private readonly logger = new Logger(OrderService.name); 
 
   constructor() {
     this.prisma = new PrismaClient();
@@ -91,29 +111,21 @@ export class OrderService {
 
     const businessId = business.id;
 
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    return this.prisma.$transaction(async (tx) => { 
       let calculatedTotalAmount = new Prisma.Decimal(0);
       const orderItemsToCreate: Prisma.OrderItemCreateWithoutOrderInput[] = [];
 
-      for (const itemDto of payload.items) {
-        const menuItem = await tx.menuItem.findUnique({
+      for (const itemDto of payload.items) { 
+        this.logger.debug(`[OrderService createOrder] Procesando itemDto. MenuItemId: ${itemDto.menuItemId}. selectedModifierOptions ANTES del IF: ${JSON.stringify(itemDto.selectedModifierOptions)}`);
+        if (itemDto.selectedModifierOptions) {
+            this.logger.debug(`[OrderService createOrder] itemDto.selectedModifierOptions.length: ${itemDto.selectedModifierOptions.length}`);
+        } else {
+            this.logger.debug(`[OrderService createOrder] itemDto.selectedModifierOptions es null o undefined.`);
+        }
+
+        const menuItem: MenuItemWithFullModifiers | null = await tx.menuItem.findUnique({
           where: { id: itemDto.menuItemId },
-          include: {
-            modifierGroups: { 
-                include: { 
-                    options: { 
-                        where: { isAvailable: true },
-                        select: { 
-                            id: true, 
-                            name_es: true, 
-                            priceAdjustment: true, 
-                            isAvailable: true, 
-                            groupId: true // <-- CORREGIDO: Seleccionar 'groupId'
-                        } 
-                    } 
-                } 
-            }
-          }
+          ...menuItemWithFullModifiersArgs 
         });
 
         if (!menuItem || menuItem.businessId !== businessId || !menuItem.isAvailable) {
@@ -127,19 +139,29 @@ export class OrderService {
         const orderItemModifierOptionsData: Prisma.OrderItemModifierOptionCreateManyOrderItemInput[] = [];
 
         if (itemDto.selectedModifierOptions && itemDto.selectedModifierOptions.length > 0) {
-          const selectedOptionsByGroup: Record<string, string[]> = {};
-          for (const selectedOpt of itemDto.selectedModifierOptions) {
+          this.logger.debug(`[OrderService createOrder] ENTRANDO al bloque IF para procesar selectedModifierOptions para el item ${itemDto.menuItemId}.`);
+          const selectedOptionsByGroup: Record<string, string[]> = {}; 
+          
+          for (const selectedOpt of itemDto.selectedModifierOptions) { 
             const optionFull = typedModifierGroups
-              .flatMap((g: ModifierGroupWithSelectedOptions) => g.options) 
-              .find((opt: SelectedModifierOptionShape) => opt.id === selectedOpt.modifierOptionId);
+              .flatMap(g => g.options) 
+              .find(opt => opt.id === selectedOpt.modifierOptionId);
 
             if (!optionFull || !optionFull.isAvailable) { 
               throw new BadRequestException(`Opción mod ID '${selectedOpt.modifierOptionId}' no válida/disponible para '${menuItem.name_es}'.`);
             }
+            // CORREGIDO: Usar optionFull.groupId
+            if (optionFull.groupId === null || optionFull.groupId === undefined) { 
+                this.logger.error(`[OrderService Error Crítico] Opción ${optionFull.id} ('${optionFull.name_es}') no tiene groupId válido después de la consulta. OptionFull: ${JSON.stringify(optionFull)}`);
+                throw new InternalServerErrorException(`Configuración de datos inválida: Opción ${optionFull.id} no tiene grupo asignado correctamente (groupId es null/undefined).`);
+            }
             
-            // La comparación ahora usa optionFull.groupId
-            const parentGroup = typedModifierGroups.find((g: ModifierGroupWithSelectedOptions) => g.id === optionFull.groupId);
-            if (!parentGroup) throw new InternalServerErrorException(`Grupo padre no hallado para opción ${optionFull.id} (buscando con groupId ${optionFull.groupId} vs group.id).`);
+            // CORREGIDO: Usar optionFull.groupId
+            const parentGroup = typedModifierGroups.find(g => g.id === optionFull.groupId); 
+            if (!parentGroup) {
+                this.logger.error(`[OrderService Error Crítico] Grupo padre con ID ${optionFull.groupId} no hallado para opción ${optionFull.id}.`);
+                throw new InternalServerErrorException(`Grupo padre no hallado para opción ${optionFull.id}.`);
+            }
 
             if (!selectedOptionsByGroup[parentGroup.id]) selectedOptionsByGroup[parentGroup.id] = [];
             selectedOptionsByGroup[parentGroup.id].push(optionFull.id);
@@ -147,7 +169,7 @@ export class OrderService {
             currentItemTotalModifierPrice = currentItemTotalModifierPrice.add(optionFull.priceAdjustment);
             orderItemModifierOptionsData.push({
               modifierOptionId: optionFull.id,
-              optionNameSnapshot: optionFull.name_es, 
+              optionNameSnapshot: optionFull.name_es || 'Opción sin nombre', 
               optionPriceAdjustmentSnapshot: optionFull.priceAdjustment,
             });
           }
@@ -155,22 +177,45 @@ export class OrderService {
           for (const group of typedModifierGroups) { 
             const selectedCount = selectedOptionsByGroup[group.id]?.length || 0;
             if (group.isRequired && selectedCount < group.minSelections) {
-              throw new BadRequestException(`Grupo '${group.name_es}': requiere min ${group.minSelections}. Seleccionadas: ${selectedCount}.`);
+              throw new BadRequestException(`Grupo '${group.name_es || group.id}': requiere min ${group.minSelections}. Seleccionadas: ${selectedCount}.`);
             }
             if (selectedCount > group.maxSelections) {
-              throw new BadRequestException(`Grupo '${group.name_es}': máx ${group.maxSelections}. Seleccionadas: ${selectedCount}.`);
+              throw new BadRequestException(`Grupo '${group.name_es || group.id}': máx ${group.maxSelections}. Seleccionadas: ${selectedCount}.`);
             }
           }
+        } else { 
+            this.logger.warn(`[OrderService createOrder] ENTRANDO al bloque ELSE porque selectedModifierOptions está vacío o no se proporcionó para el item ${itemDto.menuItemId} (ItemID: ${menuItem.id}).`);
+            for (const group of typedModifierGroups) {
+                if (group.isRequired && group.minSelections > 0) {
+                    this.logger.error( 
+                        `FALLO VALIDACIÓN (porque se entró al ELSE - selectedModifierOptions vacío/nulo para el servicio): Item ID: ${menuItem.id}, Grupo ID: ${group.id} ('${group.name_es || group.name_en || group.id}'). ` +
+                        `Es requerido (min ${group.minSelections}) pero el servicio considera que no se enviaron opciones para este ítem.`
+                      );
+                    throw new BadRequestException(`Grupo '${group.name_es || 'Modificador'}' es obligatorio y parece que no se proporcionaron opciones para el ítem '${menuItem.name_es || menuItem.id}'.`);
+                }
+            }
         }
         
         for (const group of typedModifierGroups) { 
             if (group.isRequired && group.minSelections > 0) {
                 const hasSelectionInGroup = itemDto.selectedModifierOptions?.some(smo => 
-                    // La comparación ahora usa opt.groupId
-                    group.options.find((opt: SelectedModifierOptionShape) => opt.id === smo.modifierOptionId && opt.groupId === group.id)
+                    // CORREGIDO: Usar opt.groupId
+                    group.options.find(opt => opt.id === smo.modifierOptionId && opt.groupId === group.id) 
                 );
                 if (!hasSelectionInGroup) {
-                    throw new BadRequestException(`Grupo '${group.name_es || 'Modificador'}' es obligatorio.`);
+                    const selectionsInThisGroupCount = itemDto.selectedModifierOptions?.filter(smo =>
+                        // CORREGIDO: Usar opt.groupId
+                        group.options.some(opt => opt.id === smo.modifierOptionId && opt.groupId === group.id)
+                      ).length || 0;
+
+                    this.logger.error( 
+                        `FALLO VALIDACIÓN MODIFICADOR OBLIGATORIO (createOrder - validación final por grupo): Item ID: ${menuItem.id} ('${menuItem.name_es || menuItem.id}'), Grupo ID: ${group.id} ('${group.name_es || group.name_en || group.id}'). ` +
+                        `Min requerido: ${group.minSelections}, Se encontró (conteo directo en esta validación): ${selectionsInThisGroupCount}. ` +
+                        `(Booleano hasSelectionInGroup fue: ${hasSelectionInGroup}). ` +
+                        `IDs de opciones VÁLIDAS para este grupo según BD y filtro 'isAvailable': [${group.options.map(opt => opt.id).join(', ')}]. ` +
+                        `IDs de opciones RECIBIDAS en payload para este ítem (según itemDto DENTRO DEL SERVICIO): [${itemDto.selectedModifierOptions?.map(smo => smo.modifierOptionId).join(', ') || 'NINGUNA (undefined/vacío)'}]`
+                      );
+                    throw new BadRequestException(`Grupo '${group.name_es || 'Modificador'}' es obligatorio (check final) para el ítem '${menuItem.name_es || menuItem.id}'.`);
                 }
             }
         }
@@ -186,7 +231,7 @@ export class OrderService {
           totalItemPrice: totalItemPriceValue,
           notes: itemDto.notes,
           kdsDestination: menuItem.kdsDestination,
-          itemNameSnapshot: menuItem.name_es, 
+          itemNameSnapshot: menuItem.name_es || 'Ítem sin nombre', 
           itemDescriptionSnapshot: menuItem.description_es, 
           status: OrderItemStatus.PENDING_KDS,
           ...(orderItemModifierOptionsData.length > 0 && {
@@ -214,7 +259,7 @@ export class OrderService {
           select: { id: true }
         });
         if (tableRecord) orderCreateData.table = { connect: { id: tableRecord.id } };
-        else console.warn(`[OrderService] Table '${payload.tableIdentifier}' no hallada para business ${businessId}.`);
+        else this.logger.warn(`[OrderService] Table '${payload.tableIdentifier}' no hallada para business ${businessId}.`); 
       }
 
       const finalCustomerId = payload.customerId || requestingCustomerId;
@@ -223,7 +268,7 @@ export class OrderService {
       }
 
       const newOrder = await tx.order.create({ data: orderCreateData, include: { items: true }});
-      console.log(`[OrderService] Order ${newOrder.id} (Number: ${newOrder.orderNumber}) created successfully.`);
+      this.logger.log(`[OrderService] Order ${newOrder.id} (Number: ${newOrder.orderNumber}) created successfully.`); 
       return newOrder;
     });
   }
@@ -272,7 +317,7 @@ export class OrderService {
     businessSlug: string, 
     requestingCustomerId?: string, 
   ): Promise<Order> {
-    console.log(`[OrderService] Attempting to add items to order ${orderId} for business slug: ${businessSlug}`);
+    this.logger.log(`[OrderService] Attempting to add items to order ${orderId} for business slug: ${businessSlug}`); 
 
     const business = await this.prisma.business.findUnique({
       where: { slug: businessSlug },
@@ -285,7 +330,7 @@ export class OrderService {
     
     const actualBusinessId = business.id;
 
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    return this.prisma.$transaction(async (tx) => { 
       const order = await tx.order.findUnique({
         where: { id: orderId },
         include: { items: true } 
@@ -312,25 +357,18 @@ export class OrderService {
       const newOrderItemsToCreateInput: Prisma.OrderItemCreateWithoutOrderInput[] = [];
       let additionalAmountCalculated = new Prisma.Decimal(0);
 
-      for (const itemDto of addItemsDto.items) {
-        const menuItem = await tx.menuItem.findUnique({
+      // itemDto es AddItemsOrderItemDto, que debería tener selectedModifierOptions
+      for (const itemDto of addItemsDto.items) { 
+        this.logger.debug(`[OrderService addItemsToOrder] Procesando itemDto. MenuItemId: ${itemDto.menuItemId}. selectedModifierOptions ANTES del IF: ${JSON.stringify(itemDto.selectedModifierOptions)}`);
+        if (itemDto.selectedModifierOptions) {
+            this.logger.debug(`[OrderService addItemsToOrder] itemDto.selectedModifierOptions.length: ${itemDto.selectedModifierOptions.length}`);
+        } else {
+            this.logger.debug(`[OrderService addItemsToOrder] itemDto.selectedModifierOptions es null o undefined.`);
+        }
+
+        const menuItem: MenuItemWithFullModifiers | null = await tx.menuItem.findUnique({
           where: { id: itemDto.menuItemId },
-          include: {
-            modifierGroups: { 
-                include: { 
-                    options: { 
-                        where: { isAvailable: true },
-                        select: { 
-                            id: true, 
-                            name_es: true, 
-                            priceAdjustment: true, 
-                            isAvailable: true, 
-                            groupId: true // <-- CORREGIDO: Seleccionar 'groupId'
-                        } 
-                    } 
-                } 
-            }
-          }
+          ...menuItemWithFullModifiersArgs 
         });
 
         if (!menuItem || menuItem.businessId !== actualBusinessId || !menuItem.isAvailable) {
@@ -338,24 +376,35 @@ export class OrderService {
         }
         
         const typedModifierGroups = menuItem.modifierGroups as ModifierGroupWithSelectedOptions[];
+
         let itemBasePrice = menuItem.price;
         let currentItemTotalModifierPrice = new Prisma.Decimal(0);
         const orderItemModifierOptionsDataToCreate: Prisma.OrderItemModifierOptionCreateManyOrderItemInput[] = [];
 
-        if (itemDto.selectedModifiers && itemDto.selectedModifiers.length > 0) {
+        // Usar itemDto.selectedModifierOptions
+        if (itemDto.selectedModifierOptions && itemDto.selectedModifierOptions.length > 0) {
+          this.logger.debug(`[OrderService addItemsToOrder] ENTRANDO al bloque IF para procesar selectedModifierOptions para el item ${itemDto.menuItemId}.`);
           const selectedOptionsByGroup: Record<string, string[]> = {};
-          for (const selectedOpt of itemDto.selectedModifiers as Array<{ modifierOptionId: string }>) { 
+          for (const selectedOpt of itemDto.selectedModifierOptions) { // selectedOpt es SelectedOrderModifierOptionDto
             const optionFull = typedModifierGroups
-              .flatMap((g: ModifierGroupWithSelectedOptions) => g.options) 
-              .find((opt: SelectedModifierOptionShape) => opt.id === selectedOpt.modifierOptionId);
+              .flatMap(g => g.options) 
+              .find(opt => opt.id === selectedOpt.modifierOptionId);
 
             if (!optionFull || !optionFull.isAvailable) { 
               throw new BadRequestException(`(Add) Opción mod ID '${selectedOpt.modifierOptionId}' no válida/disp. para '${menuItem.name_es}'.`);
             }
+            // CORREGIDO: Usar optionFull.groupId
+            if (optionFull.groupId === null || optionFull.groupId === undefined) { // Y el schema dice que groupId es String (no opcional)
+                this.logger.error(`[OrderService Error Crítico V2] (Add) Opción ${optionFull.id} ('${optionFull.name_es}') no tiene groupId válido. OptionFull: ${JSON.stringify(optionFull)}`);
+                throw new InternalServerErrorException(`(Add) Configuración de datos inválida: Opción ${optionFull.id} no tiene grupo asignado correctamente (groupId es null/undefined).`);
+            }
             
-            // La comparación ahora usa optionFull.groupId
-            const parentGroup = typedModifierGroups.find((g: ModifierGroupWithSelectedOptions) => g.id === optionFull.groupId);
-            if (!parentGroup) throw new InternalServerErrorException(`(Add) Grupo padre no hallado para opción ${optionFull.id} (buscando con groupId ${optionFull.groupId} vs group.id).`);
+            // CORREGIDO: Usar optionFull.groupId
+            const parentGroup = typedModifierGroups.find(g => g.id === optionFull.groupId);
+            if (!parentGroup) {
+                 this.logger.error(`[OrderService Error Crítico V2] (Add) Grupo padre con ID ${optionFull.groupId} no hallado para opción ${optionFull.id}.`);
+                throw new InternalServerErrorException(`(Add) Grupo padre no hallado para opción ${optionFull.id}.`);
+            }
 
             if (!selectedOptionsByGroup[parentGroup.id]) selectedOptionsByGroup[parentGroup.id] = [];
             selectedOptionsByGroup[parentGroup.id].push(optionFull.id);
@@ -363,7 +412,7 @@ export class OrderService {
             currentItemTotalModifierPrice = currentItemTotalModifierPrice.add(optionFull.priceAdjustment);
             orderItemModifierOptionsDataToCreate.push({
               modifierOptionId: optionFull.id,
-              optionNameSnapshot: optionFull.name_es, 
+              optionNameSnapshot: optionFull.name_es || 'Opción sin nombre', 
               optionPriceAdjustmentSnapshot: optionFull.priceAdjustment,
             });
           }
@@ -371,23 +420,44 @@ export class OrderService {
           for (const group of typedModifierGroups) { 
             const selectedCount = selectedOptionsByGroup[group.id]?.length || 0;
             if (group.isRequired && selectedCount < group.minSelections) {
-              throw new BadRequestException(`(Add) Grupo '${group.name_es}': requiere min ${group.minSelections}. Sel: ${selectedCount}.`);
+              throw new BadRequestException(`(Add) Grupo '${group.name_es || group.id}': requiere min ${group.minSelections}. Sel: ${selectedCount}.`);
             }
             if (selectedCount > group.maxSelections) {
-              throw new BadRequestException(`(Add) Grupo '${group.name_es}': máx ${group.maxSelections}. Sel: ${selectedCount}.`);
+              throw new BadRequestException(`(Add) Grupo '${group.name_es || group.id}': máx ${group.maxSelections}. Sel: ${selectedCount}.`);
             }
           }
+        } else { 
+             this.logger.warn(`[OrderService addItemsToOrder] ENTRANDO al bloque ELSE porque selectedModifierOptions está vacío o no se proporcionó para el item ${itemDto.menuItemId} (ItemID: ${menuItem.id}).`);
+             for (const group of typedModifierGroups) {
+                if (group.isRequired && group.minSelections > 0) {
+                    this.logger.error( 
+                        `FALLO VALIDACIÓN (AddItems, porque se entró al ELSE - selectedModifierOptions vacío/nulo para el servicio): Item ID: ${menuItem.id}, Grupo ID: ${group.id} ('${group.name_es || group.name_en || group.id}'). ` +
+                        `Es requerido (min ${group.minSelections}) pero el servicio considera que no se enviaron opciones para este ítem.`
+                      );
+                    throw new BadRequestException(`(Add) Grupo '${group.name_es || 'Modificador'}' es obligatorio y parece que no se proporcionaron opciones válidas para el ítem '${menuItem.name_es || menuItem.id}'.`);
+                }
+            }
         }
         
-        const currentItemDtoModifiers = (itemDto.selectedModifiers || []) as Array<{ modifierOptionId: string }>;
         for (const group of typedModifierGroups) { 
             if (group.isRequired && group.minSelections > 0) {
-                const hasSelectionInGroup = currentItemDtoModifiers.some(smo => 
-                    // La comparación ahora usa opt.groupId
-                    group.options.find((opt: SelectedModifierOptionShape) => opt.id === smo.modifierOptionId && opt.groupId === group.id)
+                const hasSelectionInGroup = itemDto.selectedModifierOptions?.some(smo => // CORREGIDO
+                    // CORREGIDO: Usar opt.groupId
+                    group.options.find(opt => opt.id === smo.modifierOptionId && opt.groupId === group.id)
                 );
                 if (!hasSelectionInGroup) {
-                    throw new BadRequestException(`(Add) Grupo '${group.name_es || 'Modificador'}' es obligatorio.`);
+                     const selectionsInThisGroupCount = itemDto.selectedModifierOptions?.filter(smo => // CORREGIDO
+                        // CORREGIDO: Usar opt.groupId
+                        group.options.some(opt => opt.id === smo.modifierOptionId && opt.groupId === group.id)
+                      ).length || 0;
+                    this.logger.error( 
+                        `FALLO VALIDACIÓN MODIFICADOR OBLIGATORIO (addItemsToOrder - validación final por grupo): Item ID: ${menuItem.id} ('${menuItem.name_es || menuItem.id}'), Grupo ID: ${group.id} ('${group.name_es || group.name_en || group.id}'). ` +
+                        `Min requerido: ${group.minSelections}, Se encontró (conteo directo en esta validación): ${selectionsInThisGroupCount}. ` +
+                        `(Booleano hasSelectionInGroup fue: ${hasSelectionInGroup}). ` +
+                        `IDs de opciones VÁLIDAS para este grupo según BD y filtro 'isAvailable': [${group.options.map(opt => opt.id).join(', ')}]. ` +
+                        `IDs de opciones RECIBIDAS en payload para este ítem (según itemDto DENTRO DEL SERVICIO): [${itemDto.selectedModifierOptions?.map(smo => smo.modifierOptionId).join(', ') || 'NINGUNA (undefined/vacío)'}]`
+                      );
+                    throw new BadRequestException(`(Add) Grupo '${group.name_es || 'Modificador'}' es obligatorio (check final) para el ítem '${menuItem.name_es || menuItem.id}'.`);
                 }
             }
         }
@@ -402,7 +472,7 @@ export class OrderService {
           priceAtPurchase: priceAtPurchaseValue,
           totalItemPrice: totalItemPriceValue,
           kdsDestination: menuItem.kdsDestination,
-          itemNameSnapshot: menuItem.name_es, 
+          itemNameSnapshot: menuItem.name_es || 'Ítem sin nombre', 
           itemDescriptionSnapshot: menuItem.description_es,
           status: OrderItemStatus.PENDING_KDS, 
           ...(orderItemModifierOptionsDataToCreate.length > 0 && {
@@ -414,14 +484,14 @@ export class OrderService {
       const newTotalAmount = new Prisma.Decimal(order.totalAmount).add(additionalAmountCalculated);
       
       let newOrderNotes = order.notes;
-      if (addItemsDto.customerNotes) {
+      if (addItemsDto.customerNotes) { 
         newOrderNotes = order.notes ? `${order.notes}\n---\nAdición: ${addItemsDto.customerNotes}` : `Adición: ${addItemsDto.customerNotes}`;
       }
 
       let finalOrderStatus = order.status;
       if (originalOrderStatus === OrderStatus.COMPLETED && newOrderItemsToCreateInput.length > 0) {
         finalOrderStatus = OrderStatus.IN_PROGRESS;
-        console.log(`[OrderService] Order ${orderId} was COMPLETED, new items added. Changing status to IN_PROGRESS.`);
+        this.logger.log(`[OrderService] Order ${orderId} was COMPLETED, new items added. Changing status to IN_PROGRESS.`); 
       }
 
       const updatedOrder = await tx.order.update({
@@ -441,7 +511,7 @@ export class OrderService {
         },
       });
 
-      console.log(`[OrderService] Items added to order ${orderId}. New total: ${updatedOrder.totalAmount}. New status: ${updatedOrder.status}`);
+      this.logger.log(`[OrderService] Items added to order ${orderId}. New total: ${updatedOrder.totalAmount}. New status: ${updatedOrder.status}`); 
       return updatedOrder;
     });
   }
