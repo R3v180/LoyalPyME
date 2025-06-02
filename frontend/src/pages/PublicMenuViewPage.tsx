@@ -1,12 +1,12 @@
 // frontend/src/pages/PublicMenuViewPage.tsx
-// Version: 1.6.10 (Remove unused PublicMenuModifierOption import)
+// Version: 1.6.11 (Correcciones TypeScript y logs de depuración)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import {
     Container, Title, Loader, Alert, Text, Stack, Paper, Image, Group,
-    useMantineTheme, Button, useMantineColorScheme 
+    useMantineTheme, Button, useMantineColorScheme
 } from '@mantine/core';
 import {
     IconAlertCircle, IconShoppingCartPlus, IconShoppingCart, IconCheck,
@@ -19,15 +19,15 @@ import { useDisclosure } from '@mantine/hooks';
 import {
     PublicDigitalMenuData,
     PublicMenuItem,
-    ModifierUiType
-    // PublicMenuModifierOption // <-- Eliminada esta importación
-} from '../types/menu.types';
+    ModifierUiType,
+    //PublicMenuModifierGroup // Importación directa del tipo
+} from '../types/menu.types'; // Asegúrate que esta ruta es correcta
 
-import CategoryAccordion from '../components/public/menu/CategoryAccordion';
-import { MenuItemCardConfiguringState } from '../components/public/menu/MenuItemCard';
-import ShoppingCartModal from '../components/public/menu/ShoppingCartModal';
+import CategoryAccordion from '../components/public/menu/CategoryAccordion'; // Asegúrate que esta ruta es correcta
+import { MenuItemCardConfiguringState } from '../components/public/menu/MenuItemCard'; // Asegúrate que esta ruta es correcta
+import ShoppingCartModal from '../components/public/menu/ShoppingCartModal'; // Asegúrate que esta ruta es correcta
 
-import { OrderStatus as PageOrderStatus, PublicOrderStatusInfo as PagePublicOrderStatusInfo } from './OrderStatusPage';
+import { OrderStatus as PageOrderStatus, PublicOrderStatusInfo as PagePublicOrderStatusInfo } from './OrderStatusPage'; // Asegúrate que esta ruta es correcta
 
 export interface SelectedModifierFE {
     modifierOptionId: string;
@@ -41,8 +41,8 @@ export interface SelectedModifierFE {
 export interface OrderItemFE {
     cartItemId: string;
     menuItemId: string;
-    menuItemName_es: string | null;
-    menuItemName_en: string | null;
+    menuItemName_es: string | null; // Usado para getTranslatedItemName
+    menuItemName_en: string | null; // Usado para getTranslatedItemName
     quantity: number;
     basePrice: number;
     currentPricePerUnit: number;
@@ -62,24 +62,24 @@ interface CreateOrderItemDto {
 }
 interface CreateOrderPayloadDto {
     tableIdentifier?: string | null;
-    customerId?: string | null; 
+    customerId?: string | null;
     orderNotes?: string | null;
     items: CreateOrderItemDto[];
     businessId?: string;
 }
 
-export interface AddOrderItemDtoFE { 
+export interface AddOrderItemDtoFE {
     menuItemId: string;
     quantity: number;
     selectedModifiers?: Array<{ modifierOptionId: string }>;
 }
-export interface AddItemsToOrderPayloadDtoFE { 
+export interface AddItemsToOrderPayloadDtoFE {
     items: AddOrderItemDtoFE[];
     customerNotes?: string;
 }
 
 interface BackendOrderResponse {
-    id: string; 
+    id: string;
     orderNumber?: string | null;
 }
 
@@ -88,7 +88,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL_PUBLIC || 'http://localho
 interface ConfiguringItemState {
     itemDetails: PublicMenuItem;
     quantity: number;
-    selectedOptionsByGroup: Record<string, string[] | string>;
+    selectedOptionsByGroup: Record<string, string[] | string>; // groupId -> optionId o optionId[]
     currentUnitPrice: number;
     itemNotes: string;
     areModifiersValid: boolean;
@@ -96,10 +96,20 @@ interface ConfiguringItemState {
 
 const LOCAL_STORAGE_CART_KEY_PREFIX = 'loyalpyme_public_cart_';
 const LOCAL_STORAGE_ORDER_NOTES_KEY_PREFIX = 'loyalpyme_public_order_notes_';
-const ACTIVE_ORDER_INFO_KEY_PREFIX = 'loyalpyme_active_order_info_'; 
+const ACTIVE_ORDER_INFO_KEY_PREFIX = 'loyalpyme_active_order_info_';
+
+// Helper para obtener nombres traducidos
+const getTranslatedNameHelper = (item: { name_es?: string | null, name_en?: string | null }, lang: string, defaultName: string = 'Unnamed') => {
+    if (lang === 'es' && item.name_es) return item.name_es;
+    if (lang === 'en' && item.name_en) return item.name_en;
+    // Fallback si el idioma actual no tiene traducción pero el otro sí
+    return item.name_es || item.name_en || defaultName;
+};
+
 
 const PublicMenuViewPage: React.FC = () => {
     const { t, i18n } = useTranslation();
+    const currentLang = i18n.language;
     const theme = useMantineTheme();
     const { colorScheme } = useMantineColorScheme();
     const { businessSlug, tableIdentifier } = useParams<{ businessSlug: string; tableIdentifier?: string }>();
@@ -113,10 +123,10 @@ const PublicMenuViewPage: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [activeAccordionItems, setActiveAccordionItems] = useState<string[]>([]);
-    
+
     const [currentOrderItems, setCurrentOrderItems] = useState<OrderItemFE[]>(() => {
         const savedCart = localStorage.getItem(cartStorageKey);
-        try { return savedCart ? JSON.parse(savedCart) : []; } 
+        try { return savedCart ? JSON.parse(savedCart) : []; }
         catch (e) { console.error("Error parsing cart from localStorage", e); return []; }
     });
     const [orderNotes, setOrderNotes] = useState<string>(() => {
@@ -126,7 +136,7 @@ const PublicMenuViewPage: React.FC = () => {
     const [isCartOpen, { open: openCart, close: closeCart }] = useDisclosure(false);
     const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
     const [configuringItem, setConfiguringItem] = useState<ConfiguringItemState | null>(null);
-    
+
     const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
     const [activeOrderNumber, setActiveOrderNumber] = useState<string | null>(null);
     const [canCurrentlyAddToExistingOrder, setCanCurrentlyAddToExistingOrder] = useState<boolean>(false);
@@ -136,7 +146,7 @@ const PublicMenuViewPage: React.FC = () => {
         if (!status) return false;
         return [
             PageOrderStatus.RECEIVED, PageOrderStatus.IN_PROGRESS, PageOrderStatus.PARTIALLY_READY,
-            PageOrderStatus.ALL_ITEMS_READY, PageOrderStatus.COMPLETED 
+            PageOrderStatus.ALL_ITEMS_READY, PageOrderStatus.COMPLETED
         ].includes(status);
     }, []);
 
@@ -149,8 +159,8 @@ const PublicMenuViewPage: React.FC = () => {
                     if (parsedInfo.orderId && parsedInfo.orderNumber) {
                         setActiveOrderId(parsedInfo.orderId);
                         setActiveOrderNumber(parsedInfo.orderNumber);
-                        setCurrentOrderItems([]); 
-                        setOrderNotes('');      
+                        setCurrentOrderItems([]);
+                        setOrderNotes('');
 
                         setLoadingActiveOrderStatus(true);
                         axios.get<PagePublicOrderStatusInfo>(`${API_BASE_URL}/order/${parsedInfo.orderId}/status`)
@@ -188,13 +198,13 @@ const PublicMenuViewPage: React.FC = () => {
     }, [activeOrderKey, canAddMoreItemsToOrderStatus]);
 
     useEffect(() => {
-        if (!activeOrderId) { 
+        if (!activeOrderId) {
             localStorage.setItem(cartStorageKey, JSON.stringify(currentOrderItems));
         }
     }, [currentOrderItems, cartStorageKey, activeOrderId]);
 
     useEffect(() => {
-        if (!activeOrderId) { 
+        if (!activeOrderId) {
             localStorage.setItem(notesStorageKey, orderNotes);
         }
     }, [orderNotes, notesStorageKey, activeOrderId]);
@@ -208,39 +218,43 @@ const PublicMenuViewPage: React.FC = () => {
                 const parsedMenuData = {
                     ...response.data,
                     categories: response.data.categories.map(c => ({
-                        ...c, 
+                        ...c,
                         items: c.items.map(i => ({
-                            ...i, 
-                            price: parseFloat(String(i.price)), 
+                            ...i,
+                            price: parseFloat(String(i.price)),
                             modifierGroups: Array.isArray(i.modifierGroups) ? i.modifierGroups.map(g => ({
-                                ...g, 
+                                ...g,
                                 options: Array.isArray(g.options) ? g.options.map(o => ({
-                                    ...o, 
-                                    priceAdjustment: parseFloat(String(o.priceAdjustment)) 
-                                })) : [] 
-                            })) : [] 
+                                    ...o,
+                                    priceAdjustment: parseFloat(String(o.priceAdjustment))
+                                })) : []
+                            })) : []
                         }))
                     }))
                 };
                 setMenuData(parsedMenuData);
-                if (parsedMenuData.categories.length > 0 && !activeOrderId) { 
+                if (parsedMenuData.categories.length > 0 && !activeOrderId) {
                     setActiveAccordionItems([parsedMenuData.categories[0].id]);
                 } else if (activeOrderId) {
-                    setActiveAccordionItems([]); 
+                    setActiveAccordionItems([]);
                 }
             } else { throw new Error(t('error.noMenuDataReceived')); }
-        } catch (err: any) { setError(err.response?.data?.message || err.message || t('common.errorUnknown')); setMenuData(null); } 
+        } catch (err: any) { setError(err.response?.data?.message || err.message || t('common.errorUnknown')); setMenuData(null); }
         finally { setLoading(false); }
     }, [businessSlug, t, activeOrderId]);
 
     useEffect(() => { fetchPublicMenu(); }, [fetchPublicMenu]);
 
     const calculatePriceAndValidate = useCallback((itemDetails: PublicMenuItem, selectedOptions: Record<string, string[] | string>): { newPrice: number; isValid: boolean } => {
-        let newPrice = itemDetails.price; 
+        let newPrice = itemDetails.price;
         let isValid = true;
         
+        const itemNameForLog = getTranslatedNameHelper(itemDetails, currentLang, "Item Desconocido");
+        console.log(`[DEBUG] calculatePriceAndValidate: For item "${itemNameForLog}" (ID: ${itemDetails.id}). Base price: ${itemDetails.price}. Initial selectedOptions:`, JSON.parse(JSON.stringify(selectedOptions)));
+
         if (Array.isArray(itemDetails.modifierGroups)) {
             for (const group of itemDetails.modifierGroups) {
+                const groupNameForLog = getTranslatedNameHelper(group, currentLang, "Grupo Desconocido");
                 const selections = selectedOptions[group.id];
                 let count = 0;
                 let currentSelectionsForGroup: string[] = [];
@@ -253,111 +267,158 @@ const PublicMenuViewPage: React.FC = () => {
                     count = 1;
                 }
                 
+                console.log(`[DEBUG] calculatePriceAndValidate: Group "${groupNameForLog}" (ID: ${group.id}), isRequired: ${group.isRequired}, minSelections: ${group.minSelections}, maxSelections: ${group.maxSelections}. Selections for this group:`, JSON.parse(JSON.stringify(selections)), `Count: ${count}`);
+
                 if (group.isRequired && count < group.minSelections) {
                     isValid = false;
+                    console.log(`[DEBUG] calculatePriceAndValidate: INVALID - Group "${groupNameForLog}" required min ${group.minSelections}, got ${count}.`);
                 }
                 if (count > group.maxSelections) {
                     isValid = false;
+                    console.log(`[DEBUG] calculatePriceAndValidate: INVALID - Group "${groupNameForLog}" allows max ${group.maxSelections}, got ${count}.`);
                 }
-                if (group.uiType === ModifierUiType.RADIO && count > 1) {
+                if (group.uiType === ModifierUiType.RADIO && count > 1) { 
                     isValid = false;
+                    console.log(`[DEBUG] calculatePriceAndValidate: INVALID - Radio Group "${groupNameForLog}" has more than one selection.`);
                 }
                 
                 if(Array.isArray(group.options)) {
-                    currentSelectionsForGroup.forEach(optionId => { 
-                        const option = group.options.find(opt => opt.id === optionId); 
+                    currentSelectionsForGroup.forEach(optionId => {
+                        const option = group.options.find(opt => opt.id === optionId);
                         if (option) {
                             newPrice += option.priceAdjustment;
+                            const optionNameForLog = getTranslatedNameHelper(option, currentLang, "Opción Desconocida");
+                            console.log(`[DEBUG] calculatePriceAndValidate: Adding price for option "${optionNameForLog}" (ID: ${optionId}) from group "${groupNameForLog}": ${option.priceAdjustment}. New cumulative price: ${newPrice}`);
+                        } else {
+                            console.warn(`[DEBUG] calculatePriceAndValidate: Option ID "${optionId}" not found in group "${groupNameForLog}".`);
                         }
                     });
                 }
             }
         }
+        console.log(`[DEBUG] calculatePriceAndValidate: For item "${itemNameForLog}", Final Price: ${newPrice}, IsValid: ${isValid}`);
         return { newPrice, isValid };
-    }, []);
+    }, [currentLang]); 
 
-    useEffect(() => { 
+    useEffect(() => {
         if (configuringItem) {
             const { newPrice, isValid } = calculatePriceAndValidate(configuringItem.itemDetails, configuringItem.selectedOptionsByGroup);
             if (newPrice !== configuringItem.currentUnitPrice || isValid !== configuringItem.areModifiersValid) {
+                const itemNameForLog = getTranslatedNameHelper(configuringItem.itemDetails, currentLang, "Item Desconocido");
+                console.log(`[DEBUG] useEffect (after price/validation change): Updating configuringItem "${itemNameForLog}". New Unit Price: ${newPrice}, IsValid: ${isValid}`);
                 setConfiguringItem(prev => prev ? { ...prev, currentUnitPrice: newPrice, areModifiersValid: isValid } : null);
             }
         }
-    }, [configuringItem, calculatePriceAndValidate]);
-    
+    }, [configuringItem, calculatePriceAndValidate, currentLang]);
+
     const handleStartConfigureItem = (item: PublicMenuItem) => {
+        const itemNameForLog = getTranslatedNameHelper(item, currentLang, "Item Desconocido");
+        console.log(`[DEBUG] handleStartConfigureItem: Configuring item "${itemNameForLog}" (ID: ${item.id})`, item);
         const initialSelectedOptions: Record<string, string[] | string> = {};
         if (Array.isArray(item.modifierGroups)) {
             item.modifierGroups.forEach(group => {
+                const groupNameForLog = getTranslatedNameHelper(group, currentLang, "Grupo Desconocido");
                 const optionsAvailable = Array.isArray(group.options) ? group.options : [];
-                const defaultOptions = optionsAvailable.filter(opt => opt.isDefault && opt.isAvailable); // Usa isAvailable aquí
-                
-                if (group.uiType === ModifierUiType.RADIO) { 
+                const defaultOptions = optionsAvailable.filter(opt => opt.isDefault && opt.isAvailable);
+
+                if (group.uiType === ModifierUiType.RADIO) {
                     let defaultRadioOptionId = '';
                     if (defaultOptions.length > 0) {
                         defaultRadioOptionId = defaultOptions[0].id;
                     } else if (optionsAvailable.length > 0 && group.isRequired && group.minSelections === 1) {
-                        const firstAvailableOption = optionsAvailable.find(opt => opt.isAvailable); // Busca primera disponible
+                        const firstAvailableOption = optionsAvailable.find(opt => opt.isAvailable);
                         if (firstAvailableOption) {
                             defaultRadioOptionId = firstAvailableOption.id;
                         }
                     }
                     initialSelectedOptions[group.id] = defaultRadioOptionId;
-                } else { // CHECKBOX
+                    console.log(`[DEBUG] handleStartConfigureItem: Group "${groupNameForLog}" (Radio) - Initial selection: ${defaultRadioOptionId || '(none)'}`);
+                } else { 
                     initialSelectedOptions[group.id] = defaultOptions.map(opt => opt.id);
+                     console.log(`[DEBUG] handleStartConfigureItem: Group "${groupNameForLog}" (Checkbox) - Initial selections: [${defaultOptions.map(opt => opt.id).join(', ')}]`);
                 }
             });
         }
         const {newPrice, isValid} = calculatePriceAndValidate(item, initialSelectedOptions);
-        setConfiguringItem({ 
-            itemDetails: item, 
-            quantity: 1, 
-            selectedOptionsByGroup: initialSelectedOptions, 
-            currentUnitPrice: newPrice, 
-            itemNotes: '', 
-            areModifiersValid: isValid 
+        console.log(`[DEBUG] handleStartConfigureItem: For item "${itemNameForLog}", Initial Price after defaults: ${newPrice}, Initial Valid State: ${isValid}`);
+        setConfiguringItem({
+            itemDetails: item,
+            quantity: 1,
+            selectedOptionsByGroup: initialSelectedOptions,
+            currentUnitPrice: newPrice,
+            itemNotes: '',
+            areModifiersValid: isValid
         });
     };
     const handleCancelConfiguration = () => setConfiguringItem(null);
     const handleConfigQuantityChange = (newQuantity: number) => setConfiguringItem(prev => prev ? { ...prev, quantity: newQuantity } : null);
+
     const handleConfigModifierSelectionChange = (groupId: string, newSelection: string | string[]) => {
+        if (configuringItem) {
+            const groupForLog = configuringItem.itemDetails.modifierGroups?.find(g => g.id === groupId);
+            const groupNameForLog = groupForLog ? getTranslatedNameHelper(groupForLog, currentLang, "Grupo Desconocido") : `ID ${groupId}`;
+            const itemNameForLog = getTranslatedNameHelper(configuringItem.itemDetails, currentLang, "Item Desconocido");
+            console.log(`[DEBUG] handleConfigModifierSelectionChange: Item "${itemNameForLog}", Group "${groupNameForLog}" (ID: ${groupId}), New selection:`, newSelection);
+        }
+        
         setConfiguringItem(prev => {
             if (!prev) return null;
-            return { 
-                ...prev, 
-                selectedOptionsByGroup: { 
-                    ...prev.selectedOptionsByGroup, 
-                    [groupId]: newSelection 
-                } 
+            const updatedState = {
+                ...prev,
+                selectedOptionsByGroup: {
+                    ...prev.selectedOptionsByGroup,
+                    [groupId]: newSelection
+                }
             };
+            if (configuringItem) { // Check again, prev might be null if called during unmount or race condition
+                 const itemNameForLog = getTranslatedNameHelper(updatedState.itemDetails, currentLang, "Item Desconocido");
+                console.log(`[DEBUG] handleConfigModifierSelectionChange: Updated selectedOptionsByGroup for item "${itemNameForLog}":`, JSON.parse(JSON.stringify(updatedState.selectedOptionsByGroup)));
+            }
+            return updatedState;
         });
     };
     const handleConfigNotesChange = (newNotes: string) => setConfiguringItem(prev => prev ? { ...prev, itemNotes: newNotes } : null);
-    
+
     const handleConfigAddToCart = () => {
-        if (!configuringItem || !configuringItem.areModifiersValid) {
+        if (!configuringItem) {
+            console.error("[DEBUG] handleConfigAddToCart: No configuringItem found. Aborting.");
+            return;
+        }
+        const itemNameForLog = getTranslatedNameHelper(configuringItem.itemDetails, currentLang, "Item Desconocido");
+        console.log(`[DEBUG] handleConfigAddToCart: Attempting to add item "${itemNameForLog}" (ID: ${configuringItem.itemDetails.id}). Current configuringItem state:`, JSON.parse(JSON.stringify(configuringItem)));
+
+        if (!configuringItem.areModifiersValid) {
             notifications.show({
                 title: t('publicMenu.invalidSelectionTitle', "Selección Inválida"),
                 message: t('publicMenu.invalidSelectionMsg', "Por favor, revisa los modificadores obligatorios."),
                 color: 'orange'
             });
+            console.warn(`[DEBUG] handleConfigAddToCart: Modifiers are NOT valid for item "${itemNameForLog}". Aborting.`);
             return;
         }
+        console.log(`[DEBUG] handleConfigAddToCart: Modifiers ARE valid for item "${itemNameForLog}". Proceeding.`);
+
         const { itemDetails, quantity, selectedOptionsByGroup, currentUnitPrice, itemNotes } = configuringItem;
 
         const flatSelectedModifiers: SelectedModifierFE[] = [];
         if (Array.isArray(itemDetails.modifierGroups)) {
             Object.entries(selectedOptionsByGroup).forEach(([groupId, optionSelections]) => {
                 const group = itemDetails.modifierGroups!.find(g => g.id === groupId);
-                if (!group || !Array.isArray(group.options)) return; 
+                if (!group || !Array.isArray(group.options)) return;
                 
-                const ids = Array.isArray(optionSelections) 
+                const groupNameForLog = getTranslatedNameHelper(group, currentLang, "Grupo Desconocido");
+
+                const ids = Array.isArray(optionSelections)
                     ? optionSelections.filter(s => s && s.trim() !== '')
                     : ( (typeof optionSelections === 'string' && optionSelections.trim() !== '') ? [optionSelections.trim()] : [] );
-                
+
+                console.log(`[DEBUG] handleConfigAddToCart: Processing Group "${groupNameForLog}" (ID: ${groupId}). Selected option IDs for this group: [${ids.join(', ')}]`);
+
                 ids.forEach(optId => {
                     const option = group.options.find(o => o.id === optId);
                     if (option) {
+                        const optionNameForLog = getTranslatedNameHelper(option, currentLang, "Opción Desconocida");
+                        console.log(`[DEBUG] handleConfigAddToCart: Adding modifier option "${optionNameForLog}" (ID: ${optId}) from group "${groupNameForLog}" to flatSelectedModifiers.`);
                         flatSelectedModifiers.push({
                             modifierOptionId: option.id,
                             name_es: option.name_es,
@@ -366,14 +427,20 @@ const PublicMenuViewPage: React.FC = () => {
                             modifierGroupName_es: group.name_es,
                             modifierGroupName_en: group.name_en,
                         });
+                    } else {
+                         console.warn(`[DEBUG] handleConfigAddToCart: Option ID "${optId}" NOT FOUND in definition for group "${groupNameForLog}".`);
                     }
                 });
             });
         }
+        console.log(`[DEBUG] handleConfigAddToCart: Built flatSelectedModifiers for "${itemNameForLog}":`, JSON.parse(JSON.stringify(flatSelectedModifiers)));
+
 
         const sortedModifierOptionIds = flatSelectedModifiers.map(m => m.modifierOptionId).sort().join(',');
         const notesHash = itemNotes ? `_notes-${itemNotes.toLocaleLowerCase().replace(/\s/g, '')}` : '';
         const cartItemId = `${itemDetails.id}${flatSelectedModifiers.length > 0 ? `-[${sortedModifierOptionIds}]` : ''}${notesHash}`;
+        console.log(`[DEBUG] handleConfigAddToCart: Generated cartItemId for "${itemNameForLog}": ${cartItemId}`);
+
 
         const existingCartItemIndex = currentOrderItems.findIndex(ci => ci.cartItemId === cartItemId);
 
@@ -383,9 +450,10 @@ const PublicMenuViewPage: React.FC = () => {
             existing.quantity += quantity;
             existing.totalPriceForItem = existing.currentPricePerUnit * existing.quantity;
             setCurrentOrderItems(updatedItems);
+            console.log(`[DEBUG] handleConfigAddToCart: Updated quantity for existing cart item "${itemNameForLog}" (cartItemId: ${cartItemId}). New quantity: ${existing.quantity}`);
         } else {
             const newCartItem: OrderItemFE = {
-                cartItemId: cartItemId, 
+                cartItemId: cartItemId,
                 menuItemId: itemDetails.id,
                 menuItemName_es: itemDetails.name_es,
                 menuItemName_en: itemDetails.name_en,
@@ -397,6 +465,7 @@ const PublicMenuViewPage: React.FC = () => {
                 selectedModifiers: flatSelectedModifiers,
             };
             setCurrentOrderItems(prev => [...prev, newCartItem]);
+            console.log(`[DEBUG] handleConfigAddToCart: Added NEW cart item "${itemNameForLog}" (cartItemId: ${cartItemId}):`, JSON.parse(JSON.stringify(newCartItem)));
         }
 
         notifications.show({
@@ -407,7 +476,10 @@ const PublicMenuViewPage: React.FC = () => {
         });
         setConfiguringItem(null);
     };
+
     const handleSimpleAddToCart = (item: PublicMenuItem, quantity: number) => {
+        const itemNameForLog = getTranslatedNameHelper(item, currentLang, "Item Desconocido");
+        console.log(`[DEBUG] handleSimpleAddToCart: Adding simple item "${itemNameForLog}" (ID: ${item.id}), Quantity: ${quantity}`);
         const cartItemId = item.id; const existingCartItemIndex = currentOrderItems.findIndex(ci => ci.cartItemId === cartItemId && (!ci.selectedModifiers || ci.selectedModifiers.length === 0) && !ci.notes);
         if (existingCartItemIndex > -1) { const updatedItems = [...currentOrderItems]; const existing = updatedItems[existingCartItemIndex]; existing.quantity += quantity; existing.totalPriceForItem = existing.currentPricePerUnit * existing.quantity; setCurrentOrderItems(updatedItems);
         } else { const newCartItem: OrderItemFE = { cartItemId: cartItemId, menuItemId: item.id, menuItemName_es: item.name_es, menuItemName_en: item.name_en, quantity: quantity, basePrice: item.price, currentPricePerUnit: item.price, totalPriceForItem: item.price * quantity, selectedModifiers: [], }; setCurrentOrderItems(prev => [...prev, newCartItem]); }
@@ -425,30 +497,43 @@ const PublicMenuViewPage: React.FC = () => {
     }, [t]);
 
     const handleSubmitOrder = useCallback(async () => {
+        console.log("[DEBUG] handleSubmitOrder: Process started.");
+        console.log("[DEBUG] handleSubmitOrder: Current cart items before processing:", JSON.parse(JSON.stringify(currentOrderItems)));
+        console.log("[DEBUG] handleSubmitOrder: Current orderNotes:", orderNotes);
+        console.log("[DEBUG] handleSubmitOrder: Is adding to existing order?", (activeOrderId && canCurrentlyAddToExistingOrder));
+        if (activeOrderId) console.log("[DEBUG] handleSubmitOrder: Active Order ID:", activeOrderId, "Number:", activeOrderNumber);
+
+
         if (currentOrderItems.length === 0) {
-            notifications.show({ 
-                title: t('publicMenu.cart.errorTitle'), 
-                message: activeOrderId && canCurrentlyAddToExistingOrder 
-                    ? t('publicMenu.cart.errorEmptyAddToExisting', "Añade ítems al carrito antes de enviarlos a tu pedido existente.") 
-                    : t('publicMenu.cart.errorEmpty'), 
-                color: 'orange' 
+            notifications.show({
+                title: t('publicMenu.cart.errorTitle'),
+                message: activeOrderId && canCurrentlyAddToExistingOrder
+                    ? t('publicMenu.cart.errorEmptyAddToExisting', "Añade ítems al carrito antes de enviarlos a tu pedido existente.")
+                    : t('publicMenu.cart.errorEmpty'),
+                color: 'orange'
             });
             return;
         }
         setIsSubmittingOrder(true);
 
         if (activeOrderId && canCurrentlyAddToExistingOrder) {
-            const payloadItemsFE: AddOrderItemDtoFE[] = currentOrderItems.map(feItem => ({
-                menuItemId: feItem.menuItemId,
-                quantity: feItem.quantity,
-                selectedModifiers: feItem.selectedModifiers.map(sm => ({ modifierOptionId: sm.modifierOptionId })),
-            }));
+            const payloadItemsFE: AddOrderItemDtoFE[] = currentOrderItems.map(feItem => {
+                // Corrección para TS2559: Crear objeto con las propiedades esperadas por getTranslatedNameHelper
+                const itemLogName = getTranslatedNameHelper({ name_es: feItem.menuItemName_es, name_en: feItem.menuItemName_en }, currentLang, "Item Desconocido");
+                console.log(`[DEBUG] handleSubmitOrder (Add To Existing): Mapping cart item "${itemLogName}" (menuItemId: ${feItem.menuItemId}) for DTO. Selected Modifiers:`, JSON.parse(JSON.stringify(feItem.selectedModifiers)));
+                return {
+                    menuItemId: feItem.menuItemId,
+                    quantity: feItem.quantity,
+                    selectedModifiers: feItem.selectedModifiers.map(sm => ({ modifierOptionId: sm.modifierOptionId })),
+                }
+            });
 
             const addItemsPayload: AddItemsToOrderPayloadDtoFE = {
                 items: payloadItemsFE,
                 customerNotes: orderNotes.trim() || undefined,
             };
-            
+            console.log("[DEBUG] handleSubmitOrder (Add To Existing): Final DTO to send:", JSON.parse(JSON.stringify(addItemsPayload)));
+
             try {
                 const headers: Record<string, string> = {
                     'Content-Type': 'application/json',
@@ -458,54 +543,60 @@ const PublicMenuViewPage: React.FC = () => {
                 }
 
                 const response = await axios.post<BackendOrderResponse>(
-                    `${API_BASE_URL}/order/${activeOrderId}/items`, 
+                    `${API_BASE_URL}/order/${activeOrderId}/items`,
                     addItemsPayload,
                     { headers }
                 );
-                
+
                 notifications.show({
                     title: t('publicMenu.cart.itemsAddedSuccessTitle', "Ítems Añadidos"),
-                    message: t('publicMenu.cart.itemsAddedSuccessMsg', { orderNumber: activeOrderNumber || response.data.orderNumber || activeOrderId }), 
+                    message: t('publicMenu.cart.itemsAddedSuccessMsg', { orderNumber: activeOrderNumber || response.data.orderNumber || activeOrderId }),
                     color: 'green', autoClose: 4000, icon: <IconCheck size={18} />
                 });
 
-                setCurrentOrderItems([]); 
-                setOrderNotes('');       
-                closeCart();             
-                navigate(`/order-status/${activeOrderId}`, { 
-                    state: { 
-                        orderNumber: activeOrderNumber || response.data.orderNumber, 
+                setCurrentOrderItems([]);
+                setOrderNotes('');
+                closeCart();
+                navigate(`/order-status/${activeOrderId}`, {
+                    state: {
+                        orderNumber: activeOrderNumber || response.data.orderNumber,
                         businessSlug: businessSlug,
-                        tableIdentifier: tableIdentifier 
-                    } 
+                        tableIdentifier: tableIdentifier
+                    }
                 });
 
             } catch (err: any) {
                 const errMsg = err.response?.data?.message || err.message || t('publicMenu.cart.orderErrorMsg');
-                notifications.show({ 
-                    title: t('publicMenu.cart.addItemsErrorTitle', "Error al Añadir Ítems"), 
-                    message: errMsg, 
+                notifications.show({
+                    title: t('publicMenu.cart.addItemsErrorTitle', "Error al Añadir Ítems"),
+                    message: errMsg,
                     color: 'red',
-                    icon: <IconAlertCircle size={18} /> 
+                    icon: <IconAlertCircle size={18} />
                 });
+                console.error("[DEBUG] handleSubmitOrder (Add To Existing): API Error:", err.response || err);
             } finally {
                 setIsSubmittingOrder(false);
             }
 
-        } else { 
+        } else { // Creating a new order
             if (!businessSlug) {
                  notifications.show({ title: t('publicMenu.cart.errorTitle'), message: t('error.missingBusinessSlug'), color: 'red' });
                  setIsSubmittingOrder(false);
                  return;
             }
-            const payloadItems: CreateOrderItemDto[] = currentOrderItems.map(feItem => ({
-                menuItemId: feItem.menuItemId,
-                quantity: feItem.quantity,
-                notes: feItem.notes || null,
-                selectedModifierOptions: feItem.selectedModifiers.length > 0
-                    ? feItem.selectedModifiers.map(sm => ({ modifierOptionId: sm.modifierOptionId }))
-                    : null,
-            }));
+            const payloadItems: CreateOrderItemDto[] = currentOrderItems.map(feItem => {
+                 // Corrección para TS2559: Crear objeto con las propiedades esperadas por getTranslatedNameHelper
+                const itemLogName = getTranslatedNameHelper({ name_es: feItem.menuItemName_es, name_en: feItem.menuItemName_en }, currentLang, "Item Desconocido");
+                console.log(`[DEBUG] handleSubmitOrder (New Order): Mapping cart item "${itemLogName}" (menuItemId: ${feItem.menuItemId}) for DTO. Selected Modifiers:`, JSON.parse(JSON.stringify(feItem.selectedModifiers)));
+                return {
+                    menuItemId: feItem.menuItemId,
+                    quantity: feItem.quantity,
+                    notes: feItem.notes || null,
+                    selectedModifierOptions: feItem.selectedModifiers.length > 0
+                        ? feItem.selectedModifiers.map(sm => ({ modifierOptionId: sm.modifierOptionId }))
+                        : null,
+                }
+            });
             let customerIdForPayload: string | null = null;
             const storedUser = localStorage.getItem('user');
             if (storedUser) {
@@ -522,49 +613,51 @@ const PublicMenuViewPage: React.FC = () => {
                 tableIdentifier: tableIdentifier || null,
                 customerId: customerIdForPayload,
             };
+            console.log("[DEBUG] handleSubmitOrder (New Order): Final DTO to send:", JSON.parse(JSON.stringify(orderPayload)));
             try {
                 const response = await axios.post<BackendOrderResponse>(`${API_BASE_URL}/order/${businessSlug}`, orderPayload);
-                const orderIdFromResponse = response.data.id; 
-                const orderNumberFromResponse = response.data.orderNumber; 
+                const orderIdFromResponse = response.data.id;
+                const orderNumberFromResponse = response.data.orderNumber;
                 notifications.show({
                     title: t('publicMenu.cart.orderSuccessTitle'),
-                    message: t('publicMenu.cart.orderSuccessMsg', { orderNumber: orderNumberFromResponse || orderIdFromResponse }), 
+                    message: t('publicMenu.cart.orderSuccessMsg', { orderNumber: orderNumberFromResponse || orderIdFromResponse }),
                     color: 'green', autoClose: 4000, icon: <IconCheck size={18} />
                 });
                 if (activeOrderKey && orderIdFromResponse && orderNumberFromResponse) {
                     const activeOrderData = { orderId: orderIdFromResponse, orderNumber: orderNumberFromResponse, savedAt: Date.now() };
                     localStorage.setItem(activeOrderKey, JSON.stringify(activeOrderData));
                 }
-                setCurrentOrderItems([]); 
-                setOrderNotes('');       
-                closeCart();             
-                navigate(`/order-status/${orderIdFromResponse}`, { 
-                    state: { 
-                        orderNumber: orderNumberFromResponse, 
+                setCurrentOrderItems([]);
+                setOrderNotes('');
+                closeCart();
+                navigate(`/order-status/${orderIdFromResponse}`, {
+                    state: {
+                        orderNumber: orderNumberFromResponse,
                         businessSlug: businessSlug,
-                        tableIdentifier: tableIdentifier 
-                    } 
+                        tableIdentifier: tableIdentifier
+                    }
                 });
             } catch (err: any) {
                 const errMsg = err.response?.data?.message || err.message || t('publicMenu.cart.orderErrorMsg');
-                notifications.show({ 
-                    title: t('publicMenu.cart.orderErrorTitle'), 
-                    message: errMsg, 
+                notifications.show({
+                    title: t('publicMenu.cart.orderErrorTitle'),
+                    message: errMsg,
                     color: 'red',
-                    icon: <IconAlertCircle size={18} /> 
+                    icon: <IconAlertCircle size={18} />
                 });
+                console.error("[DEBUG] handleSubmitOrder (New Order): API Error:", err.response || err);
             } finally {
                 setIsSubmittingOrder(false);
             }
         }
     }, [
-        businessSlug, currentOrderItems, orderNotes, tableIdentifier, t, 
-        closeCart, navigate, activeOrderKey, 
-        activeOrderId, canCurrentlyAddToExistingOrder, activeOrderNumber
+        businessSlug, currentOrderItems, orderNotes, tableIdentifier, t,
+        closeCart, navigate, activeOrderKey,
+        activeOrderId, canCurrentlyAddToExistingOrder, activeOrderNumber, currentLang
     ]);
-    
-    if (loading || loadingActiveOrderStatus) { 
-        return ( <Container size="md" py="xl" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}> <Loader size="xl" /> </Container> ); 
+
+    if (loading || loadingActiveOrderStatus) {
+        return ( <Container size="md" py="xl" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}> <Loader size="xl" /> </Container> );
     }
     if (error) { return ( <Container size="md" py="xl"> <Alert icon={<IconAlertCircle size="1rem" />} title={t('common.error')} color="red" radius="md"> {error} </Alert> </Container> ); }
     if (!menuData) { return ( <Container size="md" py="xl"> <Text ta="center" c="dimmed">{t('publicMenu.menuNotAvailable')}</Text> </Container> ); }
@@ -574,8 +667,8 @@ const PublicMenuViewPage: React.FC = () => {
     const totalCartAmount = currentOrderItems.reduce((sum, item) => sum + item.totalPriceForItem, 0);
     const topOffsetForCartBar = typeof theme.spacing.md === 'number' ? theme.spacing.md + 10 : 26;
 
-    const cartButtonText = activeOrderId && canCurrentlyAddToExistingOrder 
-        ? t('publicMenu.cart.addItemsToOrderButton', { count: totalCartItems, orderNumber: activeOrderNumber }) 
+    const cartButtonText = activeOrderId && canCurrentlyAddToExistingOrder
+        ? t('publicMenu.cart.addItemsToOrderButton', { count: totalCartItems, orderNumber: activeOrderNumber })
         : t('publicMenu.cart.viewOrderItems', { count: totalCartItems });
 
     return (
@@ -588,7 +681,7 @@ const PublicMenuViewPage: React.FC = () => {
                     </Group>
 
                     {activeOrderId && canCurrentlyAddToExistingOrder && !configuringItem && (
-                        <Paper shadow="md" p="lg" radius="md" withBorder mb="xl" 
+                        <Paper shadow="md" p="lg" radius="md" withBorder mb="xl"
                             bg={colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.blue[0]}
                         >
                             <Group justify="space-between" align="center">
@@ -612,7 +705,7 @@ const PublicMenuViewPage: React.FC = () => {
                         </Paper>
                     )}
                      {activeOrderId && !canCurrentlyAddToExistingOrder && !loadingActiveOrderStatus && !configuringItem && (
-                        <Paper shadow="md" p="lg" radius="md" withBorder mb="xl" 
+                        <Paper shadow="md" p="lg" radius="md" withBorder mb="xl"
                             bg={colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[0]}
                         >
                             <Group justify="space-between" align="center">
@@ -628,7 +721,7 @@ const PublicMenuViewPage: React.FC = () => {
                                     </Stack>
                                 </Group>
                                 <Button variant="outline" size="xs"
-                                    onClick={() => { 
+                                    onClick={() => {
                                         if(activeOrderKey) localStorage.removeItem(activeOrderKey);
                                         setActiveOrderId(null); setActiveOrderNumber(null); setCanCurrentlyAddToExistingOrder(false);
                                     }}
@@ -641,10 +734,10 @@ const PublicMenuViewPage: React.FC = () => {
 
                     {currentOrderItems.length > 0 && (!activeOrderId || (activeOrderId && canCurrentlyAddToExistingOrder)) && !configuringItem && (
                         <Paper p={0} shadow="xs" withBorder={false} radius="md" style={{ position: 'sticky', top: topOffsetForCartBar, zIndex: 200 }} >
-                            <Button fullWidth size="lg" variant="gradient" 
+                            <Button fullWidth size="lg" variant="gradient"
                                 gradient={{ from: theme.primaryColor, to: theme.colors[theme.primaryColor][4], deg: 105 }}
                                 onClick={openCart}
-                                disabled={isCartOpen} 
+                                disabled={isCartOpen}
                                 styles={{ root: { height: 'auto', padding: `${theme.spacing.sm} ${theme.spacing.md}` }, label: { width: '100%' } }}
                             >
                                 <Group justify="space-between" style={{ width: '100%' }}>
@@ -659,7 +752,7 @@ const PublicMenuViewPage: React.FC = () => {
                             </Button>
                         </Paper>
                     )}
-                    
+
                     <CategoryAccordion
                         categories={menuData.categories}
                         activeAccordionItems={activeAccordionItems}

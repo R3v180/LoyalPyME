@@ -1,6 +1,6 @@
 # LoyalPyME Camarero: ¡Tu Experiencia Gastronómica, Digitalizada y Eficiente! 🧑‍🍳📱✨
 
-**Última Actualización:** 28 de Mayo de 2025 (Refleja KDS con acciones de estado funcionales y detalla el próximo flujo de camarero para recogida y servicio)
+**Última Actualización:** 3 de Junio de 2025 (Refleja creación de pedidos con modificadores robusta, KDS y servicio de camarero (entrega de ítems) funcionales. Detalla el próximo flujo de "Pedir Cuenta", "Marcar como Pagado" y "Liberar Mesa".)
 
 Bienvenido a la experiencia moderna de pedir y disfrutar en tu establecimiento favorito con **LoyalPyME Camarero**. Diseñado para agilizar el servicio, personalizar tu pedido y mejorar la comunicación, todo directamente desde tu móvil o gestionado eficientemente por el personal del restaurante.
 
@@ -8,196 +8,236 @@ Bienvenido a la experiencia moderna de pedir y disfrutar en tu establecimiento f
 
 ## 🚀 **I. El Viaje del Cliente Final: Control y Comodidad en Tu Mano**
 
-Este flujo describe la experiencia del cliente desde su llegada hasta la visualización del estado de su pedido, que ahora puede ser actualizado por el personal de cocina/barra.
+Este flujo describe la experiencia del cliente desde su llegada hasta la finalización y pago de su pedido, incluyendo las interacciones con el personal de cocina/barra (KDS) y de sala (Camarero).
 
 ### 1. 📲 **Llegada y Escaneo Mágico del QR de Mesa**
 
-    *   **Bienvenida:** Al llegar, el cliente encuentra un código QR único en su mesa (`tableIdentifier`).
-    *   **Escaneo Instantáneo:** Usando la cámara de su smartphone, el QR lo redirige a `https://[tuDominio.com]/m/[businessSlug]/[tableIdentifier]`.
-    *   _(Sin cambios funcionales en este paso, pero es el inicio del flujo LC)._
+    * **Bienvenida:** Al llegar, el cliente encuentra un código QR único en su mesa, provisto por el establecimiento. Este QR contiene el `tableIdentifier` único de esa mesa.
+    * **Escaneo Instantáneo:** Usando la cámara de su smartphone (o una app de lectura de QR), el cliente escanea el código. El QR lo redirige a una URL del tipo `https://[tuDominio.com]/m/[businessSlug]/[tableIdentifier]`.
+    * **Estado:** Funcionalidad base de generación de QR (implícita, ya que el admin gestiona mesas) y redirección.
 
 ### 2. 🧾 **Explora la Carta Digital Interactiva (`PublicMenuViewPage.tsx`)**
 
-    *   **Acceso Inmediato:** Carga la carta digital del negocio.
-    *   **Verificación de Pedido Activo:**
-        *   Al cargar, el sistema revisa `localStorage` para `activeOrderInfo_BUSINESSSLUG_TABLEIDENTIFIER`.
-        *   **Si existe un pedido activo (`activeOrderIdForTable`, `activeOrderNumberForTable`):**
-            *   La UI muestra: "Tienes el pedido #{{orderNumber}} en curso para esta mesa."
-            *   Opciones: "Ver Estado del Pedido" (enlaza a `/order-status/:activeOrderId`), **"Añadir más Ítems a este Pedido" (FUNCIONALIDAD PENDIENTE)**, **"Empezar un Nuevo Pedido Separado" (FUNCIONALIDAD PENDIENTE)**.
-            *   El carrito para "nuevo pedido" está oculto/deshabilitado.
-        *   **Si NO existe pedido activo:** La página funciona en modo "crear nuevo pedido".
-    *   **Navegación y Detalle del Ítem (`MenuItemCard.tsx`):** Categorías en acordeón, ítems con fotos, descripciones i18n, precios, alérgenos, tags.
-    *   _(Funcionalidad completada y estable)._
+    * **Acceso Inmediato:** Al acceder a la URL, se carga la carta digital del negocio (`businessSlug`), contextualizada para la mesa (`tableIdentifier`).
+    * **Verificación de Pedido Activo (Fundamental):**
+        * Al cargar la página, el sistema revisa `localStorage` buscando una entrada con la clave `activeOrderInfo_BUSINESSSLUG_TABLEIDENTIFIER`.
+        * **Si existe un pedido activo (`activeOrderIdForTable`, `activeOrderNumberForTable`):**
+            * La UI muestra un mensaje destacado: "Tienes el pedido #{{orderNumber}} en curso para esta mesa."
+            * **Opciones Clave:**
+                * "Ver Estado del Pedido": Enlaza directamente a `/order-status/:activeOrderId` (pasando `orderNumber`, `businessSlug`, `tableIdentifier` en el `state` de la ruta).
+                * **"[PENDIENTE - ALTA/MEDIA PRIORIDAD]" Añadir más Ítems a este Pedido:** (Ver Tarea B1.3 en `DEVELOPMENT_PLAN.md`). Permitiría al cliente reabrir la carta para añadir más productos al pedido activo.
+                * **"[PENDIENTE - BAJA PRIORIDAD]" Empezar un Nuevo Pedido Separado (para la misma mesa, si la política del negocio lo permite):** Implicaría una lógica más compleja para gestionar múltiples pedidos activos en una misma mesa o forzar la finalización del anterior.
+            * El carrito para "nuevo pedido" y la opción de enviar un nuevo pedido están ocultos o deshabilitados para evitar confusión.
+        * **Si NO existe pedido activo:** La página funciona en modo "crear nuevo pedido", con el carrito vacío.
+    * **Navegación y Detalle del Ítem (`MenuItemCard.tsx`):**
+        * Categorías del menú presentadas en componentes tipo acordeón (`CategoryAccordion.tsx`) con imágenes y descripciones (i18n).
+        * Cada ítem se muestra en una tarjeta (`MenuItemCard.tsx`) con su imagen, nombre (i18n), descripción (i18n), precio base, lista de alérgenos (iconos/texto) y etiquetas (ej. "VEGANO", "PICANTE").
+    * **Estado:** Funcionalidad de detección de pedido activo y visualización de carta completada y estable.
 
 ### 3. 🎨 **Personaliza tu Plato (`MenuItemCard.tsx`, `ModifierGroupInteractiveRenderer.tsx`)**
 
-    *   Selección de ítems, configuración de modificadores (RADIO/CHECKBOX) con precios dinámicos y validación de reglas (`minSelections`, `maxSelections`, `isRequired`).
-    *   Ajuste de cantidad y notas específicas del ítem.
-    *   _(Funcionalidad completada y estable)._
+    * Al seleccionar un ítem, se abre un modal o sección para la configuración de modificadores.
+    * **Selección de Modificadores (`ModifierGroupInteractiveRenderer.tsx`):**
+        * Se presentan los `ModifierGroup`s asociados al ítem.
+        * Cada grupo muestra sus `ModifierOption`s según el `uiType` (RADIO para selección única, CHECKBOX para múltiple).
+        * **Validación en Tiempo Real Frontend:** Se aplican las reglas `minSelections`, `maxSelections`, y `isRequired` de cada grupo. La UI impide selecciones inválidas.
+        * **Cálculo de Precio Dinámico:** El precio del ítem se actualiza instantáneamente en la UI a medida que el cliente selecciona/deselecciona opciones con `priceAdjustment`.
+    * **Cantidad del Ítem:** El cliente puede ajustar la cantidad del ítem configurado (por defecto 1).
+    * **Notas Específicas del Ítem:** Un campo de texto opcional para que el cliente añada instrucciones especiales para ese ítem (ej. "sin sal", "muy hecho").
+    * **Estado:** Funcionalidad de personalización de ítems con modificadores, incluyendo la validación frontend y el cálculo dinámico de precios, **completada, robusta y validada tras la solución del bug de modificadores.**
 
-### 4. 🛒 **Tu Carrito de Pedido (`ShoppingCartModal.tsx`)**
+### 4. 🛒 **Tu Carrito de Pedido (`ShoppingCartModal.tsx` en `PublicMenuViewPage.tsx`)**
 
-    *   Acumulación de ítems en `currentOrderItems` (estado local en `PublicMenuViewPage.tsx`), persistido en `localStorage` (si no hay pedido activo).
-    *   Modal para revisar ítems, modificar cantidad, eliminar, añadir notas generales (`orderNotes` persistidas), vaciar carrito. Muestra total dinámico.
-    *   _(Funcionalidad completada y estable)._
+    * **Acumulación de Ítems:**
+        * Los ítems configurados (con sus modificadores, cantidad, precio calculado y notas) se añaden al estado local `currentOrderItems`.
+        * Este estado se persiste en `localStorage` (clave `loyalpyme_public_cart_BUSINESSSLUG_TABLEIDENTIFIER`) si no hay un pedido activo ya enviado para la mesa. Se limpia al enviar un nuevo pedido o si se detecta un pedido activo.
+    * **Modal del Carrito:**
+        * Se accede mediante un botón/icono persistente que muestra el número de ítems y/o el total actual.
+        * Lista detallada de `currentOrderItems`: nombre, cantidad, precio unitario (con modificadores), precio total por línea de ítem, modificadores seleccionados, notas del ítem.
+        * **Acciones en el Carrito:**
+            * Modificar cantidad de un ítem (con recalculo automático de totales).
+            * Eliminar un ítem.
+            * Añadir/editar notas generales para todo el pedido (`orderNotes`, persistidas en `localStorage`).
+            * Vaciar completamente el carrito.
+        * Muestra el subtotal, impuestos (futuro), y total final del pedido.
+    * **Estado:** Funcionalidad completada y estable.
 
-### 5. ⭐ **Opcional: Identifícate para Beneficios LCo**
+### 5. ⭐ **Opcional: Identifícate para Beneficios LCo (Integración con LoyalPyME Core)**
 
-    *   Si el cliente inicia sesión con su cuenta LoyalPyME Core, su `customerId` se asociará al `Order` al enviarlo, permitiendo la futura acumulación de puntos y aplicación de beneficios LCo.
-    *   _(Integración básica de `customerId` en `Order` completada; acumulación automática de puntos y canje de beneficios en LC son funcionalidades LCo-LC futuras)._
+    * **Contexto:** Si el `Business` tiene el módulo LCo activo.
+    * **Flujo:**
+        * No es estrictamente necesario para realizar un pedido LC.
+        * Si el cliente está navegando y tiene una sesión LCo activa (ya logueado en el dominio principal o a través de un login en la `PublicMenuViewPage`), su `customerId` (UUID del `User` LCo) puede asociarse al pedido.
+        * La `PublicMenuViewPage` puede obtener el `customerId` del `localStorage` o de un contexto de autenticación.
+    * **Impacto:** Al enviar el pedido (paso 6), si se incluye el `customerId`, el backend podrá asociar el `Order` LC con el cliente LCo.
+    * **Estado:** La asociación básica de `customerId` al `Order` si el cliente está logueado está completada. La acumulación automática de puntos LCo tras el pago del pedido LC y el canje de recompensas LCo en el flujo LC son funcionalidades futuras de integración (ver `DEVELOPMENT_PLAN.md` Tarea D7).
 
 ### 6. ➡️ **Envía tu Pedido (`handleSubmitOrder` en `PublicMenuViewPage.tsx`)**
 
-    *   **Payload:** `CreateOrderPayloadDto` (con `items`, `orderNotes`, `tableIdentifier`, `customerId?`).
-    *   **Endpoint:** `POST /public/order/:businessSlug`.
-    *   **Backend:** Valida, calcula precios, crea `Order` (estado `RECEIVED`), `OrderItem`s (estado `PENDING_KDS`), `OrderItemModifierOption`s. Devuelve el `Order` creado.
-    *   **Frontend Post-Envío:**
-        *   Notificación de éxito (con `orderNumber`).
-        *   Guarda `{ orderId, orderNumber, savedAt }` como `activeOrderInfo` en `localStorage`.
-        *   Limpia `currentOrderItems` y `orderNotes` del `localStorage`.
-        *   Redirige a `/order-status/:orderId` (pasando `orderNumber`, `businessSlug`, `tableIdentifier` en el `state` de la ruta).
-    *   _(Funcionalidad completada y estable)._
+    * Desde el `ShoppingCartModal`, el cliente pulsa "Enviar Pedido".
+    * **Payload:** Se construye un `CreateOrderPayloadDto` que incluye:
+        * `items`: Array de `CreateOrderItemDto`, cada uno con `menuItemId`, `quantity`, `notes?` (del ítem), y `selectedModifierOptions: [{modifierOptionId}]`.
+        * `orderNotes?`: Notas generales del pedido.
+        * `tableIdentifier`: Obtenido de los params de la URL.
+        * `customerId?`: Si el cliente está logueado con LCo.
+    * **Endpoint:** Se realiza una petición `POST` a `/public/order/:businessSlug`.
+    * **Backend (`createPublicOrderHandler` en `order.controller.ts` y `createOrder` en `order.service.ts`):**
+        * `plainToInstance` transforma el `req.body` JSON en una instancia de `CreateOrderDto`, asegurando que los `selectedModifierOptions` anidados se conviertan en arrays de `SelectedOrderModifierOptionDto` gracias a los decoradores `@Type` y `@ValidateNested` en `order.dto.ts`.
+        * Se realizan validaciones exhaustivas: activación del negocio y módulo, disponibilidad de `MenuItem`s y `ModifierOption`s, pertenencia al negocio, cumplimiento de reglas de selección de modificadores (`minSelections`, `maxSelections`, `isRequired`). **Esta validación ahora funciona correctamente tras la solución del bug de modificadores.**
+        * Se recalcula `priceAtPurchase` (precio unitario del ítem + suma de `priceAdjustment` de modificadores) y `totalItemPrice` para cada `OrderItem`. Se calcula el `totalAmount`/`finalAmount` del `Order`.
+        * Se crea transaccionalmente en la BD: `Order` (con `tableId` resuelto, `customerLCoId?`, `orderNotes`, `orderNumber` único autogenerado, `status: RECEIVED`, `source: CUSTOMER_APP`), `OrderItem`s (con snapshots i18n de nombre/descripción, `kdsDestination`, `status: PENDING_KDS`), y `OrderItemModifierOption`s (con snapshots i18n de nombre/precio de opción).
+        * Se devuelve el objeto `Order` completo recién creado.
+    * **Frontend Post-Envío:**
+        * Notificación Mantine de éxito (mostrando `orderNumber` o `id` del pedido).
+        * Se guarda `{ orderId, orderNumber, businessSlug, tableIdentifier, savedAt }` como `activeOrderInfo` en `localStorage` (clave `activeOrderInfo_BUSINESSSLUG_TABLEIDENTIFIER`).
+        * Se limpian `currentOrderItems` y `orderNotes` del `localStorage` (claves `loyalpyme_public_cart_...` y `loyalpyme_public_order_notes_...`).
+        * Se redirige al cliente a `/order-status/:orderId` (pasando `orderNumber`, `businessSlug`, `tableIdentifier` en el `state` de la ruta).
+    * **Estado:** Funcionalidad completada, robusta y validada.
 
 ### 7. ⏳ **Página de Estado del Pedido (`OrderStatusPage.tsx`)**
 
-    *   **Acceso:** Vía `/order-status/:orderId`. Lee `orderId` de URL y datos del `state`.
-    *   **Visualización:** Muestra `orderNumber`, estado general del `Order` (`orderStatus`), identificador de mesa, notas generales, y una lista de `OrderItem`s con su nombre (snapshot), cantidad y estado individual (`OrderItemStatus`).
-    *   **Polling Automático:** Refresca datos llamando a `GET /public/order/:orderId/status` cada ~10 segundos.
-    *   **Lógica de Pedido Finalizado:**
-        *   Si `orderStatus` es `PAID` o `CANCELLED`, el polling se detiene.
-        *   Se muestra mensaje "Pedido finalizado".
-        *   Botón "Actualizar" cambia a "Empezar Nuevo Pedido en esta Mesa". Al pulsar: limpia `activeOrderInfo_...`, `loyalpyme_public_cart_...`, `loyalpyme_public_order_notes_...` de `localStorage` para la mesa/negocio actual, y redirige a `/m/:businessSlug/:tableIdentifier`.
-    *   **Botones de Acción (si el pedido NO es final):**
-        *   "Actualizar Estado Manualmente": Llama a `GET /public/order/:orderId/status`.
-        *   "Volver al Menú": Enlaza a `/m/:businessSlug/:tableIdentifier`. La `PublicMenuViewPage` detectará el `activeOrderInfo` y mostrará el aviso de pedido en curso. **(Futuro: este botón podría cambiar a "Añadir más Ítems" si se implementa esa funcionalidad).**
-    *   _(Funcionalidad completada y estable para visualización y finalización básica. La visualización de ítems `SERVED` y estado `COMPLETED` dependerá del flujo de camarero)._
+    * **Acceso:** Vía `/order-status/:orderId`. Lee `orderId` de URL y `orderNumber`, `businessSlug`, `tableIdentifier` del `state` de navegación (pasados por `PublicMenuViewPage.tsx`).
+    * **Visualización:**
+        * Muestra `orderNumber`, `tableIdentifier`, estado general del `Order` (`orderStatus`), notas generales.
+        * Lista de `OrderItem`s: `itemNameSnapshot_es/en`, `quantity`, y estado individual (`OrderItemStatus`). Se debe asegurar que los estados `SERVED` y `COMPLETED` (del pedido general) se reflejen correctamente.
+    * **Polling Automático:** Refresca datos llamando a `GET /public/order/:orderId/status` cada ~10 segundos.
+    * **Lógica de Pedido Finalizado:**
+        * Si `orderStatus` es `PAID` o `CANCELLED` (obtenido del backend):
+            * El polling se detiene.
+            * Se muestra un mensaje apropiado (ej. "Pedido Pagado ¡Gracias!", "Pedido Cancelado").
+            * El botón "Actualizar" (si existe) cambia a "Empezar Nuevo Pedido en esta Mesa".
+            * Al pulsar "Empezar Nuevo Pedido...": se limpian de `localStorage` las claves `activeOrderInfo_...`, `loyalpyme_public_cart_...`, y `loyalpyme_public_order_notes_...` para la mesa/negocio actual, y se redirige a `/m/:businessSlug/:tableIdentifier`.
+    * **Botones de Acción (si el pedido NO es `PAID` o `CANCELLED`):**
+        * "Actualizar Estado Manualmente": Llama a `GET /public/order/:orderId/status`.
+        * "Volver al Menú": Enlaza a `/m/:businessSlug/:tableIdentifier`. `PublicMenuViewPage` detectará `activeOrderInfo` y mostrará el aviso de pedido en curso.
+        * **"[PENDIENTE - CRÍTICO]" Botón "Pedir la Cuenta":** (Ver Tarea B1.1 en `DEVELOPMENT_PLAN.md`). Se mostrará si el pedido está `IN_PROGRESS`, `PARTIALLY_READY`, `ALL_ITEMS_READY`, `COMPLETED`.
+    * **Estado:** Visualización y finalización básica (`PAID`/`CANCELLED`) completadas y estables. Se adaptará para el nuevo flujo de "Pedir Cuenta" y para mostrar correctamente el estado `COMPLETED` (todos los ítems servidos, antes del pago).
 
-### 8. ➕ **[PENDIENTE] Añadir Ítems a un Pedido Existente (Cliente)**
+### 8. ➕ **[PENDIENTE - ALTA/MEDIA PRIORIDAD] Añadir Ítems a un Pedido Existente (Cliente)**
 
-    *   **Flujo:** Desde `PublicMenuViewPage.tsx` (si hay un pedido activo no final) o desde `OrderStatusPage.tsx` (si el pedido no es final), el cliente podrá acceder a la carta para añadir nuevos ítems al `activeOrderIdForTable`.
-    *   **Backend:** Requerirá el endpoint `POST /public/order/:existingOrderId/add-items`.
-    *   _(Tarea B2.2 del `DEVELOPMENT_PLAN.md`)._
+    * **Flujo:**
+        * Desde `PublicMenuViewPage.tsx`: Si se detecta un `activeOrderInfo` y el pedido NO está `PAID` o `CANCELLED`, la UI debe permitir al cliente navegar la carta y añadir ítems. El carrito se usaría para acumular estos nuevos ítems. El botón de envío sería "Añadir al Pedido #X".
+        * Desde `OrderStatusPage.tsx`: Si el pedido NO está `PAID` o `CANCELLED`, un botón "Añadir más Ítems" podría llevar al cliente de vuelta a `PublicMenuViewPage.tsx` en este modo "añadir a pedido".
+    * **Backend:** Requerirá que el endpoint `POST /public/order/:existingOrderId/add-items` (o la ruta actual `POST /api/public/order/:orderId/items` que usa `OrderService.addItemsToOrder`) esté completamente operativo para esta funcionalidad, incluyendo el recálculo de totales y la posible transición de `Order.status` (ej. de `COMPLETED` o `PENDING_PAYMENT` de nuevo a `IN_PROGRESS`).
+    * _(Tarea B1.3 del `DEVELOPMENT_PLAN.md` actualizado)._
 
-### 9. 🙋 **[PENDIENTE] Interacciones Adicionales Durante la Estancia (Cliente)**
+### 9. 🙋 **[PENDIENTE - CRÍTICO] Pedir la Cuenta y Otras Interacciones (Cliente)**
 
-    *   Desde `PublicMenuViewPage` o `OrderStatusPage`:
-        *   **"Llamar Camarero":** Notifica al personal de sala.
-        *   **"Pedir la Cuenta":** Notifica al camarero, opcionalmente con preferencias de pago.
-        *   **"Solicitar Cancelación de Ítem":** Si el ítem está `PENDING_KDS` o `PREPARING` (temprano). Envía solicitud al KDS para aprobación.
-    *   _(Tareas B3.1 y B3.5 del `DEVELOPMENT_PLAN.md`)._
+    * Desde `OrderStatusPage.tsx` (si el pedido no está `PAID`/`CANCELLED`):
+        * **"Pedir la Cuenta":** Botón que llama a `POST /public/order/:orderId/request-bill`. El backend actualiza `Order.status` a `PENDING_PAYMENT` y/o `Order.isBillRequested = true`. La UI del cliente refleja "Cuenta solicitada".
+        * **"[PENDIENTE - BAJA PRIORIDAD MVP]" "Llamar Camarero":** (Tarea B3.1 del `DEVELOPMENT_PLAN.md`) Notifica al personal de sala (requiere sistema de notificación o polling por parte del camarero).
+        * **"[PENDIENTE - MEDIA PRIORIDAD]" "Solicitar Cancelación de Ítem":** (Tarea B3.5 del `DEVELOPMENT_PLAN.md`) Si el ítem está `PENDING_KDS` o `PREPARING`. Envía solicitud (`OrderItem.status = CANCELLATION_REQUESTED`).
+    * _(Tareas B1.1 del `DEVELOPMENT_PLAN.md` actualizado)._
 
-### 10. 💸 **[PENDIENTE] Proceso de Pago y Cierre de Sesión de Mesa**
+### 10. 💸 **[PENDIENTE - CRÍTICO] Proceso de Pago y Cierre de Sesión de Mesa**
 
-    *   Cliente solicita cuenta o camarero la presenta.
-    *   Pago gestionado por camarero/TPV (fuera del sistema MVP inicial o mediante futura integración TPV/Pago Online).
-    *   Camarero (o sistema TPV) marca el/los `Order`(s) como `PAID`.
-    *   `OrderStatusPage` del cliente refleja estado `PAID`, polling se detiene, se ofrece empezar nuevo pedido (limpiando `localStorage`).
-    *   Si cliente se identificó con LCo, el estado `PAID` del `Order` dispara asignación de puntos (Integración LCo-LC futura).
+    * Cliente ha solicitado cuenta, `Order.status` es `PENDING_PAYMENT`.
+    * Camarero gestiona el cobro (físicamente).
+    * Camarero usa su interfaz para marcar el `Order` como `PAID` (ver Flujo del Personal de Sala).
+    * `OrderStatusPage.tsx` del cliente (vía polling) detecta `Order.status = PAID`.
+        * Muestra mensaje de agradecimiento.
+        * Activa la lógica de "Pedido Finalizado" (limpieza de `localStorage` para `activeOrderInfo` etc., botón para "Empezar Nuevo Pedido").
+    * Si el cliente estaba identificado con LCo y el negocio tiene LCo activo:
+        * El backend (al marcar `Order.status = PAID` en `OrderService.markOrderAsPaid`) automáticamente calcula y asigna puntos al `User.points`, actualiza `User.totalSpend`, `User.totalVisits`, y crea un `ActivityLog` de tipo `POINTS_EARNED_ORDER_LC`. Se dispara la reevaluación del `Tier`.
+    * _(Tareas B1.2 y parte de D7 del `DEVELOPMENT_PLAN.md` actualizado)._
 
 ---
 
-## 👨‍🍳 **II. Flujo del Personal de Cocina/Barra (KDS - Kitchen Display System) - [FUNCIONALIDAD BASE COMPLETADA CON ACCIONES]**
+## 👨‍🍳 **II. Flujo del Personal de Cocina/Barra (KDS - Kitchen Display System) - [COMPLETADO Y VALIDADO]**
 
 El KDS (`KitchenDisplayPage.tsx`) es el panel de control digital para la preparación eficiente y coordinada de los pedidos. Accesible por roles `KITCHEN_STAFF`, `BAR_STAFF`, `BUSINESS_ADMIN` en `/admin/kds`.
 
 ### 1. 🖥️ **Acceso y Visualización de Comandas/Ítems**
 
-    *   **Autenticación:** Login estándar de usuario.
-    *   **Selección de Destino:** `SegmentedControl` para elegir el `kdsDestination` a visualizar (ej. "COCINA", "BARRA").
-    *   **Cola de `OrderItem`s:**
-        *   Se obtienen mediante `GET /api/camarero/kds/items` filtrando por el `kdsDestination` seleccionado y los estados `PENDING_KDS` y `PREPARING`.
-        *   Ordenados por `Order.createdAt` (más antiguos primero).
-    *   **Tarjeta de `OrderItem` Detallada:**
-        *   Muestra claramente: `orderNumber`, `table.identifier` (si aplica), hora del pedido.
-        *   Nombre del ítem (`menuItemNameSnapshot_es/en`), cantidad.
-        *   Lista de modificadores seleccionados (nombres i18n).
-        *   Notas del ítem (si las hay).
-        *   Estado actual del `OrderItem` (ej. "Recibido en cocina", "En preparación") con un `Badge` coloreado.
-    *   **Refresco Automático:** La lista se actualiza mediante polling (cada ~15s). El polling se pausa durante una acción de actualización de estado. Botón de refresco manual disponible.
+    * **Autenticación:** Login estándar de usuario con roles KDS.
+    * **Selección de Destino:** `SegmentedControl` para elegir el `kdsDestination` ("COCINA", "BARRA").
+    * **Cola de `OrderItem`s:**
+        * Obtenidos mediante `GET /api/camarero/kds/items` (filtrado por destino y estados `PENDING_KDS`, `PREPARING`).
+        * Ordenados por `Order.createdAt`.
+    * **Tarjeta de `OrderItem` Detallada:** Muestra `orderNumber`, `table.identifier`, hora, nombre del ítem (i18n), cantidad, modificadores (i18n), notas, estado actual del ítem.
+    * **Refresco Automático:** Polling (cada ~15s), pausado durante actualizaciones. Botón de refresco manual.
+    * **Estado:** Funcionalidad completada y validada.
 
 ### 2. 🔄 **Gestión del Estado de Preparación de Ítems (`PATCH /api/camarero/kds/items/:orderItemId/status`)**
 
-    *   **Botones de Acción en cada Tarjeta de `OrderItem`:**
-        *   **Si `OrderItem.status` es `PENDING_KDS`:**
-            *   Botón "Empezar Preparación": Llama al PATCH endpoint para cambiar `OrderItem.status` a `PREPARING`.
-            *   Botón "Cancelar Ítem": Llama al PATCH endpoint para cambiar `OrderItem.status` a `CANCELLED`.
-        *   **Si `OrderItem.status` es `PREPARING`:**
-            *   Botón "Marcar como Listo": Llama al PATCH endpoint para cambiar `OrderItem.status` a `READY`.
-            *   Botón "Cancelar Ítem": Llama al PATCH endpoint para cambiar `OrderItem.status` a `CANCELLED`.
-            *   (Opcional futuro: Botón "Volver a Pendiente" si se inició por error).
-    *   **Feedback:** Estado de carga en el botón presionado. Notificaciones Mantine de éxito/error.
-    *   **Actualización de UI:** Tras una acción exitosa, la lista de ítems se refresca (actualmente vía `fetchKdsItems`). El ítem actualizado cambiará su `Badge` de estado o desaparecerá si su nuevo estado ya no coincide con los filtros del KDS (ej. si pasa a `READY` y el KDS solo muestra `PENDING_KDS` y `PREPARING`).
-    *   **Impacto en `Order.status` (Backend):** El servicio backend (`kds.service.ts`) actualiza el `Order.status` general (`RECEIVED` -> `IN_PROGRESS` -> `PARTIALLY_READY` -> `ALL_ITEMS_READY`) de forma consistente y validada.
+    * **Botones de Acción en cada Tarjeta de `OrderItem`:**
+        * Si `PENDING_KDS`: "Empezar Preparación" (-> `PREPARING`), "Cancelar Ítem" (-> `CANCELLED`).
+        * Si `PREPARING`: "Marcar como Listo" (-> `READY`), "Cancelar Ítem" (-> `CANCELLED`).
+    * **Feedback:** Estado de carga en botón, notificaciones Mantine.
+    * **Actualización de UI:** La lista se refresca; el ítem cambia o desaparece.
+    * **Impacto en `Order.status` (Backend):** `kds.service.ts` actualiza `Order.status` (`RECEIVED` -> `IN_PROGRESS` -> `PARTIALLY_READY` -> `ALL_ITEMS_READY`). Lógica validada.
+    * **Estado:** Funcionalidad completada y validada.
 
-### 3. ⏱️ **[PENDIENTE - KDS AVANZADO] Gestión de Tiempos y Alertas (Tarea B2.KDS1)**
+### 3. ⏱️ **[PENDIENTE - KDS AVANZADO] Gestión de Tiempos y Alertas**
 
-    *   Mostrar `preparationTime` del `MenuItem` en la tarjeta.
-    *   Iniciar temporizador visible cuando un ítem pasa a `PREPARING`.
-    *   Alertas visuales/sonoras si se excede `preparationTime`.
+    * _(Como en DEVELOPMENT_PLAN.md Tarea B2.3)_
 
-### 4. 📦 **[PENDIENTE - KDS AVANZADO] Agrupación por Cursos y Sincronización de "Pases" (Tarea B2.KDS1)**
+### 4. 📦 **[PENDIENTE - KDS AVANZADO] Agrupación por Cursos y Sincronización de "Pases"**
 
-    *   **Objetivo:** Coordinar la preparación y entrega de platos por cursos (entrantes, principales, postres).
-    *   **Backend:** `MenuItem` necesita un campo `course` (o usar `tags`). API de KDS debe incluir esta info.
-    *   **KDS Frontend:** Agrupar visualmente ítems por curso. Lógica para que el KDS pueda "lanzar" la preparación de un curso y notificar "Pase Listo" a la interfaz de camarero.
+    * _(Como en DEVELOPMENT_PLAN.md Tarea B2.3)_
 
-### 5. 🚫 **[PENDIENTE - KDS AVANZADO] Gestión de Incidencias**
+### 5. 🚫 **[PENDIENTE - MEDIA PRIORIDAD] Gestión de Incidencias por KDS**
 
-    *   **Rechazar Ítem:** Si un ítem no se puede preparar, KDS lo marca (ej. `REJECTED`) y notifica al camarero/cliente.
-    *   **Gestión de Solicitudes de Cancelación de Cliente (Tarea B3.4):** KDS ve `OrderItem.status = CANCELLATION_REQUESTED`. Puede "Aceptar" (`CANCELLED`) o "Rechazar" (revierte estado). Notifica al cliente.
+    * **Rechazar Ítem:** Si un ítem no se puede preparar, KDS lo marca (ej. `REJECTED_KDS`, un nuevo `OrderItemStatus`). Esto debería notificar al camarero y/o cliente.
+    * **Gestión de Solicitudes de Cancelación de Cliente:** Si cliente solicita cancelar (`OrderItem.status = CANCELLATION_REQUESTED`):
+        * KDS ve la solicitud. Puede "Aceptar Cancelación" (-> `CANCELLED`) o "Rechazar Cancelación" (revierte a `PREPARING` o `PENDING_KDS`).
+        * Notifica al cliente del resultado a través de `OrderStatusPage.tsx`.
+    * _(Parte de Tarea B3.5 del `DEVELOPMENT_PLAN.md`)_
 
 ---
 
-## 🤵 **III. Flujo del Personal de Sala/Camareros (Interfaz de Camarero) - [BLOQUE DE DESARROLLO ACTUAL]**
+## 🤵 **III. Flujo del Personal de Sala/Camareros (Interfaz de Camarero) - [ENTREGA DE ÍTEMS COMPLETADA, PENDIENTE CICLO DE PAGO]**
 
-Esta sección describe la funcionalidad **pendiente de implementar** para el rol `WAITER`.
+Esta sección detalla la funcionalidad actual y pendiente para el rol `WAITER` a través de la `WaiterPickupPage.tsx` y futuras interfaces.
 
-### 1. 🔑 **[PENDIENTE] Acceso y Vista General (Interfaz Camarero)**
+### 1. 🔑 **Acceso y Vista General (Interfaz Camarero)**
 
-    *   **Autenticación:** Login estándar para `UserRole.WAITER` (email/password) o futuro login rápido con `StaffPin`.
-    *   **Panel Principal (`WaiterDashboardPage.tsx` o similar):**
-        *   **Notificaciones Activas:**
-            *   **"Ítems/Pases Listos para Recoger" del KDS (Prioridad Actual - Tarea B1.1, B1.2):** Lista de `OrderItem`s que están en estado `READY`.
-            *   (Futuro) Llamadas de mesa desde cliente (con motivo).
-            *   (Futuro) Solicitudes de cuenta desde cliente (con preferencias de pago).
-        *   **(Futuro - Gestión de Mesas) Vista de Mesas:** Lista/cuadrícula de `Table`s del negocio con su estado (`identifier`, "Libre", "Ocupada", "Pedido Activo", "Cuenta Solicitada", "Necesita Limpieza").
+    * **Autenticación:** Login estándar para `UserRole.WAITER` (email/password). (Futuro: login rápido con `StaffPin`).
+    * **Panel Principal Actual (`WaiterPickupPage.tsx` en `/admin/camarero/pickup-station`):**
+        * **"Ítems Listos para Recoger":** Lista de `OrderItem`s que están en estado `READY`, obtenidos de `GET /api/camarero/staff/ready-for-pickup`.
+    * **[PENDIENTE] Panel Principal Mejorado (`WaiterDashboardPage.tsx` o similar):**
+        * **Notificaciones Activas:**
+            * "Ítems/Pases Listos para Recoger" (funcionalidad actual).
+            * "Mesas/Pedidos Solicitando Cuenta" (de Tarea B1.1).
+            * (Futuro) "Llamadas de Mesa" de clientes.
+        * **(Futuro - Tarea B3.2) Vista de Mesas:** Lista/cuadrícula de `Table`s con su estado (`identifier`, estado actual: `AVAILABLE`, `OCCUPIED`, `PENDING_PAYMENT_TABLE`, `NEEDS_CLEANING`).
 
-### 2. 🛎️ **[PENDIENTE] Recepción y Gestión de Notificaciones (Interfaz Camarero)**
+### 2. 🛎️ **Recepción y Gestión de Notificaciones (Interfaz Camarero)**
 
-    *   **Actualización "Ítems Listos":** La lista de ítems listos para recoger se actualizará mediante polling o un botón de refresco (MVP). (Futuro: SSE/WebSockets para tiempo real).
-    *   **(Futuro) Notificaciones de Llamada/Cuenta:** Alertas visuales/sonoras para nuevas solicitudes de clientes.
+    * **Actualización "Ítems Listos":** La lista en `WaiterPickupPage.tsx` se actualiza mediante polling. (Futuro: SSE/WebSockets).
+    * **[PENDIENTE] Notificaciones de Solicitud de Cuenta:** Alertas visuales/sonoras para nuevas solicitudes de clientes (de Tarea B1.1).
 
-### 3. 🍽️ **[PENDIENTE - PRIORIDAD ACTUAL] Recogida y Entrega de Pedidos (Interfaz Camarero - Tarea B1.1, B1.2)**
+### 3. 🍽️ **Recogida y Entrega de Pedidos (Interfaz Camarero - `WaiterPickupPage.tsx`) - [COMPLETADO Y VALIDADO]**
 
-    *   **Visualización:** El camarero ve la lista de `OrderItem`s (`ReadyPickupItemDto`) que están `READY`.
-    *   **Acción "Marcar como Servido":**
-        *   En cada ítem/pase listo, un botón "Servido".
-        *   Al pulsar, llama a `PATCH /api/camarero/staff/order-items/:orderItemId/status` (con `newStatus: SERVED`).
-        *   El `OrderItem.status` se actualiza a `SERVED` y se registra `servedAt`.
-        *   El ítem desaparece de la lista de "pendientes de recoger".
-    *   **Impacto en `Order.status` (Backend):**
-        *   Cuando todos los `OrderItem`s activos de un `Order` se marcan como `SERVED`, el `Order.status` general del pedido cambia a `COMPLETED`.
-        *   El cliente verá este estado `COMPLETED` en su `OrderStatusPage.tsx`.
+    * **Visualización:** El camarero ve la lista de `OrderItem`s (`ReadyPickupItemDto`) que están `READY`, con detalles del pedido, mesa, ítem y modificadores.
+    * **Acción "Marcar como Servido":**
+        * Botón "Servido" en cada ítem.
+        * Al pulsar, llama a `PATCH /api/camarero/staff/order-items/:orderItemId/status` (con `newStatus: SERVED`).
+        * El `OrderItem.status` se actualiza a `SERVED`, se registra `servedAt` y `servedById`.
+        * El ítem desaparece de la lista de "pendientes de recoger".
+    * **Impacto en `Order.status` (Backend):**
+        * Cuando todos los `OrderItem`s activos de un `Order` se marcan como `SERVED`, el `Order.status` general del pedido cambia a `COMPLETED`.
+        * El cliente ve este estado `COMPLETED` en su `OrderStatusPage.tsx`.
+    * **Estado:** Funcionalidad de entrega de ítems y marcado de pedido como `COMPLETED` está operativa.
 
-### 4. ✍️ **[PENDIENTE - Post-MVP Camarero Básico] Toma de Pedidos Manual por el Camarero (Tarea B3.2)**
+### 4. 💸 **[PENDIENTE - CRÍTICO] Gestión de Cuentas y Pago (Interfaz Camarero - Tareas B1.1 y B1.2)**
 
-    *   Seleccionar mesa (de la Vista de Mesas).
-    *   Acceder a una UI de la carta similar a la del cliente.
-    *   Añadir ítems, configurar modificadores, cantidad, notas.
-    *   Opción para "Ítem Fuera de Carta" con nombre y precio manuales.
-    *   Enviar el pedido al KDS (asociado a la mesa, `waiterId`, y con `source: WAITER_APP`).
-    *   Considerar cómo se visualizan los pedidos de una mesa si múltiples clientes y/o camareros están añadiendo ítems a la misma.
+    * **Visualizar Pedidos para Cobro:**
+        * En la (futura) vista de mesas o lista de pedidos del camarero, se deben destacar los pedidos con `Order.status = PENDING_PAYMENT`.
+    * **Procesar Pago y Marcar como Pagado:**
+        * Acción "Registrar Pago" / "Marcar Como Pagada" para un pedido en `PENDING_PAYMENT`.
+        * (Opcional) Modal para que el camarero introduzca el método de pago utilizado (`paymentMethodUsed`) y notas del pago.
+        * Llamar a `POST /api/camarero/staff/order/:orderId/mark-as-paid` con los detalles.
+        * **Backend:** `OrderService.markOrderAsPaid` actualiza `Order.status = PAID`, `paidAt`, `paidByUserId`, `paymentMethodUsed`.
+    * **Liberar Mesa:**
+        * **Backend:** Después de marcar como `PAID`, el `OrderService` actualiza `Table.status` a `AVAILABLE` (o `NEEDS_CLEANING`).
+        * **Frontend (Camarero):** La vista de mesas debe reflejar la mesa como disponible.
+    * **Impacto en Cliente:** `OrderStatusPage.tsx` del cliente refleja `PAID`, se limpia `localStorage`.
+    * **Impacto en LCo:** Si aplica, se disparará la asignación de puntos.
 
-### 5. 💰 **[PENDIENTE - Post-MVP Camarero Básico / Integración TPV] Gestión de Cuentas y Pago**
+### 5. ✍️ **[PENDIENTE - MEDIA PRIORIDAD] Toma de Pedidos Manual por el Camarero (Tarea B3.2)**
 
-    *   **Visualizar Cuenta de Mesa:** Ver todos los `Order`s activos y sus `OrderItem`s para una `TableIdentifier` o un `Order` específico.
-    *   **Procesar Pago:**
-        *   Marcar un `Order` individual o todos los `Order`s de una mesa como `PAID`.
-        *   **Este estado `PAID` es el trigger final para:**
-            *   Lógica de "Pedido Finalizado" en `OrderStatusPage.tsx` del cliente (limpieza de `localStorage`).
-            *   (Futuro) Acumulación de puntos LCo si el pedido tiene `customerLCoId`.
-    *   **(Avanzado - Tarea B3.6) Transferencia de Ítems / División de Cuenta (Manual):** Herramientas para que el camarero mueva ítems entre sub-cuentas de una mesa o marque cómo se divide el pago.
-    *   **Cerrar/Liberar Mesa:** Marcar mesa como `LIBRE` o `NECESITA_LIMPIEZA` tras el pago y partida.
+    * _(Como en DEVELOPMENT_PLAN.md)_
 
 ---
 
@@ -207,28 +247,26 @@ El `BUSINESS_ADMIN` configura y supervisa el Módulo Camarero desde el panel de 
 
 ### 1. ⚙️ **Gestión de Carta Digital [COMPLETADO]**
 
-    *   CRUD completo de `MenuCategory`, `MenuItem`, `ModifierGroup`, `ModifierOption` a través de la UI en `/admin/dashboard/camarero/menu-editor`.
-    *   Subida de imágenes, configuración i18n, precios, disponibilidad, etc.
+    * CRUD completo de `MenuCategory`, `MenuItem`, `ModifierGroup`, `ModifierOption` funcional.
 
-### 2. 🪑 **[PENDIENTE] Gestión de Mesas (Tarea B3.3)**
+### 2. 🪑 **[PENDIENTE - MEDIA PRIORIDAD] Gestión de Mesas (Tarea B3.3)**
 
-    *   CRUD para `Table`s: `identifier` (ej. "MESA-1", "TERRAZA-A2"), `zone`, `capacity`.
-    *   Generación de QR para cada mesa que enlaza a `/m/:businessSlug/:tableIdentifier`.
+    * CRUD para `Table`s (`identifier`, `zone`, `capacity`).
+    * Generación de QR para cada mesa.
 
-### 3. 🧑‍💼 **[PENDIENTE] Gestión de Personal de LC (Tarea B3.3 y enlace a B3.4)**
+### 3. 🧑‍💼 **[PENDIENTE - MEDIA PRIORIDAD] Gestión de Personal de LC (Tarea B3.3 y enlace a B3.4)**
 
-    *   CRUD para usuarios con roles `WAITER`, `KITCHEN_STAFF`, `BAR_STAFF` asociados al negocio.
-    *   Gestión de `StaffPin`s para login rápido.
-    *   **(Futuro - Tarea B3.4) Asignación de roles personalizados y/o permisos granulares** (ej. qué KDS puede ver/actualizar un `KITCHEN_STAFF` específico).
+    * CRUD para usuarios con roles `WAITER`, `KITCHEN_STAFF`, `BAR_STAFF`.
+    * Gestión de `StaffPin`s.
+    * (Futuro) Asignación de roles personalizados / permisos granulares.
 
-### 4. 🖥️ **[PENDIENTE] Configuración de Destinos KDS (Tarea B3.3)**
+### 4. 🖥️ **[PENDIENTE - MEDIA PRIORIDAD] Configuración de Destinos KDS (Tarea B3.3)**
 
-    *   UI para que el admin defina los `kdsDestination` válidos para su negocio (ej. "COCINA", "BARRA", "POSTRES").
-    *   Estos destinos se usarán al configurar el campo `kdsDestination` de los `MenuItem`s.
+    * UI para definir `kdsDestination` válidos.
 
 ### 5. 📊 **[PENDIENTE - BAJA PRIORIDAD MVP] Supervisión de Pedidos en Tiempo Real (Admin)**
 
-    *   Una vista en el panel de admin para ver los pedidos en curso, sus estados generales y los estados de los ítems, similar a una vista maestra del KDS o de la actividad de los camareros, pero sin las funciones operativas directas. Útil para supervisión y análisis.
+    * Vista de supervisión de pedidos en curso.
 
 ---
 
