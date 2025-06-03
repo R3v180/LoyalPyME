@@ -42,7 +42,8 @@
     "errorMustBePositiveOrZero": "Debe ser un número igual o mayor que 0.",
     "nameNotAvailable": "(Sin nombre)",
     "saveChanges": "Guardar Cambios",
-    "camera": "Cámara"
+    "camera": "Cámara",
+    "item": "Ítem"
   },
   "validation": {
     "cannotBeZero": "La cantidad no puede ser cero.",
@@ -255,7 +256,7 @@
       "desc_ADJUSTED_REASON": "Ajuste manual: {{reason}}"
     },
     "rewards": {
-        "affordable": "Asequible"
+      "affordable": "Asequible"
     }
   },
   "adminCommon": {
@@ -908,9 +909,26 @@
       "orderErrorMsg": "No se pudo enviar tu pedido. Por favor, inténtalo de nuevo o contacta con el personal.",
       "clearCartButton": "Vaciar Carrito",
       "clearedTitle": "Carrito Vacío",
-      "clearedMsg": "Se han eliminado todos los ítems de tu pedido."
+      "clearedMsg": "Se han eliminado todos los ítems de tu pedido.",
+      "titleAddToOrder": "Añadir a Pedido #{{orderNumber}}",
+      "submitAddToOrder": "Añadir al Pedido",
+      "emptyAddToOrder": "Selecciona ítems para añadir a tu pedido.",
+      "totalAddItems": "Total a Añadir:",
+      "addItemsToOrderButton": "Añadir {{count}} ítems al Pedido #{{orderNumber}}",
+      "itemsAddedSuccessTitle": "Ítems Añadidos",
+      "itemsAddedSuccessMsg": "Ítems añadidos al pedido #{{orderNumber}}.",
+      "addItemsErrorTitle": "Error al Añadir Ítems"
     },
-    "unnamedModifier": "Modificador sin nombre"
+    "unnamedModifier": "Modificador sin nombre",
+    "activeOrder": {
+      "addingToOrderTitle": "Añadiendo al Pedido #{{orderNumber}}",
+      "addingToOrderMsg": "Los nuevos ítems se añadirán a tu pedido en curso.",
+      "viewStatusButton": "Ver Estado del Pedido",
+      "cannotAddTitle": "No se pueden añadir ítems al Pedido #{{orderNumber}}",
+      "cannotAddMsg": "El pedido ya no acepta nuevos ítems. Comienza un nuevo pedido.",
+      "startNewButton": "Empezar Nuevo Pedido",
+      "startNewButtonAlt": "Crear Pedido Nuevo"
+    }
   },
   "error": {
     "missingBusinessSlug": "Error: Slug del negocio no proporcionado.",
@@ -932,6 +950,7 @@
     "orderNotesLabel": "Notas Generales del Pedido",
     "refreshButton": "Actualizar Estado",
     "backToMenuButton": "Volver al Menú",
+    "addMoreItemsButton": "Añadir más ítems",
     "itemStatus": {
       "pending_kds": "Recibido en cocina",
       "preparing": "En preparación",
@@ -951,30 +970,41 @@
       "cancelled": "Cancelado",
       "payment_failed": "Pago Fallido"
     },
-      "kdsPage": {
-    "title": "Pantalla de Cocina (KDS)",
-    "destination": {
-      "kitchen": "COCINA",
-      "bar": "BARRA"
-    },
-    "unknownItem": "Ítem Desconocido",
-    "noItems": "No hay ítems pendientes para este destino.",
-    "quantity": "Cantidad",
-    "notes": "Notas",
-    "noTable": "Sin Mesa",
-    "createdAt": "Recibido KDS",
-    "modifiers": "Modificadores:",
-    "statusUpdateSuccessTitle": "Estado Actualizado",
-    "statusUpdateSuccessMsg": "El ítem \"{{itemName}}\" se actualizó a {{status}}.",
-    "statusUpdateErrorMsg": "Error al actualizar estado del ítem.",
-    "updateInProgressTitle": "Actualización en Progreso",
-    "updateInProgressMsg": "Espera a que finalice la acción actual antes de iniciar otra.",
-    "refreshManual": "Refrescar Manualmente",
-    "action": {
-      "startPreparing": "Empezar Preparación",
-      "markReady": "Marcar como Listo",
-      "cancelItem": "Cancelar Ítem"
+    "kdsPage": {
+      "title": "Pantalla de Cocina (KDS)",
+      "destination": {
+        "kitchen": "COCINA",
+        "bar": "BARRA"
+      },
+      "unknownItem": "Ítem Desconocido",
+      "noItems": "No hay ítems pendientes para este destino.",
+      "quantity": "Cantidad",
+      "notes": "Notas",
+      "noTable": "Sin Mesa",
+      "createdAt": "Recibido KDS",
+      "modifiers": "Modificadores:",
+      "statusUpdateSuccessTitle": "Estado Actualizado",
+      "statusUpdateSuccessMsg": "El ítem \"{{itemName}}\" se actualizó a {{status}}.",
+      "statusUpdateErrorMsg": "Error al actualizar estado del ítem.",
+      "updateInProgressTitle": "Actualización en Progreso",
+      "updateInProgressMsg": "Espera a que finalice la acción actual antes de iniciar otra.",
+      "refreshManual": "Refrescar Manualmente",
+      "action": {
+        "startPreparing": "Empezar Preparación",
+        "markReady": "Marcar como Listo",
+        "cancelItem": "Cancelar Ítem"
+      }
     }
-  }
+  },
+  "waiterInterface": {
+    "pickupPageTitle": "Pedidos Listos para Recoger y Servir",
+    "noItemsReady": "No hay ítems listos para recoger en este momento.",
+    "orderNumber": "Pedido",
+    "pickupFrom": "Recoger de",
+    "markAsServedButton": "Marcar como Servido",
+    "actionInProgress": "Por favor, espera a que la acción actual termine.",
+    "itemMarkedServedSuccess": "Ítem '{{itemName}}' marcado como servido.",
+    "errorMarkingServed": "Error al marcar el ítem como servido.",
+    "navLinkPickup": "Recoger Pedidos"
   }
 }

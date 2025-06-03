@@ -42,7 +42,8 @@
     "errorMustBePositiveOrZero": "Must be a number equal to or greater than 0.",
     "nameNotAvailable": "(No name)",
     "saveChanges": "Save Changes",
-    "camera": "Camera"
+    "camera": "Camera",
+    "item": "Item"
   },
   "validation": {
     "cannotBeZero": "The amount cannot be zero.",
@@ -255,7 +256,7 @@
       "desc_ADJUSTED_REASON": "Manual adjustment: {{reason}}"
     },
     "rewards": {
-        "affordable": "Affordable"
+      "affordable": "Affordable"
     }
   },
   "adminCommon": {
@@ -344,11 +345,11 @@
       "errorNameRequired": "Reward name cannot be empty.",
       "errorPointsCostInvalid": "Points cost must be a number equal to or greater than zero.",
       "nameEsLabel": "Name (ES)",
-      "nameEsPlaceholder": "Ej: Café Gratis",
+      "nameEsPlaceholder": "E.g.: Café Gratis",
       "nameEnLabel": "Name (EN)",
       "nameEnPlaceholder": "E.g.: Free Coffee",
       "descriptionEsLabel": "Description (ES, Optional)",
-      "descriptionEsPlaceholder": "Ej: Un café espresso o americano",
+      "descriptionEsPlaceholder": "E.g.: Un café espresso o americano",
       "descriptionEnLabel": "Description (EN, Optional)",
       "descriptionEnPlaceholder": "E.g.: One espresso or americano coffee",
       "imageLabel": "Image",
@@ -830,33 +831,33 @@
       }
     },
     "modifierOption": {
-        "statusAvailable": "Available",
-        "statusNotAvailable": "Not Avail.",
-        "tooltipEditOption": "Edit Option",
-        "tooltipMarkAvailable": "Mark Available",
-        "tooltipMarkNotAvailable": "Mark Not Available",
-        "tooltipDeleteOption": "Delete Option"
+      "statusAvailable": "Available",
+      "statusNotAvailable": "Not Avail.",
+      "tooltipEditOption": "Edit Option",
+      "tooltipMarkAvailable": "Mark Available",
+      "tooltipMarkNotAvailable": "Mark Not Available",
+      "tooltipDeleteOption": "Delete Option"
     },
     "modifierGroupHook": {
-        "errorNoMenuItemForGroup": "Error: Cannot add a group without an associated menu item.",
-        "fallbackGroupName": "Group",
-        "createSuccess": "Group '{{name}}' created successfully.",
-        "updateSuccess": "Group '{{name}}' updated successfully.",
-        "deleteSuccess": "Modifier group deleted successfully."
+      "errorNoMenuItemForGroup": "Error: Cannot add a group without an associated menu item.",
+      "fallbackGroupName": "Group",
+      "createSuccess": "Group '{{name}}' created successfully.",
+      "updateSuccess": "Group '{{name}}' updated successfully.",
+      "deleteSuccess": "Modifier group deleted successfully."
     },
     "modifierOptionHook": {
-        "errorLoadingOptions": "Error loading modifier options.",
-        "errorNoGroupForOption": "Cannot add an option without an associated modifier group.",
-        "createSuccess": "Option \"{{optionName}}\" created successfully.",
-        "fallbackOptionName": "Option",
-        "errorCreatingOption": "Error creating option.",
-        "updateSuccess": "Option \"{{optionName}}\" updated successfully.",
-        "errorUpdatingOption": "Error updating option.",
-        "deleteSuccess": "Modifier option deleted successfully.",
-        "errorDeletingOption": "Error deleting option."
+      "errorLoadingOptions": "Error loading modifier options.",
+      "errorNoGroupForOption": "Cannot add an option without an associated modifier group.",
+      "createSuccess": "Option \"{{optionName}}\" created successfully.",
+      "fallbackOptionName": "Option",
+      "errorCreatingOption": "Error creating option.",
+      "updateSuccess": "Option \"{{optionName}}\" updated successfully.",
+      "errorUpdatingOption": "Error updating option.",
+      "deleteSuccess": "Modifier option deleted successfully.",
+      "errorDeletingOption": "Error deleting option."
     },
     "menuItemHook": {
-        "errorNoCategoryForItem": "Cannot add an item without a selected category."
+      "errorNoCategoryForItem": "Cannot add an item without a selected category."
     }
   },
   "publicMenu": {
@@ -908,12 +909,102 @@
       "orderErrorMsg": "Could not send your order. Please try again or contact staff.",
       "clearCartButton": "Clear Cart",
       "clearedTitle": "Cart Cleared",
-      "clearedMsg": "All items have been removed from your order."
+      "clearedMsg": "All items have been removed from your order.",
+      "titleAddToOrder": "Add to Order #{{orderNumber}}",
+      "submitAddToOrder": "Add to Order",
+      "emptyAddToOrder": "Select items to add to your order.",
+      "totalAddItems": "Total to Add:",
+      "addItemsToOrderButton": "Add {{count}} items to Order #{{orderNumber}}",
+      "itemsAddedSuccessTitle": "Items Added",
+      "itemsAddedSuccessMsg": "Items added to order #{{orderNumber}}.",
+      "addItemsErrorTitle": "Error Adding Items"
     },
-    "unnamedModifier": "Unnamed Modifier"
+    "unnamedModifier": "Unnamed Modifier",
+    "activeOrder": {
+      "addingToOrderTitle": "Adding to Order #{{orderNumber}}",
+      "addingToOrderMsg": "New items will be added to your current order.",
+      "viewStatusButton": "View Order Status",
+      "cannotAddTitle": "Cannot add items to Order #{{orderNumber}}",
+      "cannotAddMsg": "The order no longer accepts new items. Please start a new order.",
+      "startNewButton": "Start New Order",
+      "startNewButtonAlt": "Create New Order"
+    }
   },
   "error": {
     "missingBusinessSlug": "Error: Business slug not provided.",
     "noMenuDataReceived": "No menu data received."
+  },
+  "orderStatusPage": {
+    "title": "Your Order Status",
+    "error": {
+      "missingOrderId": "No order ID specified.",
+      "noData": "No order status data received.",
+      "notFound": "Order not found or unavailable.",
+      "updateFailed": "Could not update status: {{message}}"
+    },
+    "generalStatus": "General Status:",
+    "table": "Table:",
+    "placedAt": "Placed at:",
+    "itemsTitle": "Order Items",
+    "quantity": "Quantity:",
+    "orderNotesLabel": "General Order Notes",
+    "refreshButton": "Refresh Status",
+    "backToMenuButton": "Back to Menu",
+    "addMoreItemsButton": "Add More Items",
+    "itemStatus": {
+      "pending_kds": "Received in Kitchen",
+      "preparing": "Preparing",
+      "ready": "Ready for Pickup",
+      "served": "Served",
+      "cancelled": "Cancelled",
+      "cancellation_requested": "Cancellation Requested"
+    },
+    "orderStatus": {
+      "received": "Received",
+      "in_progress": "In Progress",
+      "partially_ready": "Partially Ready",
+      "all_items_ready": "All Items Ready",
+      "completed": "Completed",
+      "pending_payment": "Pending Payment",
+      "paid": "Paid",
+      "cancelled": "Cancelled",
+      "payment_failed": "Payment Failed"
+    },
+    "kdsPage": {
+      "title": "Kitchen Display System (KDS)",
+      "destination": {
+        "kitchen": "KITCHEN",
+        "bar": "BAR"
+      },
+      "unknownItem": "Unknown Item",
+      "noItems": "No pending items for this destination.",
+      "quantity": "Quantity",
+      "notes": "Notes",
+      "noTable": "No Table",
+      "createdAt": "KDS Received",
+      "modifiers": "Modifiers:",
+      "statusUpdateSuccessTitle": "Status Updated",
+      "statusUpdateSuccessMsg": "Item \"{{itemName}}\" updated to {{status}}.",
+      "statusUpdateErrorMsg": "Error updating item status.",
+      "updateInProgressTitle": "Update in Progress",
+      "updateInProgressMsg": "Please wait for the current action to complete.",
+      "refreshManual": "Refresh Manually",
+      "action": {
+        "startPreparing": "Start Preparing",
+        "markReady": "Mark as Ready",
+        "cancelItem": "Cancel Item"
+      }
+    }
+  },
+  "waiterInterface": {
+    "pickupPageTitle": "Orders Ready for Pickup & Serving",
+    "noItemsReady": "No items currently ready for pickup.",
+    "orderNumber": "Order",
+    "pickupFrom": "Pick up from",
+    "markAsServedButton": "Mark as Served",
+    "actionInProgress": "Please wait for the current action to complete.",
+    "itemMarkedServedSuccess": "Item '{{itemName}}' marked as served.",
+    "errorMarkingServed": "Error marking item as served.",
+    "navLinkPickup": "Pickup Orders"
   }
 }
