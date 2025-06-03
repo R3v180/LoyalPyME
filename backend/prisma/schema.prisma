@@ -2,7 +2,7 @@
 
 generator client {
   provider        = "prisma-client-js"
-  output          = "../node_modules/.prisma/client"
+  output          = "../node_modules/.prisma/client" // Mantengo tu output
   previewFeatures = ["postgresqlExtensions"]
 }
 
@@ -69,8 +69,8 @@ enum OrderStatus {
   PARTIALLY_READY
   ALL_ITEMS_READY
   COMPLETED
-  PENDING_PAYMENT
-  PAID
+  PENDING_PAYMENT // Ya existía, crucial
+  PAID // Ya existía, crucial
   CANCELLED
   PAYMENT_FAILED
 }
@@ -90,6 +90,7 @@ enum OrderType {
   DELIVERY
 }
 
+// MODIFICADO: TableNotificationType no se usa en este flujo inmediato, pero lo mantengo
 enum TableNotificationType {
   CALL_WAITER
   REQUEST_BILL
@@ -102,6 +103,15 @@ enum ReservationStatus {
   SEATED
   COMPLETED
   NO_SHOW
+}
+
+// NUEVO ENUM para el estado de las mesas (lo habías definido, lo integro)
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  PENDING_PAYMENT_TABLE // Para la mesa específicamente, no la orden
+  NEEDS_CLEANING
+  RESERVED
 }
 
 // ---------- MODELS ----------
@@ -128,7 +138,7 @@ model Business {
   qrCodes            QrCode[]
   tiers              Tier[]
   activityLogs       ActivityLog[]
-  grantedRewards     GrantedReward[]
+  grantedRewards     GrantedReward[] // Relación inversa para business en GrantedReward (campo businessId)
   tables             Table[]             @relation("BusinessTables")
   menuCategories     MenuCategory[]      @relation("BusinessMenuCategories")
   menuItems          MenuItem[]          @relation("BusinessMenuItems")
@@ -169,10 +179,12 @@ model User {
   currentTierId   String?
   currentTier     Tier?           @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
   grantedRewards  GrantedReward[] @relation("CustomerGrantedRewards")
-  assignedRewards GrantedReward[] @relation("AdminAssignedRewards")
+  assignedRewards GrantedReward[] @relation("AdminAssignedRewards") // Regalos asignados por este User (si es admin)
 
   waiterTakenOrders   Order[]     @relation("WaiterTakenOrders")
-  itemsServedByWaiter OrderItem[] @relation("ItemsServedByWaiter")
+  // MODIFICADO: Renombrar para coincidir con OrderItem.servedBy (y potencialmente Order.paidByUser)
+  itemsServedByWaiter OrderItem[] @relation("ItemsServedByStaff") // Para OrderItem.servedBy
+  ordersPaidByStaff   Order[]     @relation("OrdersPaidByStaff") // Para Order.paidByUser
   customerLCOrders    Order[]     @relation("CustomerLCOrders")
   staffPin            StaffPin?   @relation("UserStaffPin")
 
@@ -188,7 +200,7 @@ model User {
 
 model Reward {
   id             String          @id @default(uuid())
-  name_es        String // MODIFICADO: Ahora es String (obligatorio)
+  name_es        String
   name_en        String?
   description_es String?         @db.Text
   description_en String?         @db.Text
@@ -205,7 +217,7 @@ model Reward {
   updatedAt DateTime @updatedAt
 
   @@unique([businessId, name_es], name: "unique_reward_name_es_business")
-  @@unique([businessId, name_en], name: "unique_reward_name_en_business") // Considera si name_en también debe ser obligatorio si es parte de un unique
+  @@unique([businessId, name_en], name: "unique_reward_name_en_business")
   @@index([businessId])
 }
 
@@ -299,7 +311,7 @@ model GrantedReward {
   rewardId     String
   reward       Reward        @relation(fields: [rewardId], references: [id], onDelete: Cascade)
   businessId   String
-  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade) // Prisma inferirá la relación inversa si solo hay una lista de GrantedReward en Business.
   assignedById String?
   assignedBy   User?         @relation("AdminAssignedRewards", fields: [assignedById], references: [id], onDelete: SetNull)
   status       String        @default("PENDING")
@@ -327,11 +339,15 @@ model Table {
   tableNotifications TableNotification[]
   reservations       Reservation[]
 
+  // NUEVO: Campo de estado para la mesa
+  status TableStatus @default(AVAILABLE)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([businessId, identifier])
   @@index([businessId])
+  @@index([businessId, status]) // NUEVO: Índice por estado de mesa
 }
 
 model MenuCategory {
@@ -393,7 +409,7 @@ model ModifierGroup {
   id            String           @id @default(uuid())
   name_es       String
   name_en       String?
-  uiType        String           @default("RADIO")
+  uiType        String           @default("RADIO") // Prisma no soporta enums directamente en el default así, pero el cliente lo manejará
   minSelections Int              @default(0)
   maxSelections Int              @default(1)
   position      Int              @default(0)
@@ -421,7 +437,7 @@ model ModifierOption {
   isAvailable              Boolean                   @default(true)
   groupId                  String
   group                    ModifierGroup             @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  orderItemModifierOptions OrderItemModifierOption[] @relation("OptionInOrderItems") // MODIFICADO: Renombrado para claridad
+  orderItemModifierOptions OrderItemModifierOption[] @relation("OptionInOrderItems")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -436,9 +452,9 @@ model Order {
   status                              OrderStatus   @default(RECEIVED)
   totalAmount                         Decimal       @default(0.00) @db.Decimal(10, 2)
   discountAmount                      Decimal?      @db.Decimal(10, 2)
-  finalAmount                         Decimal?      @db.Decimal(10, 2)
+  finalAmount                         Decimal?      @db.Decimal(10, 2) // Tu original tenía Float? pero amount es Decimal. Decimal es mejor para moneda.
   notes                               String?       @db.Text
-  source                              String        @default("CUSTOMER_APP")
+  source                              String        @default("CUSTOMER_APP") // Tu original tenía String?, pero con default es más robusto
   tableId                             String?
   table                               Table?        @relation("TableOrders", fields: [tableId], references: [id], onDelete: SetNull)
   customerLCoId                       String?
@@ -455,17 +471,23 @@ model Order {
   paidAt                              DateTime?
   orderType                           OrderType     @default(DINE_IN)
   paymentMethodPreference             String?
-  amountToPayWith                     String?
+  amountToPayWith                     String? // Podría ser Decimal si es un valor exacto
   paymentIntentId                     String?
   paymentProvider                     String?
   deliveryAddressJson                 String?
-  deliveryFee                         Float?
+  deliveryFee                         Float? // Podría ser Decimal
   estimatedDeliveryTime               DateTime?
   appliedLcoRewardId                  String?
   appliedLcoReward                    Reward?       @relation(fields: [appliedLcoRewardId], references: [id], onDelete: SetNull)
-  appliedLcoRewardDiscountAmount      Float?
-  appliedLcoTierBenefitDiscountAmount Float?
+  appliedLcoRewardDiscountAmount      Float? // Podría ser Decimal
+  appliedLcoTierBenefitDiscountAmount Float? // Podría ser Decimal
   activityLog                         ActivityLog[]
+
+  // NUEVOS CAMPOS PARA ESTE FLUJO
+  isBillRequested   Boolean @default(false)
+  paidByUserId      String?
+  paidByUser        User?   @relation("OrdersPaidByStaff", fields: [paidByUserId], references: [id], onDelete: SetNull)
+  paymentMethodUsed String?
 
   @@unique([businessId, orderNumber])
   @@index([businessId, status])
@@ -473,24 +495,25 @@ model Order {
   @@index([customerLCoId])
   @@index([waiterId])
   @@index([orderType])
+  @@index([paidByUserId]) // NUEVO: Índice
 }
 
 model OrderItem {
   id                      String                    @id @default(uuid())
   quantity                Int                       @default(1)
-  priceAtPurchase         Decimal                   @db.Decimal(10, 2) // Precio unitario del MenuItem + suma de ajustes de modificadores
-  totalItemPrice          Decimal                   @db.Decimal(10, 2) // <--- CAMPO AÑADIDO AQUÍ
+  priceAtPurchase         Decimal                   @db.Decimal(10, 2)
+  totalItemPrice          Decimal                   @db.Decimal(10, 2)
   notes                   String?                   @db.Text
   status                  OrderItemStatus           @default(PENDING_KDS)
   kdsDestination          String?
   orderId                 String
   order                   Order                     @relation("OrderOrderItems", fields: [orderId], references: [id], onDelete: Cascade)
-  menuItemId              String?
+  menuItemId              String? // Tu original lo tiene opcional, lo mantengo. Si siempre debe existir, quitar '?'
   menuItem                MenuItem?                 @relation("MenuItemOrderItems", fields: [menuItemId], references: [id], onDelete: SetNull)
   itemNameSnapshot        String?
   itemDescriptionSnapshot String?
   servedById              String?
-  servedBy                User?                     @relation("ItemsServedByWaiter", fields: [servedById], references: [id], onDelete: SetNull)
+  servedBy                User?                     @relation("ItemsServedByStaff", fields: [servedById], references: [id], onDelete: SetNull) // Corregido nombre de relación
   preparedAt              DateTime?
   servedAt                DateTime?
   cancellationReason      String?
@@ -511,7 +534,7 @@ model OrderItemModifierOption {
   modifierOptionId              String
   modifierOption                ModifierOption @relation("OptionInOrderItems", fields: [modifierOptionId], references: [id], onDelete: Cascade)
   optionNameSnapshot            String?
-  optionPriceAdjustmentSnapshot Decimal?       @db.Decimal(10, 2)
+  optionPriceAdjustmentSnapshot Decimal?       @db.Decimal(10, 2) // Tu original tenía Decimal?, lo mantengo
   createdAt                     DateTime       @default(now())
 
   @@id([orderItemId, modifierOptionId])
@@ -530,7 +553,6 @@ model StaffPin {
   business    Business @relation("BusinessStaffPins", fields: [businessId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  // CONSIDERA: @@unique([businessId, pinHash]) si los PINs deben ser únicos por negocio.
 
   @@index([businessId])
 }
