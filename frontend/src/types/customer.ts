@@ -1,7 +1,7 @@
 // frontend/src/types/customer.ts
-// Version: 1.1.2 (Add OrderItemStatus and OrderStatus enums) // O la versión que corresponda
+// Version: 1.1.3 (Ensure OrderType is exported)
 
-import React from 'react'; // Mantén esta si la usas en otros tipos de este archivo
+import React from 'react';
 
 export enum UserRole {
     SUPER_ADMIN = 'SUPER_ADMIN',
@@ -12,30 +12,26 @@ export enum UserRole {
     BAR_STAFF = 'BAR_STAFF'
 }
 
-// --- AÑADIR ESTOS ENUMS AQUÍ (o asegurarse de que ya están y se exportan) ---
 export enum OrderItemStatus {
-    PENDING_KDS = 'PENDING_KDS',
-    PREPARING = 'PREPARING',
-    READY = 'READY',
-    SERVED = 'SERVED',
-    CANCELLED = 'CANCELLED',
-    CANCELLATION_REQUESTED = 'CANCELLATION_REQUESTED',
+    PENDING_KDS = 'PENDING_KDS', PREPARING = 'PREPARING', READY = 'READY',
+    SERVED = 'SERVED', CANCELLED = 'CANCELLED', CANCELLATION_REQUESTED = 'CANCELLATION_REQUESTED',
 }
 
 export enum OrderStatus {
-    RECEIVED = 'RECEIVED',
-    IN_PROGRESS = 'IN_PROGRESS',
-    PARTIALLY_READY = 'PARTIALLY_READY',
-    ALL_ITEMS_READY = 'ALL_ITEMS_READY',
-    COMPLETED = 'COMPLETED',
-    PENDING_PAYMENT = 'PENDING_PAYMENT',
-    PAID = 'PAID',
-    CANCELLED = 'CANCELLED',
-    PAYMENT_FAILED = 'PAYMENT_FAILED',
+    RECEIVED = 'RECEIVED', IN_PROGRESS = 'IN_PROGRESS', PARTIALLY_READY = 'PARTIALLY_READY',
+    ALL_ITEMS_READY = 'ALL_ITEMS_READY', COMPLETED = 'COMPLETED', PENDING_PAYMENT = 'PENDING_PAYMENT',
+    PAID = 'PAID', CANCELLED = 'CANCELLED', PAYMENT_FAILED = 'PAYMENT_FAILED',
 }
-// --- FIN AÑADIR ENUMS ---
 
-// ... (resto de tus tipos existentes en customer.ts como UserData, TierData, etc.)
+// ---- AÑADIR Y EXPORTAR OrderType SI NO EXISTE ----
+export enum OrderType {
+  DINE_IN = 'DINE_IN',
+  TAKE_AWAY = 'TAKE_AWAY',
+  DELIVERY = 'DELIVERY',
+}
+// ---- FIN AÑADIR/EXPORTAR OrderType ----
+
+
 export enum TierCalculationBasis {
     SPEND = 'SPEND',
     VISITS = 'VISITS',
@@ -48,10 +44,10 @@ export interface CustomerBusinessConfig {
 
 export interface TierBenefitData {
   id: string;
-  type: string; 
+  type: string;
   value: string;
   description: string | null;
-  isActive?: boolean; 
+  isActive?: boolean;
 }
 
 export interface TierData {
@@ -67,7 +63,7 @@ export interface UserData {
     id: string;
     email: string;
     name?: string | null;
-    role: UserRole; 
+    role: UserRole;
     businessId: string | null;
     isActive: boolean;
     points?: number;
@@ -76,14 +72,14 @@ export interface UserData {
     currentTier?: {
         id: string;
         name: string;
-        benefits: TierBenefitData[]; 
+        benefits: TierBenefitData[];
     } | null;
     businessIsActive?: boolean;
     isLoyaltyCoreActive?: boolean;
     isCamareroActive?: boolean;
-    businessName?: string | null;      
-    businessSlug?: string | null;      
-    businessLogoUrl?: string | null;   
+    businessName?: string | null;
+    businessSlug?: string | null;
+    businessLogoUrl?: string | null;
 }
 export interface Reward {
     id: string;
@@ -93,18 +89,18 @@ export interface Reward {
     description_en?: string | null;
     pointsCost: number;
     isActive: boolean;
-    businessId?: string; 
+    businessId?: string;
     imageUrl?: string | null;
-    createdAt?: string;  
-    updatedAt?: string;  
+    createdAt?: string;
+    updatedAt?: string;
 }
 export interface GrantedReward {
     id: string;
-    status: string; 
-    assignedAt: string; 
-    reward: Pick<Reward, 'id' | 'name_es' | 'name_en' | 'description_es' | 'description_en' | 'imageUrl'>; 
-    assignedBy?: { name?: string | null; email: string; } | null; 
-    business?: { name: string; } | null; 
+    status: string;
+    assignedAt: string;
+    reward: Pick<Reward, 'id' | 'name_es' | 'name_en' | 'description_es' | 'description_en' | 'imageUrl'>;
+    assignedBy?: { name?: string | null; email: string; } | null;
+    business?: { name: string; } | null;
 }
 export type DisplayReward =
     {
@@ -116,22 +112,22 @@ export type DisplayReward =
         description_en?: string | null;
         pointsCost: number;
         imageUrl?: string | null;
-        grantedRewardId?: undefined; 
+        grantedRewardId?: undefined;
         assignedByString?: undefined;
         assignedAt?: undefined;
     } |
     {
         isGift: true;
-        grantedRewardId: string; 
-        id: string; 
+        grantedRewardId: string;
+        id: string;
         name_es: string | null;
         name_en: string | null;
         description_es?: string | null;
         description_en?: string | null;
-        pointsCost: 0; 
+        pointsCost: 0;
         imageUrl?: string | null;
-        assignedByString: string; 
-        assignedAt: string; 
+        assignedByString: string;
+        assignedAt: string;
     };
 
 export interface UseProfileResult {
@@ -139,22 +135,23 @@ export interface UseProfileResult {
     loading: boolean;
     error: string | null;
     refetch: () => Promise<void>;
-    setUserData: React.Dispatch<React.SetStateAction<UserData | null>>; 
+    setUserData: React.Dispatch<React.SetStateAction<UserData | null>>;
 }
 
 export interface UseCustomerTierDataResult {
-    allTiers: TierData[] | null; 
-    businessConfig: CustomerBusinessConfig | null; 
+    allTiers: TierData[] | null;
+    businessConfig: CustomerBusinessConfig | null;
     loading: boolean;
     error: string | null;
-    refetch: () => Promise<void>; 
+    refetch: () => Promise<void>;
 }
 
 export type ActivityType =
     | 'POINTS_EARNED_QR'
     | 'POINTS_REDEEMED_REWARD'
     | 'GIFT_REDEEMED'
-    | 'POINTS_ADJUSTED_ADMIN';
+    | 'POINTS_ADJUSTED_ADMIN'
+    | 'POINTS_EARNED_ORDER_LC'; // Asegúrate que este también esté si lo usas en el frontend
 
 export interface ActivityLogItem {
   id: string;

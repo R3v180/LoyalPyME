@@ -1,20 +1,20 @@
 // backend/src/camarero/waiter.controller.ts
-// Version: 1.1.1 (Fix DTO import and logger usage)
+// Version: 1.2.0 (Add getStaffOrdersHandler)
 
 import { Request, Response, NextFunction } from 'express';
-import { OrderItemStatus, Order } from '@prisma/client';
+import { OrderItemStatus, Order, OrderStatus } from '@prisma/client'; // Añadido OrderStatus
 import * as waiterService from './waiter.service';
-// ---- MODIFICADO: Importar el nuevo DTO ----
-import { MarkOrderItemServedPayloadDto, OrderItemStatusUpdateResponseDto, MarkOrderAsPaidPayloadDto } from './camarero.dto';
+import { MarkOrderItemServedPayloadDto, OrderItemStatusUpdateResponseDto, MarkOrderAsPaidPayloadDto, WaiterOrderListItemDto } from './camarero.dto'; // Añadido WaiterOrderListItemDto
 
-// ---- MODIFICADO: Importar OrderService para la llamada a markOrderAsPaid ----
-// Esto es temporal hasta que decidamos si crear un wrapper en waiter.service.ts
-import { OrderService } from '../public/order.service'; // Ajusta la ruta si es diferente
+// Importar OrderService para la llamada a markOrderAsPaid
+// Considerar refactorizar esto a un método en waiter.service.ts que llame a order.service.ts
+import { OrderService } from '../public/order.service';
 
 /**
  * Handler para GET /api/camarero/staff/ready-for-pickup
  */
 export const getReadyForPickupItemsHandler = async (req: Request, res: Response, next: NextFunction) => {
+    // ... (código existente sin cambios)
     const businessId = req.user?.businessId;
 
     if (!businessId) {
@@ -37,6 +37,7 @@ export const getReadyForPickupItemsHandler = async (req: Request, res: Response,
  * Handler para PATCH /api/camarero/staff/order-items/:orderItemId/status
  */
 export const markOrderItemServedHandler = async (req: Request, res: Response, next: NextFunction) => {
+    // ... (código existente sin cambios)
     const businessId = req.user?.businessId;
     const waiterUserId = req.user?.id;
     const { orderItemId } = req.params;
@@ -87,10 +88,11 @@ export const markOrderItemServedHandler = async (req: Request, res: Response, ne
 };
 
 export const requestBillByStaffHandler = async (req: Request, res: Response, next: NextFunction) => {
+    // ... (código existente sin cambios)
     const businessId = req.user?.businessId;
     const staffUserId = req.user?.id;
     const { orderId } = req.params;
-    const { paymentPreference } = req.body;
+    const { paymentPreference } = req.body; // DTO: RequestBillPayloadDto
 
     if (!businessId || !staffUserId) {
         console.error("[WaiterCtrl] Critical: businessId or staffUserId missing from req.user for requestBillByStaffHandler.");
@@ -133,6 +135,7 @@ export const requestBillByStaffHandler = async (req: Request, res: Response, nex
 };
 
 export const markOrderAsPaidHandler = async (req: Request, res: Response, next: NextFunction) => {
+    // ... (código existente sin cambios)
     const businessId = req.user?.businessId;
     const staffUserId = req.user?.id;
     const { orderId } = req.params;
@@ -149,15 +152,13 @@ export const markOrderAsPaidHandler = async (req: Request, res: Response, next: 
     console.log(`[WaiterCtrl] Staff ${staffUserId} marking order ${orderId} as PAID. Payment Details: ${JSON.stringify(payload)}`);
 
     try {
-        // ---- MODIFICADO: Instanciar y llamar a OrderService ----
-        const orderServiceInstance = new OrderService(); // Asumiendo que el constructor no toma args
+        const orderServiceInstance = new OrderService();
         const updatedOrder: Order = await orderServiceInstance.markOrderAsPaid(
             orderId,
             staffUserId,
             businessId,
-            payload // Contiene method y notes
+            payload
         );
-        // ---- FIN MODIFICADO ----
 
         res.status(200).json({
             message: `Pedido #${updatedOrder.orderNumber || orderId} marcado como PAGADO.`,
@@ -175,3 +176,45 @@ export const markOrderAsPaidHandler = async (req: Request, res: Response, next: 
         next(error);
     }
 };
+
+// ---- NUEVO HANDLER: getStaffOrdersHandler ----
+/**
+ * Handler para GET /api/camarero/staff/orders
+ * Obtiene una lista de pedidos para la interfaz del camarero, con posibles filtros.
+ */
+export const getStaffOrdersHandler = async (req: Request, res: Response, next: NextFunction) => {
+    const businessId = req.user?.businessId;
+
+    if (!businessId) {
+        console.error("[WaiterCtrl] Critical: businessId missing from req.user in getStaffOrdersHandler.");
+        return res.status(403).json({ message: "Identificador de negocio no encontrado en la sesión del usuario." });
+    }
+
+    // Leer filtros de la query (ej. ?status=PENDING_PAYMENT,COMPLETED)
+    const statusQuery = req.query.status as string | string[] | undefined;
+    let statusFilter: OrderStatus[] | undefined = undefined;
+
+    if (statusQuery) {
+        const statuses = Array.isArray(statusQuery) ? statusQuery : [statusQuery];
+        statusFilter = statuses.map(s => s.toUpperCase() as OrderStatus)
+                               .filter(s => Object.values(OrderStatus).includes(s));
+        if (statusFilter.length === 0) {
+            statusFilter = undefined; // Si el filtro no es válido, no filtrar por estado
+        }
+    }
+
+    console.log(`[WaiterCtrl] Request for staff orders for business: ${businessId}. Filters: ${JSON.stringify({ status: statusFilter })}`);
+
+    try {
+        const orders: WaiterOrderListItemDto[] = await waiterService.getOrdersForStaff(
+            businessId,
+            { status: statusFilter }
+        );
+        res.status(200).json(orders);
+    } catch (error: any) {
+        console.error(`[WaiterCtrl] Error fetching staff orders for business ${businessId}:`, error);
+        // Si el servicio lanza un error conocido, ya tendrá un mensaje apropiado
+        next(error);
+    }
+};
+// ---- FIN NUEVO HANDLER ----

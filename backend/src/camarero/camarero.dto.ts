@@ -1,7 +1,7 @@
 // backend/src/camarero/camarero.dto.ts
-// Version: 1.1.0 (Add MarkOrderAsPaidPayloadDto and RequestBillPayloadDto)
+// Version: 1.2.0 (Add WaiterOrderListItemDto)
 
-import { OrderItemStatus, OrderStatus } from '@prisma/client';
+import { OrderItemStatus, OrderStatus, OrderType } from '@prisma/client'; // Añadido OrderType
 
 /**
  * DTO para la información de un modificador seleccionado que se muestra al camarero
@@ -20,7 +20,7 @@ export interface ReadyPickupItemDto {
   orderItemId: string;
   orderId: string;
   orderNumber: string;
-  orderCreatedAt: Date; // El servicio devuelve Date, el controlador/JSON lo serializará a string
+  orderCreatedAt: Date;
   tableIdentifier: string | null;
   itemNameSnapshot_es: string | null;
   itemNameSnapshot_en: string | null;
@@ -36,10 +36,6 @@ export interface ReadyPickupItemDto {
  * Usado en: PATCH /api/camarero/staff/order-items/:orderItemId/status
  */
 export interface MarkOrderItemServedPayloadDto {
-  /**
-   * El nuevo estado al que se actualizará el OrderItem.
-   * Para esta acción específica del camarero, siempre debe ser OrderItemStatus.SERVED.
-   */
   newStatus: typeof OrderItemStatus.SERVED;
 }
 
@@ -51,29 +47,41 @@ export interface OrderItemStatusUpdateResponseDto {
   message: string;
   orderItemId: string;
   newStatus: OrderItemStatus;
-  orderStatus?: OrderStatus; // El estado general del pedido si cambió
+  orderStatus?: OrderStatus;
 }
 
-// ---- NUEVO DTO ----
 /**
  * DTO para el payload del endpoint que permite al personal solicitar la cuenta.
  * Usado en: POST /api/camarero/staff/order/:orderId/request-bill
  */
 export interface RequestBillPayloadDto {
-  paymentPreference?: string; // Ej: "EFECTIVO", "TARJETA"
-  // Otros campos que el staff podría querer enviar, como payAmountInput
+  paymentPreference?: string;
 }
-// ---- FIN NUEVO DTO ----
 
-
-// ---- NUEVO DTO ----
 /**
  * DTO para el payload del endpoint que permite al camarero marcar un pedido como PAGADO.
  * Usado en: POST /api/camarero/staff/order/:orderId/mark-as-paid
  */
 export interface MarkOrderAsPaidPayloadDto {
-  method?: string; // Método de pago usado (ej. "EFECTIVO", "TARJETA_VISA")
-  notes?: string;  // Notas adicionales sobre el pago
-  // Podrías añadir amountPaid si hubiera gestión de caja o pagos parciales
+  method?: string;
+  notes?: string;
+}
+
+// ---- NUEVO DTO ----
+/**
+ * DTO para representar un ítem en la lista de pedidos para la interfaz del camarero.
+ * Usado en: GET /api/camarero/staff/orders
+ */
+export interface WaiterOrderListItemDto {
+  orderId: string;
+  orderNumber: string;
+  tableIdentifier: string | null;
+  status: OrderStatus;
+  finalAmount: number; // O string si prefieres manejarlo como string en el frontend inicialmente
+  itemCount: number; // Número total de ítems (no cancelados) en el pedido
+  customerName?: string | null; // Nombre del cliente LCo si está asociado
+  createdAt: Date; // Fecha de creación del pedido
+  isBillRequested?: boolean; // Para saber si la cuenta ya fue solicitada
+  orderType?: OrderType | null; // Tipo de pedido
 }
 // ---- FIN NUEVO DTO ----

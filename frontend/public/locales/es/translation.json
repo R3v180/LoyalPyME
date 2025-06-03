@@ -951,6 +951,10 @@
     "refreshButton": "Actualizar Estado",
     "backToMenuButton": "Volver al Menú",
     "addMoreItemsButton": "Añadir más ítems",
+    "requestBillButton": "Pedir la Cuenta",
+    "billRequestedSuccess": "Cuenta solicitada. Un camarero se acercará pronto.",
+    "errorRequestingBill": "Error al solicitar la cuenta: {{message}}",
+    "paidSuccessMessage": "¡Pedido Pagado! Gracias por tu visita.",
     "itemStatus": {
       "pending_kds": "Recibido en cocina",
       "preparing": "En preparación",
@@ -1006,5 +1010,32 @@
     "itemMarkedServedSuccess": "Ítem '{{itemName}}' marcado como servido.",
     "errorMarkingServed": "Error al marcar el ítem como servido.",
     "navLinkPickup": "Recoger Pedidos"
+  },
+  "waiterOrderManagement": {
+    "title": "Gestión de Pedidos de Sala",
+    "filterStatusLabel": "Filtrar por Estado:",
+    "statusOptionAll": "Todos los Pedidos",
+    "statusOptionPendingPayment": "Pendientes de Pago",
+    "statusOptionCompleted": "Completados (No Pagados)",
+    "statusOptionPaid": "Pagados",
+    "noOrdersFound": "No se encontraron pedidos con los filtros actuales.",
+    "tableHeaderOrderNum": "Nº Pedido",
+    "tableHeaderTable": "Mesa",
+    "tableHeaderTotal": "Total",
+    "tableHeaderStatus": "Estado",
+    "tableHeaderActions": "Acciones",
+    "buttonMarkAsPaid": "Marcar Como Pagado",
+    "buttonRequestBill": "Solicitar Cuenta",
+    "confirmMarkAsPaidTitle": "Confirmar Pago",
+    "confirmMarkAsPaidMessage": "¿Confirmas que el pedido #{{orderNumber}} ha sido pagado?",
+    "markAsPaidSuccess": "Pedido #{{orderNumber}} marcado como pagado.",
+    "markAsPaidError": "Error al marcar el pedido #{{orderNumber}} como pagado: {{error}}",
+    "paymentDetailsModalTitle": "Registrar Detalles del Pago para Pedido #{{orderNumber}}",
+    "paymentMethodLabel": "Método de Pago",
+    "paymentMethodPlaceholder": "Ej: Efectivo, Tarjeta Visa",
+    "paymentNotesLabel": "Notas del Pago (Opcional)",
+    "paymentNotesPlaceholder": "Detalles adicionales...",
+    "confirmPaymentButton": "Confirmar Pago",
+    "navLinkTitle": "Gestionar Pedidos"
   }
 }

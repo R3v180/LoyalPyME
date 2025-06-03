@@ -1,5 +1,5 @@
 // frontend/src/components/layout/AdminNavbar.tsx
-// Version: 1.1.0 (Add Waiter Pickup Station link)
+// Version: 1.2.1 (Add debug logs for WAITER role)
 
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -12,11 +12,12 @@ import {
     IconStairsUp,
     IconSettings,
     IconToolsKitchen,
-    IconClipboardText, // <--- NUEVO ICONO IMPORTADO (o el que prefieras)
+    IconClipboardText,
+    IconFileInvoice
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import type { UserData } from '../../types/customer';
-import { UserRole } from '../../types/customer'; // <--- IMPORTAR UserRole
+import { UserRole } from '../../types/customer';
 
 interface AdminNavbarProps {
     pathname: string;
@@ -27,15 +28,32 @@ interface AdminNavbarProps {
 const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname, closeNavbar, userData }) => {
     const { t } = useTranslation();
 
+    // ---- DEBUG LOG ----
+    // Loguear siempre que userData cambie o el componente se renderice con userData
+    if (userData) {
+        console.log("[AdminNavbar DEBUG] UserData received in props:", JSON.stringify(userData, null, 2));
+        console.log(`[AdminNavbar DEBUG] Current Role: ${userData.role}, IsCamareroActive: ${userData.isCamareroActive}`);
+
+        if (userData.role === UserRole.WAITER) {
+            console.log("[AdminNavbar DEBUG - WAITER CONTEXT] Role matches WAITER.");
+            const conditionForPickup = userData?.isCamareroActive === true && (userData?.role === UserRole.WAITER || userData?.role === UserRole.BUSINESS_ADMIN);
+            console.log("[AdminNavbar DEBUG - WAITER CONTEXT] ShowCondition for '/admin/camarero/pickup':", conditionForPickup);
+
+            const conditionForOrders = userData?.isCamareroActive === true && (userData?.role === UserRole.WAITER || userData?.role === UserRole.BUSINESS_ADMIN);
+            console.log("[AdminNavbar DEBUG - WAITER CONTEXT] ShowCondition for '/admin/camarero/orders':", conditionForOrders);
+        }
+    } else {
+        console.log("[AdminNavbar DEBUG] UserData is null.");
+    }
+    // ---- FIN DEBUG LOG ----
+
     const allPossibleNavLinks = [
         {
             to: "/admin/dashboard",
             labelKey: 'adminCommon.dashboard',
             icon: IconGauge,
-            // Condición: Siempre mostrar para BUSINESS_ADMIN. Otros roles de staff NO deberían ver esto.
             showCondition: userData?.role === UserRole.BUSINESS_ADMIN,
         },
-        // --- Enlaces LoyalPyME Core (LCo) ---
         {
             to: "/admin/dashboard/rewards",
             labelKey: 'adminCommon.rewards',
@@ -52,7 +70,6 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname, closeNavbar, userDa
             to: "/admin/dashboard/customers",
             labelKey: 'adminCommon.customers',
             icon: IconUsers,
-            // Mostrar si LCo o Camarero están activos y el rol es BUSINESS_ADMIN
             showCondition: (userData?.isLoyaltyCoreActive === true || userData?.isCamareroActive === true) && userData?.role === UserRole.BUSINESS_ADMIN,
         },
         {
@@ -67,29 +84,36 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ pathname, closeNavbar, userDa
             icon: IconSettings,
             showCondition: userData?.isLoyaltyCoreActive === true && userData?.role === UserRole.BUSINESS_ADMIN,
         },
-        // --- Enlaces Módulo Camarero (LC) para BUSINESS_ADMIN ---
         {
             to: "/admin/dashboard/camarero/menu-editor",
             labelKey: 'adminCamarero.manageMenu.title',
             icon: IconToolsKitchen,
             showCondition: userData?.isCamareroActive === true && userData?.role === UserRole.BUSINESS_ADMIN,
         },
-        // --- NUEVO ENLACE PARA ESTACIÓN DE RECOGIDA DEL CAMARERO ---
-        // Este enlace debe ser visible para WAITER y BUSINESS_ADMIN si el módulo Camarero está activo.
-        // El KDS tiene su propia ruta directa (/admin/kds) y no suele estar en esta navbar.
         {
-            to: "/admin/waiter/pickup", // Ruta que definimos en index.tsx
-            labelKey: 'waiterInterface.navLinkPickup', // Clave de i18n para "Recoger Pedidos" o "Pickup Station"
-            icon: IconClipboardText, // O IconTruckDelivery, IconBellRinging, etc.
+            to: "/admin/camarero/pickup",
+            labelKey: 'waiterInterface.navLinkPickup',
+            icon: IconClipboardText,
+            showCondition: userData?.isCamareroActive === true &&
+                           (userData?.role === UserRole.WAITER || userData?.role === UserRole.BUSINESS_ADMIN)
+        },
+        {
+            to: "/admin/camarero/orders",
+            labelKey: 'waiterOrderManagement.navLinkTitle',
+            icon: IconFileInvoice,
             showCondition: userData?.isCamareroActive === true &&
                            (userData?.role === UserRole.WAITER || userData?.role === UserRole.BUSINESS_ADMIN)
         },
     ];
 
-    // Filtrar enlaces visibles (sin cambios)
     const navLinksToShow = allPossibleNavLinks.filter(link => link.showCondition);
-    // console.log("[AdminNavbar] userData PROPS received:", JSON.stringify(userData, null, 2)); // Descomentar para debug si es necesario
-    // console.log("[AdminNavbar] Links to show:", navLinksToShow.map(l => l.labelKey)); // Descomentar para debug si es necesario
+    
+    // ---- DEBUG LOG ----
+    if (userData?.role === UserRole.WAITER) {
+      console.log("[AdminNavbar DEBUG - WAITER CONTEXT] Final navLinksToShow for WAITER:", navLinksToShow.map(l => ({ to: l.to, labelKey: l.labelKey })));
+    }
+    // ---- FIN DEBUG LOG ----
+
 
     return (
         <>

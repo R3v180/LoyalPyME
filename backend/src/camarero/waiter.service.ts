@@ -1,5 +1,5 @@
 // backend/src/camarero/waiter.service.ts
-// Version: 1.1.1 (Fix missing imports for Order and InternalServerErrorException)
+// Version: 1.2.1 (Fix totalAmount select in getOrdersForStaff)
 
 import {
     PrismaClient,
@@ -8,10 +8,10 @@ import {
     OrderStatus,
     Prisma,
     TableStatus,
-    Order // ---- NUEVO: Importar Order ----
+    Order,
+    OrderType
 } from '@prisma/client';
-import { ReadyPickupItemDto, WaiterSelectedModifierDto } from './camarero.dto';
-// ---- MODIFICADO: Añadir InternalServerErrorException ----
+import { ReadyPickupItemDto, WaiterSelectedModifierDto, WaiterOrderListItemDto } from './camarero.dto';
 import { NotFoundException, BadRequestException, ForbiddenException, Logger, InternalServerErrorException } from '@nestjs/common';
 
 const prisma = new PrismaClient();
@@ -46,7 +46,7 @@ export const getReadyForPickupItems = async (businessId: string): Promise<ReadyP
                     select: {
                         optionNameSnapshot: true,
                         modifierOption: {
-                            select: { name_en: true }
+                            select: { name_en: true, name_es: true }
                         }
                     },
                 },
@@ -59,17 +59,13 @@ export const getReadyForPickupItems = async (businessId: string): Promise<ReadyP
 
         const readyItemsDto: ReadyPickupItemDto[] = orderItemsFromDb.map(item => {
             const selectedModifiersDto: WaiterSelectedModifierDto[] = item.selectedModifiers.map(sm => {
-                let nameEnForModifier: string | null = null;
-                if (sm.modifierOption?.name_en) {
-                    nameEnForModifier = sm.modifierOption.name_en;
-                }
                 return {
-                    optionName_es: sm.optionNameSnapshot || null,
-                    optionName_en: nameEnForModifier,
+                    optionName_es: sm.optionNameSnapshot || sm.modifierOption?.name_es || null,
+                    optionName_en: sm.modifierOption?.name_en || null,
                 };
             });
 
-            let nameEnForItem: string | null = null;
+            let itemNameSnapshotEn: string | null = null;
 
             return {
                 orderItemId: item.id,
@@ -78,7 +74,7 @@ export const getReadyForPickupItems = async (businessId: string): Promise<ReadyP
                 orderCreatedAt: item.order.createdAt,
                 tableIdentifier: item.order.table?.identifier || null,
                 itemNameSnapshot_es: item.itemNameSnapshot,
-                itemNameSnapshot_en: nameEnForItem,
+                itemNameSnapshot_en: itemNameSnapshotEn,
                 quantity: item.quantity,
                 itemNotes: item.notes,
                 kdsDestination: item.kdsDestination,
@@ -121,7 +117,6 @@ export const markOrderItemAsServed = async (
             throw new NotFoundException(`Ítem de pedido con ID ${orderItemId} no encontrado o no pertenece a este negocio.`);
         }
         if (!orderItem.order) {
-            // ---- CORRECCIÓN: Usar InternalServerErrorException importado ----
             throw new InternalServerErrorException(`Error interno: El ítem de pedido ${orderItemId} no está asociado a ningún pedido.`);
         }
 
@@ -188,7 +183,6 @@ export const requestBillByStaff = async (
     staffUserId: string,
     businessId: string,
     paymentPreference?: string
-    // ---- CORRECCIÓN: Añadir tipo de retorno ----
 ): Promise<Order> => {
     logger.log(`Staff ${staffUserId} requesting bill for order ${orderId} in business ${businessId}. Preference: ${paymentPreference || 'N/A'}`);
 
@@ -241,4 +235,74 @@ export const requestBillByStaff = async (
     }
 
     return updatedOrder;
+};
+
+export const getOrdersForStaff = async (
+    businessId: string,
+    filters?: { status?: OrderStatus[] }
+): Promise<WaiterOrderListItemDto[]> => {
+    logger.log(`Fetching orders for staff UI. Business: ${businessId}, Filters: ${JSON.stringify(filters)}`);
+
+    const whereClause: Prisma.OrderWhereInput = {
+        businessId: businessId,
+    };
+
+    if (filters?.status && filters.status.length > 0) {
+        whereClause.status = { in: filters.status };
+    } else {
+        whereClause.status = { in: [OrderStatus.PENDING_PAYMENT, OrderStatus.COMPLETED, OrderStatus.ALL_ITEMS_READY, OrderStatus.PARTIALLY_READY, OrderStatus.IN_PROGRESS, OrderStatus.RECEIVED] };
+    }
+
+    try {
+        const orders = await prisma.order.findMany({
+            where: whereClause,
+            select: {
+                id: true,
+                orderNumber: true,
+                table: { select: { identifier: true } },
+                status: true,
+                finalAmount: true,
+                totalAmount: true, // Asegurarse que este campo está seleccionado
+                items: {
+                    where: { status: { not: OrderItemStatus.CANCELLED } },
+                    select: { quantity: true }
+                },
+                customerLCo: { select: { name: true, email: true } },
+                createdAt: true,
+                isBillRequested: true,
+                orderType: true,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            }
+        });
+
+        const orderListItems: WaiterOrderListItemDto[] = orders.map(order => {
+            const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+            let customerDisplayName: string | null = null;
+            if (order.customerLCo) {
+                customerDisplayName = order.customerLCo.name || order.customerLCo.email;
+            }
+
+            return {
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                tableIdentifier: order.table?.identifier || null,
+                status: order.status,
+                finalAmount: order.finalAmount?.toNumber() ?? order.totalAmount.toNumber(),
+                itemCount: itemCount,
+                customerName: customerDisplayName,
+                createdAt: order.createdAt,
+                isBillRequested: order.isBillRequested,
+                orderType: order.orderType,
+            };
+        });
+
+        logger.log(`Found ${orderListItems.length} orders for staff UI for business ${businessId}.`);
+        return orderListItems;
+
+    } catch (error) {
+        logger.error(`Error fetching orders for staff UI (Business: ${businessId}):`, error);
+        throw new Error('Error al obtener la lista de pedidos para el personal.');
+    }
 };
