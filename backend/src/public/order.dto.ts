@@ -1,5 +1,5 @@
 // backend/src/public/order.dto.ts
-// Versión 1.6.16 (Ajuste para consistencia en AddItemsOrderItemDto)
+// Versión 1.7.0 (Add RequestBillClientPayloadDto)
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -35,16 +35,16 @@ export class CreateOrderItemDto {
 
   @IsOptional()
   @IsArray({ message: 'Los modificadores seleccionados deben ser un array al crear.' })
-  @ValidateNested({ each: true }) 
-  @Type(() => SelectedOrderModifierOptionDto) 
+  @ValidateNested({ each: true })
+  @Type(() => SelectedOrderModifierOptionDto)
   selectedModifierOptions?: SelectedOrderModifierOptionDto[]; // Nombre consistente
 }
 
 // DTO principal para crear un pedido
 export class CreateOrderDto {
-  @IsOptional() 
-  @IsString()   
-  businessId?: string; 
+  @IsOptional()
+  @IsString()
+  businessId?: string;
 
   @IsString({ message: 'El identificador de mesa debe ser texto.' })
   @IsOptional()
@@ -52,12 +52,12 @@ export class CreateOrderDto {
 
   @IsArray({ message: 'Los ítems deben ser un array al crear.' })
   @ValidateNested({ each: true, message: 'Cada ítem debe ser válido al crear.' })
-  @Type(() => CreateOrderItemDto) 
+  @Type(() => CreateOrderItemDto)
   items!: CreateOrderItemDto[];
 
   @IsString({ message: 'Las notas del cliente deben ser texto.' })
   @IsOptional()
-  customerNotes?: string; 
+  customerNotes?: string;
 
   @IsUUID()
   @IsOptional()
@@ -74,26 +74,37 @@ export class AddItemsOrderItemDto {
     @IsNumber({}, { message: 'La cantidad debe ser un número.' })
     @Min(1, { message: 'La cantidad debe ser como mínimo 1.' })
     quantity!: number;
-    
+
     @IsOptional()
     @IsString()
-    notes?: string; 
+    notes?: string;
 
     @IsOptional()
     @IsArray({ message: 'Los modificadores seleccionados deben ser un array.' })
     @ValidateNested({ each: true })
     @Type(() => SelectedOrderModifierOptionDto)
-    // CAMBIO AQUÍ para consistencia: de selectedModifiers a selectedModifierOptions
-    selectedModifierOptions?: SelectedOrderModifierOptionDto[]; 
+    selectedModifierOptions?: SelectedOrderModifierOptionDto[];
 }
 
 export class AddItemsToOrderDto {
     @IsArray({ message: 'Los ítems deben ser un array.' })
     @ValidateNested({ each: true, message: 'Cada ítem debe ser válido.' })
-    @Type(() => AddItemsOrderItemDto) 
+    @Type(() => AddItemsOrderItemDto)
     items!: AddItemsOrderItemDto[];
 
     @IsString({ message: 'Las notas del cliente deben ser texto.' })
     @IsOptional()
     customerNotes?: string;
 }
+
+// ---- NUEVO DTO AÑADIDO ----
+/**
+ * DTO para el payload opcional que el cliente puede enviar al solicitar la cuenta.
+ * Usado en: POST /public/order/:orderId/request-bill
+ */
+export class RequestBillClientPayloadDto {
+  @IsOptional()
+  @IsString({ message: 'La preferencia de pago debe ser texto.' })
+  paymentPreference?: string; // Ej: "EFECTIVO", "TARJETA"
+}
+// ---- FIN NUEVO DTO ----

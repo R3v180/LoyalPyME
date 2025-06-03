@@ -1,35 +1,33 @@
 // backend/src/camarero/waiter.controller.ts
-// Version: 1.0.0 (Initial controller for waiter actions: get ready items, mark as served)
+// Version: 1.1.1 (Fix DTO import and logger usage)
 
 import { Request, Response, NextFunction } from 'express';
-import { OrderItemStatus } from '@prisma/client'; // Para validar el enum
-import * as waiterService from './waiter.service'; // Asume que waiter.service.ts está en la misma carpeta
-import { MarkOrderItemServedPayloadDto, OrderItemStatusUpdateResponseDto } from './camarero.dto'; // Importar DTOs
+import { OrderItemStatus, Order } from '@prisma/client';
+import * as waiterService from './waiter.service';
+// ---- MODIFICADO: Importar el nuevo DTO ----
+import { MarkOrderItemServedPayloadDto, OrderItemStatusUpdateResponseDto, MarkOrderAsPaidPayloadDto } from './camarero.dto';
+
+// ---- MODIFICADO: Importar OrderService para la llamada a markOrderAsPaid ----
+// Esto es temporal hasta que decidamos si crear un wrapper en waiter.service.ts
+import { OrderService } from '../public/order.service'; // Ajusta la ruta si es diferente
 
 /**
  * Handler para GET /api/camarero/staff/ready-for-pickup
- * Obtiene los ítems de pedido que están listos para ser recogidos por el personal de camareros.
- * 
- * El `businessId` se extrae de `req.user`, que es añadido por el middleware `authenticateToken`.
- * Los middlewares `checkRole` y `checkModuleActive` también se aplican antes en el router.
  */
 export const getReadyForPickupItemsHandler = async (req: Request, res: Response, next: NextFunction) => {
     const businessId = req.user?.businessId;
 
     if (!businessId) {
-        // Esta comprobación es una salvaguarda adicional.
-        // Los middlewares deberían haber prevenido llegar aquí sin un businessId válido.
         console.error("[WaiterCtrl] Critical: businessId missing from req.user in getReadyForPickupItemsHandler.");
         return res.status(403).json({ message: "Identificador de negocio no encontrado en la sesión del usuario." });
     }
-    
+
     console.log(`[WaiterCtrl] Request for ready-for-pickup items for business: ${businessId}`);
 
     try {
         const items = await waiterService.getReadyForPickupItems(businessId);
         res.status(200).json(items);
     } catch (error) {
-        // Loguear el error y pasarlo al manejador de errores global
         console.error(`[WaiterCtrl] Error getting ready-for-pickup items for business ${businessId}:`, error);
         next(error);
     }
@@ -37,15 +35,10 @@ export const getReadyForPickupItemsHandler = async (req: Request, res: Response,
 
 /**
  * Handler para PATCH /api/camarero/staff/order-items/:orderItemId/status
- * (Específicamente para marcar un OrderItem como SERVED)
- * 
- * El `businessId` y `waiterUserId` (opcional) se extraen de `req.user`.
- * El `orderItemId` se extrae de los parámetros de la URL.
- * El payload debe contener `newStatus: "SERVED"`.
  */
 export const markOrderItemServedHandler = async (req: Request, res: Response, next: NextFunction) => {
     const businessId = req.user?.businessId;
-    const waiterUserId = req.user?.id; // ID del camarero autenticado, útil para auditoría
+    const waiterUserId = req.user?.id;
     const { orderItemId } = req.params;
     const payload: MarkOrderItemServedPayloadDto = req.body;
 
@@ -57,44 +50,128 @@ export const markOrderItemServedHandler = async (req: Request, res: Response, ne
         return res.status(400).json({ message: "Falta el ID del ítem de pedido (orderItemId) en la URL." });
     }
 
-    // Validación estricta del payload para esta acción específica
     if (!payload || payload.newStatus !== OrderItemStatus.SERVED) {
         return res.status(400).json({ message: "Payload inválido. Se esperaba que 'newStatus' sea 'SERVED'." });
     }
-    
+
     console.log(`[WaiterCtrl] Request to mark OrderItem ${orderItemId} as SERVED by waiter ${waiterUserId || 'N/A'} for business ${businessId}.`);
 
     try {
         const updatedOrderItem = await waiterService.markOrderItemAsServed(
             orderItemId,
             businessId,
-            waiterUserId // Pasamos el ID del camarero al servicio
+            waiterUserId
         );
-        
-        // Crear una respuesta DTO (podría también devolver el updatedOrderItem completo)
+
         const responseDto: OrderItemStatusUpdateResponseDto = {
             message: `Ítem '${updatedOrderItem.itemNameSnapshot || orderItemId}' marcado como ${OrderItemStatus.SERVED}.`,
             orderItemId: updatedOrderItem.id,
             newStatus: updatedOrderItem.status,
-            // Si el servicio modificara y devolviera el estado del pedido, lo añadiríamos aquí
-            // orderStatus: updatedOrderItem.order.status 
         };
         res.status(200).json(responseDto);
 
-    } catch (error: any) { 
+    } catch (error: any) {
         console.error(`[WaiterCtrl] Error marking OrderItem ${orderItemId} as SERVED:`, error);
-        
-        // Manejo de errores específicos que podría lanzar el servicio
+
         if (error.message) {
             if (error.message.includes('no encontrado')) {
                 return res.status(404).json({ message: error.message });
             }
-            // El servicio lanza error si no está READY o la transición no es válida
-            if (error.message.includes('no está en estado \'READY\'') || 
+            if (error.message.includes('no está en estado \'READY\'') ||
                 error.message.includes('Transición de estado no permitida')) {
-                return res.status(409).json({ message: error.message }); // 409 Conflict indica que el estado actual impide la acción
+                return res.status(409).json({ message: error.message });
             }
         }
-        next(error); // Para otros errores, usar el manejador global
+        next(error);
+    }
+};
+
+export const requestBillByStaffHandler = async (req: Request, res: Response, next: NextFunction) => {
+    const businessId = req.user?.businessId;
+    const staffUserId = req.user?.id;
+    const { orderId } = req.params;
+    const { paymentPreference } = req.body;
+
+    if (!businessId || !staffUserId) {
+        console.error("[WaiterCtrl] Critical: businessId or staffUserId missing from req.user for requestBillByStaffHandler.");
+        return res.status(403).json({ message: "Información de autenticación de personal incompleta." });
+    }
+    if (!orderId) {
+        return res.status(400).json({ message: "Falta el ID del pedido (orderId) en la URL." });
+    }
+
+    console.log(`[WaiterCtrl] Staff ${staffUserId} requesting bill for order ${orderId}. Preference: ${paymentPreference || 'N/A'}`);
+
+    try {
+        const updatedOrder: Order = await waiterService.requestBillByStaff(
+            orderId,
+            staffUserId,
+            businessId,
+            paymentPreference
+        );
+
+        res.status(200).json({
+            message: `Cuenta solicitada para el pedido #${updatedOrder.orderNumber}. Estado: ${updatedOrder.status}.`,
+            order: updatedOrder
+        });
+
+    } catch (error: any) {
+        console.error(`[WaiterCtrl] Error requesting bill for order ${orderId} by staff ${staffUserId}:`, error);
+        if (error.message) {
+            if (error.message.includes('no encontrado')) {
+                return res.status(404).json({ message: error.message });
+            }
+            if (error.message.includes('No se puede solicitar la cuenta')) {
+                return res.status(400).json({ message: error.message });
+            }
+            if (error.message.includes('no pertenece al negocio')) {
+                return res.status(403).json({ message: error.message });
+            }
+        }
+        next(error);
+    }
+};
+
+export const markOrderAsPaidHandler = async (req: Request, res: Response, next: NextFunction) => {
+    const businessId = req.user?.businessId;
+    const staffUserId = req.user?.id;
+    const { orderId } = req.params;
+    const payload: MarkOrderAsPaidPayloadDto = req.body;
+
+    if (!businessId || !staffUserId) {
+        console.error("[WaiterCtrl] Critical: businessId or staffUserId missing from req.user for markOrderAsPaidHandler.");
+        return res.status(403).json({ message: "Información de autenticación de personal incompleta." });
+    }
+    if (!orderId) {
+        return res.status(400).json({ message: "Falta el ID del pedido (orderId) en la URL." });
+    }
+
+    console.log(`[WaiterCtrl] Staff ${staffUserId} marking order ${orderId} as PAID. Payment Details: ${JSON.stringify(payload)}`);
+
+    try {
+        // ---- MODIFICADO: Instanciar y llamar a OrderService ----
+        const orderServiceInstance = new OrderService(); // Asumiendo que el constructor no toma args
+        const updatedOrder: Order = await orderServiceInstance.markOrderAsPaid(
+            orderId,
+            staffUserId,
+            businessId,
+            payload // Contiene method y notes
+        );
+        // ---- FIN MODIFICADO ----
+
+        res.status(200).json({
+            message: `Pedido #${updatedOrder.orderNumber || orderId} marcado como PAGADO.`,
+            order: updatedOrder
+        });
+
+    } catch (error: any) {
+        console.error(`[WaiterCtrl] Error marking order ${orderId} as PAID by staff ${staffUserId}:`, error);
+        if (error.message) {
+            if (error.message.includes('no encontrado')) return res.status(404).json({ message: error.message });
+            if (error.message.includes('Solo se pueden marcar como pagados') || error.message.includes('no pertenece al negocio')) {
+                return res.status(error.message.includes('no pertenece') ? 403 : 400).json({ message: error.message });
+            }
+        }
+        next(error);
     }
 };

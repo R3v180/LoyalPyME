@@ -1,55 +1,46 @@
 // backend/src/public/order.controller.ts
-// VERSIÓN CON plainToInstance PARA LOS HANDLERS DE EXPRESS
-import { Controller, Post, Body, Param, Get, Req, BadRequestException } from '@nestjs/common';
+// Version 1.1.1 (Fix TypeScript errors for requestBillByClientHandler)
+import { Controller, Post, Body, Param, Get, Req, BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrderService, CreateOrderPayloadInternalDto, PublicOrderStatusInfo } from './order.service';
-import { CreateOrderDto, AddItemsToOrderDto, CreateOrderItemDto as CreateOrderItemControllerDto } from './order.dto'; 
+// ---- MODIFICADO: Añadir RequestBillClientPayloadDto a la importación ----
+import { CreateOrderDto, AddItemsToOrderDto, CreateOrderItemDto as CreateOrderItemControllerDto, RequestBillClientPayloadDto } from './order.dto';
 import { Request, Response, NextFunction } from 'express';
 import { Order } from '@prisma/client';
-import { plainToInstance } from 'class-transformer'; // ¡¡IMPORTANTE!!
-import { validate } from 'class-validator';       // ¡¡IMPORTANTE!!
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 
-const orderServiceInstance = new OrderService(); // Instancia global para handlers de Express
+const orderServiceInstance = new OrderService();
 
 export const createPublicOrderHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const businessSlug = req.params.businessSlug;
-        
-        // 1. Transformar req.body a una instancia de CreateOrderDto usando class-transformer
-        // Se usa 'req.body as Record<string, any>' para asegurar compatibilidad con plainToInstance
         const createOrderDto = plainToInstance(CreateOrderDto, req.body as Record<string, any>);
-
-        // 2. Validar la instancia (opcional aquí si tu ValidationPipe global de NestJS NO se aplica a estas rutas Express)
-        const validationErrors = await validate(createOrderDto, { 
-            whitelist: true, 
-            // forbidNonWhitelisted: true, // Opción más estricta
-        });
+        const validationErrors = await validate(createOrderDto, { whitelist: true });
 
         if (validationErrors.length > 0) {
             console.error('[createPublicOrderHandler] Errores de validación del DTO:', JSON.stringify(validationErrors, null, 2));
-            const formattedErrors = validationErrors.map(err => ({ /* ... formateo de errores ... */ })); // Puedes mejorar este formateo
-            return res.status(400).json({ 
-                message: 'Error de validación en los datos del pedido.', 
-                errors: formattedErrors 
+            const formattedErrors = validationErrors.map(err => ({
+                property: err.property,
+                constraints: err.constraints
+            }));
+            return res.status(400).json({
+                message: 'Error de validación en los datos del pedido.',
+                errors: formattedErrors
             });
         }
-
-        // A partir de aquí, createOrderDto es una instancia de la clase CreateOrderDto
-        // y sus propiedades anidadas (items, selectedModifierOptions) deberían estar
-        // también transformadas en instancias de sus respectivas clases DTO gracias a @Type() en order.dto.ts
 
         if (!businessSlug) {
             return res.status(400).json({ message: 'Business slug es requerido en la ruta.' });
         }
-        
+
         const servicePayload: CreateOrderPayloadInternalDto = {
             tableIdentifier: createOrderDto.tableIdentifier,
-            orderNotes: createOrderDto.customerNotes, 
+            orderNotes: createOrderDto.customerNotes,
             customerId: createOrderDto.customerId,
-            items: createOrderDto.items.map((item: CreateOrderItemControllerDto) => ({ // item es CreateOrderItemControllerDto (alias de CreateOrderItemDto)
+            items: createOrderDto.items.map((item: CreateOrderItemControllerDto) => ({
                 menuItemId: item.menuItemId,
                 quantity: item.quantity,
-                notes: item.notes, 
-                // Ahora item.selectedModifierOptions debería tener los datos
+                notes: item.notes,
                 selectedModifierOptions: item.selectedModifierOptions?.map(mod => ({ modifierOptionId: mod.modifierOptionId })) || []
             })),
         };
@@ -57,7 +48,7 @@ export const createPublicOrderHandler = async (req: Request, res: Response, next
         const newOrder: Order = await orderServiceInstance.createOrder(
             businessSlug,
             servicePayload,
-            createOrderDto.customerId 
+            createOrderDto.customerId
         );
         res.status(201).json(newOrder);
     } catch (error) {
@@ -65,28 +56,29 @@ export const createPublicOrderHandler = async (req: Request, res: Response, next
     }
 };
 
-// Aplica la misma lógica de plainToInstance y validate a addItemsToExistingOrderHandler
 export const addItemsToExistingOrderHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const orderId = req.params.orderId;
-        
         const addItemsToOrderDto = plainToInstance(AddItemsToOrderDto, req.body as Record<string, any>);
         const validationErrors = await validate(addItemsToOrderDto, { whitelist: true });
 
         if (validationErrors.length > 0) {
             console.error('[addItemsToExistingOrderHandler] Errores de validación del DTO:', JSON.stringify(validationErrors, null, 2));
-            const formattedErrors = validationErrors.map(err => ({ /* ... formateo ... */}));
+            const formattedErrors = validationErrors.map(err => ({
+                property: err.property,
+                constraints: err.constraints
+            }));
             return res.status(400).json({ message: 'Error de validación al añadir ítems.', errors: formattedErrors });
         }
-        
+
         const businessSlugFromHeader = req.headers['x-loyalpyme-business-slug'] as string;
 
         if (!orderId) return res.status(400).json({ message: 'Order ID es requerido.' });
         if (!businessSlugFromHeader) return res.status(400).json({ message: 'Contexto de Business Slug (x-loyalpyme-business-slug header) es requerido.' });
-        
+
         const updatedOrder: Order = await orderServiceInstance.addItemsToOrder(
             orderId,
-            addItemsToOrderDto, // Ya es una instancia transformada
+            addItemsToOrderDto,
             businessSlugFromHeader,
         );
         res.status(200).json(updatedOrder);
@@ -96,7 +88,6 @@ export const addItemsToExistingOrderHandler = async (req: Request, res: Response
 };
 
 export const getPublicOrderStatusHandler = async (req: Request, res: Response, next: NextFunction) => {
-    // ... (sin cambios si no maneja DTOs complejos en el body) ...
     try {
         const orderId = req.params.orderId;
         if (!orderId) {
@@ -112,41 +103,94 @@ export const getPublicOrderStatusHandler = async (req: Request, res: Response, n
     }
 };
 
+export const requestBillByClientHandler = async (req: Request, res: Response, next: NextFunction) => {
+    const { orderId } = req.params;
+    // ---- CORRECCIÓN: Tipar explícitamente el resultado de plainToInstance ----
+    // Y asegurar que el body se trate como objeto, incluso si es vacío.
+    const requestBillDto: RequestBillClientPayloadDto = plainToInstance(
+        RequestBillClientPayloadDto,
+        (req.body || {}) as Record<string, any> // Si req.body es undefined, usar {}
+    );
 
-// --- Clase de Controlador NestJS ---
-// (Esta parte funcionaría correctamente si tu app fuera NestJS pura y tuvieras ValidationPipe global)
-@Controller('public/orders_nest') 
+    const validationErrors = await validate(requestBillDto); // No es necesario pasar { whitelist: true } si no hay propiedades extra que quitar
+    if (validationErrors.length > 0) {
+        const formattedErrors = validationErrors.map(err => ({ property: err.property, constraints: err.constraints }));
+        return res.status(400).json({ message: 'Datos inválidos para solicitar la cuenta.', errors: formattedErrors });
+    }
+
+    if (!orderId) {
+        return res.status(400).json({ message: "Falta el ID del pedido (orderId) en la URL." });
+    }
+
+    console.log(`[PublicOrderCtrl] Client requesting bill for order ${orderId}. Preference: ${requestBillDto.paymentPreference || 'N/A'}`);
+
+    try {
+        const updatedOrder: Order = await orderServiceInstance.requestBillForClient(
+            orderId,
+            requestBillDto.paymentPreference // Ahora requestBillDto está correctamente tipado
+        );
+
+        res.status(200).json({
+            message: `Cuenta solicitada para el pedido #${updatedOrder.orderNumber}. Estado: ${updatedOrder.status}.`,
+            order: {
+                id: updatedOrder.id,
+                orderNumber: updatedOrder.orderNumber,
+                status: updatedOrder.status,
+                isBillRequested: updatedOrder.isBillRequested,
+            }
+        });
+
+    } catch (error: any) {
+        console.error(`[PublicOrderCtrl] Error requesting bill for order ${orderId} by client:`, error);
+        if (error instanceof NotFoundException) { // Comprobar tipo de error si el servicio lanza excepciones específicas de NestJS
+            return res.status(404).json({ message: error.message });
+        }
+        if (error instanceof BadRequestException) { // Comprobar tipo de error
+            return res.status(400).json({ message: error.message });
+        }
+        // Manejo genérico si no es una de las excepciones conocidas
+        if (error.message) {
+            if (error.message.includes('no encontrado')) return res.status(404).json({ message: error.message });
+            if (error.message.includes('No se puede solicitar la cuenta')) return res.status(400).json({ message: error.message });
+        }
+        next(error);
+    }
+};
+
+
+// --- Clase de Controlador NestJS (sin cambios) ---
+@Controller('public/orders_nest')
 export class OrderController {
   constructor(
-    private readonly orderService: OrderService 
+    private readonly orderService: OrderService
   ) {}
 
   @Post()
   async createOrderNest(
-    @Body() createOrderDto: CreateOrderDto, // Aquí el ValidationPipe global de NestJS haría la magia
-    @Req() req: any, 
+    @Body() createOrderDto: CreateOrderDto,
+    @Req() req: any,
   ) {
-    const businessSlugOrIdFromRequest = req.headers['x-loyalpyme-business-slug'] || req.query.businessSlug || createOrderDto.businessId; 
-    const user = req.user; 
-    
+    const businessSlugOrIdFromRequest = req.headers['x-loyalpyme-business-slug'] || req.query.businessSlug || createOrderDto.businessId;
+    const user = req.user;
+
     if (!businessSlugOrIdFromRequest) {
         throw new BadRequestException('Business context (slug or ID) is required to create an order.');
     }
 
     const servicePayload: CreateOrderPayloadInternalDto = {
       tableIdentifier: createOrderDto.tableIdentifier,
-      orderNotes: createOrderDto.customerNotes, 
+      orderNotes: createOrderDto.customerNotes,
       customerId: createOrderDto.customerId || user?.id,
-      items: createOrderDto.items.map((item) => ({ 
+      items: createOrderDto.items.map((item) => ({
         menuItemId: item.menuItemId,
         quantity: item.quantity,
-        notes: item.notes, 
-        selectedModifierOptions: item.selectedModifierOptions?.map(mod => ({ 
-            modifierOptionId: mod.modifierOptionId 
-        })) || [] 
+        notes: item.notes,
+        selectedModifierOptions: item.selectedModifierOptions?.map(mod => ({
+            modifierOptionId: mod.modifierOptionId
+        })) || []
       })),
     };
-    
+
     return this.orderService.createOrder(
         businessSlugOrIdFromRequest,
         servicePayload,
@@ -162,20 +206,20 @@ export class OrderController {
   @Post(':orderId/items')
   async addItemsToExistingOrderNest(
     @Param('orderId') orderId: string,
-    @Body() addItemsToOrderDto: AddItemsToOrderDto, 
-    @Req() req: any, 
+    @Body() addItemsToOrderDto: AddItemsToOrderDto,
+    @Req() req: any,
   ) {
-    const businessSlugFromHeader = req.headers['x-loyalpyme-business-slug'] as string; 
+    const businessSlugFromHeader = req.headers['x-loyalpyme-business-slug'] as string;
     const user = req.user;
 
     if (!businessSlugFromHeader) {
       throw new BadRequestException('Business context (Slug) is required to add items to an order.');
     }
-    
+
     return this.orderService.addItemsToOrder(
       orderId,
-      addItemsToOrderDto, 
-      businessSlugFromHeader, 
+      addItemsToOrderDto,
+      businessSlugFromHeader,
       user?.id,
     );
   }
