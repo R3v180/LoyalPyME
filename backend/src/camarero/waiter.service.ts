@@ -1,5 +1,5 @@
 // backend/src/camarero/waiter.service.ts
-// Version: 1.2.1 (Fix totalAmount select in getOrdersForStaff)
+// Version 1.3.1 (Corrected orderBy clause in getOrdersForStaff)
 
 import {
     PrismaClient,
@@ -9,16 +9,32 @@ import {
     Prisma,
     TableStatus,
     Order,
-    OrderType
+    OrderType,
+    User, // Asegurarse de importar User si se usa en tipos
 } from '@prisma/client';
-import { ReadyPickupItemDto, WaiterSelectedModifierDto, WaiterOrderListItemDto } from './camarero.dto';
-import { NotFoundException, BadRequestException, ForbiddenException, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+    ReadyPickupItemDto,
+    WaiterSelectedModifierDto,
+    WaiterOrderListItemDto
+} from './camarero.dto';
+import {
+    NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+    Logger,
+    InternalServerErrorException,
+} from '@nestjs/common';
 
-const prisma = new PrismaClient();
-const logger = new Logger('WaiterService');
+const prisma = new PrismaClient(); // Instancia de Prisma para este servicio
+const logger = new Logger('WaiterService'); // Logger para este servicio
 
+/**
+ * Obtiene la lista de ítems de pedido que están listos para ser recogidos por el personal de sala.
+ * @param businessId - ID del negocio.
+ * @returns Un array de ReadyPickupItemDto.
+ */
 export const getReadyForPickupItems = async (businessId: string): Promise<ReadyPickupItemDto[]> => {
-    logger.log(`Fetching items ready for pickup for business: ${businessId}`);
+    logger.log(`[WaiterService] Fetching items ready for pickup for business: ${businessId}`);
     try {
         const orderItemsFromDb = await prisma.orderItem.findMany({
             where: {
@@ -26,12 +42,10 @@ export const getReadyForPickupItems = async (businessId: string): Promise<ReadyP
                 order: {
                     businessId: businessId,
                     status: {
-                        notIn: [
-                            OrderStatus.COMPLETED,
-                            OrderStatus.PAID,
-                            OrderStatus.CANCELLED,
-                            OrderStatus.PENDING_PAYMENT,
-                            OrderStatus.PAYMENT_FAILED
+                        in: [
+                            OrderStatus.IN_PROGRESS,
+                            OrderStatus.PARTIALLY_READY,
+                            OrderStatus.ALL_ITEMS_READY,
                         ],
                     },
                 },
@@ -65,8 +79,6 @@ export const getReadyForPickupItems = async (businessId: string): Promise<ReadyP
                 };
             });
 
-            let itemNameSnapshotEn: string | null = null;
-
             return {
                 orderItemId: item.id,
                 orderId: item.orderId,
@@ -74,7 +86,7 @@ export const getReadyForPickupItems = async (businessId: string): Promise<ReadyP
                 orderCreatedAt: item.order.createdAt,
                 tableIdentifier: item.order.table?.identifier || null,
                 itemNameSnapshot_es: item.itemNameSnapshot,
-                itemNameSnapshot_en: itemNameSnapshotEn,
+                itemNameSnapshot_en: null, // Ajustar si tienes snapshot_en
                 quantity: item.quantity,
                 itemNotes: item.notes,
                 kdsDestination: item.kdsDestination,
@@ -83,22 +95,26 @@ export const getReadyForPickupItems = async (businessId: string): Promise<ReadyP
             };
         });
 
-        logger.log(`Found ${readyItemsDto.length} items ready for pickup for business ${businessId}.`);
+        logger.log(`[WaiterService] Found ${readyItemsDto.length} items ready for pickup for business ${businessId}.`);
         return readyItemsDto;
 
     } catch (error) {
-        logger.error(`Error fetching 'ready for pickup' items for business ${businessId}:`, error);
-        throw new Error('Error al obtener los ítems listos para servir desde la base de datos.');
+        logger.error(`[WaiterService] Error fetching 'ready for pickup' items for business ${businessId}:`, error);
+        throw new InternalServerErrorException('Error al obtener los ítems listos para servir desde la base de datos.');
     }
 };
 
+export interface MarkServedResult {
+    updatedOrderItem: OrderItem;
+    finalOrderStatus: OrderStatus;
+}
 
 export const markOrderItemAsServed = async (
     orderItemId: string,
     businessId: string,
     waiterUserId?: string
-): Promise<OrderItem> => {
-    logger.log(`Attempting to mark OrderItem ${orderItemId} as SERVED by waiter ${waiterUserId || 'unknown'} for business ${businessId}.`);
+): Promise<MarkServedResult> => {
+    logger.log(`[WaiterService] Attempting to mark OrderItem ${orderItemId} as SERVED by waiter ${waiterUserId || 'unknown'} for business ${businessId}.`);
 
     return prisma.$transaction(async (tx) => {
         const orderItem = await tx.orderItem.findFirst({
@@ -114,37 +130,41 @@ export const markOrderItemAsServed = async (
         });
 
         if (!orderItem) {
+            logger.warn(`[WaiterService TX] OrderItem '${orderItemId}' not found or not in business '${businessId}'.`);
             throw new NotFoundException(`Ítem de pedido con ID ${orderItemId} no encontrado o no pertenece a este negocio.`);
         }
         if (!orderItem.order) {
+            logger.error(`[WaiterService TX] Critical: OrderItem '${orderItemId}' has no associated order.`);
             throw new InternalServerErrorException(`Error interno: El ítem de pedido ${orderItemId} no está asociado a ningún pedido.`);
         }
 
         if (orderItem.status !== OrderItemStatus.READY) {
+            logger.warn(`[WaiterService TX] OrderItem '${orderItemId}' is in status '${orderItem.status}', not 'READY'. Cannot mark as served.`);
             throw new BadRequestException(`El ítem de pedido '${orderItem.itemNameSnapshot || orderItemId}' no está en estado 'READY'. Estado actual: ${orderItem.status}. No se puede marcar como servido.`);
         }
 
-        const dataToUpdate: Prisma.OrderItemUpdateArgs['data'] = {
+        const dataToUpdateOrderItem: Prisma.OrderItemUpdateArgs['data'] = {
             status: OrderItemStatus.SERVED,
             servedAt: new Date(),
         };
         if (waiterUserId) {
-            dataToUpdate.servedById = waiterUserId;
+            dataToUpdateOrderItem.servedById = waiterUserId;
         }
 
         const updatedOrderItem = await tx.orderItem.update({
             where: { id: orderItemId },
-            data: dataToUpdate,
+            data: dataToUpdateOrderItem,
         });
-        logger.log(`[TX] OrderItem ${orderItemId} marked as SERVED.`);
+        logger.log(`[WaiterService TX] OrderItem ${orderItemId} marked as SERVED in DB.`);
 
         const orderId = orderItem.order.id;
-        const allItemsInOrder = await tx.orderItem.findMany({
+        const allItemsInThisOrder = await tx.orderItem.findMany({
             where: { orderId: orderId },
             select: { status: true }
         });
 
-        const activeItems = allItemsInOrder.filter(item => item.status !== OrderItemStatus.CANCELLED);
+        const activeItems = allItemsInThisOrder.filter(item => item.status !== OrderItemStatus.CANCELLED);
+        let newOrderStatusForParent: OrderStatus = orderItem.order.status;
 
         if (activeItems.length > 0 && activeItems.every(item => item.status === OrderItemStatus.SERVED)) {
             if (
@@ -152,96 +172,89 @@ export const markOrderItemAsServed = async (
                 orderItem.order.status !== OrderStatus.CANCELLED &&
                 orderItem.order.status !== OrderStatus.COMPLETED
             ) {
+                newOrderStatusForParent = OrderStatus.COMPLETED;
                 await tx.order.update({
                     where: { id: orderId },
-                    data: { status: OrderStatus.COMPLETED }
+                    data: { status: newOrderStatusForParent }
                 });
-                logger.log(`[TX] Order ${orderId} status updated to COMPLETED as all active items are SERVED.`);
+                logger.log(`[WaiterService TX] Order ${orderId} status updated to COMPLETED as all active items are SERVED.`);
             } else {
-                 logger.log(`[TX] Order ${orderId} already in state ${orderItem.order.status}. Not changing to COMPLETED despite all items served.`);
+                 logger.log(`[WaiterService TX] Order ${orderId} already in final/completed state (${orderItem.order.status}). Not changing to COMPLETED.`);
             }
-        } else if (activeItems.length === 0 && allItemsInOrder.length > 0) {
-            if (orderItem.order.status !== OrderStatus.CANCELLED && orderItem.order.status !== OrderStatus.PAID) {
-                 await tx.order.update({
+        } else if (activeItems.length === 0 && allItemsInThisOrder.length > 0) {
+             if (orderItem.order.status !== OrderStatus.CANCELLED && orderItem.order.status !== OrderStatus.PAID) {
+                newOrderStatusForParent = OrderStatus.CANCELLED;
+                await tx.order.update({
                     where: { id: orderId },
-                    data: { status: OrderStatus.CANCELLED }
+                    data: { status: newOrderStatusForParent }
                 });
-                logger.log(`[TX] Order ${orderId} status updated to CANCELLED as all items were cancelled.`);
+                logger.log(`[WaiterService TX] Order ${orderId} status updated to CANCELLED as all items were cancelled.`);
             }
+        } else {
+            logger.log(`[WaiterService TX] Order ${orderId} still has items not SERVED or no active items. Order status remains ${newOrderStatusForParent}.`);
         }
-        else {
-             logger.log(`[TX] Order ${orderId} still has items not SERVED or no active items. Status not changed to COMPLETED. Active items: ${activeItems.length}, All items: ${allItemsInOrder.length}`);
-        }
-
-        return updatedOrderItem;
+        return { updatedOrderItem, finalOrderStatus: newOrderStatusForParent };
     });
 };
-
 
 export const requestBillByStaff = async (
     orderId: string,
     staffUserId: string,
     businessId: string,
-    paymentPreference?: string
+    paymentPreference?: string | undefined
 ): Promise<Order> => {
-    logger.log(`Staff ${staffUserId} requesting bill for order ${orderId} in business ${businessId}. Preference: ${paymentPreference || 'N/A'}`);
+    logger.log(`[WaiterService] Staff ${staffUserId} requesting bill for order ${orderId} in business ${businessId}. Preference: ${paymentPreference || 'N/A'}`);
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      select: { status: true, businessId: true, tableId: true }
-    });
+    return prisma.$transaction(async (tx) => {
+        const order = await tx.order.findUnique({
+            where: { id: orderId },
+            select: { id: true, status: true, businessId: true, tableId: true, orderNumber: true }
+        });
 
-    if (!order) {
-      throw new NotFoundException(`Pedido con ID ${orderId} no encontrado.`);
-    }
-
-    if (order.businessId !== businessId) {
-        throw new ForbiddenException("El pedido no pertenece al negocio del personal.");
-    }
-
-    const allowedStatesToRequestBill: OrderStatus[] = [
-      OrderStatus.RECEIVED,
-      OrderStatus.IN_PROGRESS,
-      OrderStatus.PARTIALLY_READY,
-      OrderStatus.ALL_ITEMS_READY,
-      OrderStatus.COMPLETED,
-    ];
-
-    if (!allowedStatesToRequestBill.includes(order.status)) {
-      throw new BadRequestException(`No se puede solicitar la cuenta para un pedido en estado '${order.status}'.`);
-    }
-
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        status: OrderStatus.PENDING_PAYMENT,
-        isBillRequested: true,
-        paymentMethodPreference: paymentPreference,
-      },
-    });
-
-    logger.log(`Bill requested by staff ${staffUserId} for order ${orderId}. Status set to PENDING_PAYMENT.`);
-
-    if (order.tableId) {
-        try {
-            await prisma.table.update({
-                where: { id: order.tableId },
-                data: { status: TableStatus.PENDING_PAYMENT_TABLE }
-            });
-            logger.log(`Table ${order.tableId} status updated to PENDING_PAYMENT_TABLE.`);
-        } catch (tableError) {
-            logger.error(`Failed to update table status for table ${order.tableId} on bill request:`, tableError);
+        if (!order) {
+            throw new NotFoundException(`Pedido con ID ${orderId} no encontrado.`);
         }
-    }
+        if (order.businessId !== businessId) {
+            throw new ForbiddenException("El pedido no pertenece al negocio del personal.");
+        }
 
-    return updatedOrder;
+        const allowedStates: OrderStatus[] = [
+            OrderStatus.RECEIVED, OrderStatus.IN_PROGRESS, OrderStatus.PARTIALLY_READY,
+            OrderStatus.ALL_ITEMS_READY, OrderStatus.COMPLETED,
+        ];
+        if (!allowedStates.includes(order.status)) {
+            throw new BadRequestException(`No se puede solicitar la cuenta para un pedido en estado '${order.status}'.`);
+        }
+
+        const updateData: Prisma.OrderUpdateInput = {
+            status: OrderStatus.PENDING_PAYMENT,
+            isBillRequested: true,
+            ...(paymentPreference !== undefined && { paymentMethodPreference: paymentPreference }),
+        };
+
+        const updatedOrder = await tx.order.update({ where: { id: orderId }, data: updateData });
+        logger.log(`[WaiterService TX] Bill requested by staff ${staffUserId} for order ${orderId}. Status set to PENDING_PAYMENT.`);
+
+        if (order.tableId) {
+            try {
+                await tx.table.update({
+                    where: { id: order.tableId },
+                    data: { status: TableStatus.PENDING_PAYMENT_TABLE }
+                });
+                logger.log(`[WaiterService TX] Table ID '${order.tableId}' status updated to PENDING_PAYMENT_TABLE.`);
+            } catch (tableError) {
+                logger.error(`[WaiterService TX] Failed to update table status for table '${order.tableId}' on staff bill request. Continuing. Error:`, tableError);
+            }
+        }
+        return updatedOrder;
+    });
 };
 
 export const getOrdersForStaff = async (
     businessId: string,
     filters?: { status?: OrderStatus[] }
 ): Promise<WaiterOrderListItemDto[]> => {
-    logger.log(`Fetching orders for staff UI. Business: ${businessId}, Filters: ${JSON.stringify(filters)}`);
+    logger.log(`[WaiterService] Fetching orders for staff UI. Business: ${businessId}, Filters: ${JSON.stringify(filters)}`);
 
     const whereClause: Prisma.OrderWhereInput = {
         businessId: businessId,
@@ -250,11 +263,17 @@ export const getOrdersForStaff = async (
     if (filters?.status && filters.status.length > 0) {
         whereClause.status = { in: filters.status };
     } else {
-        whereClause.status = { in: [OrderStatus.PENDING_PAYMENT, OrderStatus.COMPLETED, OrderStatus.ALL_ITEMS_READY, OrderStatus.PARTIALLY_READY, OrderStatus.IN_PROGRESS, OrderStatus.RECEIVED] };
+        whereClause.status = {
+            in: [
+                OrderStatus.PENDING_PAYMENT, OrderStatus.COMPLETED,
+                OrderStatus.ALL_ITEMS_READY, OrderStatus.PARTIALLY_READY,
+                OrderStatus.IN_PROGRESS, OrderStatus.RECEIVED
+            ]
+        };
     }
 
     try {
-        const orders = await prisma.order.findMany({
+        const ordersFromDb = await prisma.order.findMany({
             where: whereClause,
             select: {
                 id: true,
@@ -262,7 +281,7 @@ export const getOrdersForStaff = async (
                 table: { select: { identifier: true } },
                 status: true,
                 finalAmount: true,
-                totalAmount: true, // Asegurarse que este campo está seleccionado
+                totalAmount: true,
                 items: {
                     where: { status: { not: OrderItemStatus.CANCELLED } },
                     select: { quantity: true }
@@ -272,12 +291,15 @@ export const getOrdersForStaff = async (
                 isBillRequested: true,
                 orderType: true,
             },
-            orderBy: {
-                createdAt: 'desc',
-            }
+            // --- CORRECCIÓN APLICADA ---
+            orderBy: [
+                { status: 'asc' },    // Primer criterio de ordenación
+                { createdAt: 'asc' }  // Segundo criterio de ordenación
+            ]
+            // --- FIN CORRECCIÓN ---
         });
 
-        const orderListItems: WaiterOrderListItemDto[] = orders.map(order => {
+        const orderListItems: WaiterOrderListItemDto[] = ordersFromDb.map(order => {
             const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
             let customerDisplayName: string | null = null;
             if (order.customerLCo) {
@@ -289,20 +311,26 @@ export const getOrdersForStaff = async (
                 orderNumber: order.orderNumber,
                 tableIdentifier: order.table?.identifier || null,
                 status: order.status,
-                finalAmount: order.finalAmount?.toNumber() ?? order.totalAmount.toNumber(),
+                finalAmount: (order.finalAmount ?? order.totalAmount).toNumber(),
                 itemCount: itemCount,
                 customerName: customerDisplayName,
                 createdAt: order.createdAt,
                 isBillRequested: order.isBillRequested,
-                orderType: order.orderType,
+                orderType: order.orderType as OrderType | null, // Casteo al enum local si es necesario
             };
         });
 
-        logger.log(`Found ${orderListItems.length} orders for staff UI for business ${businessId}.`);
+        logger.log(`[WaiterService] Found ${orderListItems.length} orders for staff UI for business ${businessId}.`);
         return orderListItems;
 
     } catch (error) {
-        logger.error(`Error fetching orders for staff UI (Business: ${businessId}):`, error);
-        throw new Error('Error al obtener la lista de pedidos para el personal.');
+        logger.error(`[WaiterService] Error fetching orders for staff UI (Business: ${businessId}):`, error);
+        if (error instanceof Prisma.PrismaClientValidationError) {
+            logger.error("[WaiterService] Prisma Client Validation Error details:", error.message);
+            throw new InternalServerErrorException(`Error de validación de Prisma al obtener pedidos: ${error.message}`);
+        }
+        throw new InternalServerErrorException('Error al obtener la lista de pedidos para el personal.');
     }
 };
+
+// (No se necesita exportar `prisma` si el controlador no lo usa directamente)
