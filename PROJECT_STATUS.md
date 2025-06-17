@@ -1,7 +1,7 @@
 # LoyalPyME - Estado del Proyecto y Decisiones Clave
 
-**Versión Actual:** 1.20.0 (LC: Creación de Pedidos con Modificadores SOLUCIONADO, Ciclo KDS y Servicio de Camarero (preparación/entrega) Completado y Validado)
-**Fecha de Última Actualización:** 3 de Junio de 2025
+**Versión Actual:** 1.21.0 (LC: Ciclo Completo de Pedido (Creación, Servicio, Pago) y Adición de Ítems a Pedido Existente COMPLETADOS Y VALIDADOS)
+**Fecha de Última Actualización:** 17 de Junio de 2025
 
 ---
 
@@ -13,17 +13,16 @@
     La plataforma ofrece dos módulos principales que los negocios pueden activar según sus necesidades:
   - **LoyalPyME Core (LCo):** Un sistema de fidelización digital robusto y completo. **[Funcionalmente Completo para MVP]**.
     - **Características Clave LCo:** Gestión integral de clientes (con roles), sistema de acumulación de puntos (configurable por negocio), niveles de fidelización (tiers) con beneficios personalizables (multiplicadores de puntos, acceso a recompensas exclusivas, beneficios textuales), catálogo de recompensas canjeables (con soporte i18n para nombres/descripciones e imágenes individuales), generación de códigos QR únicos para la asignación de puntos en transacciones físicas, y un panel de cliente interactivo donde pueden visualizar su progreso, saldo de puntos, recompensas disponibles, regalos asignados por el administrador, y el historial de su actividad en el programa.
-  - **LoyalPyME Camarero (LC):** Un módulo avanzado, **[EN DESARROLLO ACTIVO - Flujo de creación de pedidos, ciclo KDS y ciclo de servicio por camarero (preparación y entrega de ítems) COMPLETADOS Y VALIDADOS. Próximo paso: Flujo de "Pedir Cuenta" y "Marcar Como Pagado"]**, diseñado para digitalizar y optimizar la operativa de servicio en el sector de la hostelería (restaurantes, bares, cafeterías).
+  - **LoyalPyME Camarero (LC):** Un módulo avanzado, **[FLUJO DE PEDIDO PRINCIPAL COMPLETADO. Próximo paso: Funcionalidades avanzadas de gestión de cuenta (Dividir Cuenta)]**, diseñado para digitalizar y optimizar la operativa de servicio en el sector de la hostelería (restaurantes, bares, cafeterías).
     - **Funcionalidades Clave LC Implementadas y Validadas:**
-      1.  **Gestión Completa de Carta Digital (Admin):** Interfaz administrativa para crear, editar y organizar categorías del menú (con imágenes), ítems del menú (con detalles como i18n para nombre/descripción, precio, imagen, lista de alérgenos, etiquetas personalizables, tiempo de preparación estimado, calorías, SKU, y destino KDS), y grupos de modificadores con opciones configurables (tipo de UI radio/checkbox, selecciones mínimas/máximas, obligatoriedad, ajustes de precio).
-      2.  **Visualización de Carta y Toma de Pedidos por Cliente (con Modificadores):** Acceso a través de URL específica (ej. `/m/:businessSlug/:tableIdentifier?`). Interfaz interactiva para explorar la carta, **personalizar ítems con múltiples grupos de modificadores (obligatorios y opcionales, selección única y múltiple), con cálculo de precio dinámico y validación de reglas frontend precisa**. Se permite añadir a un carrito de compra local persistente (`localStorage`), revisar el pedido, añadir notas generales y enviar la comanda.
-      3.  **Backend Robusto para Creación de Pedidos (con Modificadores):** El backend (`OrderService`, `OrderController`, DTOs en `order.dto.ts`, y la transformación con `plainToInstance` en el controller) **procesa correctamente los pedidos públicos, incluyendo la validación exhaustiva de modificadores (disponibilidad, reglas de grupo `min/maxSelections`, `isRequired`), recálculo de precios, y creación transaccional de `Order`, `OrderItem`s y `OrderItemModifierOption`s. El bug crítico de modificadores obligatorios ha sido SOLUCIONADO.**
-      4.  **Gestión de Pedido Activo por Cliente:** La `PublicMenuViewPage` detecta si ya existe un pedido activo para esa mesa/navegador (información guardada en `localStorage`) y adapta la UI para mostrar el número de pedido en curso y un enlace a su estado. (Funcionalidad de "Añadir a Pedido Existente" está detallada como próxima tarea).
-      5.  **Visualización del Estado del Pedido por Cliente:** La página `OrderStatusPage` muestra el estado general del pedido y el estado individual de cada ítem (ej. "En preparación", "Listo para servir", "Servido"), actualizándose automáticamente mediante polling. Gestiona la lógica de "pedido finalizado" (cuando el estado es `PAID` o `CANCELLED`) para limpiar el `localStorage` y permitir al cliente iniciar un nuevo pedido.
-      6.  **API KDS (Backend): [COMPLETADA Y VALIDADA]** Endpoints robustos (`/api/camarero/kds/*`) para que las pantallas de cocina/barra (KDS) obtengan los `OrderItem`s filtrados por destino y estado. Permite actualizar el `OrderItemStatus` (ej. de `PENDING_KDS` a `PREPARING`, luego a `READY`, o a `CANCELLED`). La lógica en `kds.service.ts` que actualiza el `Order.status` general del pedido basada en los cambios de estado de sus ítems ha sido **validada y funciona correctamente.**
-      7.  **Interfaz KDS (Frontend - MVP): [FUNCIONALIDAD BASE COMPLETADA]** La página `/admin/kds` (`KitchenDisplayPage.tsx`) permite al personal de cocina/barra autenticado seleccionar su destino KDS, visualizar ítems pendientes/en preparación, y actualizar su estado ("Empezar Preparación", "Marcar como Listo", "Cancelar Ítem") mediante botones de acción, con polling para refresco automático.
-      8.  **API Servicio Camarero (Backend - Entrega de Ítems): [COMPLETADA Y VALIDADA]** Endpoints (`/api/camarero/staff/*`) para que los camareros obtengan ítems listos para recoger (`OrderItem.status = READY`) y para marcar ítems como `SERVED`. La lógica en `waiter.service.ts` actualiza `OrderItem.status` a `SERVED`, registra `servedAt`, y **actualiza `Order.status` a `COMPLETED` si todos los ítems activos del pedido están servidos. Esta lógica ha sido validada y funciona correctamente.**
-      9.  **Interfaz Camarero (Frontend - MVP Entrega de Ítems): [FUNCIONALIDAD BASE COMPLETADA]** La página `/admin/camarero/pickup-station` (`WaiterPickupPage.tsx`) permite al personal de sala autenticado visualizar los ítems listos para recoger y marcarlos como "Servido", desapareciendo de la lista. Implementa polling para refresco.
+      1.  **Gestión Completa de Carta Digital (Admin):** Interfaz administrativa para crear, editar y organizar la carta, ítems y modificadores complejos.
+      2.  **Visualización de Carta y Toma de Pedidos por Cliente (con Modificadores):** Interfaz interactiva para explorar la carta, personalizar ítems con modificadores, con cálculo de precio dinámico y validación de reglas.
+      3.  **Backend Robusto para Creación de Pedidos:** El backend procesa y valida correctamente los pedidos públicos, incluyendo modificadores y precios. El bug crítico de modificadores ha sido **SOLUCIONADO.**
+      4.  **Gestión de Pedido Activo por Cliente:** La `PublicMenuViewPage` detecta pedidos activos y adapta la UI, permitiendo **añadir nuevos ítems a un pedido existente**.
+      5.  **Visualización del Estado del Pedido por Cliente:** La `OrderStatusPage` muestra el estado del pedido y de cada ítem en tiempo real (con polling).
+      6.  **Ciclo KDS (Cocina/Barra):** API e Interfaz de KDS funcionales para que el personal vea y actualice el estado de preparación de los ítems (`PENDING_KDS` -> `PREPARING` -> `READY`).
+      7.  **Ciclo de Servicio del Camarero:** API e Interfaz para que el camarero vea los ítems listos para recoger (`READY`) y los marque como `SERVED`.
+      8.  **Ciclo Financiero Completo:** API e Interfaces para que el cliente **pida la cuenta** (cambiando el pedido a `PENDING_PAYMENT`) y para que el camarero **marque el pedido como `PAID`**, lo cual **libera la mesa** y **asigna los puntos de fidelidad LCo** correspondientes.
 - **Componentes Tecnológicos Clave Detallados:**
   - **Backend:** Node.js (runtime JavaScript), Express.js (framework web), TypeScript (tipado estático), Prisma ORM (interacción con base de datos PostgreSQL, versión 6+), PostgreSQL (base de datos relacional), JSON Web Tokens (JWT) (para autenticación stateless basada en tokens), `bcryptjs` (hashing de contraseñas), Cloudinary SDK (almacenamiento y gestión de imágenes en la nube), Multer (middleware para manejo de subidas de archivos multipart/form-data), Swagger/OpenAPI (`swagger-jsdoc`, `swagger-ui-express`) (para documentación interactiva de la API), `node-cron` (para ejecución de tareas programadas), `class-validator` y `class-transformer` (para validación y transformación robusta de DTOs, crucial para el correcto parseo de payloads anidados).
   - **Frontend:** React (biblioteca para construir interfaces de usuario, versión 19+ con Hooks), TypeScript (tipado estático), Vite (herramienta de construcción y servidor de desarrollo rápido, versión 5+), Mantine UI (biblioteca de componentes React, versión 7+), Axios (cliente HTTP para peticiones a la API), React Router DOM (gestión de rutas en la aplicación de página única, versión 6+), `i18next` y `react-i18next` (para internacionalización completa ES/EN con archivos JSON de traducción), `html5-qrcode` (para la funcionalidad de escaneo de QR por el cliente en LCo), `react-image-crop` (para la funcionalidad de recorte de imágenes en los paneles de administración).
@@ -41,11 +40,9 @@
     - **Visualización Estado del Pedido Cliente (`/order-status/:orderId`):** Página accesible sin login. Muestra el estado general del pedido y el estado individual de cada `OrderItem`, con actualizaciones automáticas por polling. Gestiona la lógica de "pedido finalizado" (`PAID` o `CANCELLED`) para limpiar el `localStorage` y permitir al cliente iniciar un nuevo pedido.
 - **Propósito y Visión:** Convertirse en la herramienta digital de referencia, modular y altamente adaptable, que impulse la fidelización de clientes (LCo) y optimice drásticamente la operativa de servicio en PyMEs (LC), con un foco especial en el sector hostelero. El objetivo es mejorar la recurrencia de clientes, aumentar el ticket promedio, facilitar la gestión del negocio y enriquecer la relación cliente-negocio a través de experiencias digitales eficientes y gratificantes.
 
-_(Para una descripción más detallada de la visión a largo plazo, consulta el [README.md](./README.md). Para la hoja de ruta y el backlog de funcionalidades, revisa [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md). Para los flujos de trabajo detallados de cada módulo, consulta `LOYALPYME_CORE_WORKFLOW.md`, `LOYALPYME_CAMARERO_WORKFLOW.md`, y `MODULE_INTEGRATION_WORKFLOW.md`)._
-
 ---
 
-## 2. Estado Actual Detallado (Hitos Completados y En Progreso - v1.20.0) 📝
+## 2. Estado Actual Detallado (Hitos Completados y En Progreso - v1.21.0) 📝
 
 - **Fase 1 (Núcleo Operativo LCo + Pulido Inicial): [COMPLETADO]**
 
@@ -70,52 +67,72 @@ _(Para una descripción más detallada de la visión a largo plazo, consulta el 
   - Payload de Perfil de Usuario (`/api/profile`) enriquecido con flags de módulos activos y detalles del negocio.
   - Script de Seed (`prisma/seed.ts`) actualizado (v7) y funcional, creando datos demo exhaustivos para LCo y LC (negocio, admin, clientes, tiers, recompensas, carta completa con modificadores, mesas, personal, pedidos de ejemplo con ítems KDS).
 
-- **Fase 3 (Desarrollo Módulo "LoyalPyME Camarero" - LC): [EN PROGRESO AVANZADO - Flujo de Pedido y Servicio (pre-pago) COMPLETADO Y VALIDADO]**
-  - **LC - Fundamentos Backend (Modelos BD y API Gestión Carta): [COMPLETADO]**
+- **Fase 3 (Desarrollo Módulo "LoyalPyME Camarero" - LC): [FLUJO PRINCIPAL COMPLETO]**
+  - **LC - Fundamentos Backend (Modelos BD y API Gestión Carta): [COMPLETADO Y VALIDADO]**
     - Modelos Prisma detallados y migrados para `Table`, `MenuCategory`, `MenuItem`, `ModifierGroup`, `ModifierOption`, `Order`, `OrderItem`, `OrderItemModifierOption`, `StaffPin`. Enums `OrderStatus`, `OrderItemStatus`, etc. definidos.
     - API CRUD Admin Carta (`/api/camarero/admin/*`) completa y protegida para `MenuCategory`, `MenuItem` (con `ModifierGroup`s), y `ModifierOption`s.
-  - **LC - Frontend: UI Admin para Gestión de Carta Digital: [COMPLETADO]**
+  - **LC - Frontend: UI Admin para Gestión de Carta Digital: [COMPLETADO Y VALIDADO]**
     - Página `/admin/dashboard/camarero/menu-editor` (`MenuManagementPage.tsx`) y componentes asociados (`MenuCategoryManager.tsx`, `MenuItemManager.tsx`, `MenuItemFormModal.tsx`, `ModifierGroupsManagementModal.tsx`, `ModifierOptionsManagementModal.tsx`) funcionales para CRUD completo de la carta, incluyendo subida de imágenes.
     - Hooks de datos y tipos para gestión de menú implementados. Botón "Previsualizar Carta Pública".
-  - **LC - Backend y Frontend: Visualización de Carta Pública y Flujo de Pedido por Cliente (con Modificadores): [ACTUALIZADO - ROBUSTO Y VALIDADO]**
+  - **LC - Backend y Frontend: Visualización de Carta Pública y Flujo de Pedido por Cliente (con Modificadores): [COMPLETADO Y VALIDADO]**
     - **Backend (API Pública de Menú - `/public/menu/business/:businessSlug`):** Funcional, sirve la carta completa y activa para el cliente.
     - **Frontend (Visualización de Carta - `/m/:businessSlug/:tableIdentifier?` - `PublicMenuViewPage.tsx`):**
       - Muestra interactiva de la carta, personalización de ítems con modificadores y cálculo de precio dinámico **validado y funcionando correctamente**.
       - Funcionalidad "Añadir al Carrito" y persistencia del carrito no enviado en `localStorage` operativa.
     - **Frontend (Modal del Carrito y Envío - `ShoppingCartModal.tsx`):** Funcional para revisión, modificación de cantidades, notas y envío.
     - **Backend (Creación de Pedido - `POST /public/order/:businessSlug`):**
-      - **SOLUCIONADO BUG CRÍTICO:** El servicio (`OrderService`) ahora procesa y valida correctamente los `selectedModifierOptions` gracias a la corrección en el uso de `groupId` (en lugar de `modifierGroupId`), la implementación de `plainToInstance` en el `OrderController` para la transformación del `req.body` JSON, y la correcta definición de DTOs en `order.dto.ts` con decoradores `@Type`/`@ValidateNested`.
+      - **SOLUCIONADO BUG CRÍTICO:** El servicio (`OrderService`) ahora procesa y valida correctamente los `selectedModifierOptions`.
       - Recálculo de precios en backend y creación transaccional de `Order`, `OrderItem`s, y `OrderItemModifierOption`s funcionando como se espera.
     - **Frontend (Post-Envío Pedido en `PublicMenuViewPage.tsx`):** Guardado de `activeOrderInfo` en `localStorage` y redirección a `OrderStatusPage` operativos.
-  - **LC - Cliente: Visualización del Estado del Pedido: [COMPLETADO]**
+  - **LC - Cliente: Visualización del Estado del Pedido: [COMPLETADO Y VALIDADO]**
     - **Backend (`public/order.service.ts`):** Endpoint `GET /public/order/:orderId/status` (`PublicOrderStatusInfo`) funcional.
-    - **Frontend (`PublicMenuViewPage.tsx` - Detección Pedido Activo):** Funcionalidad de detección y UI condicional operativa.
-    - **Frontend (`OrderStatusPage.tsx`):** Muestra información del pedido y estado de ítems con polling. Lógica de "Pedido Finalizado" (`PAID` o `CANCELLED`) para limpiar `localStorage` y permitir nuevo pedido está implementada (se adaptará para `PENDING_PAYMENT`). Botón "Volver al Menú" funcional.
+    - **Frontend (`PublicMenuViewPage.tsx` - Detección Pedido Activo):** Funcionalidad de detección, UI condicional y **adición de ítems a pedido existente** operativa.
+    - **Frontend (`OrderStatusPage.tsx`):** Muestra información del pedido y estado de ítems con polling. Lógica de "Pedido Finalizado" (`PAID` o `CANCELLED`) para limpiar `localStorage` y permitir nuevo pedido está implementada. Botón "Volver al Menú" funcional.
   - **LC - KDS Backend (API y Lógica de Estados): [COMPLETADO Y VALIDADO]**
     - Endpoints `GET /api/camarero/kds/items` y `PATCH /api/camarero/kds/items/:orderItemId/status` funcionales y protegidos.
     - Lógica de `Order.status` en `kds.service.ts` (actualización a `IN_PROGRESS`, `PARTIALLY_READY`, `ALL_ITEMS_READY`) basada en estados de `OrderItem`s **validada**.
-  - **LC - KDS Frontend (Visualización y Acciones): [FUNCIONALIDAD BASE COMPLETADA]**
+  - **LC - KDS Frontend (Visualización y Acciones): [COMPLETADO Y VALIDADO]**
     - `KitchenDisplayPage.tsx` funcional: selección de destino KDS, visualización de ítems, polling, y acciones de cambio de estado (`PENDING_KDS` -> `PREPARING` -> `READY`; `CANCELLED`) con notificaciones.
   - **LC - Camarero Backend (Servicio y Entrega de Ítems): [COMPLETADO Y VALIDADO]**
     - Endpoints `GET /api/camarero/staff/ready-for-pickup` y `PATCH /api/camarero/staff/order-items/:orderItemId/status` (para marcar como `SERVED`) implementados y funcionales.
     - Lógica en `waiter.service.ts` para actualizar `OrderItem.status` a `SERVED` y `Order.status` a `COMPLETED` (si todos los ítems están servidos) **validada**.
-  - **LC - Camarero Frontend (Recogida y Servicio de Ítems): [FUNCIONALIDAD BASE COMPLETADA]**
+  - **LC - Camarero Frontend (Recogida y Servicio de Ítems): [COMPLETADO Y VALIDADO]**
     - Página `WaiterPickupPage.tsx` (`/admin/camarero/pickup-station`) funcional: visualización de ítems `READY` y acción "Marcar como Servido" con actualización de la lista y notificaciones.
+  - **LC - Flujo Financiero Completo del Pedido: [COMPLETADO Y VALIDADO]**
+    - **Pedir la Cuenta:** Funcionalidad implementada en el backend y frontend (`OrderStatusPage`) para que el cliente solicite la cuenta, cambiando `Order.status` a `PENDING_PAYMENT`.
+    - **Marcar Como Pagado:** Funcionalidad implementada en el backend y frontend (`WaiterOrderManagementPage`) para que el camarero marque el pedido como `PAID`, lo cual libera la mesa asociada en el `TableManager` y dispara la lógica de asignación de puntos de LCo.
 
 ---
 
 ## 3. Key Concepts & Design Decisions 🔑
 
-- **Arquitectura Modular y Activación por Negocio:** _(Confirmado y funcional)_
-- **Estructura de Datos Detallada para Módulo Camarero (LC) (Resumen Clave):** _(Modelos Prisma estables y validados en el flujo actual)_
-- **Flujo de Pedido LC - Cliente (Resumen Clave):**
-  - **Creación de Nuevo Pedido:** El flujo desde la selección de ítems y modificadores por el cliente, la construcción del payload en el frontend, la recepción y transformación del DTO en el backend (controller usando `plainToInstance` y DTOs con decoradores), y el procesamiento y validación en el servicio (incluyendo la correcta gestión de `groupId` de modificadores) está **ahora robusto y validado.**
-- **Flujo KDS (LC - Actual):** _(Confirmado y funcional)_
-- **Flujo Camarero (LC - Actual - Entrega):** _(Confirmado y funcional para la entrega de ítems y marcado de pedido como `COMPLETED`)_
-- **Internacionalización (i18n):** _(Implementación base funcional)_
-- **Almacenamiento de Imágenes:** _(Funcional con Cloudinary)_
-- **Arquitectura de Servicios y Controladores (Backend):** _(Se ha clarificado el uso de `plainToInstance` para handlers Express vs. `ValidationPipe` para controladores NestJS puros)_
-- **Hooks Personalizados (Frontend):** _(En uso y funcionales)_
+- **Arquitectura Modular y Activación por Negocio:** La plataforma está diseñada para ser multi-tenant, donde cada `Business` es una entidad independiente. La modularidad se logra a nivel de base de datos con flags booleanos en el modelo `Business` (ej. `isLoyaltyCoreActive`, `isCamareroActive`). En el backend, un middleware personalizado (`checkModuleActive`) protege rutas de API específicas, denegando el acceso si el negocio del usuario autenticado no tiene el módulo correspondiente activo. En el frontend, la UI se adapta dinámicamente: componentes como `AdminNavbar` y los dashboards de cliente y administrador leen estas flags del perfil del usuario y renderizan condicionalmente los menús, botones y secciones relevantes para los módulos activos.
+
+- **Estructura de Datos Detallada para Módulo Camarero (LC):** La base de datos, gestionada por Prisma, se ha diseñado para ser robusta y escalable. `Order` es la entidad central que agrupa los `OrderItem`s. Crucialmente, cada `OrderItem` almacena un _snapshot_ del precio y nombre del producto en el momento del pedido (`priceAtTimeOfOrder`, `itemNameSnapshot_es`), garantizando la integridad de los datos históricos aunque el producto cambie en el menú. Los modificadores se enlazan a través de `OrderItemModifierOption`, que conecta un `OrderItem` con una `ModifierOption` específica. El modelo `Table` se asocia a un `Order` para gestionar la ocupación y liberación del espacio físico.
+
+- **Flujo de Pedido LC - Cliente (Detallado):** El proceso completo desde que un cliente se sienta en la mesa hasta que envía su pedido está meticulosamente orquestado:
+
+  1.  **Acceso y Carga:** El cliente escanea un QR o accede a una URL (`/m/:slug/:table`). La página `PublicMenuViewPage` se inicializa y el hook `usePublicMenuData` se dispara para obtener la carta digital del negocio.
+  2.  **Configuración de Ítem:** Al seleccionar un producto, se activa el hook `useMenuItemConfigurator`, que presenta una UI para seleccionar modificadores. Este hook valida en tiempo real las reglas del grupo (mínimos/máximos, obligatorios) y recalcula el precio final del ítem dinámicamente, proporcionando feedback instantáneo al usuario.
+  3.  **Gestión del Carrito:** Los ítems, ya sean simples o configurados, se añaden al carrito, cuyo estado es gestionado por el hook `usePublicOrderCart`. Este hook genera un ID único para cada configuración de ítem (`cartItemId`) para poder agruparlos correctamente y persiste el estado del carrito en el `localStorage` del navegador, permitiendo al cliente cerrar la pestaña y no perder su selección.
+  4.  **Detección de Pedido Activo:** Simultáneamente, el hook `useActiveOrderState` comprueba el `localStorage` para ver si ya existe un `activeOrderId` para esa mesa. Si lo encuentra, adapta la UI para informar al cliente que puede añadir más ítems a su pedido en curso.
+  5.  **Envío y Orquestación:** Al enviar el pedido, se invoca la función `handleOrderSubmission` del servicio `publicOrderApiService`. Esta función orquesta toda la lógica: construye el payload (DTO), determina si debe llamar a la API de "crear nuevo pedido" o "añadir a pedido existente", y maneja la respuesta.
+  6.  **Recepción y Validación en Backend:** El controlador de Express recibe la petición, utiliza `plainToInstance` para transformar el JSON en una instancia de clase DTO anidada, y luego `validate` para asegurar que todos los datos (incluyendo cada modificador) son correctos antes de pasar la petición al servicio de backend (`OrderCreationService` o `OrderModificationService`) para su procesamiento en la base de datos.
+
+- **Flujo KDS (LC - Detallado):** La comunicación entre el cliente y la cocina es asíncrona. Cuando se crea un `OrderItem`, su estado inicial es `PENDING_KDS`. La interfaz del KDS (`KitchenDisplayPage.tsx`) realiza un polling al endpoint `/api/camarero/kds/items` para mostrar los ítems pendientes. El personal de cocina interactúa con la UI para cambiar el estado a `PREPARING` y luego a `READY`, actualizando la base de datos a través de la API. El `kds.service.ts` contiene la lógica para, por ejemplo, actualizar el estado general del `Order` a `PARTIALLY_READY` o `ALL_ITEMS_READY` basado en el estado de sus ítems.
+
+- **Flujo Camarero (LC - Servicio y Pago Detallado):**
+
+  1.  **Recogida:** La interfaz del camarero (`WaiterPickupPage.tsx`) hace polling al endpoint `/api/camarero/staff/ready-for-pickup` para mostrar solo los ítems en estado `READY`. Al entregarlos, el camarero los marca como `SERVED`. Cuando todos los ítems de un pedido están servidos, el `waiter.service.ts` cambia el estado del `Order` a `COMPLETED`.
+  2.  **Pago:** El cliente, desde `OrderStatusPage.tsx`, puede "Pedir la Cuenta", lo que cambia el estado del `Order` a `PENDING_PAYMENT`. Los camareros ven estos pedidos en su interfaz de gestión. Usando esta interfaz, seleccionan el pedido y lo marcan como `PAID`. Esta acción, manejada por `order-payment.service.ts`, actualiza el estado del pedido, libera la `Table` asociada, y crucialmente, invoca al `loyaltyPointsService` para asignar los puntos LCo si el cliente estaba identificado.
+
+- **Internacionalización (i18n):** La estrategia es dual. La UI estática se traduce usando `react-i18next` con archivos de recursos `translation.json`. El contenido dinámico de la base de datos (como nombres de ítems o recompensas) se gestiona con campos duplicados en el schema (ej. `name_es`, `name_en`). El frontend selecciona el campo apropiado basándose en el idioma activo.
+
+- **Almacenamiento de Imágenes:** El componente `ImageUploadCropper` permite al administrador seleccionar y recortar una imagen. Al confirmar, la imagen recortada (como un `Blob`) se envía a la API de subida (`/api/uploads/image`). El backend usa `Multer` para procesar el `multipart/form-data`, y el `uploads.service.ts` utiliza el SDK de Cloudinary para subir la imagen a la nube, devolviendo la URL segura, que luego se guarda en la base de datos en el campo `imageUrl` de la entidad correspondiente (ej. `Reward`, `MenuCategory`).
+
+- **Arquitectura de Backend (Refactorizada):** Se ha adoptado una estructura más limpia y escalable. El archivo principal `index.ts` ahora se encarga únicamente de la configuración del servidor Express y los middlewares globales. La configuración de Swagger, que es muy extensa, se ha aislado en su propio archivo (`config/swagger.config.ts`). Más importante, todo el montaje de rutas se ha centralizado en `routes/index.ts`, que exporta un `apiRouter` y un `publicRouter`. Esto desacopla la definición de rutas de la inicialización del servidor.
+
+- **Hooks Personalizados (Frontend):** La arquitectura del frontend se basa en gran medida en hooks personalizados para encapsular la lógica de estado y los efectos secundarios. Hooks como `useAdminCustomersData`, `usePublicMenuData`, `usePublicOrderCart`, `useActiveOrderState` y `useMenuItemConfigurator` actúan como "cerebros" para sus respectivos dominios de funcionalidad, haciendo que los componentes de la página (`PublicMenuViewPage`, `AdminCustomerManagementPage`, etc.) sean más limpios, declarativos y centrados en la presentación.
 
 ---
 
@@ -141,92 +158,31 @@ _(Para una descripción más detallada de la visión a largo plazo, consulta el 
 - ⭐ **[CLAVE PARA BUG MODIFICADORES] Consistencia de Nombres de Campos (Prisma Schema vs. Service Logic):**
   - **Problema Identificado:** Uso inconsistente de nombres de campos entre el `schema.prisma` (ej. `ModifierOption.groupId`) y la lógica del servicio o las consultas Prisma (ej. intento de usar `modifierGroupId` como campo directo de `ModifierOption`).
   - **Solución Aplicada y Validada:** Revisión y corrección en `OrderService` para usar los nombres de campos exactos (`groupId`) definidos en `schema.prisma`, especialmente en los `select` de Prisma y en la lógica de acceso a propiedades. Ejecutar `npx prisma generate` después de cualquier cambio en el schema fue vital.
-
-_(Para una guía más exhaustiva de problemas específicos y soluciones detalladas, consulta [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md))_
+- ⭐ **[NUEVA LECCIÓN APRENDIDA] Sincronización de Documentación:** Se ha identificado como un punto crítico mantener los archivos `.md` (especialmente `PROJECT_STATUS.md` y `DEVELOPMENT_PLAN.md`) sincronizados con el código para evitar confusiones y retrabajo. Actualizar la documentación es ahora un paso obligatorio al finalizar un bloque de funcionalidades.
 
 ---
 
-## 5. Próximos Pasos Inmediatos / Prioridades (Foco en Completar Ciclo de Pedido LC) ⏳📌
+## 5. Próximos Pasos Inmediatos / Prioridades ⏳📌
 
-El ciclo de creación de pedidos, preparación en KDS y servicio por camarero hasta marcar ítems como `SERVED` y el pedido como `COMPLETED` está funcional. El siguiente bloque se centra en el cierre financiero del pedido: solicitud de cuenta y marcado como pagado para liberar la mesa.
+Con el ciclo completo de pedido finalizado (creación, servicio y pago), el siguiente bloque se enfoca en funcionalidades avanzadas para mejorar la gestión y la flexibilidad del servicio.
 
-1.  ⭐ **LC - Pedir la Cuenta (Cliente y/o Camarero): [CRÍTICO - SIGUIENTE BLOQUE FUNDAMENTAL]**
+1.  ⭐ **LC - Dividir la Cuenta (Split Bill): [CRÍTICO - SIGUIENTE BLOQUE FUNDAMENTAL]**
 
-    - **Objetivo:** Implementar la funcionalidad para que un cliente pueda solicitar la cuenta desde `OrderStatusPage.tsx` y/o un camarero pueda marcarla como solicitada, cambiando el estado del pedido a `PENDING_PAYMENT`.
+    - **Objetivo:** Implementar la capacidad para que un camarero divida la cuenta de un pedido pendiente de pago, ya sea por ítems o en partes iguales.
     - **Backend:**
-      1.  **Modificar `schema.prisma`:**
-          - Añadir `isBillRequested: Boolean @default(false)` al modelo `Order`. (Opcional si el cambio a `PENDING_PAYMENT` es suficiente).
-          - El estado `OrderStatus.PENDING_PAYMENT` ya existe y se usará.
-      2.  **`OrderService`:** Nuevo método `requestBill(orderId: string, requestedByRole: 'CUSTOMER' | 'WAITER', waiterId?: string)` (o similar).
-          - Lógica:
-            - Verificar que el pedido (`orderId`) exista y pertenezca al `businessSlug` (si es llamado por camarero).
-            - Validar que el pedido esté en un estado apropiado para solicitar la cuenta (ej. `IN_PROGRESS`, `ALL_ITEMS_READY`, `COMPLETED`). No se puede pedir cuenta de un pedido ya `PAID` o `CANCELLED`.
-            - Actualizar `Order.status = OrderStatus.PENDING_PAYMENT`.
-            - Si se usa `isBillRequested`, establecer `Order.isBillRequested = true`.
-          - (Opcional futuro) Crear una notificación `TableNotification` de tipo `REQUEST_BILL`.
-      3.  **`OrderController` / `WaiterController` / Rutas:**
-          - Endpoint para cliente: `POST /public/order/:orderId/request-bill`. No requiere autenticación de usuario, pero sí que el `orderId` sea válido.
-          - Endpoint para camarero: `POST /api/camarero/staff/order/:orderId/request-bill`. Requiere autenticación de camarero.
-    - **Frontend (Cliente - `OrderStatusPage.tsx`):**
-      1.  Añadir botón "Pedir la Cuenta" (visible si `Order.status` es `IN_PROGRESS`, `PARTIALLY_READY`, `ALL_ITEMS_READY`, `COMPLETED`).
-      2.  Al pulsar, llamar al endpoint `POST /public/order/:orderId/request-bill`.
-      3.  Tras éxito, la UI debería reflejar "Esperando el pago" o similar (el polling debería actualizar al estado `PENDING_PAYMENT`). El botón "Pedir la Cuenta" se deshabilita o desaparece.
-    - **Frontend (Camarero - Interfaz de Gestión de Pedidos/Mesas - PENDIENTE DE DISEÑO):**
-      1.  Listado de pedidos/mesas debe indicar claramente cuáles están en `PENDING_PAYMENT`.
-      2.  (Opcional) Permitir al camarero marcar un pedido como `PENDING_PAYMENT` manualmente.
+      1.  **Diseño de Datos:** Se deberá decidir cómo representar los pagos parciales. Una opción es un nuevo modelo `PartialPayment` relacionado con `Order`, que contenga el `amount`, `method` y `status`.
+      2.  **Lógica de Servicio:** Crear un nuevo servicio (`SplitBillService`?) que maneje la lógica de división, cree los registros de pago parcial y actualice el estado del pedido principal (ej. a `PARTIALLY_PAID`) hasta que esté completamente saldado.
+      3.  **Endpoints API:** Diseñar y crear nuevas rutas en `/api/camarero/staff/order/:orderId/split-bill` para iniciar el proceso y registrar los pagos parciales.
+    - **Frontend (Camarero):**
+      1.  **Diseño de UI/UX:** Crear una nueva interfaz o modal para la división de cuentas. Deberá mostrar los ítems del pedido y permitir al camarero asignarlos a diferentes "cestas" o "personas", o simplemente dividir el total.
+      2.  **Integración:** Conectar la nueva UI con los nuevos endpoints del backend, manejando los estados de carga y error.
 
-2.  ⭐ **LC - Marcar Pedido como Pagado y Liberar Mesa (Camarero): [CRÍTICO - DESPUÉS DE PEDIR CUENTA]**
+2.  ⭐ **LC - Gestión de Personal (PINs y Permisos): [ALTA PRIORIDAD - Después de Split Bill]**
 
-    - **Objetivo:** Permitir al camarero marcar un pedido como `PAID`, registrar opcionalmente detalles del pago y que la mesa asociada se marque como disponible.
-    - **Backend:**
-      1.  **Modificar `schema.prisma`:**
-          - Asegurar que `Order.paidAt: DateTime?` existe.
-          - Añadir `paidByWaiterId: String?` (si es diferente del `waiterId` que tomó el pedido) y relación al `User` (camarero que cobró). Podría ser `processedByUserId` para ser más general.
-          - Añadir `paymentMethodUsed: String?` (ej. "EFECTIVO", "TARJETA_VISA", "BIZUM", etc.) al modelo `Order`.
-          - **Modelo `Table`:** Añadir `status: String @default("AVAILABLE")` (considerar un Enum `TableStatus`: `AVAILABLE`, `OCCUPIED`, `RESERVED`, `NEEDS_CLEANING`).
-      2.  **`OrderService`:** Nuevo método `markOrderAsPaid(orderId: string, processedByUserId: string, paymentDetails: { method?: string, amount?: number, notes?: string })`.
-          - Lógica:
-            - Verificar que el pedido exista y esté en `PENDING_PAYMENT`.
-            - Actualizar `Order.status = OrderStatus.PAID`.
-            - Establecer `Order.paidAt = new Date()`.
-            - Establecer `Order.processedByUserId = processedByUserId`.
-            - Guardar `Order.paymentMethodUsed` y cualquier otra nota/detalle del pago.
-          - **Liberar Mesa:** Si `Order.tableId` existe, actualizar `Table.status` a `AVAILABLE` (o `NEEDS_CLEANING`).
-          - (Futuro LCo) Este es el punto donde se podría disparar un evento/lógica para calcular y asignar puntos de fidelidad (`ActivityType.POINTS_EARNED_ORDER_LC`) si el pedido tiene un `customerLCoId`.
-      3.  **`WaiterController` / `AdminController` / Rutas:** Nuevo endpoint `POST /api/camarero/staff/order/:orderId/mark-as-paid`.
-          - DTO para `paymentDetails`.
-    - **Frontend (Camarero - Interfaz de Gestión de Pedidos/Mesas):**
-      1.  Para pedidos que están `PENDING_PAYMENT`:
-          - Botón/Acción "Marcar Como Pagada" / "Registrar Pago".
-          - (Opcional) Modal para confirmar, introducir método de pago, importe (si hay desglose o gestión de caja básica).
-      2.  Llamar al endpoint del backend.
-      3.  Actualizar la UI para reflejar el pedido como `PAID` y la mesa como disponible.
-    - **Frontend (Cliente - `OrderStatusPage.tsx`):**
-      1.  El polling debería detectar el cambio a `Order.status = PAID`.
-      2.  Mostrar mensaje final de agradecimiento "¡Pedido Pagado! Gracias por tu visita."
-      3.  La lógica de "Pedido Finalizado" para limpiar `localStorage` (`activeOrderInfoKey`) y permitir nuevo pedido ya debería activarse.
+    - **Objetivo:** Crear un sistema para que el `BUSINESS_ADMIN` pueda gestionar a su personal (camareros, cocina), asignarles roles (`WAITER`, `KITCHEN_STAFF`) y un PIN de 4 dígitos para un inicio de sesión rápido en las interfaces de servicio (KDS, TPV de camarero).
 
-3.  ⭐ **LC - Cliente/Backend: Añadir Ítems a Pedido Existente (Tarea B2.2 del `DEVELOPMENT_PLAN.md` anterior): [MEDIA PRIORIDAD - DESPUÉS DE COMPLETAR EL CICLO DE PAGO]**
-
-    - **Objetivo:** Permitir a los clientes añadir más ítems a su pedido activo que aún no ha sido pagado.
-    - **Backend:**
-      - Asegurar que el endpoint `POST /public/order/:existingOrderId/add-items` (o similar como `POST /api/public/order/:orderId/items` que ya existe y se usa en `OrderService.addItemsToOrder`) esté completamente validado y funcional para este propósito.
-      - La lógica de `OrderService.addItemsToOrder` ya contempla cambiar el estado de un pedido `COMPLETED` a `IN_PROGRESS` si se añaden nuevos ítems. Debe verificarse que esto funcione con `PENDING_PAYMENT` también (podría volver a `IN_PROGRESS`).
-    - **Frontend (`PublicMenuViewPage.tsx`):**
-      - Cuando se detecta `activeOrderInfo` y el pedido NO está `PAID` o `CANCELLED`:
-        - Habilitar la carta para añadir nuevos ítems.
-        - El "carrito" actual se usaría para los nuevos ítems a añadir.
-        - El botón de envío llamaría a `addItemsToExistingOrderHandler` con el `orderId` activo y los nuevos ítems.
-        - Se debe gestionar la UI para que el cliente entienda que está añadiendo a un pedido existente.
-      - Tras añadir, redirigir o actualizar la `OrderStatusPage.tsx`.
-
-4.  **(Paralelo/Continuo) Testing y Fundamentos Técnicos:**
-    - Escribir tests unitarios (Vitest) para la nueva lógica en `OrderService` ("Pedir Cuenta", "Marcar Pagado").
-    - Escribir tests de integración (Supertest) para los nuevos endpoints API.
-    - Revisar y asegurar la correcta implementación de guardas de NestJS para todas las rutas de Camarero y Admin.
-    - Completar y revisar todas las traducciones (i18next) para las nuevas interfaces y mensajes.
-
-_(Para ver la hoja de ruta completa, el backlog detallado, la nueva tarea de permisos granulares y las funcionalidades futuras, consulta el `DEVELOPMENT_PLAN.md` actualizado)._
+3.  ⭐ **LC - Mejoras en la Interfaz de Camarero (TPV): [MEDIA PRIORIDAD]**
+    - **Objetivo:** Unificar y mejorar las vistas del camarero. Pasar de páginas separadas (`pickup-station`, `order-management`) a un TPV (Terminal Punto de Venta) más cohesivo que incluya un plano de mesas (`TableManager`), listado de pedidos por estado, y acceso a las nuevas funcionalidades como "Dividir Cuenta".
 
 ---
 
@@ -237,5 +193,3 @@ _(Para ver la hoja de ruta completa, el backlog detallado, la nueva tarea de per
   - `LOYALPYME_CORE_WORKFLOW.md`
   - `LOYALPYME_CAMARERO_WORKFLOW.md` (requerirá una actualización significativa después de implementar el ciclo completo de pedido y pago)
   - `MODULE_INTEGRATION_WORKFLOW.md`
-
----

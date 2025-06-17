@@ -1,4 +1,4 @@
-# LoyalPyME 🇪🇸 (v1.19.0)
+# LoyalPyME 🇪🇸 (v1.21.0)
 
 **LoyalPyME** es una plataforma web integral y modular, desarrollada con un stack **Frontend React (TypeScript, Mantine UI, Vite)** y **Backend Node.js (TypeScript, Express, Prisma, PostgreSQL)**, diseñada específicamente para Pequeñas y Medianas Empresas (PyMEs). La plataforma se estructura en módulos activables individualmente por cada negocio cliente, permitiendo una solución a medida y adaptada a sus necesidades operativas y de marketing.
 
@@ -11,40 +11,36 @@
   - **Catálogo de Recompensas:** Gestión de un catálogo de recompensas canjeables por puntos, con soporte completo para internacionalización (nombres y descripciones en ES/EN) e imágenes individuales por recompensa.
   - **Panel de Cliente Interactivo:** Un dashboard personalizado para que los clientes finales consulten su saldo de puntos, nivel actual y progreso hacia el siguiente, visualicen las recompensas disponibles y regalos asignados, canjeen beneficios, y revisen su historial completo de transacciones de fidelización.
 
-- 🚀 **LoyalPyME Camarero (LC) - Módulo de Hostelería [En Desarrollo Activo - KDS Funcional con Acciones]:**
+- 🚀 **LoyalPyME Camarero (LC) - Módulo de Hostelería [Ciclo Completo de Pedido y Servicio Validado]:**
   Un módulo avanzado enfocado en la digitalización y optimización integral del servicio en el sector hostelero (restaurantes, bares, cafeterías), mejorando la eficiencia operativa y la experiencia del cliente.
   - **Funcionalidad Actual Clave:**
     1.  **Gestión de Carta Digital por el Administrador:** Interfaz administrativa completa y detallada (`/admin/dashboard/camarero/menu-editor`) para crear, editar y organizar:
         - **Categorías del Menú:** Con nombre (ES/EN), descripción (ES/EN), imagen (con recorte), posición y estado de activación.
-        - **Ítems del Menú:** Dentro de cada categoría, con nombre (ES/EN), descripción (ES/EN), precio, imagen (con recorte), listado de alérgenos, etiquetas (ej. "Vegano", "Popular"), disponibilidad, posición, tiempo de preparación estimado, calorías, SKU (identificador único de producto) y asignación a un destino KDS específico (ej. "COCINA", "BARRA").
-        - **Grupos de Modificadores:** Asociados a cada ítem, con nombre (ES/EN), tipo de interfaz de usuario (`RADIO` para selección única, `CHECKBOX` para múltiple), reglas de selección (mínimo/máximo, obligatorio) y posición.
-        - **Opciones de Modificador:** Dentro de cada grupo, con nombre (ES/EN), ajuste de precio (positivo, negativo o cero), posición, si es una opción por defecto y disponibilidad.
-    2.  **Visualización de Carta Pública por el Cliente Final:** Acceso mediante URL directa (`/m/:businessSlug/:tableIdentifier?`), idealmente a través de un código QR en la mesa del cliente. Presenta la carta del negocio de forma interactiva, responsive y multilingüe (ES/EN). Los clientes pueden:
+        - **Ítems del Menú:** Dentro de cada categoría, con nombre (ES/EN), descripción (ES/EN), precio, imagen (con recorte), listado de alérgenos, etiquetas (ej. "Vegano", "Popular"), disponibilidad, posición, tiempo de preparación estimado, calorías, SKU y destino KDS.
+        - **Grupos de Modificadores:** Asociados a cada ítem, con nombre (ES/EN), tipo de interfaz de usuario (`RADIO` para selección única, `CHECKBOX` para múltiple), y reglas de selección (mínimo/máximo, obligatorio).
+        - **Opciones de Modificador:** Dentro de cada grupo, con nombre (ES/EN) y ajuste de precio.
+    2.  **Visualización de Carta Pública por el Cliente Final:** Acceso mediante URL directa (`/m/:businessSlug/:tableIdentifier?`). Los clientes pueden:
         - Navegar por categorías y ver detalles de cada ítem.
-        - Personalizar ítems seleccionando opciones de los modificadores, con el precio actualizándose dinámicamente en tiempo real según las selecciones.
+        - Personalizar ítems seleccionando opciones de los modificadores, con el precio actualizándose dinámicamente.
     3.  **Flujo de Pedido Completo por el Cliente Final:**
-        - **Carrito de Compra Local:** Los ítems configurados se añaden a un carrito de compra que persiste en el `localStorage` del navegador del cliente (específico para ese negocio y mesa), permitiendo continuar el pedido más tarde si no se envía.
-        - **Modal de Carrito (`ShoppingCartModal.tsx`):** Permite revisar todos los ítems, modificar cantidades (con recalculo de totales), eliminar ítems, añadir notas generales para todo el pedido, y vaciar el carrito.
-        - **Envío de Pedido:** Al confirmar, el frontend construye un `CreateOrderPayloadDto` (incluyendo ítems, notas, identificador de mesa, y `customerId` de LCo si el cliente está logueado) y lo envía al backend (`POST /public/order/:businessSlug`).
-        - **Procesamiento Backend:** Validación exhaustiva de la disponibilidad, reglas de modificadores y precios. Creación transaccional de los registros `Order`, `OrderItem` y `OrderItemModifierOption` en la base de datos. El `Order` se guarda con estado inicial `RECEIVED` y un `orderNumber` único.
-        - **Feedback al Cliente:** Notificación de éxito (con el `orderNumber`) y redirección a la página de estado del pedido. El carrito local se limpia y se guarda información del pedido activo en `localStorage`.
+        - **Carrito de Compra Local:** Los ítems configurados se añaden a un carrito que persiste en el `localStorage`.
+        - **Modal de Carrito (`ShoppingCartModal.tsx`):** Permite revisar el pedido, modificar cantidades, eliminar ítems y añadir notas generales.
+        - **Envío y Adición a Pedido:** Al confirmar, el sistema envía un `CreateOrderPayloadDto` al backend, gestionando inteligentemente si se debe crear un pedido nuevo o añadir los ítems a uno ya existente.
+        - **Procesamiento Backend:** Validación exhaustiva de disponibilidad, reglas y precios, con creación transaccional en la base de datos.
+        - **Feedback al Cliente:** Notificación de éxito y redirección a la página de estado del pedido.
     4.  **Visualización del Estado del Pedido por el Cliente (`OrderStatusPage.tsx`):**
-        - Muestra el estado general del pedido (`Order.status`) y el estado individual de cada `OrderItem` (`OrderItem.status`).
-        - Se actualiza automáticamente mediante polling al backend (`GET /public/order/:orderId/status`).
-        - Maneja la finalización del pedido (si el estado es `PAID` o `CANCELLED`) limpiando el `localStorage` para permitir nuevos pedidos.
-    5.  **Kitchen Display System (KDS) - Backend y Frontend (MVP Funcional):**
-        - **API KDS Backend (`/api/camarero/kds/*`): [VALIDADA]**
-          - Endpoints para que el personal de KDS obtenga los `OrderItem`s filtrados por destino (ej. "COCINA", "BARRA") y estado de preparación.
-          - Endpoint para actualizar el `OrderItemStatus` (ej. `PENDING_KDS` -> `PREPARING`, `PREPARING` -> `READY`, o `CANCELLED`).
-          - **Lógica de actualización de `Order.status` general (ej. `IN_PROGRESS`, `PARTIALLY_READY`) completamente funcional y probada.**
-        - **Interfaz KDS Frontend (`/admin/kds` - `KitchenDisplayPage.tsx`): [FUNCIONAL]**
-          - Permite al personal de cocina/barra (roles `KITCHEN_STAFF`, `BAR_STAFF`) y al `BUSINESS_ADMIN` visualizar los ítems activos.
-          - Selector de destino KDS ("COCINA", "BARRA").
-          - Listado de ítems con detalles (cantidad, modificadores, notas, info del pedido, estado).
-          - **Botones de acción para cambiar el estado de los ítems** (`Empezar Preparación`, `Marcar como Listo`, `Cancelar Ítem`), con feedback visual y notificaciones.
-          - Polling para refresco automático de la lista.
+        - Muestra el estado general del pedido y de cada ítem (`En preparación`, `Listo`, `Servido`).
+        - Se actualiza automáticamente mediante polling.
+        - Permite al cliente **solicitar la cuenta** para iniciar el proceso de pago.
+    5.  **Kitchen Display System (KDS) - Backend y Frontend (Funcional):**
+        - **API KDS Backend:** Endpoints validados para obtener y actualizar el estado de los ítems de preparación.
+        - **Interfaz KDS Frontend:** Permite al personal de cocina/barra visualizar los ítems por destino y cambiar su estado (`PENDING_KDS` -> `PREPARING` -> `READY`).
+    6.  **Interfaz de Camarero y Ciclo de Pago Completo (Funcional):**
+        - **Recogida y Entrega:** La interfaz de camarero (`WaiterPickupPage.tsx`) muestra los ítems listos para recoger, permitiendo marcarlos como servidos.
+        - **Gestión de Pago:** La interfaz de gestión (`WaiterOrderManagementPage.tsx`) muestra los pedidos pendientes de pago, permitiendo al camarero marcarlos como `PAID`.
+        - **Automatización:** Al marcar como pagado, el sistema libera la mesa y asigna puntos de fidelidad LCo al cliente de forma automática.
 
-La plataforma LoyalPyME está diseñada con un enfoque en la **mantenibilidad** (código limpio, TypeScript, tests), **escalabilidad** (arquitectura de servicios, Prisma con PostgreSQL) y **adaptabilidad** (módulos activables, futura configuración de permisos), buscando ser el socio tecnológico que impulse la eficiencia operativa y el crecimiento sostenible de las PyMEs.
+La plataforma LoyalPyME está diseñada con un enfoque en la **mantenibilidad**, **escalabilidad** y **adaptabilidad**, buscando ser el socio tecnológico que impulse la eficiencia operativa y el crecimiento sostenible de las PyMEs.
 
 ## Visión y Propósito ✨
 
@@ -56,25 +52,13 @@ Con el módulo **LoyalPyME Camarero (LC)**, nuestra visión es transformar y mod
 
 - **Modernizar su servicio:** Ofreciendo una experiencia de pedido digital ágil y sin fricciones directamente desde la mesa del cliente.
 - **Reducir errores manuales:** Minimizando las imprecisiones en la toma de comandas y la comunicación con cocina/barra.
-- **Agilizar la comunicación interna:** Optimizando el flujo de información entre el personal de sala, la cocina y la barra a través del KDS y (futuramente) la interfaz de camarero.
+- **Agilizar la comunicación interna:** Optimizando el flujo de información entre el personal de sala, la cocina y la barra a través del KDS y la interfaz de camarero.
 - **Mejorar significativamente la experiencia del cliente final:** Permitiéndole explorar la carta a su ritmo, personalizar sus pedidos con total control y transparencia, y seguir el estado de su comanda en tiempo real.
 - **Obtener datos operativos valiosos:** Recopilando información sobre ventas, popularidad de ítems, y tiempos de preparación para la toma de decisiones estratégicas y la optimización continua del negocio.
 
 La plataforma es inherentemente versátil: **LoyalPyME Core** es aplicable a una amplia gama de sectores empresariales (retail, servicios profesionales, bienestar, etc.) que busquen implementar programas de fidelización. Por su parte, **LoyalPyME Camarero** ofrece una solución especializada, potente y adaptada a las particularidades del sector de la restauración, desde pequeñas cafeterías hasta restaurantes con mayor volumen de operaciones. La sinergia entre ambos módulos permite una experiencia de cliente altamente integrada y datos de negocio enriquecidos.
 
 _(Para un análisis exhaustivo del estado actual del proyecto, incluyendo la versión actual, los hitos completados en detalle, las decisiones de diseño clave y las lecciones aprendidas, consulta nuestro [**PROJECT_STATUS.md**](./PROJECT_STATUS.md). La hoja de ruta completa, el backlog de funcionalidades futuras para ambos módulos, y la visión a largo plazo se encuentran detallados en [**DEVELOPMENT_PLAN.md**](./DEVELOPMENT_PLAN.md))._
-
-_(Para entender en profundidad los flujos de usuario y las interacciones dentro de cada módulo, así como la integración entre LCo y LC, por favor revisa los siguientes documentos de flujo de trabajo:_
-
-- _[LOYALPYME_CORE_WORKFLOW.md](./LOYALPYME_CORE_WORKFLOW.md)_
-- _[LOYALPYME_CAMARERO_WORKFLOW.md](./LOYALPYME_CAMARERO_WORKFLOW.md)_
-- _[MODULE_INTEGRATION_WORKFLOW.md](./MODULE_INTEGRATION_WORKFLOW.md))_
-
-|                                                                           Panel de Admin (Escritorio)                                                                            |                                                                           Panel de Admin (Móvil)                                                                            |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-| <img src="images/SC_LoyalPyME.png" alt="Captura de pantalla del Panel de Administración de LoyalPyME en vista de escritorio, mostrando la gestión de recompensas." width="100%"> | <img src="images/SC_LoyalPyME_PHONE.png" alt="Captura de pantalla del Panel de Administración de LoyalPyME en vista móvil, mostrando la gestión de clientes." width="100%"> |
-
-_(Nota: Las capturas de pantalla actuales corresponden principalmente al Módulo LoyalPyME Core. Se actualizarán progresivamente para incluir las nuevas interfaces del Módulo Camarero (Gestión de Carta, KDS) y el Panel Super Admin a medida que su UI se estabilice)._
 
 ## Características Principales Implementadas ✅
 
@@ -91,104 +75,67 @@ _(Nota: Las capturas de pantalla actuales corresponden principalmente al Módulo
 - **Autenticación Completa y Segura:**
   - Registro de Negocios con su primer `BUSINESS_ADMIN`.
   - Registro de `CUSTOMER_FINAL` asociados a un negocio específico.
-  - Login robusto con email/contraseña, utilizando JWT (JSON Web Tokens) para la gestión de sesiones.
-  - Funcionalidad completa de Reseteo de Contraseña (solicitud por email, token temporal, cambio de contraseña).
+  - Login robusto con email/contraseña, utilizando JWT para la gestión de sesiones.
+  - Funcionalidad completa de Reseteo de Contraseña.
 - **Gestión Avanzada de Clientes (Panel Admin LCo):**
-  - Listado paginado con búsqueda por nombre/email, filtros (estado activo/inactivo, favorito, nivel de tier) y ordenación por múltiples columnas.
-  - Funcionalidades CRUD para clientes, incluyendo: edición de datos básicos, añadir notas internas de administrador, ajuste manual de saldo de puntos (con motivo), cambio manual del nivel de fidelización (tier), asignación de recompensas del catálogo como regalo (sin coste de puntos), activación/desactivación de cuentas de cliente, y marcado/desmarcado de clientes como favoritos.
-  - Acciones Masivas sobre clientes seleccionados: activar/desactivar, eliminar (con validaciones de integridad referencial), y ajustar puntos a un grupo.
+  - Listado paginado con búsqueda por nombre/email, filtros y ordenación.
+  - Funcionalidades CRUD para clientes, incluyendo: notas internas, ajuste manual de puntos, cambio manual de nivel, asignación de regalos, activación/desactivación y marcado como favoritos.
+  - Acciones Masivas sobre clientes seleccionados: activar/desactivar, eliminar y ajustar puntos.
 - **Sistema de Niveles/Tiers Dinámico y Configurable (Panel Admin LCo):**
-  - CRUD completo para niveles de fidelización (Tiers).
-  - Definición de umbrales (`minValue`) para alcanzar cada nivel.
-  - Asignación de beneficios (`TierBenefit`) específicos y personalizables por nivel (tipos implementados: multiplicador de puntos sobre los puntos base ganados, acceso a una recompensa exclusiva del catálogo, beneficio personalizado con texto descriptivo).
-  - Configuración global del sistema de tiers: Habilitación/deshabilitación general, base de cálculo de nivel (`TierCalculationBasis`: por gasto acumulado, número de visitas, o total de puntos históricos ganados), periodo de cálculo (`tierCalculationPeriodMonths`: 0 para histórico total o N meses móviles), política de descenso de nivel (`TierDowngradePolicy`: nunca, revisión periódica, o por inactividad tras N meses), y periodo de inactividad para descenso (`inactivityPeriodMonths`).
+  - CRUD completo para niveles de fidelización y sus beneficios asociados.
+  - Configuración global del sistema de tiers: base de cálculo, periodo y políticas de descenso.
 - **Gestión Integral de Recompensas (Panel Admin LCo):**
-  - CRUD completo para recompensas canjeables por puntos.
-  - Campos por recompensa: Nombre (ES/EN), Descripción (ES/EN, opcional), Coste en Puntos, Estado (Activa/Inactiva).
-  - Subida y recorte de imágenes (Cloudinary, con `react-image-crop` para aspecto 1:1) para cada recompensa.
+  - CRUD completo para recompensas canjeables por puntos, con soporte i18n y subida de imágenes.
 - **Flujo de Acumulación de Puntos y QR (LCo):**
-  - **Generación QR (Admin):** El `BUSINESS_ADMIN` genera códigos QR únicos (basados en token UUID) desde su panel, asociándolos a un importe de venta y un número de ticket/referencia. Estos QR tienen una validez temporal configurable.
-  - **Validación QR (Cliente):** El `CUSTOMER_FINAL` accede a su dashboard y valida el QR, ya sea introduciendo el token alfanumérico manualmente o escaneando el código directamente con la cámara de su dispositivo móvil (integración de `html5-qrcode`). El sistema valida el token, calcula los puntos a otorgar (considerando `Business.pointsPerEuro` y multiplicadores de nivel del cliente), actualiza el saldo de puntos, `totalSpend`, `totalVisits` del cliente, y registra la transacción en su historial (`ActivityLog`).
-- **Lógica de Tiers y Actualización Automática (LCo - Backend):** Un sistema backend (con tarea programada/Cron Job utilizando `node-cron`, configurable) que se ejecuta periódicamente para recalcular y actualizar automáticamente el nivel de los clientes basado en la configuración del negocio, las métricas acumuladas por el cliente, y las políticas de descenso de nivel definidas.
+  - Generación de QR únicos y temporales por parte del administrador.
+  - Validación de QR por parte del cliente mediante escaneo con la cámara o introducción manual.
+- **Lógica de Tiers y Actualización Automática (LCo - Backend):** Tarea programada (Cron Job) para recalcular y actualizar el nivel de los clientes.
 - **Panel de Cliente Completo (LCo - Frontend - `CustomerDashboardPage.tsx`):**
-  - Interfaz de usuario rica y organizada en pestañas para el cliente final:
-    - **Resumen (`SummaryTab.tsx`):** Muestra información clave (puntos actuales, nivel actual con nombre y beneficios), una barra de progreso visual hacia el siguiente nivel (indicando la métrica faltante y con un popover para previsualizar los beneficios del próximo nivel), un resumen de regalos pendientes y recompensas destacadas con botones de canje directo, y la sección para validar códigos QR. Si el Módulo Camarero está activo para el negocio, incluye una tarjeta de acceso directo a la carta digital.
-    - **Recompensas (`RewardsTab.tsx`):** Listado completo y visual (`RewardList.tsx`) de todas las recompensas activas disponibles para canjear con puntos (mostrando imagen, nombre i18n, descripción i18n, coste en puntos), así como los regalos (`GrantedReward`) otorgados directamente por el administrador que estén pendientes de canje. Permite el canje directo.
-    - **Actividad (`ActivityTab.tsx`):** Historial paginado y detallado de todas las transacciones de puntos (ganados por QR, gastados en recompensas, ajustados manualmente por admin) y canjes de regalos, con descripciones claras, fechas y el cambio de puntos asociado.
-- **Otros (Plataforma y LCo):**
-  - Internacionalización (i18n) completa de la interfaz de usuario frontend (ES/EN) mediante `i18next` y archivos de traducción JSON. Detección de idioma del navegador y persistencia de la preferencia del usuario.
-  - Documentación de la API Backend generada con Swagger/OpenAPI y accesible en el endpoint `/api-docs` para la mayoría de los servicios de LCo y plataforma.
+  - Interfaz organizada en pestañas:
+    - **Resumen (`SummaryTab.tsx`):** Información clave, barra de progreso al siguiente nivel, y sección para validar QR.
+    - **Recompensas (`RewardsTab.tsx`):** Listado de recompensas canjeables y regalos pendientes.
+    - **Actividad (`ActivityTab.tsx`):** Historial paginado de todas las transacciones de puntos.
 
-**Módulo LoyalPyME Camarero (LC) [En Desarrollo Activo - KDS Funcional con Acciones]:**
+**Módulo LoyalPyME Camarero (LC) [Ciclo de Pedido Completo Validado]:**
 
 - **Modelo de Datos Robusto para Hostelería (Backend - Prisma):**
-  - Definición detallada de entidades como `MenuCategory`, `MenuItem` (con `kdsDestination`), `ModifierGroup`, `ModifierOption`, `Order`, `OrderItem` (con `status`, `priceAtPurchase`, `totalItemPrice`, `itemNameSnapshot_es/en`), `Table`, `StaffPin`.
-  - Enums específicos: `OrderStatus`, `OrderItemStatus`, `ModifierUiType`, `OrderType`, `OrderSource`.
-  - Soporte i18n en modelos de carta (`name_es/en`, `description_es/en`).
-- **API de Gestión de Carta por el Administrador (Backend - `/api/camarero/admin/*`):**
-  - Endpoints CRUD completos y protegidos para que el `BUSINESS_ADMIN` gestione `MenuCategory`, `MenuItem`, `ModifierGroup` y `ModifierOption`, si el módulo LC está activo.
-- **Interfaz de Usuario para Gestión de Carta por el Administrador (Frontend - `/admin/dashboard/camarero/menu-editor`):**
-  - `MenuManagementPage.tsx` con componentes dedicados (`MenuCategoryManager.tsx`, `MenuItemManager.tsx`, `MenuItemFormModal.tsx`, `ModifierGroupsManagementModal.tsx`, `ModifierOptionsManagementModal.tsx`) para un CRUD intuitivo de toda la estructura de la carta, incluyendo subida y recorte de imágenes.
-  - Botón "Previsualizar Carta Pública" funcional.
-- **Visualización de Carta Pública y Flujo de Pedido por Cliente Final (Backend & Frontend):**
-  - **Backend (`GET /public/menu/business/:businessSlug`):** API pública que sirve la carta activa y disponible, con i18n y estructura de modificadores.
-  - **Frontend (`/m/:businessSlug/:tableIdentifier?` - `PublicMenuViewPage.tsx`):** Página responsive para visualización y personalización de ítems (`MenuItemCard.tsx`, `ModifierGroupInteractiveRenderer.tsx`).
-  - **Carrito de Compra Local:** Con persistencia en `localStorage` (asociado a `businessSlug` y `tableIdentifier`), modal de revisión (`ShoppingCartModal.tsx`), y funcionalidades de edición.
-  - **Envío y Procesamiento de Pedido (`POST /public/order/:businessSlug`):**
-    - Frontend construye `CreateOrderPayloadDto` (con ítems, notas, mesa, `customerId?` LCo).
-    - Backend valida exhaustivamente (disponibilidad, reglas de modificadores), recalcula precios, y crea transaccionalmente `Order` (estado `RECEIVED`, `orderNumber`), `OrderItem`s, y `OrderItemModifierOption`s.
-    - Frontend recibe confirmación, limpia carrito, guarda info del pedido activo en `localStorage`, y redirige a `OrderStatusPage`.
-- **Visualización del Estado del Pedido por el Cliente (`OrderStatusPage.tsx`):**
-  - Muestra estado general del `Order` y de cada `OrderItem`.
-  - Polling automático (`GET /public/order/:orderId/status`) para actualizaciones.
-  - Manejo de estados finales (`PAID`, `CANCELLED`) para limpiar `localStorage` y permitir nuevos pedidos.
-- **Kitchen Display System (KDS) - Backend y Frontend (MVP Funcional):**
-  - **API KDS Backend (`/api/camarero/kds/*`): [VALIDADA]**
-    - Endpoints `GET /items` (filtra por destino y estado) y `PATCH /items/:orderItemId/status`.
-    - Lógica de actualización de `Order.status` general basada en `OrderItem.status` **corregida y probada.**
-  - **Interfaz KDS Frontend (`/admin/kds` - `KitchenDisplayPage.tsx`): [FUNCIONAL]**
-    - Accesible por roles `KITCHEN_STAFF`, `BAR_STAFF`, `BUSINESS_ADMIN`.
-    - Selector de destino ("COCINA", "BARRA").
-    - Muestra ítems `PENDING_KDS` y `PREPARING` con detalles.
-    - **Botones de acción para cambiar estado de `OrderItem`s** (Empezar Preparación, Marcar Listo, Cancelar Ítem), con feedback y notificaciones.
-    - Polling para refresco automático.
+  - Definición detallada de entidades como `MenuCategory`, `MenuItem`, `ModifierGroup`, `Order`, `OrderItem`, `Table`, `StaffPin`.
+- **API de Gestión de Carta por el Administrador (Backend):**
+  - Endpoints CRUD completos y protegidos para gestionar toda la carta digital.
+- **Interfaz de Usuario para Gestión de Carta (Admin Frontend):**
+  - Componentes dedicados para un CRUD intuitivo de la estructura de la carta, incluyendo subida y recorte de imágenes.
+- **Visualización de Carta Pública y Flujo de Pedido por Cliente Final:**
+  - **Frontend:** Página responsive para visualización y personalización de ítems con precios dinámicos.
+  - **Carrito de Compra Local:** Con persistencia en `localStorage` y funcionalidades de edición.
+  - **Envío y Adición de Ítems:** El sistema gestiona inteligentemente si crear un nuevo pedido o añadir ítems a uno ya existente.
+- **Visualización del Estado del Pedido por el Cliente:**
+  - Página con polling automático que muestra el estado del `Order` y de cada `OrderItem`.
+  - Incluye la funcionalidad para "Pedir la Cuenta".
+- **Kitchen Display System (KDS) - Backend y Frontend:**
+  - **API KDS:** Endpoints validados para obtener y actualizar el estado de los ítems de preparación.
+  - **Interfaz KDS:** Permite al personal de cocina/barra visualizar los ítems y cambiar su estado de preparación.
+- **Ciclo de Servicio y Pago Completo (Camarero):**
+  - **Recogida:** Interfaz para que el personal de sala vea los ítems listos y los marque como servidos.
+  - **Pago:** Interfaz para ver los pedidos pendientes de pago y marcarlos como `PAID`.
+  - **Automatización:** El marcado como pagado libera la mesa y asigna puntos LCo.
 
 ## Estado Actual y Próximos Pasos 🗺️
 
-La plataforma ha alcanzado la **versión v1.19.0**.
+La plataforma ha alcanzado la **versión v1.21.0**.
 
 - **LoyalPyME Core (LCo):** Estable, completamente funcional y probado.
 - **Arquitectura Multi-Módulo y Panel Super Admin:** Implementada y operativa.
-- **Módulo Camarero (LC) - Hitos Clave Alcanzados:**
-  - Gestión completa de la carta digital por el administrador (backend y frontend).
-  - Visualización pública e interactiva de la carta por el cliente final.
-  - Flujo de pedido por el cliente final funcional: desde la selección y personalización de ítems, pasando por un carrito de compras persistente y editable, hasta el envío del pedido al backend, su registro en la base de datos y la redirección a la página de estado del pedido.
-  - Visualización del estado del pedido por el cliente con actualizaciones por polling.
-  - **KDS Backend:** API y lógica de actualización de estados (`OrderItem` y `Order`) validadas y funcionales.
-  - **KDS Frontend (MVP):** Interfaz que permite al personal de cocina/barra visualizar los ítems por destino y cambiar su estado de preparación.
+- **Módulo Camarero (LC):** El ciclo de vida completo de un pedido está **completo y validado.**
 
-El **enfoque principal de desarrollo inmediato** para el Módulo Camarero (LC) es completar el ciclo de servicio, centrándose en la **Interfaz del Camarero (MVP)**:
+El **enfoque principal de desarrollo inmediato** es añadir funcionalidades avanzadas de gestión al Módulo Camarero (LC):
 
-1.  ⭐ **LC - Backend: API para Interfaz de Camarero:**
-    - **Objetivo:** Crear los endpoints para que el personal de sala pueda:
-      - Ver los `OrderItem`s que el KDS ha marcado como `READY`.
-      - Marcar estos `OrderItem`s como `SERVED`.
-      - Desencadenar la actualización del `Order.status` general a `COMPLETED` cuando todos los ítems estén servidos.
-2.  ⭐ **LC - Frontend: Interfaz de Camarero (MVP):**
-    - **Objetivo:** Desarrollar una página/vista simple para que los camareros:
-      - Visualicen la lista de ítems/pases listos para recoger.
-      - Puedan usar un botón "Marcar como Servido" para cada ítem/pase.
-3.  ⭐ **LC - Cliente: Visualización de Ítems Servidos y Pedido Completado:**
-    - **Objetivo:** Asegurar que la `OrderStatusPage.tsx` del cliente refleje correctamente los ítems servidos y el estado `COMPLETED` del pedido.
+1.  ⭐ **LC - Dividir la Cuenta (Split Bill):**
+    - **Objetivo:** Permitir al personal de sala dividir una cuenta entre múltiples clientes.
 
-Posteriormente, se abordarán funcionalidades como "Añadir Ítems a Pedido Existente" (cliente), mejoras en el KDS (tiempos, alertas, pases), gestión de mesas y personal por el administrador de LC (incluyendo la consideración de un sistema de permisos más granular), la solicitud de cancelación de pedidos por el cliente (con confirmación KDS), y una mayor integración con LoyalPyME Core.
+Posteriormente, se abordarán funcionalidades como la gestión de personal con PINs, mejoras en la interfaz del camarero (TPV), y un sistema de reservas.
 
-- Consulta **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** para un análisis detallado de los hitos completados, la versión actual y las decisiones de diseño clave.
-- Revisa **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** para el backlog completo, la hoja de ruta detallada de funcionalidades para el Módulo Camarero y las ideas futuras.
-- Para los flujos de trabajo en detalle:
-  - [LOYALPYME_CORE_WORKFLOW.md](./LOYALPYME_CORE_WORKFLOW.md)
-  - [LOYALPYME_CAMARERO_WORKFLOW.md](./LOYALPYME_CAMARERO_WORKFLOW.md)
-  - [MODULE_INTEGRATION_WORKFLOW.md](./MODULE_INTEGRATION_WORKFLOW.md)
+- Consulta **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** para un análisis detallado.
+- Revisa **[DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)** para la hoja de ruta completa.
 
 ## Tecnologías Utilizadas 🛠️
 
@@ -197,8 +144,6 @@ React (v19+, Hooks, Context API), TypeScript, Vite (v5+, bundler y servidor de d
 
 **Backend:**
 Node.js (runtime), Express.js (framework web), TypeScript (lenguaje principal), Prisma ORM (v6+, para acceso a base de datos PostgreSQL, gestión de migraciones y generación de cliente tipado), PostgreSQL (sistema de gestión de base deatos relacional), JSON Web Tokens (JWT) (para autenticación stateless), `bcryptjs` (para hashing seguro de contraseñas), Cloudinary SDK (para almacenamiento y gestión de imágenes en la nube), Multer (middleware para manejo de subidas de archivos `multipart/form-data`), Vitest (para testing unitario y de integración), Supertest (para testing de API HTTP), Swagger/OpenAPI (`swagger-jsdoc`, `swagger-ui-express`) (para documentación interactiva de la API RESTful), `node-cron` (para la ejecución de tareas programadas, ej. actualización de tiers en LCo).
-
-_(Una lista más detallada de dependencias y versiones específicas se encuentra en los archivos `package.json` de las carpetas `frontend/` y `backend/`. Una discusión más profunda sobre las tecnologías clave y su aplicación en el proyecto se encuentra en el documento [PROJECT_STATUS.md](./PROJECT_STATUS.md))._
 
 ## Inicio Rápido (Desarrollo Local) 🚀
 
@@ -209,37 +154,24 @@ _(Una lista más detallada de dependencias y versiones específicas se encuentra
     ```
 2.  **Configuración del Backend (`backend/`):**
     - Instalar dependencias: `yarn install` (o `npm install`).
-    - Configurar Variables de Entorno: Copiar `backend/.env.example` a `backend/.env`. Rellenar **todas** las variables requeridas:
-      - `DATABASE_URL`: Cadena de conexión a tu servidor PostgreSQL local (ej. `postgresql://postgres:tu_password@localhost:5432/loyalpymedb?schema=public`).
-      - `JWT_SECRET`: Cadena aleatoria larga y segura para firmar tokens.
-      - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`: Credenciales de tu cuenta de Cloudinary.
-      - (Opcional) `TIER_UPDATE_CRON_SCHEDULE`: Para la tarea de actualización de tiers (ej. `0 3 * * *` para las 3 AM todos los días).
+    - Configurar Variables de Entorno: Copiar `backend/.env.example` a `backend/.env` y rellenar todas las variables.
     - Base de Datos (PostgreSQL debe estar corriendo):
-      1.  Crear la base de datos (ej. `loyalpymedb`) si no existe.
-      2.  Desde `backend/`, ejecutar `npx prisma migrate reset` (confirma la acción, esto borrará y recreará la BD).
-      3.  Ejecutar `npx prisma db seed` para poblar con datos de demostración (negocio, admin, cliente, carta LC, etc.).
-      4.  Ejecutar `npx ts-node ./scripts/create-superadmin.ts` para crear el Super Administrador global (`superadmin@loyalpyme.com` / `superadminpassword`).
+      1.  Crear la base de datos (ej. `loyalpymedb`).
+      2.  Desde `backend/`, ejecutar `npx prisma migrate reset`.
+      3.  Ejecutar `npx prisma db seed` para poblar con datos de demostración.
+      4.  Ejecutar `npx ts-node ./scripts/create-superadmin.ts` para crear el Super Administrador.
     - Ejecutar el Backend (desde `backend/`, en dos terminales separadas):
       1.  `yarn dev:build` (o `npx tsc --watch`): Compilación continua de TypeScript.
       2.  `yarn dev:run` (o `npx nodemon dist/index.js`): Iniciar servidor Node.js con Nodemon.
 3.  **Configuración del Frontend (`frontend/`):**
     - Instalar dependencias: `yarn install` (o `npm install`).
-    - Ejecutar el Frontend (desde `frontend/`):
-      - `yarn dev` (para acceso en `https://localhost:5173`).
-      - `yarn dev --host` (para acceso desde otros dispositivos en la red local, ej. móvil para probar QR de mesa o KDS en tablet).
+    - Ejecutar el Frontend (desde `frontend/`): `yarn dev`.
 4.  **Acceso a las Aplicaciones (URLs por defecto):**
-    - **Carta Pública Módulo Camarero (Cliente):** `https://localhost:5173/m/restaurante-demo-loyalpyme` (o el slug de tu negocio demo; puedes añadir `/identificador-mesa` al final, ej. `/M1`, si usas los datos del seed).
-    - **Página de Estado del Pedido (Cliente):** Se accede tras enviar un pedido desde la carta.
-    - **Login / Registro / Dashboard Cliente LCo / Panel Admin Negocio:** `https://localhost:5173`
-      - Login Admin Negocio Demo (LCo & LC): `admin@demo.com` / `password`
-      - Login Cliente Demo (LCo): `cliente@demo.com` / `password`
-      - Login Staff KDS Demo: `cocina@demo.com` / `password` (redirige a `/admin/kds`) o `barra@demo.com` / `password`.
-    - **Panel KDS (Staff):** `https://localhost:5173/admin/kds` (requiere login como staff KDS o admin).
-    - **Panel Super Admin:** `https://localhost:5173/superadmin`
-      - Login: `superadmin@loyalpyme.com` / `superadminpassword` (o las credenciales configuradas).
-    - **Documentación API Backend (Swagger):** `http://localhost:3000/api-docs`
+    - **Carta Pública:** `https://localhost:5173/m/restaurante-demo-loyalpyme`
+    - **Login / Dashboards:** `https://localhost:5173`
+    - **Documentación API (Swagger):** `http://localhost:3000/api-docs`
 
-**¡Importante!** Para instrucciones **exhaustivas y detalladas** sobre la instalación, configuración completa del entorno (variables `.env` para backend y frontend), creación de base de datos, y ejecución paso a paso, consulta la guía **[SETUP_GUIDE.md](./SETUP_GUIDE.md)**. Para soluciones a problemas comunes de configuración o ejecución, revisa la **[TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md)**.
+**¡Importante!** Para instrucciones **exhaustivas y detalladas**, consulta la guía **[SETUP_GUIDE.md](./SETUP_GUIDE.md)**. Para soluciones a problemas comunes, revisa la **[TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md)**.
 
 ---
 
@@ -262,5 +194,3 @@ Para consultas sobre el proyecto, licencias, adquisición, o cualquier otro asun
 
 - **Olivier Hottelet**
 - [olivierhottelet1980@gmail.com](mailto:olivierhottelet1980@gmail.com)
-
----
