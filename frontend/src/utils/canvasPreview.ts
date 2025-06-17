@@ -1,22 +1,17 @@
-// filename: frontend/src/utils/canvasPreview.ts
+// frontend/src/utils/canvasPreview.ts
+// Version 1.0.2 (Removed unused centerX, centerY for current logic)
 import { PixelCrop } from 'react-image-crop';
 
 const TO_RADIANS = Math.PI / 180;
 
-/**
- * Draws the cropped image onto a canvas element.
- * @param image The source image element.
- * @param canvas The target canvas element.
- * @param crop The crop details (in pixels).
- * @param scale The scaling factor (default 1).
- * @param rotate The rotation angle in degrees (default 0).
- */
 export async function canvasPreview(
   image: HTMLImageElement,
   canvas: HTMLCanvasElement,
   crop: PixelCrop,
   scale = 1,
   rotate = 0,
+  outputWidth?: number,
+  outputHeight?: number
 ) {
   const ctx = canvas.getContext('2d');
 
@@ -24,72 +19,55 @@ export async function canvasPreview(
     throw new Error('No 2d context');
   }
 
-  const scaleX = image.naturalWidth / image.width;
-  const scaleY = image.naturalHeight / image.height;
-  // devicePixelRatio slightly increases sharpness on retina devices
-  // at the expense of slightly slower render times and needing to change image.width and height a bit
-  // const pixelRatio = window.devicePixelRatio;
-  // canvas.width = Math.floor(crop.width * scaleX * pixelRatio);
-  // canvas.height = Math.floor(crop.height * scaleY * pixelRatio);
+  const scaleX = image.naturalWidth / image.width;  // Relación entre tamaño natural y tamaño mostrado
+  const scaleY = image.naturalHeight / image.height; // Usado para convertir crop de % a px si fuera el caso
 
-  canvas.width = Math.floor(crop.width * scaleX);
-  canvas.height = Math.floor(crop.height * scaleY);
+  canvas.width = Math.floor(outputWidth || crop.width);   // Usar outputWidth o el ancho del crop en píxeles
+  canvas.height = Math.floor(outputHeight || crop.height); // Usar outputHeight o el alto del crop en píxeles
 
-  // ctx.scale(pixelRatio, pixelRatio);
   ctx.imageSmoothingQuality = 'high';
 
-  const cropX = crop.x * scaleX;
-  const cropY = crop.y * scaleY;
+  const cropXInOriginal = crop.x * scaleX; // Coordenada X del crop en la imagen original
+  const cropYInOriginal = crop.y * scaleY; // Coordenada Y del crop en la imagen original
+  const cropWidthInOriginal = crop.width * scaleX; // Ancho del crop en la imagen original
+  const cropHeightInOriginal = crop.height * scaleY; // Alto del crop en la imagen original
 
   const rotateRads = rotate * TO_RADIANS;
-  const centerX = image.naturalWidth / 2;
-  const centerY = image.naturalHeight / 2;
 
   ctx.save();
-
-  // 5) Move the crop origin to the canvas origin (0,0)
-  ctx.translate(-cropX, -cropY);
-  // 4) Move the origin to the center of the original position
-  ctx.translate(centerX, centerY);
-  // 3) Rotate around the origin
+  // Mover el origen del canvas al centro del canvas para la rotación/escalado
+  ctx.translate(canvas.width / 2, canvas.height / 2);
   ctx.rotate(rotateRads);
-  // 2) Scale the image
   ctx.scale(scale, scale);
-  // 1) Move the center of the image to the origin (0,0)
-  ctx.translate(-centerX, -centerY);
+  // Mover el origen de nuevo para que (0,0) del drawImage sea la esquina superior izquierda del área de destino
+  ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
+  // Dibujar la porción recortada de la imagen original,
+  // y que se ajuste a las dimensiones completas del canvas (que son outputWidth/Height o el tamaño del crop).
   ctx.drawImage(
     image,
+    cropXInOriginal,
+    cropYInOriginal,
+    cropWidthInOriginal,
+    cropHeightInOriginal,
+    0, // Dibujar en la esquina (0,0) del canvas (ya transformado)
     0,
-    0,
-    image.naturalWidth,
-    image.naturalHeight,
-    0,
-    0,
-    image.naturalWidth,
-    image.naturalHeight,
+    canvas.width,  // Estirar/encoger a todo el ancho del canvas
+    canvas.height  // Estirar/encoger a todo el alto del canvas
   );
 
   ctx.restore();
 }
 
-/**
- * Utility to get a Blob from a canvas element.
- * @param canvas The canvas element.
- * @param type MIME type for the blob (e.g., 'image/png').
- * @param quality Quality for formats like 'image/jpeg'.
- * @returns A Promise that resolves with the Blob or null.
- */
+// canvasToBlob (sin cambios)
 export function canvasToBlob(
   canvas: HTMLCanvasElement,
-  type = 'image/png', // Default to PNG for lossless
-  quality = 0.9 // Default quality for lossy formats
+  type = 'image/png',
+  quality = 0.9
 ): Promise<Blob | null> {
     return new Promise((resolve) => {
         canvas.toBlob(
-            (blob) => {
-                resolve(blob);
-            },
+            (blob) => { resolve(blob); },
             type,
             quality
         );
