@@ -1,5 +1,5 @@
 // frontend/src/types/publicOrder.types.ts
-// Version: 1.0.4 (Final correction: DTO note fields are strictly string | null)
+// Version: 1.0.5 (Correct property name from orderNotes to customerNotes)
 
 import { PublicMenuItem } from './menu.types';
 
@@ -43,21 +43,23 @@ export interface CreateOrderItemModifierDto {
 export interface CreateOrderItemDto {
     menuItemId: string;
     quantity: number;
-    notes?: string | null; // En el DTO del item, puede ser opcional y null
+    notes?: string | null;
     selectedModifierOptions?: CreateOrderItemModifierDto[] | null;
 }
 
 export interface CreateOrderPayloadDto {
-    tableIdentifier?: string | null; // Opcional en el payload
-    customerId?: string | null;      // Opcional en el payload
-    orderNotes: string | null;        // NO opcional, debe ser string o null si se envía el objeto payload
+    tableIdentifier?: string | null;
+    customerId?: string | null;
+    // --- CORRECCIÓN AQUÍ ---
+    customerNotes: string | null; // Antes era orderNotes
+    // --- FIN CORRECCIÓN ---
     items: CreateOrderItemDto[];
-    businessId?: string;             // Opcional en el payload
+    businessId?: string;
 }
 
 export interface AddItemsToOrderPayloadDto {
-    items: CreateOrderItemDto[];      // CORREGIDO: Usar CreateOrderItemDto[]
-    customerNotes: string | null;   // NO opcional, debe ser string o null si se envía el objeto payload
+    items: CreateOrderItemDto[];
+    customerNotes: string | null;
 }
 
 // --- Tipos para las Respuestas de la API de Pedidos ---

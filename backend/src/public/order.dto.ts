@@ -1,5 +1,6 @@
 // backend/src/public/order.dto.ts
-// Versión 1.7.0 (Add RequestBillClientPayloadDto)
+// Versión 1.7.1 (Add IsArray() to selectedModifierOptions and make optional)
+
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -14,7 +15,7 @@ import {
 
 // DTO para cada opción de modificador seleccionada DENTRO de un ítem de pedido
 export class SelectedOrderModifierOptionDto {
-  @IsString() // O IsUUID() si tus IDs de opción son UUIDs
+  @IsString()
   @IsNotEmpty({ message: 'modifierOptionId no puede estar vacío.'})
   modifierOptionId!: string;
 }
@@ -33,11 +34,13 @@ export class CreateOrderItemDto {
   @IsString()
   notes?: string;
 
-  @IsOptional()
-  @IsArray({ message: 'Los modificadores seleccionados deben ser un array al crear.' })
+  // --- CORRECCIÓN AQUÍ ---
+  @IsOptional() // El array completo es opcional
+  @IsArray({ message: 'Los modificadores seleccionados deben ser un array.' }) // Asegurarse de que, si viene, sea un array
   @ValidateNested({ each: true })
   @Type(() => SelectedOrderModifierOptionDto)
-  selectedModifierOptions?: SelectedOrderModifierOptionDto[]; // Nombre consistente
+  selectedModifierOptions?: SelectedOrderModifierOptionDto[];
+  // --- FIN CORRECCIÓN ---
 }
 
 // DTO principal para crear un pedido
@@ -64,7 +67,7 @@ export class CreateOrderDto {
   customerId?: string;
 }
 
-// --- DTOs para AÑADIR ítems a un pedido existente ---
+// --- DTOs para AÑADIR ítems a un pedido existente (también corregido) ---
 
 export class AddItemsOrderItemDto {
     @IsUUID()
@@ -78,12 +81,14 @@ export class AddItemsOrderItemDto {
     @IsOptional()
     @IsString()
     notes?: string;
-
+    
+    // --- CORRECCIÓN AQUÍ ---
     @IsOptional()
     @IsArray({ message: 'Los modificadores seleccionados deben ser un array.' })
     @ValidateNested({ each: true })
     @Type(() => SelectedOrderModifierOptionDto)
     selectedModifierOptions?: SelectedOrderModifierOptionDto[];
+    // --- FIN CORRECCIÓN ---
 }
 
 export class AddItemsToOrderDto {
@@ -97,14 +102,9 @@ export class AddItemsToOrderDto {
     customerNotes?: string;
 }
 
-// ---- NUEVO DTO AÑADIDO ----
-/**
- * DTO para el payload opcional que el cliente puede enviar al solicitar la cuenta.
- * Usado en: POST /public/order/:orderId/request-bill
- */
+// DTO para solicitar la cuenta (sin cambios)
 export class RequestBillClientPayloadDto {
   @IsOptional()
   @IsString({ message: 'La preferencia de pago debe ser texto.' })
-  paymentPreference?: string; // Ej: "EFECTIVO", "TARJETA"
+  paymentPreference?: string;
 }
-// ---- FIN NUEVO DTO ----

@@ -1,5 +1,5 @@
 // frontend/src/pages/PublicMenuViewPage.tsx
-// Version: 2.0.13 (Fix orderNumberToNavigate type assignment)
+// Version 2.2.0 (Refactored to use usePublicMenuData hook)
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -14,20 +14,23 @@ import { useTranslation } from 'react-i18next';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
 
-import { PublicDigitalMenuData } from '../types/menu.types';
-import { OrderItemFE, SelectedModifierFE, CreateOrderPayloadDto, AddItemsToOrderPayloadDto } from '../types/publicOrder.types';
+// Tipos
+import { SelectedModifierFE } from '../types/publicOrder.types';
 
+// Componentes
 import CategoryAccordion from '../components/public/menu/CategoryAccordion';
 import { MenuItemCardConfiguringState } from '../components/public/menu/MenuItemCard';
 import ShoppingCartModal from '../components/public/menu/ShoppingCartModal';
 
+// Hooks
 import { useActiveOrderState } from '../hooks/useActiveOrderState';
 import { usePublicOrderCart } from '../hooks/usePublicOrderCart';
 import { useMenuItemConfigurator } from '../hooks/useMenuItemConfigurator';
-import { submitNewOrder, addItemsToExistingOrderApi } from '../services/publicOrderApiService';
-import axios from 'axios';
+import { usePublicMenuData } from '../hooks/usePublicMenuData'; // <-- NUEVA IMPORTACIÓN
 
-const API_MENU_BASE_URL = import.meta.env.VITE_API_BASE_URL_PUBLIC || 'http://localhost:3000/public';
+// Servicio
+import { handleOrderSubmission } from '../services/publicOrderApiService';
+
 
 const PublicMenuViewPage: React.FC = () => {
     const { t, i18n } = useTranslation();
@@ -36,63 +39,37 @@ const PublicMenuViewPage: React.FC = () => {
     const { businessSlug, tableIdentifier: tableIdentifierFromParams } = useParams<{ businessSlug: string; tableIdentifier?: string }>();
     const navigate = useNavigate();
 
+    // --- LÓGICA DE DATOS AHORA CENTRALIZADA EN HOOKS ---
+    const { menuData, loadingMenu, errorMenu } = usePublicMenuData(businessSlug);
     const {
         activeOrderId, activeOrderNumber, canCurrentlyAddToExistingOrder,
         loadingActiveOrderStatus, clearActiveOrder, setActiveOrderManually,
     } = useActiveOrderState(businessSlug, tableIdentifierFromParams);
-
     const {
         currentOrderItems, orderNotes, totalCartItems, totalCartAmount,
         addItemToCart, addSimpleItemToCart, updateItemQuantityInCart,
         removeItemFromCart, updateOrderNotes, clearCart, clearCartStorage,
     } = usePublicOrderCart(businessSlug, tableIdentifierFromParams, activeOrderId);
-
     const {
         configuringItem, startConfiguringItem, cancelConfiguration,
         updateConfigQuantity, updateConfigModifierSelection, updateConfigNotes,
     } = useMenuItemConfigurator();
-
-    const [menuData, setMenuData] = useState<PublicDigitalMenuData | null>(null);
-    const [loadingMenu, setLoadingMenu] = useState<boolean>(true);
-    const [errorMenu, setErrorMenu] = useState<string | null>(null);
+    
+    // --- ESTADO LOCAL SOLO PARA LA UI ---
     const [activeAccordionItems, setActiveAccordionItems] = useState<string[]>([]);
     const [isCartOpen, { open: openCart, close: closeCart }] = useDisclosure(false);
     const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
+    // Efecto para abrir la primera categoría del menú (ahora depende de menuData)
     useEffect(() => {
-        const fetchMenu = async () => {
-            if (!businessSlug) { setErrorMenu(t('error.missingBusinessSlug')); setLoadingMenu(false); return; }
-            setLoadingMenu(true); setErrorMenu(null);
-            try {
-                const response = await axios.get<PublicDigitalMenuData>(`${API_MENU_BASE_URL}/menu/business/${businessSlug}`);
-                if (response.data) {
-                    const parsedMenuData = {
-                        ...response.data,
-                        categories: response.data.categories.map(c => ({
-                            ...c,
-                            items: c.items.map(i => ({
-                                ...i,
-                                price: parseFloat(String(i.price)),
-                                modifierGroups: Array.isArray(i.modifierGroups) ? i.modifierGroups.map(g => ({
-                                    ...g,
-                                    options: Array.isArray(g.options) ? g.options.map(o => ({ ...o, priceAdjustment: parseFloat(String(o.priceAdjustment)) })) : []
-                                })) : []
-                            }))
-                        }))
-                    };
-                    setMenuData(parsedMenuData);
-                    if (parsedMenuData.categories.length > 0 && !activeOrderId) {
-                        setActiveAccordionItems([parsedMenuData.categories[0].id]);
-                    } else if (activeOrderId) {
-                        setActiveAccordionItems([]);
-                    }
-                } else { throw new Error(t('error.noMenuDataReceived')); }
-            } catch (err: any) { setErrorMenu(err.response?.data?.message || err.message || t('common.errorUnknown')); setMenuData(null); }
-            finally { setLoadingMenu(false); }
-        };
-        fetchMenu();
-    }, [businessSlug, t, activeOrderId]);
+        if (menuData && menuData.categories.length > 0 && !activeOrderId) {
+            setActiveAccordionItems([menuData.categories[0].id]);
+        } else if (activeOrderId) {
+            setActiveAccordionItems([]);
+        }
+    }, [menuData, activeOrderId]);
 
+    // Lógica para añadir ítem configurado al carrito (sin cambios)
     const handleConfiguredItemAddToCart = () => {
         if (!configuringItem) return;
         const { itemDetails, quantity, selectedOptionsByGroup, currentUnitPrice, itemNotes, areModifiersValid } = configuringItem;
@@ -108,120 +85,55 @@ const PublicMenuViewPage: React.FC = () => {
                 const ids = Array.isArray(optionSelections) ? optionSelections.filter(s => s && s.trim() !== '') : ((typeof optionSelections === 'string' && optionSelections.trim() !== '') ? [optionSelections.trim()] : []);
                 ids.forEach(optId => {
                     const option = group.options.find(o => o.id === optId);
-                    if (option) {
-                        flatSelectedModifiers.push({
-                            modifierOptionId: option.id, name_es: option.name_es, name_en: option.name_en,
-                            priceAdjustment: option.priceAdjustment,
-                            modifierGroupName_es: group.name_es, modifierGroupName_en: group.name_en,
-                        });
-                    }
+                    if (option) { flatSelectedModifiers.push({ modifierOptionId: option.id, name_es: option.name_es, name_en: option.name_en, priceAdjustment: option.priceAdjustment, modifierGroupName_es: group.name_es, modifierGroupName_en: group.name_en }); }
                 });
             });
         }
         const sortedModifierOptionIds = flatSelectedModifiers.map(m => m.modifierOptionId).sort().join(',');
         const notesHash = itemNotes ? `_notes-${itemNotes.toLocaleLowerCase().replace(/\s/g, '')}` : '';
         const cartItemId = `${itemDetails.id}${flatSelectedModifiers.length > 0 ? `-[${sortedModifierOptionIds}]` : ''}${notesHash}`;
-
-        const newCartItem: OrderItemFE = {
-            cartItemId, menuItemId: itemDetails.id,
-            menuItemName_es: itemDetails.name_es, menuItemName_en: itemDetails.name_en,
-            quantity, basePrice: itemDetails.price, currentPricePerUnit: currentUnitPrice,
-            totalPriceForItem: currentUnitPrice * quantity, notes: itemNotes || undefined,
-            selectedModifiers: flatSelectedModifiers,
-        };
-        addItemToCart(newCartItem);
+        addItemToCart({ cartItemId, menuItemId: itemDetails.id, menuItemName_es: itemDetails.name_es, menuItemName_en: itemDetails.name_en, quantity, basePrice: itemDetails.price, currentPricePerUnit: currentUnitPrice, totalPriceForItem: currentUnitPrice * quantity, notes: itemNotes || undefined, selectedModifiers: flatSelectedModifiers });
         cancelConfiguration();
     };
 
-    const getProcessedNotesValue = (notesInput: string | null | undefined): string | null => {
-        if (notesInput === null || notesInput === undefined) {
-            return null;
-        }
-        const trimmed = notesInput.trim();
-        return trimmed === "" ? null : trimmed;
-    };
-
+    // Lógica de envío de pedido (sin cambios)
     const handleSubmitOrderOrAddItems = async () => {
         if (currentOrderItems.length === 0) {
-            notifications.show({ title: t('publicMenu.cart.errorTitle'), message: activeOrderId && canCurrentlyAddToExistingOrder ? t('publicMenu.cart.errorEmptyAddToExisting') : t('publicMenu.cart.errorEmpty'), color: 'orange' });
+            notifications.show({ title: t('publicMenu.cart.errorTitle'), message: activeOrderId ? t('publicMenu.cart.errorEmptyAddToOrder') : t('publicMenu.cart.errorEmpty'), color: 'orange' });
+            return;
+        }
+        if (!businessSlug) {
+            notifications.show({ title: t('common.error'), message: t('error.missingBusinessSlug'), color: 'red' });
             return;
         }
         setIsSubmittingOrder(true);
-
-        const dtoItems = currentOrderItems.map(feItem => ({
-            menuItemId: feItem.menuItemId,
-            quantity: feItem.quantity,
-            notes: (typeof feItem.notes === 'string' ? feItem.notes.trim() : "") || null,
-            selectedModifierOptions: feItem.selectedModifiers.length > 0
-                ? feItem.selectedModifiers.map(sm => ({ modifierOptionId: sm.modifierOptionId }))
-                : null,
-        }));
-
-        let customerIdForPayload: string | null = null;
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            try {
-                const parsedUser = JSON.parse(storedUser);
-                if (parsedUser?.id && parsedUser.role === 'CUSTOMER_FINAL') {
-                    customerIdForPayload = parsedUser.id;
-                }
-            } catch (e) {
-                console.error("Error parsing user from localStorage for order payload:", e);
-            }
-        }
-
         try {
-            let orderIdToNavigate: string;
-            let orderNumberToNavigate: string | null = null; // Tipo: string | null
-
-            if (activeOrderId && canCurrentlyAddToExistingOrder && businessSlug) {
-                const processedCustomerNotes = getProcessedNotesValue(orderNotes);
-                const payloadForAdd: AddItemsToOrderPayloadDto = {
-                    items: dtoItems,
-                    customerNotes: processedCustomerNotes,
-                };
-                const response = await addItemsToExistingOrderApi(activeOrderId, businessSlug, payloadForAdd);
-                orderIdToNavigate = activeOrderId;
-                // CORRECCIÓN LÍNEA 188 (aproximada):
-                orderNumberToNavigate = activeOrderNumber || (response.orderNumber ?? null);
-                notifications.show({
-                    title: t('publicMenu.cart.itemsAddedSuccessTitle'),
-                    message: t('publicMenu.cart.itemsAddedSuccessMsg', { orderNumber: orderNumberToNavigate || orderIdToNavigate }),
-                    color: 'green',
-                    icon: <IconCheck />
-                });
-            } else if (businessSlug) {
-                const processedOrderNotes = getProcessedNotesValue(orderNotes);
-                const payloadForCreate: CreateOrderPayloadDto = {
-                    items: dtoItems,
-                    orderNotes: processedOrderNotes,
-                    tableIdentifier: tableIdentifierFromParams ? tableIdentifierFromParams : null,
-                    customerId: customerIdForPayload,
-                };
-                const response = await submitNewOrder(businessSlug, payloadForCreate);
-                orderIdToNavigate = response.id;
-                // CORRECCIÓN LÍNEA 205 (aproximada):
-                orderNumberToNavigate = response.orderNumber ?? null;
-                notifications.show({
-                    title: t('publicMenu.cart.orderSuccessTitle'),
-                    message: t('publicMenu.cart.orderSuccessMsg', { orderNumber: orderNumberToNavigate || orderIdToNavigate }),
-                    color: 'green',
-                    icon: <IconCheck />
-                });
-                setActiveOrderManually(orderIdToNavigate, orderNumberToNavigate || orderIdToNavigate);
-            } else {
-                throw new Error("Business context (slug) is required.");
+            const response = await handleOrderSubmission(
+                currentOrderItems,
+                orderNotes,
+                canCurrentlyAddToExistingOrder ? activeOrderId : null,
+                businessSlug,
+                tableIdentifierFromParams
+            );
+            const orderIdToNavigate = response.id;
+            const orderNumberToNavigate = response.orderNumber || activeOrderNumber || orderIdToNavigate;
+            const successMessage = activeOrderId
+                ? t('publicMenu.cart.itemsAddedSuccessMsg', { orderNumber: orderNumberToNavigate })
+                : t('publicMenu.cart.orderSuccessMsg', { orderNumber: orderNumberToNavigate });
+            notifications.show({
+                title: activeOrderId ? t('publicMenu.cart.itemsAddedSuccessTitle') : t('publicMenu.cart.orderSuccessTitle'),
+                message: successMessage,
+                color: 'green',
+                icon: <IconCheck />
+            });
+            if (!activeOrderId) {
+                setActiveOrderManually(orderIdToNavigate, orderNumberToNavigate);
             }
-
             clearCart();
             clearCartStorage();
             closeCart();
             navigate(`/order-status/${orderIdToNavigate}`, {
-                state: {
-                    orderNumber: orderNumberToNavigate,
-                    businessSlug,
-                    tableIdentifier: tableIdentifierFromParams
-                }
+                state: { orderNumber: orderNumberToNavigate, businessSlug, tableIdentifier: tableIdentifierFromParams }
             });
         } catch (err: any) {
             const errMsg = err.response?.data?.message || err.message || t('publicMenu.cart.orderErrorMsg');
@@ -236,53 +148,31 @@ const PublicMenuViewPage: React.FC = () => {
         }
     };
 
+    // El resto del componente (renderizado) permanece sin cambios...
     const isLoadingPage = loadingMenu || loadingActiveOrderStatus;
     const pageError = errorMenu;
 
     if (isLoadingPage) {
-        return (
-            <Container size="md" py="xl" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-                <Loader size="xl" />
-            </Container>
-        );
+        return ( <Container size="md" py="xl" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}><Loader size="xl" /></Container> );
     }
-
     if (pageError) {
-        return (
-            <Container size="md" py="xl">
-                <Alert icon={<IconAlertCircle size="1rem" />} title={t('common.error')} color="red" radius="md">
-                    {pageError}
-                </Alert>
-            </Container>
-        );
+        return ( <Container size="md" py="xl"><Alert icon={<IconAlertCircle size="1rem" />} title={t('common.error')} color="red" radius="md">{pageError}</Alert></Container> );
     }
-
     if (!menuData) {
-        return (
-            <Container size="md" py="xl">
-                <Text ta="center" c="dimmed">{t('publicMenu.menuNotAvailable')}</Text>
-            </Container>
-        );
+        return ( <Container size="md" py="xl"><Text ta="center" c="dimmed">{t('publicMenu.menuNotAvailable')}</Text></Container> );
     }
-
     const menuItemCardConfigState: MenuItemCardConfiguringState | null = configuringItem;
     const topOffsetForCartBar = typeof theme.spacing.md === 'number' ? theme.spacing.md + 10 : 26;
-
-    const cartButtonText = activeOrderId && canCurrentlyAddToExistingOrder
-        ? t('publicMenu.cart.addItemsToOrderButton', { count: totalCartItems, orderNumber: activeOrderNumber })
-        : t('publicMenu.cart.viewOrderItems', { count: totalCartItems });
+    const cartButtonText = activeOrderId && canCurrentlyAddToExistingOrder ? t('publicMenu.cart.addItemsToOrderButton', { count: totalCartItems, orderNumber: activeOrderNumber }) : t('publicMenu.cart.viewOrderItems', { count: totalCartItems });
 
     return (
         <>
             <Container size="lg" py="xl">
                 <Stack gap="xl">
                     <Group justify="center" align="center" wrap="nowrap">
-                        {menuData.businessLogoUrl && (
-                            <Image src={menuData.businessLogoUrl} alt={`${menuData.businessName} logo`} h={50} w="auto" fit="contain" radius="sm" />
-                        )}
+                        {menuData.businessLogoUrl && ( <Image src={menuData.businessLogoUrl} alt={`${menuData.businessName} logo`} h={50} w="auto" fit="contain" radius="sm" /> )}
                         <Title order={1} ta="center" style={{ flexShrink: 1, minWidth: 0 }}>{menuData.businessName}</Title>
                     </Group>
-
                     {activeOrderId && canCurrentlyAddToExistingOrder && !configuringItem && (
                         <Paper shadow="md" p="lg" radius="md" withBorder mb="xl" bg={colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.blue[0]}>
                             <Group justify="space-between" align="center">
@@ -309,7 +199,6 @@ const PublicMenuViewPage: React.FC = () => {
                             </Group>
                         </Paper>
                     )}
-
                     {totalCartItems > 0 && (!activeOrderId || (activeOrderId && canCurrentlyAddToExistingOrder)) && !configuringItem && (
                         <Paper p={0} shadow="xs" withBorder={false} radius="md" style={{ position: 'sticky', top: topOffsetForCartBar, zIndex: 200 }} >
                             <Button fullWidth size="lg" variant="gradient"
@@ -325,7 +214,6 @@ const PublicMenuViewPage: React.FC = () => {
                             </Button>
                         </Paper>
                     )}
-
                     <CategoryAccordion
                         categories={menuData.categories}
                         activeAccordionItems={activeAccordionItems}
@@ -342,19 +230,13 @@ const PublicMenuViewPage: React.FC = () => {
                     />
                 </Stack>
             </Container>
-
             {(!activeOrderId || (activeOrderId && canCurrentlyAddToExistingOrder)) && (
                 <ShoppingCartModal
-                    opened={isCartOpen}
-                    onClose={closeCart}
-                    orderItems={currentOrderItems}
-                    orderNotes={orderNotes}
-                    onUpdateItemQuantity={updateItemQuantityInCart}
-                    onRemoveItem={removeItemFromCart}
-                    onUpdateOrderNotes={updateOrderNotes}
-                    onSubmitOrder={handleSubmitOrderOrAddItems}
-                    isSubmittingOrder={isSubmittingOrder}
-                    onClearCart={clearCart}
+                    opened={isCartOpen} onClose={closeCart}
+                    orderItems={currentOrderItems} orderNotes={orderNotes}
+                    onUpdateItemQuantity={updateItemQuantityInCart} onRemoveItem={removeItemFromCart}
+                    onUpdateOrderNotes={updateOrderNotes} onSubmitOrder={handleSubmitOrderOrAddItems}
+                    isSubmittingOrder={isSubmittingOrder} onClearCart={clearCart}
                     isAddingToExistingOrder={!!(activeOrderId && canCurrentlyAddToExistingOrder)}
                     activeOrderNumber={activeOrderNumber}
                 />
