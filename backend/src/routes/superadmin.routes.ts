@@ -4,14 +4,19 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { checkRole } from '../middleware/role.middleware';
 import { UserRole } from '@prisma/client';
 
-// --- CAMBIO: Importar los handlers reales del controlador ---
+// Importar todos los handlers del controlador de superadmin
 import {
     getAllBusinessesHandler,
     toggleBusinessStatusHandler,
     toggleLoyaltyCoreModuleHandler,
-    toggleCamareroModuleHandler
-} from '../superadmin/superadmin.controller'; // Ahora importamos desde el archivo creado
-// --- FIN CAMBIO ---
+    toggleCamareroModuleHandler,
+    setSubscriptionPriceHandler,
+    recordPaymentHandler,
+    getPaymentHistoryHandler,
+    impersonationHandler,
+    // --- NUEVO HANDLER IMPORTADO ---
+    getPendingPeriodsHandler
+} from '../superadmin/superadmin.controller';
 
 const router = Router();
 
@@ -19,11 +24,23 @@ const router = Router();
 router.use(authenticateToken);
 router.use(checkRole([UserRole.SUPER_ADMIN]));
 
-// --- CAMBIO: Usar los handlers importados ---
+// --- Rutas existentes para gestión de Negocios y Módulos ---
 router.get('/businesses', getAllBusinessesHandler);
 router.patch('/businesses/:businessId/status', toggleBusinessStatusHandler);
 router.patch('/businesses/:businessId/module-loyaltycore', toggleLoyaltyCoreModuleHandler);
 router.patch('/businesses/:businessId/module-camarero', toggleCamareroModuleHandler);
-// --- FIN CAMBIO ---
+
+// --- Rutas para Pagos y Suscripciones ---
+router.put('/businesses/:businessId/subscription', setSubscriptionPriceHandler);
+router.post('/businesses/:businessId/payments', recordPaymentHandler);
+router.get('/businesses/:businessId/payments', getPaymentHistoryHandler);
+
+// --- NUEVA RUTA AÑADIDA ---
+router.get('/businesses/:businessId/pending-payments', getPendingPeriodsHandler);
+
+
+// --- Ruta para Suplantación de Identidad ---
+router.post('/impersonate/:userId', impersonationHandler);
+
 
 export default router;
