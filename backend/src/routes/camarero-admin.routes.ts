@@ -1,29 +1,28 @@
-// backend/src/routes/camarero-admin.routes.ts
+// backend/src/routes/camarero-admin.routes.ts (CORREGIDO)
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth.middleware';
-import { checkRole } from '../middleware/role.middleware';
+// --- RUTAS CORREGIDAS ---
+import { authenticateToken } from '../shared/middleware/auth.middleware';
+import { checkRole } from '../shared/middleware/role.middleware';
 import { UserRole } from '@prisma/client';
-import { checkModuleActive } from '../middleware/module.middleware';
+import { checkModuleActive } from '../shared/middleware/module.middleware';
 
-// Controladores para Categorías
+// Controladores (ahora desde la ubicación modular correcta)
 import {
     createMenuCategoryHandler,
     getMenuCategoriesHandler,
     getMenuCategoryByIdHandler,
     updateMenuCategoryHandler,
     deleteMenuCategoryHandler
-} from '../camarero/admin-menu-category.controller';
+} from '../modules/camarero/admin-menu-category.controller';
 
-// Controladores para Ítems
 import {
     createMenuItemHandler,
     getMenuItemsByCategoryHandler,
     getMenuItemByIdHandler,
     updateMenuItemHandler,
     deleteMenuItemHandler
-} from '../camarero/admin-menu-item.controller';
+} from '../modules/camarero/admin-menu-item.controller';
 
-// --- NUEVO: Importar controladores para Modificadores ---
 import {
     createModifierGroupHandler,
     getModifierGroupsByMenuItemHandler,
@@ -33,8 +32,8 @@ import {
     getModifierOptionsByGroupHandler,
     updateModifierOptionHandler,
     deleteModifierOptionHandler
-} from '../camarero/admin-modifier.controller';
-// --- FIN NUEVO ---
+} from '../modules/camarero/admin-modifier.controller';
+// --- FIN RUTAS CORREGIDAS ---
 
 const camareroAdminRouter = Router();
 
@@ -70,31 +69,22 @@ const modifierOptionsBaseRelative = '/options'; // Relativo al grupo de modifica
 const modifierOptionsBaseAbsolute = '/modifier-options'; // Para acceder a una opción directamente
 
 // ModifierGroups (anidados bajo un MenuItem)
-// POST /api/camarero/admin/menu/items/:itemId/modifier-groups
 camareroAdminRouter.post(`${itemsBaseAbsolute}/:itemId${modifierGroupsBaseRelative}`, createModifierGroupHandler);
-// GET /api/camarero/admin/menu/items/:itemId/modifier-groups
 camareroAdminRouter.get(`${itemsBaseAbsolute}/:itemId${modifierGroupsBaseRelative}`, getModifierGroupsByMenuItemHandler);
 
 // ModifierGroups (acceso directo por ID del grupo)
-// PUT /api/camarero/admin/modifier-groups/:modifierGroupId
 camareroAdminRouter.put(`${modifierGroupsBaseAbsolute}/:modifierGroupId`, updateModifierGroupHandler);
 camareroAdminRouter.patch(`${modifierGroupsBaseAbsolute}/:modifierGroupId`, updateModifierGroupHandler);
-// DELETE /api/camarero/admin/modifier-groups/:modifierGroupId
 camareroAdminRouter.delete(`${modifierGroupsBaseAbsolute}/:modifierGroupId`, deleteModifierGroupHandler);
 
 // ModifierOptions (anidados bajo un ModifierGroup)
-// POST /api/camarero/admin/modifier-groups/:modifierGroupId/options
 camareroAdminRouter.post(`${modifierGroupsBaseAbsolute}/:modifierGroupId${modifierOptionsBaseRelative}`, createModifierOptionHandler);
-// GET /api/camarero/admin/modifier-groups/:modifierGroupId/options
 camareroAdminRouter.get(`${modifierGroupsBaseAbsolute}/:modifierGroupId${modifierOptionsBaseRelative}`, getModifierOptionsByGroupHandler);
 
 // ModifierOptions (acceso directo por ID de la opción)
-// PUT /api/camarero/admin/modifier-options/:modifierOptionId
 camareroAdminRouter.put(`${modifierOptionsBaseAbsolute}/:modifierOptionId`, updateModifierOptionHandler);
 camareroAdminRouter.patch(`${modifierOptionsBaseAbsolute}/:modifierOptionId`, updateModifierOptionHandler);
-// DELETE /api/camarero/admin/modifier-options/:modifierOptionId
 camareroAdminRouter.delete(`${modifierOptionsBaseAbsolute}/:modifierOptionId`, deleteModifierOptionHandler);
-// --- FIN NUEVAS RUTAS MODIFICADORES ---
 
 
 // Placeholder para la raíz de /api/camarero/admin

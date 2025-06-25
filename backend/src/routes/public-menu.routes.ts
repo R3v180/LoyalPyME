@@ -1,6 +1,8 @@
-// backend/src/routes/public-menu.routes.ts
+// backend/src/routes/public-menu.routes.ts (CORREGIDO)
 import { Router } from 'express';
-import { getPublicDigitalMenuHandler } from '../public/menu.controller'; // Ajustaremos la ruta si el controlador está en otra carpeta
+// --- RUTA CORREGIDA ---
+import { getPublicDigitalMenuHandler } from '../modules/camarero/public/menu.controller';
+// --- FIN RUTA CORREGIDA ---
 
 const publicMenuRouter = Router();
 
@@ -9,4 +11,4 @@ publicMenuRouter.get(
     getPublicDigitalMenuHandler
 );
 
-export default publicMenuRouter; // <--- ESTA LÍNEA ES CRUCIAL
+export default publicMenuRouter;

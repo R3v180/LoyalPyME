@@ -1,7 +1,8 @@
-// filename: backend/src/routes/activity.routes.ts
+// backend/src/routes/activity.routes.ts (CORREGIDO)
 import { Router } from 'express';
-import { getCustomerActivityHandler } from '../activity/activity.controller';
-// NOTA: Los middlewares authenticateToken y checkRole se aplicarán en index.ts
+// --- RUTA CORREGIDA ---
+import { getCustomerActivityHandler } from '../modules/loyalpyme/activity/activity.controller';
+// --- FIN RUTA CORREGIDA ---
 
 const activityRouter = Router();
 

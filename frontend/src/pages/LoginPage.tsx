@@ -1,9 +1,12 @@
-// frontend/src/pages/LoginPage.tsx
-// Version: 1.6.5 (Handles WAITER role redirection)
-
+// frontend/src/pages/LoginPage.tsx (CORREGIDO)
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axiosInstance from '../services/axiosInstance';
+// --- RUTA CORREGIDA ---
+import axiosInstance from '../shared/services/axiosInstance';
+import { UserRole } from '../shared/types/user.types';
+import type { UserData } from '../shared/types/user.types';
+// --- FIN RUTAS CORREGIDAS ---
+
 import { AxiosError } from 'axios';
 import {
     TextInput, PasswordInput, Button, Paper, Title, Stack, Container,
@@ -12,9 +15,6 @@ import {
 import { IconAlertCircle } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
-// Importar UserData y el ENUM UserRole
-import type { UserData } from '../types/customer';
-import { UserRole } from '../types/customer'; // Importar el ENUM UserRole
 
 function LoginPage() {
     const { t } = useTranslation();
@@ -28,7 +28,8 @@ function LoginPage() {
         event.preventDefault();
         setLoading(true);
         setError(null);
-        const loginPath = '/auth/login';
+        // La ruta de la API es correcta, ya que axiosInstance apunta a /api
+        const loginPath = '/auth/login'; 
         try {
             const response = await axiosInstance.post<{ user: UserData; token: string }>(
                 loginPath, { email, password }
@@ -39,31 +40,24 @@ function LoginPage() {
                 localStorage.setItem('token', token);
                 localStorage.setItem('user', JSON.stringify(user));
 
+                // La lógica de redirección no cambia
                 if (user.role === UserRole.KITCHEN_STAFF || user.role === UserRole.BAR_STAFF) {
-                    console.log("[LoginPage] Redirecting KDS staff to /admin/kds");
                     navigate('/admin/kds', { replace: true });
                 } else if (user.role === UserRole.BUSINESS_ADMIN) {
-                    console.log("[LoginPage] Redirecting BUSINESS_ADMIN to /admin/dashboard");
                     navigate('/admin/dashboard', { replace: true });
                 } else if (user.role === UserRole.CUSTOMER_FINAL) {
-                    console.log("[LoginPage] Redirecting CUSTOMER_FINAL to /customer/dashboard");
                     navigate('/customer/dashboard', { replace: true });
                 } else if (user.role === UserRole.SUPER_ADMIN) {
-                    console.log("[LoginPage] Redirecting SUPER_ADMIN to /superadmin");
                     navigate('/superadmin', { replace: true });
-                } else if (user.role === UserRole.WAITER) { // Condición añadida para WAITER
-                    console.log("[LoginPage] Redirecting WAITER to /admin/camarero/pickup");
+                } else if (user.role === UserRole.WAITER) {
                     navigate('/admin/camarero/pickup', { replace: true });
                 } else {
-                    console.error("[LoginPage] Unknown user role after login:", user.role);
                     setError(t('loginPage.errorUnknown', { ns: 'translation' }));
                 }
             } else {
-                console.error("[LoginPage] Login response did not include user or token.");
                 setError(t('loginPage.errorServer', { ns: 'translation' }));
             }
         } catch (err: unknown) {
-            console.error('Login error in LoginPage:', err);
             if (err instanceof AxiosError && err.response?.status === 401) {
                 setError(t('loginPage.errorCredentials', { ns: 'translation' }));
             } else if (err instanceof AxiosError && err.response) {

@@ -1,6 +1,4 @@
-// backend/src/index.ts
-// Version: 1.8.0 (Refactored to use dedicated config and router files)
-
+// backend/src/index.ts (CORREGIDO v1.8.1)
 import express, { Express, Request, Response, NextFunction, RequestHandler } from 'express';
 import dotenv from 'dotenv';
 import 'reflect-metadata';
@@ -10,12 +8,11 @@ import cron from 'node-cron';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
-// --- NUEVAS IMPORTACIONES ---
-import { swaggerOptions } from './config/swagger.config'; // Importar la configuración de Swagger
-import { apiRouter, publicRouter } from './routes';      // Importar los routers principales
+import { swaggerOptions } from './config/swagger.config';
+import { apiRouter, publicRouter } from './routes';
 
-// Cron Job Logic
-import { processTierUpdatesAndDowngrades } from './tiers/tier-logic.service';
+// --- RUTA CORREGIDA ---
+import { processTierUpdatesAndDowngrades } from './modules/loyalpyme/tiers/tier-logic.service';
 
 dotenv.config();
 
@@ -23,7 +20,6 @@ const prisma = new PrismaClient();
 const app: Express = express();
 const port = process.env.PORT || 3000;
 
-// Middlewares globales (sin cambios)
 app.use(cors());
 app.use(express.json());
 app.use((req, res, next) => {
@@ -41,18 +37,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Configuración de Swagger (ahora mucho más limpia)
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec) as RequestHandler);
 
-// --- Montaje de Rutas (ahora mucho más limpio) ---
 app.use('/api', apiRouter);
 app.use('/public', publicRouter);
 
-// Ruta raíz básica (sin cambios)
 app.get('/', (req: Request, res: Response) => { res.send('Welcome to LoyalPyME API! Docs available at /api-docs'); });
 
-// Manejador de errores global (sin cambios)
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error('[GLOBAL ERROR HANDLER]', err.stack);
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
@@ -68,7 +60,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     res.status(statusCode).json({ message: statusCode === 500 ? 'Error Interno del Servidor' : 'Error en la Petición', error: errorMessage });
 });
 
-// Cron Job (sin cambios)
 if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
     const cronSchedule = process.env.TIER_UPDATE_CRON_SCHEDULE || '0 3 * * *';
     console.log(`Scheduling Tier update/downgrade job with schedule: [${cronSchedule}]`);
@@ -80,14 +71,14 @@ if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
                  const duration = (Date.now() - startTime) / 1000;
                  console.log(`[CRON ${new Date().toISOString()}] Tier update/downgrade job finished successfully in ${duration.toFixed(2)}s.`);
             })
-            .catch(cronErr => console.error(`[CRON ${new Date().toISOString()}] Tier update/downgrade job failed:`, cronErr));
+            // --- TIPO 'any' AÑADIDO ---
+            .catch((cronErr: any) => console.error(`[CRON ${new Date().toISOString()}] Tier update/downgrade job failed:`, cronErr));
     });
     console.log(`✅ Tier update/downgrade job registered.`);
 } else {
      console.log("ℹ️ Cron job scheduling skipped in test/Vitest environment.");
 }
 
-// Iniciar servidor (sin cambios)
 if (!process.env.VITEST) {
      app.listen(port, () => {
          console.log(`\n🚀 [server]: Server is running at http://localhost:${port}`);

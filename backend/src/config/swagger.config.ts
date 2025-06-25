@@ -1,18 +1,18 @@
-// backend/src/config/swagger.config.ts
-// Version: 1.0.0 (Extracted from index.ts)
-
+// backend/src/config/swagger.config.ts (CORREGIDO v1.2.0)
 import {
+    Prisma,
     UserRole,
     TierCalculationBasis,
     TierDowngradePolicy,
     BenefitType,
     OrderItemStatus,
-    OrderStatus
+    OrderStatus,
+    ActivityType,
+    DocumentType
 } from '@prisma/client';
 
 const port = process.env.PORT || 3000;
 
-// Definición de la configuración de Swagger
 export const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
@@ -30,14 +30,14 @@ export const swaggerOptions = {
     components: {
         securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', } },
         schemas: {
-             ActivityLogItem: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, type: { type: 'string', enum: ['POINTS_EARNED_QR', 'POINTS_REDEEMED_REWARD', 'GIFT_REDEEMED', 'POINTS_ADJUSTED_ADMIN'], readOnly: true }, pointsChanged: { type: 'integer', nullable: true, readOnly: true, description: 'Cambio en puntos (+/-), null si no aplica.' }, description: { type: 'string', nullable: true, readOnly: true, description: 'Descripción del evento.' }, createdAt: { type: 'string', format: 'date-time', readOnly: true, description: 'Fecha y hora del evento.' } } },
+             ActivityLogItem: { type: 'object', properties: { id: { type: 'string', format: 'uuid', readOnly: true }, type: { type: 'string', enum: Object.values(ActivityType), readOnly: true }, pointsChanged: { type: 'integer', nullable: true, readOnly: true, description: 'Cambio en puntos (+/-), null si no aplica.' }, description: { type: 'string', nullable: true, readOnly: true, description: 'Descripción del evento.' }, createdAt: { type: 'string', format: 'date-time', readOnly: true, description: 'Fecha y hora del evento.' } } },
              PaginatedActivityResponse: { type: 'object', properties: { logs: { type: 'array', items: { '$ref': '#/components/schemas/ActivityLogItem' } }, totalPages: { type: 'integer', example: 5 }, currentPage: { type: 'integer', example: 1 }, totalItems: { type: 'integer', example: 73 } } },
              LoginCredentials: { type: 'object', required: ['email', 'password'], properties: { email: { type: 'string', format: 'email'}, password: { type: 'string', format: 'password'} }, example: { email: 'user@example.com', password: 'password123' } },
-             RegisterUserDto: { type: 'object', required: ['email', 'password', 'phone', 'documentId', 'documentType', 'businessId', 'role'], properties: { email: { type: 'string', format: 'email'}, password: { type: 'string', format: 'password', minLength: 6 }, name: { type: 'string', nullable: true }, phone: { type: 'string', example: '+34612345678' }, documentId: { type: 'string'}, documentType: { type: 'string', enum: ['DNI', 'NIE', 'PASSPORT', 'OTHER']}, businessId: { type: 'string', format: 'uuid'}, role: { type: 'string', enum: ['CUSTOMER_FINAL']} } },
+             RegisterUserDto: { type: 'object', required: ['email', 'password', 'phone', 'documentId', 'documentType', 'businessId', 'role'], properties: { email: { type: 'string', format: 'email'}, password: { type: 'string', format: 'password', minLength: 6 }, name: { type: 'string', nullable: true }, phone: { type: 'string', example: '+34612345678' }, documentId: { type: 'string'}, documentType: { type: 'string', enum: Object.values(DocumentType) }, businessId: { type: 'string', format: 'uuid'}, role: { type: 'string', enum: [UserRole.CUSTOMER_FINAL]} } },
              RegisterBusinessDto: { type: 'object', required: ['businessName', 'adminEmail', 'adminPassword'], properties: { businessName: { type: 'string', minLength: 2 }, adminEmail: { type: 'string', format: 'email'}, adminPassword: { type: 'string', format: 'password', minLength: 6 }, adminName: { type: 'string', nullable: true } } },
              ForgotPasswordDto: { type: 'object', required: ['email'], properties: { email: { type: 'string', format: 'email'} } },
              ResetPasswordDto: { type: 'object', required: ['password'], properties: { password: { type: 'string', format: 'password', minLength: 6 } } },
-             UserResponse: { type: 'object', properties: { id: { type: 'string', format: 'uuid'}, email: { type: 'string', format: 'email'}, name: { type: 'string', nullable: true }, role: { type: 'string', enum: ['BUSINESS_ADMIN', 'CUSTOMER_FINAL', 'SUPER_ADMIN', 'WAITER', 'KITCHEN_STAFF', 'BAR_STAFF']}, businessId: { type: 'string', format: 'uuid', nullable: true}, points: { type: 'integer'}, createdAt: { type: 'string', format: 'date-time'}, isActive: { type: 'boolean'}, isFavorite: { type: 'boolean', nullable: true }, currentTierId: { type: 'string', format: 'uuid', nullable: true }, tierAchievedAt: { type: 'string', format: 'date-time', nullable: true } } },
+             UserResponse: { type: 'object', properties: { id: { type: 'string', format: 'uuid'}, email: { type: 'string', format: 'email'}, name: { type: 'string', nullable: true }, role: { type: 'string', enum: Object.values(UserRole) }, businessId: { type: 'string', format: 'uuid', nullable: true}, points: { type: 'integer'}, createdAt: { type: 'string', format: 'date-time'}, isActive: { type: 'boolean'}, isFavorite: { type: 'boolean', nullable: true }, currentTierId: { type: 'string', format: 'uuid', nullable: true }, tierAchievedAt: { type: 'string', format: 'date-time', nullable: true } } },
              LoginResponse: { type: 'object', properties: { token: { type: 'string'}, user: { '$ref': '#/components/schemas/UserResponse' } } },
              SuccessMessage: { type: 'object', properties: { message: { type: 'string'} }, example: { message: 'Operación completada con éxito.'} },
              ErrorResponse: { type: 'object', properties: { message: { type: 'string'}, error: { type: 'string', nullable: true } }, example: { message: 'Error de validación.', error: 'El campo email es inválido.'} },
@@ -134,16 +134,16 @@ export const swaggerOptions = {
     security: [{ bearerAuth: [] }],
   },
   apis: [
-    './src/routes/*.ts', 
-    './src/auth/*.ts', 
-    './src/admin/*.ts', 
-    './src/camarero/*.ts', 
-    './src/public/*.ts',
-    './src/rewards/*.ts',
-    './src/points/*.ts',
-    './src/customer/*.ts',
-    './src/tiers/*.ts',
-    './src/uploads/*.ts',
-    './src/superadmin/*.ts',
-  ], 
+    './src/shared/auth/*.ts',
+    './src/modules/loyalpyme/admin/*.ts',
+    './src/modules/loyalpyme/rewards/*.ts',
+    './src/modules/loyalpyme/points/*.ts',
+    './src/modules/loyalpyme/customer/*.ts',
+    './src/modules/loyalpyme/tiers/*.ts',
+    './src/modules/camarero/*.ts', // Se asume que los controladores están aquí
+    './src/modules/camarero/public/*.ts',
+    './src/modules/superadmin/*.ts',
+    './src/shared/uploads/*.ts',
+    './src/routes/*.ts'
+  ],
 };

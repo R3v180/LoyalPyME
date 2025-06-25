@@ -1,18 +1,15 @@
-// filename: backend/src/routes/uploads.routes.ts
-// Version: 1.0.1 (Fix Multer import syntax)
-
+// backend/src/routes/uploads.routes.ts (CORREGIDO)
 import { Router } from 'express';
-import { handleImageUpload } from '../uploads/uploads.controller'; // Dejamos esta como está por ahora
-// --- MODIFICADO: Cambiar sintaxis de importación de Multer ---
-import uploadImageMemory from '../middleware/multer.config'; // Importar por defecto
-// --- FIN MODIFICADO ---
+// --- RUTAS CORREGIDAS ---
+import { handleImageUpload } from '../shared/uploads/uploads.controller';
+import uploadImageMemory from '../shared/middleware/multer.config';
+// --- FIN RUTAS CORREGIDAS ---
 
 const uploadsRouter = Router();
 
-// Ruta para subir imágenes (POST /image -> resultará en /api/uploads/image)
+// Ruta para subir imágenes
 uploadsRouter.post(
     '/image',
-    // Usar el middleware importado por defecto
     uploadImageMemory.single('image'),
     handleImageUpload
 );

@@ -1,17 +1,16 @@
-// backend/src/routes/tiers.routes.ts
+// backend/src/routes/tiers.routes.ts (CORREGIDO)
 import { Router } from 'express';
-import { checkRole } from '../middleware/role.middleware';
 import { UserRole } from '@prisma/client';
-// --- AÑADIR IMPORTACIÓN ---
-import { checkModuleActive } from '../middleware/module.middleware';
-// --- FIN AÑADIR ---
-import { getBusinessTierConfigHandler, updateBusinessTierConfigHandler } from '../tiers/tier-config.controller';
-import { createTierHandler, getBusinessTiersHandler, getTierByIdHandler, updateTierHandler, deleteTierHandler } from '../tiers/tier-crud.controller';
-import { createTierBenefitHandler, getTierBenefitsHandler, updateTierBenefitHandler, deleteTierBenefitHandler } from '../tiers/tier-benefit.controller';
+// --- RUTAS CORREGIDAS ---
+import { checkRole } from '../shared/middleware/role.middleware';
+import { checkModuleActive } from '../shared/middleware/module.middleware';
+import { getBusinessTierConfigHandler, updateBusinessTierConfigHandler } from '../modules/loyalpyme/tiers/tier-config.controller';
+import { createTierHandler, getBusinessTiersHandler, getTierByIdHandler, updateTierHandler, deleteTierHandler } from '../modules/loyalpyme/tiers/tier-crud.controller';
+import { createTierBenefitHandler, getTierBenefitsHandler, updateTierBenefitHandler, deleteTierBenefitHandler } from '../modules/loyalpyme/tiers/tier-benefit.controller';
+// --- FIN RUTAS CORREGIDAS ---
 
 const tierRouter = Router();
-const adminOnly = checkRole([UserRole.BUSINESS_ADMIN]); // Esto ya estaba
-// --- APLICAR checkModuleActive ---
+const adminOnly = checkRole([UserRole.BUSINESS_ADMIN]);
 const loyaltyCoreRequired = checkModuleActive('LOYALTY_CORE');
 
 // Rutas de Configuración
@@ -20,7 +19,7 @@ tierRouter.put('/config', adminOnly, loyaltyCoreRequired, updateBusinessTierConf
 
 // Rutas para Tiers CRUD
 tierRouter.post('/tiers', adminOnly, loyaltyCoreRequired, createTierHandler);
-tierRouter.get('/', adminOnly, loyaltyCoreRequired, getBusinessTiersHandler); // La raíz de /api/tiers
+tierRouter.get('/', adminOnly, loyaltyCoreRequired, getBusinessTiersHandler);
 tierRouter.get('/tiers/:tierId', adminOnly, loyaltyCoreRequired, getTierByIdHandler);
 tierRouter.put('/tiers/:tierId', adminOnly, loyaltyCoreRequired, updateTierHandler);
 tierRouter.patch('/tiers/:tierId', adminOnly, loyaltyCoreRequired, updateTierHandler);
@@ -31,6 +30,5 @@ tierRouter.post('/tiers/:tierId/benefits', adminOnly, loyaltyCoreRequired, creat
 tierRouter.get('/tiers/:tierId/benefits', adminOnly, loyaltyCoreRequired, getTierBenefitsHandler);
 tierRouter.put('/benefits/:benefitId', adminOnly, loyaltyCoreRequired, updateTierBenefitHandler);
 tierRouter.delete('/benefits/:benefitId', adminOnly, loyaltyCoreRequired, deleteTierBenefitHandler);
-// --- FIN APLICAR ---
 
 export default tierRouter;

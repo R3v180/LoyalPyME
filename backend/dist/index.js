@@ -1,10 +1,9 @@
 "use strict";
-// backend/src/index.ts
-// Version: 1.8.0 (Refactored to use dedicated config and router files)
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// backend/src/index.ts (CORREGIDO v1.8.1)
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
 require("reflect-metadata");
@@ -13,16 +12,14 @@ const client_1 = require("@prisma/client");
 const node_cron_1 = __importDefault(require("node-cron"));
 const swagger_jsdoc_1 = __importDefault(require("swagger-jsdoc"));
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
-// --- NUEVAS IMPORTACIONES ---
-const swagger_config_1 = require("./config/swagger.config"); // Importar la configuración de Swagger
-const routes_1 = require("./routes"); // Importar los routers principales
-// Cron Job Logic
-const tier_logic_service_1 = require("./tiers/tier-logic.service");
+const swagger_config_1 = require("./config/swagger.config");
+const routes_1 = require("./routes");
+// --- RUTA CORREGIDA ---
+const tier_logic_service_1 = require("./modules/loyalpyme/tiers/tier-logic.service");
 dotenv_1.default.config();
 const prisma = new client_1.PrismaClient();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
-// Middlewares globales (sin cambios)
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 app.use((req, res, next) => {
@@ -46,15 +43,11 @@ app.use((req, res, next) => {
     }
     next();
 });
-// Configuración de Swagger (ahora mucho más limpia)
 const swaggerSpec = (0, swagger_jsdoc_1.default)(swagger_config_1.swaggerOptions);
 app.use('/api-docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swaggerSpec));
-// --- Montaje de Rutas (ahora mucho más limpio) ---
 app.use('/api', routes_1.apiRouter);
 app.use('/public', routes_1.publicRouter);
-// Ruta raíz básica (sin cambios)
 app.get('/', (req, res) => { res.send('Welcome to LoyalPyME API! Docs available at /api-docs'); });
-// Manejador de errores global (sin cambios)
 app.use((err, req, res, next) => {
     console.error('[GLOBAL ERROR HANDLER]', err.stack);
     if (err instanceof client_1.Prisma.PrismaClientKnownRequestError) {
@@ -73,7 +66,6 @@ app.use((err, req, res, next) => {
     const errorMessage = statusCode === 500 && process.env.NODE_ENV === 'production' ? 'Ocurrió un error interno en el servidor.' : err.message || 'Error desconocido.';
     res.status(statusCode).json({ message: statusCode === 500 ? 'Error Interno del Servidor' : 'Error en la Petición', error: errorMessage });
 });
-// Cron Job (sin cambios)
 if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
     const cronSchedule = process.env.TIER_UPDATE_CRON_SCHEDULE || '0 3 * * *';
     console.log(`Scheduling Tier update/downgrade job with schedule: [${cronSchedule}]`);
@@ -85,14 +77,14 @@ if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
             const duration = (Date.now() - startTime) / 1000;
             console.log(`[CRON ${new Date().toISOString()}] Tier update/downgrade job finished successfully in ${duration.toFixed(2)}s.`);
         })
-            .catch(cronErr => console.error(`[CRON ${new Date().toISOString()}] Tier update/downgrade job failed:`, cronErr));
+            // --- TIPO 'any' AÑADIDO ---
+            .catch((cronErr) => console.error(`[CRON ${new Date().toISOString()}] Tier update/downgrade job failed:`, cronErr));
     });
     console.log(`✅ Tier update/downgrade job registered.`);
 }
 else {
     console.log("ℹ️ Cron job scheduling skipped in test/Vitest environment.");
 }
-// Iniciar servidor (sin cambios)
 if (!process.env.VITEST) {
     app.listen(port, () => {
         console.log(`\n🚀 [server]: Server is running at http://localhost:${port}`);

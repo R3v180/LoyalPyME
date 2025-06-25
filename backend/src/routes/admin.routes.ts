@@ -1,42 +1,42 @@
-// filename: backend/src/routes/admin.routes.ts
-// Version: 2.4.0 (Add reward image upload route)
+// backend/src/routes/admin.routes.ts (CORREGIDO)
 
 import { Router } from 'express';
-import { UserRole } from '@prisma/client';
+// UserRole no es necesario aquí si checkRole no se usa directamente
+// import { UserRole } from '@prisma/client';
 
-// Middlewares
-import { checkRole } from '../middleware/role.middleware';
-// --- NUEVO: Importar configuración de Multer ---
-import upload from '../middleware/multer.config';
-// --- FIN NUEVO ---
+// --- RUTAS DE MIDDLEWARE CORREGIDAS ---
+import { checkRole } from '../shared/middleware/role.middleware';
+import upload from '../shared/middleware/multer.config';
 
-
-// Importar handlers desde los controladores específicos en src/admin
-import { getAdminCustomers } from '../admin/admin-customer-list.controller';
+// --- RUTAS DE CONTROLADORES CORREGIDAS ---
+import { getAdminCustomers } from '../modules/loyalpyme/admin/admin-customer-list.controller';
 import {
-    getCustomerDetailsHandler, updateCustomerNotesHandler, adjustCustomerPoints,
-    changeCustomerTierHandler, assignRewardHandler, toggleFavoriteHandler,
+    getCustomerDetailsHandler,
+    updateCustomerNotesHandler,
+    adjustCustomerPoints,
+    changeCustomerTierHandler,
+    assignRewardHandler,
+    toggleFavoriteHandler,
     toggleActiveStatusHandler
-} from '../admin/admin-customer-individual.controller';
+} from '../modules/loyalpyme/admin/admin-customer-individual.controller';
 import {
-    bulkUpdateCustomerStatusHandler, bulkDeleteCustomersHandler, bulkAdjustPointsHandler
-} from '../admin/admin-customer-bulk.controller';
-import { handleGetOverviewStats } from '../admin/admin-stats.controller';
-// --- NUEVO: Importar handler de subida ---
-import { handleImageUpload } from '../uploads/uploads.controller';
-// --- FIN NUEVO ---
+    bulkUpdateCustomerStatusHandler,
+    bulkDeleteCustomersHandler,
+    bulkAdjustPointsHandler
+} from '../modules/loyalpyme/admin/admin-customer-bulk.controller';
+import { handleGetOverviewStats } from '../modules/loyalpyme/admin/admin-stats.controller';
+import { handleImageUpload } from '../shared/uploads/uploads.controller';
 
 
 const router = Router();
 
-// Middleware de Rol Admin aplicado globalmente a las rutas montadas bajo /api/admin en index.ts
-// No es necesario aplicarlo de nuevo aquí a menos que queramos doble seguridad.
-// const adminOnly = checkRole([UserRole.BUSINESS_ADMIN]); // Comentado si ya se aplica en index.ts
+// NOTA: El middleware checkRole([UserRole.BUSINESS_ADMIN]) se aplica en /src/routes/index.ts
+// antes de montar este router, por lo que no es necesario volver a aplicarlo aquí.
 
 // Ruta para Estadísticas
-router.get('/stats/overview', handleGetOverviewStats); // Asume adminOnly aplicado en index.ts
+router.get('/stats/overview', handleGetOverviewStats);
 
-// --- Rutas específicas de Admin relacionadas con Clientes ---
+// --- Rutas específicas de Admin relacionadas con Clientes (sin cambios en la lógica) ---
 router.get('/customers', getAdminCustomers);
 router.get('/customers/:customerId/details', getCustomerDetailsHandler);
 router.patch('/customers/:customerId/notes', updateCustomerNotesHandler);
@@ -49,15 +49,11 @@ router.patch('/customers/bulk-status', bulkUpdateCustomerStatusHandler);
 router.delete('/customers/bulk-delete', bulkDeleteCustomersHandler);
 router.post('/customers/bulk-adjust-points', bulkAdjustPointsHandler);
 
-// --- NUEVA RUTA PARA SUBIDA DE IMAGEN DE RECOMPENSA ---
+// Ruta para subida de imagen de recompensa
 router.post(
-    '/upload/reward-image',    // Ruta final será POST /api/admin/upload/reward-image
-    upload.single('imageFile'), // Middleware Multer: procesa un archivo del campo 'imageFile'
-    handleImageUpload          // Controlador que maneja la subida a Cloudinary
+    '/upload/reward-image',
+    upload.single('imageFile'),
+    handleImageUpload
 );
-// --- FIN NUEVA RUTA ---
-
 
 export default router;
-
-// End of file: backend/src/routes/admin.routes.ts

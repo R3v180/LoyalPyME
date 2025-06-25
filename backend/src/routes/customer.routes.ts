@@ -1,29 +1,26 @@
-// filename: backend/src/routes/customer.routes.ts
-// Version: 1.6.1 (Mount activityRouter)
-
+// backend/src/routes/customer.routes.ts (CORREGIDO)
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
 
-// Importar Middleware necesario
-import { checkRole } from '../middleware/role.middleware';
+// --- RUTAS CORREGIDAS ---
+import { checkRole } from '../shared/middleware/role.middleware';
 
-// Importar los handlers necesarios de customer.controller.ts
 import {
     getCustomerRewardsHandler,
     getPendingGrantedRewardsHandler,
     redeemGrantedRewardHandler,
     getCustomerTiersHandler,
     getCustomerBusinessConfigHandler
-} from '../customer/customer.controller';
+} from '../modules/loyalpyme/customer/customer.controller';
 
-// --- AÑADIR ESTA IMPORTACIÓN ---
-import activityRouter from './activity.routes'; // Asegúrate que la ruta sea correcta
-// --- FIN AÑADIR ---
+// La ruta a activity.routes.ts ya es correcta porque ambos están en /src/routes
+import activityRouter from './activity.routes';
+// --- FIN RUTAS CORREGIDAS ---
+
 
 const router = Router();
 
-// --- Rutas específicas para Clientes (montadas bajo /api/customer) ---
-
+// --- Rutas específicas para Clientes (sin cambios en la lógica) ---
 router.get(
     '/rewards',
     checkRole([UserRole.CUSTOMER_FINAL]),
@@ -54,13 +51,7 @@ router.get(
     getCustomerBusinessConfigHandler
 );
 
-// --- AÑADIR ESTA LÍNEA PARA MONTAR EL ROUTER DE ACTIVIDAD ---
-// Esto hará que las rutas definidas en activityRouter (como GET /)
-// estén disponibles bajo /api/customer/activity
 router.use('/activity', checkRole([UserRole.CUSTOMER_FINAL]), activityRouter);
-// --- FIN AÑADIR ---
 
 
 export default router;
-
-// End of File: backend/src/routes/customer.routes.ts

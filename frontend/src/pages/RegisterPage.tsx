@@ -1,9 +1,11 @@
-// filename: frontend/src/pages/RegisterPage.tsx
-// Version: 1.5.0 (Implement i18n using useTranslation)
-
+// frontend/src/pages/RegisterPage.tsx (CORREGIDO)
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axiosInstance from '../services/axiosInstance';
+// --- RUTAS CORREGIDAS ---
+import axiosInstance from '../shared/services/axiosInstance';
+import { getPublicBusinessList, BusinessOption } from '../shared/services/businessService';
+// --- FIN RUTAS CORREGIDAS ---
+
 import { AxiosError } from 'axios';
 import {
     Container, Paper, Title, Text, Stack, TextInput, PasswordInput,
@@ -12,27 +14,19 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX } from '@tabler/icons-react';
-import { getPublicBusinessList, BusinessOption } from '../services/businessService';
-// --- NUEVO: Importar useTranslation ---
 import { useTranslation } from 'react-i18next';
-// --- FIN NUEVO ---
 
-
-// Enums (sin cambios)
+// Los enums y la interfaz de formulario se quedan igual
 enum DocumentType { DNI = 'DNI', NIE = 'NIE', PASSPORT = 'PASSPORT', OTHER = 'OTHER' }
 enum UserRole { BUSINESS_ADMIN = 'BUSINESS_ADMIN', CUSTOMER_FINAL = 'CUSTOMER_FINAL' }
 
-// Interface FormValues (sin cambios)
 interface RegisterFormValues {
     email: string; password: string; confirmPassword: string; name: string; phone: string;
     documentType: DocumentType | null; documentId: string; businessId: string;
 }
 
 const RegisterPage: React.FC = () => {
-    // --- NUEVO: Hook useTranslation ---
     const { t } = useTranslation();
-    // --- FIN NUEVO ---
-
     const navigate = useNavigate();
     const role: UserRole = UserRole.CUSTOMER_FINAL;
     const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +35,6 @@ const RegisterPage: React.FC = () => {
     const [loadingBusinesses, setLoadingBusinesses] = useState<boolean>(true);
     const [errorBusinesses, setErrorBusinesses] = useState<string | null>(null);
 
-    // useForm (actualizar mensajes de validación)
     const form = useForm<RegisterFormValues>({
         initialValues: {
             email: '', password: '', confirmPassword: '', name: '', phone: '',
@@ -61,24 +54,22 @@ const RegisterPage: React.FC = () => {
             },
             businessId: (value) => (value ? null : t('registerPage.errorBusinessRequired', 'Debes seleccionar un negocio.')),
         },
-       });
+    });
 
-    // useEffect para cargar negocios (sin cambios)
     useEffect(() => {
         const fetchBusinesses = async () => {
             setLoadingBusinesses(true); setErrorBusinesses(null);
             try { const data = await getPublicBusinessList(); setBusinesses(data); }
-            catch (err: any) { console.error("Error fetching businesses:", err); setErrorBusinesses(t('registerPage.errorLoadingBusinesses')); } // Usar clave
+            catch (err: any) { console.error("Error fetching businesses:", err); setErrorBusinesses(t('registerPage.errorLoadingBusinesses')); }
             finally { setLoadingBusinesses(false); }
         };
         fetchBusinesses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Usar t en dependencias puede ser problemático si cambia frecuentemente, lo dejamos fuera por ahora
+    }, []);
 
-    // handleSubmit (actualizar notificaciones)
     const handleSubmit = async (values: RegisterFormValues) => {
         setIsLoading(true);
-        const registrationData = { /* ... (igual que antes) ... */
+        const registrationData = {
             email: values.email.trim(), password: values.password, name: values.name.trim() || undefined,
             phone: values.phone.trim(), documentId: values.documentId.trim().toUpperCase(), documentType: values.documentType,
             businessId: values.businessId, role,
@@ -95,7 +86,7 @@ const RegisterPage: React.FC = () => {
             setTimeout(() => { navigate('/login', { state: { registrationSuccess: true } }); }, 1500);
         } catch (err: unknown) {
             console.error('Error during registration:', err);
-             let message = t('registerPage.errorRegistration'); // Usar clave genérica
+             let message = t('registerPage.errorRegistration');
             if (err instanceof AxiosError && err.response?.data?.message) { message = err.response.data.message; }
             else if (err instanceof Error) { message = err.message; }
              notifications.show({
@@ -104,13 +95,10 @@ const RegisterPage: React.FC = () => {
         } finally { setIsLoading(false); }
     };
 
-    // Mapeo de opciones Select (sin cambios)
     const businessSelectOptions = businesses.map(b => ({ value: b.id, label: b.name }));
 
-    // --- JSX Modificado ---
     return (
         <Container size={480} my={40}>
-             {/* Textos traducidos */}
              <Title ta="center" style={{ fontWeight: 900 }}>{t('registerPage.welcomeTitle', '¡Bienvenido a LoyalPyME!')}</Title>
              <Text c="dimmed" size="sm" ta="center" mt={5}>
                  {t('registerPage.subtitle')}{' '}
@@ -120,7 +108,6 @@ const RegisterPage: React.FC = () => {
                  <Title order={2} ta="center" mb="lg">{t('registerPage.title')}</Title>
                  <form onSubmit={form.onSubmit(handleSubmit)}>
                      <Stack>
-                         {/* Inputs con labels y placeholders traducidos */}
                          <TextInput
                              label={t('registerPage.emailLabel')}
                              placeholder={t('registerPage.emailPlaceholder')}
@@ -162,7 +149,6 @@ const RegisterPage: React.FC = () => {
                              {...form.getInputProps('businessId')}
                          />
                          {loadingBusinesses && <Group justify='center'><Loader size="xs" /></Group>}
-                         {/* Botón traducido */}
                          <Button type="submit" loading={isLoading} fullWidth mt="xl" radius="lg">
                              {t('registerPage.registerButton')}
                          </Button>
@@ -171,9 +157,6 @@ const RegisterPage: React.FC = () => {
              </Paper>
         </Container>
     );
-     // --- Fin JSX Modificado ---
 };
 
 export default RegisterPage;
-
-// End of File: frontend/src/pages/RegisterPage.tsx

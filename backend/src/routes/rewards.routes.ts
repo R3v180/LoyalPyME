@@ -1,25 +1,26 @@
-// backend/src/routes/rewards.routes.ts
+// backend/src/routes/rewards.routes.ts (CORREGIDO)
 import { Router } from 'express';
-import { checkRole } from '../middleware/role.middleware';
 import { UserRole } from '@prisma/client';
-// --- AÑADIR IMPORTACIÓN ---
-import { checkModuleActive } from '../middleware/module.middleware';
-// --- FIN AÑADIR ---
+// --- RUTAS CORREGIDAS ---
+import { checkRole } from '../shared/middleware/role.middleware';
+import { checkModuleActive } from '../shared/middleware/module.middleware';
 import {
     createRewardHandler,
     getRewardsHandler,
     getRewardByIdHandler,
     updateRewardHandler,
     deleteRewardHandler,
-} from '../rewards/rewards.controller';
+} from '../modules/loyalpyme/rewards/rewards.controller';
+// --- FIN RUTAS CORREGIDAS ---
+
 
 const router = Router();
 
-// Middleware de rol (BUSINESS_ADMIN) ya se aplica a nivel de montaje en index.ts
-// o se aplica individualmente aquí si fuera necesario (como lo tienes actualmente)
-
-// --- APLICAR checkModuleActive A TODAS LAS RUTAS ---
 const loyaltyCoreRequired = checkModuleActive('LOYALTY_CORE');
+
+// NOTA: El middleware checkRole([UserRole.BUSINESS_ADMIN]) ya se aplica en src/routes/index.ts
+// antes de montar este router, por lo que técnicamente podría eliminarse de aquí para evitar redundancia.
+// Lo mantenemos por ahora por si decides cambiar la lógica de montaje.
 
 router.post('/', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, createRewardHandler);
 router.get('/', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, getRewardsHandler);
@@ -27,6 +28,5 @@ router.get('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, ge
 router.put('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, updateRewardHandler);
 router.patch('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, updateRewardHandler);
 router.delete('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, deleteRewardHandler);
-// --- FIN APLICAR ---
 
 export default router;

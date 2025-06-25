@@ -1,10 +1,9 @@
-// backend/src/routes/superadmin.routes.ts
+// backend/src/routes/superadmin.routes.ts (CORREGIDO)
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth.middleware';
-import { checkRole } from '../middleware/role.middleware';
 import { UserRole } from '@prisma/client';
-
-// Importar todos los handlers del controlador de superadmin
+// --- RUTAS CORREGIDAS ---
+import { authenticateToken } from '../shared/middleware/auth.middleware';
+import { checkRole } from '../shared/middleware/role.middleware';
 import {
     getAllBusinessesHandler,
     toggleBusinessStatusHandler,
@@ -14,33 +13,26 @@ import {
     recordPaymentHandler,
     getPaymentHistoryHandler,
     impersonationHandler,
-    // --- NUEVO HANDLER IMPORTADO ---
     getPendingPeriodsHandler
-} from '../superadmin/superadmin.controller';
+} from '../modules/superadmin/superadmin.controller';
+// --- FIN RUTAS CORREGIDAS ---
+
 
 const router = Router();
 
-// Middleware para todas las rutas de superadmin: autenticación y rol SUPER_ADMIN
+// Middleware para todas las rutas de superadmin
 router.use(authenticateToken);
 router.use(checkRole([UserRole.SUPER_ADMIN]));
 
-// --- Rutas existentes para gestión de Negocios y Módulos ---
+// Rutas de Superadmin (sin cambios en la lógica)
 router.get('/businesses', getAllBusinessesHandler);
 router.patch('/businesses/:businessId/status', toggleBusinessStatusHandler);
 router.patch('/businesses/:businessId/module-loyaltycore', toggleLoyaltyCoreModuleHandler);
 router.patch('/businesses/:businessId/module-camarero', toggleCamareroModuleHandler);
-
-// --- Rutas para Pagos y Suscripciones ---
 router.put('/businesses/:businessId/subscription', setSubscriptionPriceHandler);
 router.post('/businesses/:businessId/payments', recordPaymentHandler);
 router.get('/businesses/:businessId/payments', getPaymentHistoryHandler);
-
-// --- NUEVA RUTA AÑADIDA ---
 router.get('/businesses/:businessId/pending-payments', getPendingPeriodsHandler);
-
-
-// --- Ruta para Suplantación de Identidad ---
 router.post('/impersonate/:userId', impersonationHandler);
-
 
 export default router;
