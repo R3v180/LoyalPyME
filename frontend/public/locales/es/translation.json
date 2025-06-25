@@ -1011,6 +1011,14 @@
     "errorMarkingServed": "Error al marcar el ítem como servido.",
     "navLinkPickup": "Recoger Pedidos"
   },
+    "homePage": {
+    "welcomeTitle": "Bienvenido a LoyalPyME",
+    "description": "La plataforma todo en uno para que las PYMES fidelicen a sus clientes y optimicen su servicio.",
+    "businessButton": "Soy un Negocio",
+    "customerButton": "Soy un Cliente",
+    "infoTextPart1": "Si eres un cliente y conoces el identificador del negocio, puedes acceder a su menú directamente desde la página de",
+    "infoTextLink": " inicio de sesión"
+  },
   "waiterOrderManagement": {
     "title": "Gestión de Pedidos de Sala",
     "filterStatusLabel": "Filtrar por Estado:",

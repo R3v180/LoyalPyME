@@ -1,20 +1,16 @@
-// frontend/src/pages/LoginPage.tsx (CORREGIDO)
+// frontend/src/pages/LoginPage.tsx (MODIFICADO)
 import { useState, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-// --- RUTA CORREGIDA ---
+import { useNavigate, Link } from 'react-router-dom'; // <-- useLocation ya no es necesario aquí
 import axiosInstance from '../shared/services/axiosInstance';
 import { UserRole } from '../shared/types/user.types';
 import type { UserData } from '../shared/types/user.types';
-// --- FIN RUTAS CORREGIDAS ---
-
 import { AxiosError } from 'axios';
 import {
     TextInput, PasswordInput, Button, Paper, Title, Stack, Container,
-    Alert, LoadingOverlay, Anchor, Group, Text
+    Alert, LoadingOverlay, Anchor, Group, Text, Divider
 } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
-
 
 function LoginPage() {
     const { t } = useTranslation();
@@ -22,13 +18,16 @@ function LoginPage() {
     const [password, setPassword] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
+    
     const navigate = useNavigate();
+    // const location = useLocation(); // <-- YA NO ES NECESARIO
+
+    const [slugInput, setSlugInput] = useState('');
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setLoading(true);
         setError(null);
-        // La ruta de la API es correcta, ya que axiosInstance apunta a /api
         const loginPath = '/auth/login'; 
         try {
             const response = await axiosInstance.post<{ user: UserData; token: string }>(
@@ -40,35 +39,47 @@ function LoginPage() {
                 localStorage.setItem('token', token);
                 localStorage.setItem('user', JSON.stringify(user));
 
-                // La lógica de redirección no cambia
-                if (user.role === UserRole.KITCHEN_STAFF || user.role === UserRole.BAR_STAFF) {
-                    navigate('/admin/kds', { replace: true });
+                // --- CAMBIO PRINCIPAL: LÓGICA DE REDIRECCIÓN SIMPLIFICADA ---
+                // Se elimina la comprobación de 'location.state.from'.
+                // Cada rol ahora tiene un destino fijo y único después del login.
+                
+                if (user.role === UserRole.CUSTOMER_FINAL) {
+                    navigate('/customer/dashboard', { replace: true });
                 } else if (user.role === UserRole.BUSINESS_ADMIN) {
                     navigate('/admin/dashboard', { replace: true });
-                } else if (user.role === UserRole.CUSTOMER_FINAL) {
-                    navigate('/customer/dashboard', { replace: true });
                 } else if (user.role === UserRole.SUPER_ADMIN) {
                     navigate('/superadmin', { replace: true });
                 } else if (user.role === UserRole.WAITER) {
                     navigate('/admin/camarero/pickup', { replace: true });
+                } else if (user.role === UserRole.KITCHEN_STAFF || user.role === UserRole.BAR_STAFF) {
+                    navigate('/admin/kds', { replace: true });
                 } else {
-                    setError(t('loginPage.errorUnknown', { ns: 'translation' }));
+                    // Fallback de seguridad, debería redirigir a una página de inicio o de error.
+                    navigate('/', { replace: true });
                 }
+                // --- FIN DEL CAMBIO ---
+
             } else {
-                setError(t('loginPage.errorServer', { ns: 'translation' }));
+                setError(t('loginPage.errorServer'));
             }
         } catch (err: unknown) {
             if (err instanceof AxiosError && err.response?.status === 401) {
-                setError(t('loginPage.errorCredentials', { ns: 'translation' }));
+                setError(t('loginPage.errorCredentials'));
             } else if (err instanceof AxiosError && err.response) {
-                setError(err.response.data?.message || t('loginPage.errorServer', { ns: 'translation' }));
+                setError(err.response.data?.message || t('loginPage.errorServer'));
             } else if (err instanceof Error) {
                 setError(err.message);
             } else {
-                setError(t('loginPage.errorUnknown', { ns: 'translation' }));
+                setError(t('loginPage.errorUnknown'));
             }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleGoToMenu = () => {
+        if (slugInput.trim()) {
+            navigate(`/m/${slugInput.trim()}`);
         }
     };
 
@@ -118,6 +129,25 @@ function LoginPage() {
                         {t('loginPage.registerLink')}
                     </Anchor>
                 </Text>
+
+                <Divider label="O" labelPosition="center" my="lg" />
+                <Stack>
+                    <TextInput
+                        label={t('loginPage.accessMenuDirectlyTitle')}
+                        placeholder={t('loginPage.businessSlugPlaceholder')}
+                        value={slugInput}
+                        onChange={(event) => setSlugInput(event.currentTarget.value)}
+                        radius="lg"
+                    />
+                    <Button
+                        variant="light"
+                        onClick={handleGoToMenu}
+                        disabled={!slugInput.trim()}
+                        radius="lg"
+                    >
+                        {t('loginPage.goToMenuButton')}
+                    </Button>
+                </Stack>
             </Paper>
         </Container>
     );

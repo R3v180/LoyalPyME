@@ -1,5 +1,4 @@
-// frontend/src/services/publicOrderApiService.ts
-// Version 1.1.2 (Fix property name from orderNotes to customerNotes in payload)
+// frontend/src/modules/camarero/services/publicOrderApiService.ts (MODIFICADO)
 
 import axios from 'axios';
 import {
@@ -52,13 +51,17 @@ export const addItemsToExistingOrderApi = async (
     }
 };
 
+
+// --- CAMBIO PRINCIPAL: Se añade el parámetro 'requestingCustomerId' a la firma de la función ---
 export const handleOrderSubmission = async (
     cartItems: OrderItemFE[],
     generalOrderNotes: string,
     activeOrderId: string | null,
     businessSlug: string,
-    tableIdentifier?: string
+    tableIdentifier?: string,
+    requestingCustomerId?: string | null // <-- NUEVO PARÁMETRO
 ): Promise<BackendOrderResponse> => {
+// --- FIN DEL CAMBIO ---
 
     const dtoItems = cartItems.map(feItem => ({
         menuItemId: feItem.menuItemId,
@@ -69,20 +72,15 @@ export const handleOrderSubmission = async (
             : [],
     }));
 
-    let customerIdForPayload: string | null = null;
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-        try {
-            const parsedUser = JSON.parse(storedUser);
-            if (parsedUser?.id && parsedUser.role === 'CUSTOMER_FINAL') {
-                customerIdForPayload = parsedUser.id;
-            }
-        } catch (e) {
-            console.error("Error parsing user from localStorage for order submission:", e);
-        }
-    }
+    // --- CAMBIO: Se elimina la lógica de leer localStorage de aquí ---
+    // Ya no es necesario, el ID del cliente viene como argumento
+    // let customerIdForPayload: string | null = null;
+    // ... lógica de localStorage eliminada ...
+    // --- FIN DEL CAMBIO ---
 
     if (activeOrderId) {
+        // Al añadir ítems, el customerId ya está en el pedido original, no se pasa de nuevo.
+        // Esta parte se mantiene igual.
         const payloadForAdd: AddItemsToOrderPayloadDto = {
             items: dtoItems,
             customerNotes: getProcessedNotesValue(generalOrderNotes),
@@ -92,11 +90,11 @@ export const handleOrderSubmission = async (
     } else {
         const payloadForCreate: CreateOrderPayloadDto = {
             items: dtoItems,
-            // --- CORRECCIÓN AQUÍ: Cambiar 'orderNotes' por 'customerNotes' ---
             customerNotes: getProcessedNotesValue(generalOrderNotes),
-            // --- FIN CORRECCIÓN ---
             tableIdentifier: tableIdentifier || null,
-            customerId: customerIdForPayload,
+            // --- CAMBIO: Se usa el nuevo parámetro ---
+            customerId: requestingCustomerId || null,
+            // --- FIN DEL CAMBIO ---
         };
         return submitNewOrder(businessSlug, payloadForCreate);
     }

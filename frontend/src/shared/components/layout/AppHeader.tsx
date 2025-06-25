@@ -1,5 +1,4 @@
-// frontend/src/components/layout/AppHeader.tsx
-// Version: 1.6.2 (Use full UserRole enum for LayoutUserData)
+// frontend/src/shared/components/layout/AppHeader.tsx (REVISADO)
 
 import React from 'react';
 import {
@@ -16,20 +15,17 @@ import { useTranslation } from 'react-i18next';
 import ReactCountryFlag from 'react-country-flag';
 import { Link } from 'react-router-dom';
 
-// ---- MODIFICACIÓN: Importar UserRole ----
-import { UserRole } from '../../../shared/types/user.types'; // Asegúrate que la ruta es correcta
+import { UserRole } from '../../../shared/types/user.types';
 
-// Interfaz LayoutUserData MODIFICADA
 interface LayoutUserData {
     id: string;
     name?: string | null;
     email: string;
-    role: UserRole; // <--- CAMBIADO A USAR EL ENUM UserRole COMPLETO
+    role: UserRole;
 }
-// ---- FIN MODIFICACIÓN ----
 
 interface AppHeaderProps {
-    userData: LayoutUserData | null; // Ahora espera el enum UserRole
+    userData: LayoutUserData | null;
     loadingUser: boolean;
     handleLogout: () => void;
     navbarOpened?: boolean;
@@ -37,7 +33,6 @@ interface AppHeaderProps {
     showAdminNavbar?: boolean;
 }
 
-// Componente Logo (sin cambios)
 const Logo: React.FC<{ homePath: string }> = ({ homePath }) => (
     <Link
         to={homePath}
@@ -61,20 +56,17 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     let logoLinkPath = "/";
 
     if (userData) {
-        // La lógica de redirección aquí ya usa el enum UserRole, lo cual es bueno
         if (userData.role === UserRole.CUSTOMER_FINAL) {
             logoLinkPath = "/customer/dashboard";
         } else if (userData.role === UserRole.BUSINESS_ADMIN) {
             logoLinkPath = "/admin/dashboard";
         } else if (userData.role === UserRole.SUPER_ADMIN) {
             logoLinkPath = "/superadmin";
-        // ---- AÑADIR CASOS PARA NUEVOS ROLES DE STAFF SI QUIERES QUE EL LOGO LOS LLEVE A SU PÁGINA ----
         } else if (userData.role === UserRole.WAITER) {
-            logoLinkPath = "/admin/camarero/pickup"; // O a /admin/camarero/orders
+            logoLinkPath = "/admin/camarero/pickup";
         } else if (userData.role === UserRole.KITCHEN_STAFF || userData.role === UserRole.BAR_STAFF) {
             logoLinkPath = "/admin/kds";
         }
-        // ---- FIN AÑADIR CASOS ----
     }
 
     const changeLanguage = (lang: string) => { i18n.changeLanguage(lang); closeMobileMenu(); };

@@ -1,11 +1,8 @@
-// frontend/src/pages/RegisterPage.tsx (CORREGIDO)
+// frontend/src/pages/RegisterPage.tsx (MODIFICADO)
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-// --- RUTAS CORREGIDAS ---
+import { useNavigate, Link, useLocation } from 'react-router-dom'; // <-- AÑADIDO useLocation
 import axiosInstance from '../shared/services/axiosInstance';
 import { getPublicBusinessList, BusinessOption } from '../shared/services/businessService';
-// --- FIN RUTAS CORREGIDAS ---
-
 import { AxiosError } from 'axios';
 import {
     Container, Paper, Title, Text, Stack, TextInput, PasswordInput,
@@ -28,6 +25,7 @@ interface RegisterFormValues {
 const RegisterPage: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const location = useLocation(); // <-- Hook para obtener la ubicación actual
     const role: UserRole = UserRole.CUSTOMER_FINAL;
     const [isLoading, setIsLoading] = useState(false);
     const documentTypeOptions = Object.values(DocumentType).map(value => ({ value, label: value }));
@@ -41,18 +39,18 @@ const RegisterPage: React.FC = () => {
             documentType: null, documentId: '', businessId: '',
         },
         validate: {
-            email: (value) => (!value ? t('common.requiredField') : !/^\S+@\S+\.\S+$/.test(value) ? t('registerPage.errorInvalidEmail', 'Formato de email inválido.') : null),
-            password: (value) => (!value ? t('common.requiredField') : value.length < 6 ? t('registerPage.errorPasswordLength', 'La contraseña debe tener al menos 6 caracteres.') : null),
-            confirmPassword: (value, values) => (!value ? t('registerPage.errorConfirmPassword', 'Confirma la contraseña.') : value !== values.password ? t('registerPage.errorPasswordsDontMatch') : null),
-            phone: (value) => (!value ? t('common.requiredField') : !/^\+\d{9,15}$/.test(value) ? t('registerPage.errorPhoneFormat', 'Formato inválido (ej: +346...).') : null),
-            documentType: (value) => (value ? null : t('registerPage.errorDocType', 'Selecciona un tipo de documento.')),
+            email: (value) => (!value ? t('common.requiredField') : !/^\S+@\S+\.\S+$/.test(value) ? t('registerPage.errorInvalidEmail') : null),
+            password: (value) => (!value ? t('common.requiredField') : value.length < 6 ? t('registerPage.errorPasswordLength') : null),
+            confirmPassword: (value, values) => (!value ? t('registerPage.errorConfirmPassword') : value !== values.password ? t('registerPage.errorPasswordsDontMatch') : null),
+            phone: (value) => (!value ? t('common.requiredField') : !/^\+\d{9,15}$/.test(value) ? t('registerPage.errorPhoneFormat') : null),
+            documentType: (value) => (value ? null : t('registerPage.errorDocType')),
             documentId: (value, values) => {
                  if (!value) return t('common.requiredField');
-                 if (values.documentType === DocumentType.DNI && !/^\d{8}[A-Z]$/i.test(value)) return t('registerPage.errorDNIFormat', 'Formato DNI inválido (8 números y 1 letra).');
-                 if (values.documentType === DocumentType.NIE && !/^[XYZ]\d{7}[A-Z]$/i.test(value)) return t('registerPage.errorNIEFormat', 'Formato NIE inválido (letra, 7 números, letra).');
+                 if (values.documentType === DocumentType.DNI && !/^\d{8}[A-Z]$/i.test(value)) return t('registerPage.errorDNIFormat');
+                 if (values.documentType === DocumentType.NIE && !/^[XYZ]\d{7}[A-Z]$/i.test(value)) return t('registerPage.errorNIEFormat');
                  return null;
             },
-            businessId: (value) => (value ? null : t('registerPage.errorBusinessRequired', 'Debes seleccionar un negocio.')),
+            businessId: (value) => (value ? null : t('registerPage.errorBusinessRequired')),
         },
     });
 
@@ -80,10 +78,26 @@ const RegisterPage: React.FC = () => {
             console.log('Registration successful:', response.data);
             notifications.show({
                 title: t('common.success'),
-                message: t('registerPage.successMessage', 'Tu cuenta ha sido creada. Serás redirigido a la página de inicio de sesión.'),
+                message: t('registerPage.successMessage'),
                 color: 'green', icon: <IconCheck size={18} />, autoClose: 4000,
             });
-            setTimeout(() => { navigate('/login', { state: { registrationSuccess: true } }); }, 1500);
+            
+            // --- CAMBIO PRINCIPAL: LÓGICA DE REDIRECCIÓN ---
+            // Después del registro exitoso, en lugar de ir siempre a login,
+            // intentamos volver a la página anterior (la carta).
+            // Si el registro fallara, no se llega a este punto.
+            // Para una experiencia fluida, podríamos incluso auto-loguear al usuario
+            // y luego redirigirlo, pero por ahora, lo enviamos a loguearse con la redirección correcta.
+            setTimeout(() => {
+                const fromPath = location.state?.from?.pathname;
+                const fromSearch = location.state?.from?.search;
+                const from = fromPath ? `${fromPath}${fromSearch || ''}` : null;
+                
+                // Le pasamos el 'from' a la página de login para que ella sepa a dónde volver.
+                navigate('/login', { state: { registrationSuccess: true, from: from ? { pathname: from } : null } });
+            }, 1500);
+            // --- FIN DEL CAMBIO ---
+
         } catch (err: unknown) {
             console.error('Error during registration:', err);
              let message = t('registerPage.errorRegistration');
@@ -99,7 +113,7 @@ const RegisterPage: React.FC = () => {
 
     return (
         <Container size={480} my={40}>
-             <Title ta="center" style={{ fontWeight: 900 }}>{t('registerPage.welcomeTitle', '¡Bienvenido a LoyalPyME!')}</Title>
+             <Title ta="center" style={{ fontWeight: 900 }}>{t('registerPage.welcomeTitle')}</Title>
              <Text c="dimmed" size="sm" ta="center" mt={5}>
                  {t('registerPage.subtitle')}{' '}
                  <Anchor size="sm" component={Link} to="/login">{t('registerPage.loginLink')}</Anchor>

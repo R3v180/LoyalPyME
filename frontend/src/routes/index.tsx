@@ -1,10 +1,11 @@
-// frontend/src/routes/index.tsx (CORREGIDO FINAL v5)
+// frontend/src/routes/index.tsx (MODIFICADO)
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
 // --- SHARED ---
 import PrivateRoute from '../shared/components/PrivateRoute';
 import MainLayout from '../shared/components/layout/MainLayout';
 import PublicLayout from '../shared/components/layout/PublicLayout';
+import PublicRouteOnly from '../shared/components/PublicRouteOnly'; // <-- NUEVA IMPORTACIÓN
 import { UserRole } from '../shared/types/user.types';
 
 // --- PÁGINAS PÚBLICAS ---
@@ -13,6 +14,7 @@ import RegisterPage from '../pages/RegisterPage';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/ResetPasswordPage';
 import RegisterBusinessPage from '../pages/RegisterBusinessPage';
+import HomePage from '../pages/HomePage';
 
 // --- PÁGINAS DE MÓDULOS ---
 // Módulo Camarero
@@ -39,17 +41,24 @@ function AppRoutes() {
     <Routes>
       {/* Rutas Públicas */}
       <Route element={<PublicLayout />}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/register-business" element={<RegisterBusinessPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        {/* --- CAMBIO: ENVOLVER RUTAS DE AUTH EN PublicRouteOnly --- */}
+        <Route element={<PublicRouteOnly />}>
+          {/* Estas rutas solo serán accesibles si el usuario NO está logueado */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/register-business" element={<RegisterBusinessPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        </Route>
+        {/* --- FIN DEL CAMBIO --- */}
+        
+        {/* Estas rutas son siempre públicas, para usuarios logueados o no */}
+        <Route path="/" element={<HomePage />} />
         <Route path="/m/:businessSlug/:tableIdentifier?" element={<PublicMenuViewPage />} />
         <Route path="/order-status/:orderId" element={<OrderStatusPage />} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
       </Route>
 
-      {/* Rutas Protegidas */}
+      {/* Rutas Protegidas (sin cambios) */}
       <Route element={<MainLayout />}>
         <Route
             path="/superadmin"

@@ -1,5 +1,4 @@
-// frontend/src/types/menu.types.ts
-// Version: (tu versión existente + tipos para menú público)
+// frontend/src/modules/camarero/types/menu.types.ts (MODIFICADO)
 
 // --- MENU CATEGORY (Existente) ---
 export interface MenuCategoryData {
@@ -14,7 +13,7 @@ export interface MenuCategoryData {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  items?: MenuItemData[]; // Opcional para cargas anidadas
+  items?: MenuItemData[];
 }
 
 export interface MenuCategoryFormData {
@@ -48,7 +47,7 @@ export interface MenuItemData {
   sku: string | null;
   createdAt: string;
   updatedAt: string;
-  modifierGroups?: ModifierGroupData[]; // MODIFICADO: Añadido ? para que sea opcional si no se carga siempre
+  modifierGroups?: ModifierGroupData[];
 }
 
 export interface MenuItemFormData {
@@ -124,12 +123,12 @@ export interface ModifierOptionFormData {
   isAvailable: boolean;
 }
 
-// --- Tipos para la Visualización Pública del Menú (NUEVOS) ---
+// --- Tipos para la Visualización Pública del Menú ---
 export interface PublicMenuModifierOption {
     id: string;
     name_es: string | null;
     name_en: string | null;
-    priceAdjustment: number; // En frontend, esperamos un número.
+    priceAdjustment: number;
     position: number;
     isDefault: boolean;
     isAvailable: boolean;
@@ -139,7 +138,7 @@ export interface PublicMenuModifierGroup {
     id: string;
     name_es: string | null;
     name_en: string | null;
-    uiType: ModifierUiType; // Reutilizamos el enum existente
+    uiType: ModifierUiType;
     minSelections: number;
     maxSelections: number;
     isRequired: boolean;
@@ -153,7 +152,7 @@ export interface PublicMenuItem {
     name_en: string | null;
     description_es: string | null;
     description_en: string | null;
-    price: number; // En frontend, esperamos un número.
+    price: number; 
     imageUrl: string | null;
     allergens: string[];
     tags: string[];
@@ -172,9 +171,13 @@ export interface PublicMenuCategory {
     items: PublicMenuItem[];
 }
 
+// --- CAMBIO AQUÍ ---
 export interface PublicDigitalMenuData {
     businessName: string;
     businessSlug: string;
     businessLogoUrl: string | null;
+    isLoyaltyCoreActive: boolean;
+    isCamareroActive: boolean; // <-- CAMPO AÑADIDO
     categories: PublicMenuCategory[];
 }
+// --- FIN DEL CAMBIO ---
