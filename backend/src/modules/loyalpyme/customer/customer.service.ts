@@ -21,32 +21,22 @@ export type CustomerBusinessConfig = Pick<Business, 'tierCalculationBasis'> | nu
 /**
  * Encuentra recompensas activas para el cliente, seleccionando campos i18n.
  */
-export const findActiveRewardsForCustomer = async ( businessId: string ): Promise<Reward[]> => { // Devuelve Reward completo
+export const findActiveRewardsForCustomer = async ( businessId: string ): Promise<Reward[]> => { // La firma que devuelve Reward completo es correcta
   console.log( `[CUST_SVC] Finding active rewards for customer view for business: ${businessId}` );
   try {
-    // Aunque antes no usaba select, lo añadimos para ser explícitos
-    // y asegurar que obtenemos los campos necesarios, incluidos los nuevos
+    // CORRECCIÓN: Se ha eliminado la cláusula 'select' para que Prisma devuelva el objeto Reward completo.
     const rewards = await prisma.reward.findMany({
-        where: { businessId: businessId, isActive: true, },
-        select: {
-            id: true,
-            name_es: true, // Seleccionar campos nuevos
-            name_en: true, // Seleccionar campos nuevos
-            description_es: true,
-            description_en: true,
-            pointsCost: true,
-            isActive: true,
-            imageUrl: true,
-            businessId: true, // Incluir si es necesario para algún tipo
-            createdAt: true,
-            updatedAt: true
+        where: { 
+            businessId: businessId, 
+            isActive: true, 
         },
-        orderBy: { pointsCost: 'asc', },
+        orderBy: { 
+            pointsCost: 'asc', 
+        },
     });
     console.log( `[CUST_SVC] Found ${rewards.length} active rewards for business ${businessId}` );
-    console.log('[DEBUG findActiveRewardsForCustomer] Rewards found:', rewards);
-    // El tipo de retorno sigue siendo Reward[] porque select * devuelve el tipo Reward
-    // Si quisiéramos un tipo más específico, lo ajustaríamos aquí
+    
+    // Ahora la variable 'rewards' es de tipo Reward[] y coincide con el tipo de retorno.
     return rewards;
   } catch (error) {
     console.error( `[CUST_SVC] Error fetching active rewards for business ${businessId}:`, error );

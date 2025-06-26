@@ -1,12 +1,11 @@
-// backend/src/routes/camarero-admin.routes.ts (CORREGIDO)
+// backend/src/routes/camarero-admin.routes.ts
 import { Router } from 'express';
-// --- RUTAS CORREGIDAS ---
 import { authenticateToken } from '../shared/middleware/auth.middleware';
 import { checkRole } from '../shared/middleware/role.middleware';
 import { UserRole } from '@prisma/client';
 import { checkModuleActive } from '../shared/middleware/module.middleware';
 
-// Controladores (ahora desde la ubicación modular correcta)
+// Controladores
 import {
     createMenuCategoryHandler,
     getMenuCategoriesHandler,
@@ -20,7 +19,8 @@ import {
     getMenuItemsByCategoryHandler,
     getMenuItemByIdHandler,
     updateMenuItemHandler,
-    deleteMenuItemHandler
+    deleteMenuItemHandler,
+    getAllMenuItemsForBusinessHandler // <-- IMPORTACIÓN AÑADIDA
 } from '../modules/camarero/admin-menu-item.controller';
 
 import {
@@ -33,7 +33,6 @@ import {
     updateModifierOptionHandler,
     deleteModifierOptionHandler
 } from '../modules/camarero/admin-modifier.controller';
-// --- FIN RUTAS CORREGIDAS ---
 
 const camareroAdminRouter = Router();
 
@@ -52,42 +51,40 @@ camareroAdminRouter.patch(`${categoriesBase}/:categoryId`, updateMenuCategoryHan
 camareroAdminRouter.delete(`${categoriesBase}/:categoryId`, deleteMenuCategoryHandler);
 
 // --- RUTAS PARA GESTIÓN DE ÍTEMS DEL MENÚ ---
-const itemsBaseRelative = '/items'; // Relativo a la categoría
-const itemsBaseAbsolute = '/menu/items'; // Para acceder a un ítem directamente por su ID
+const itemsBaseRelative = '/items';
+const itemsBaseAbsolute = '/menu/items';
 
 camareroAdminRouter.post(`${categoriesBase}/:categoryId${itemsBaseRelative}`, createMenuItemHandler);
 camareroAdminRouter.get(`${categoriesBase}/:categoryId${itemsBaseRelative}`, getMenuItemsByCategoryHandler);
+
+// --- RUTA NUEVA AÑADIDA ---
+// Obtiene TODOS los items del negocio para los selectores del admin.
+// Debe ir ANTES de la ruta /:itemId para que "all" no se interprete como un ID.
+camareroAdminRouter.get(`${itemsBaseAbsolute}/all`, getAllMenuItemsForBusinessHandler);
+// --- FIN RUTA NUEVA ---
+
 camareroAdminRouter.get(`${itemsBaseAbsolute}/:itemId`, getMenuItemByIdHandler);
 camareroAdminRouter.put(`${itemsBaseAbsolute}/:itemId`, updateMenuItemHandler);
 camareroAdminRouter.patch(`${itemsBaseAbsolute}/:itemId`, updateMenuItemHandler);
 camareroAdminRouter.delete(`${itemsBaseAbsolute}/:itemId`, deleteMenuItemHandler);
 
-// --- NUEVAS RUTAS PARA GESTIÓN DE MODIFICADORES ---
-const modifierGroupsBaseRelative = '/modifier-groups'; // Relativo al ítem de menú
-const modifierGroupsBaseAbsolute = '/modifier-groups'; // Para acceder a un grupo directamente
-const modifierOptionsBaseRelative = '/options'; // Relativo al grupo de modificadores
-const modifierOptionsBaseAbsolute = '/modifier-options'; // Para acceder a una opción directamente
+// --- RUTAS PARA GESTIÓN DE MODIFICADORES ---
+const modifierGroupsBaseRelative = '/modifier-groups';
+const modifierGroupsBaseAbsolute = '/modifier-groups';
+const modifierOptionsBaseRelative = '/options';
+const modifierOptionsBaseAbsolute = '/modifier-options';
 
-// ModifierGroups (anidados bajo un MenuItem)
 camareroAdminRouter.post(`${itemsBaseAbsolute}/:itemId${modifierGroupsBaseRelative}`, createModifierGroupHandler);
 camareroAdminRouter.get(`${itemsBaseAbsolute}/:itemId${modifierGroupsBaseRelative}`, getModifierGroupsByMenuItemHandler);
-
-// ModifierGroups (acceso directo por ID del grupo)
 camareroAdminRouter.put(`${modifierGroupsBaseAbsolute}/:modifierGroupId`, updateModifierGroupHandler);
 camareroAdminRouter.patch(`${modifierGroupsBaseAbsolute}/:modifierGroupId`, updateModifierGroupHandler);
 camareroAdminRouter.delete(`${modifierGroupsBaseAbsolute}/:modifierGroupId`, deleteModifierGroupHandler);
-
-// ModifierOptions (anidados bajo un ModifierGroup)
 camareroAdminRouter.post(`${modifierGroupsBaseAbsolute}/:modifierGroupId${modifierOptionsBaseRelative}`, createModifierOptionHandler);
 camareroAdminRouter.get(`${modifierGroupsBaseAbsolute}/:modifierGroupId${modifierOptionsBaseRelative}`, getModifierOptionsByGroupHandler);
-
-// ModifierOptions (acceso directo por ID de la opción)
 camareroAdminRouter.put(`${modifierOptionsBaseAbsolute}/:modifierOptionId`, updateModifierOptionHandler);
 camareroAdminRouter.patch(`${modifierOptionsBaseAbsolute}/:modifierOptionId`, updateModifierOptionHandler);
 camareroAdminRouter.delete(`${modifierOptionsBaseAbsolute}/:modifierOptionId`, deleteModifierOptionHandler);
 
-
-// Placeholder para la raíz de /api/camarero/admin
 camareroAdminRouter.get('/', (req, res) => {
     res.json({ message: `[CAMARERO ADMIN] Panel de administración del módulo Camarero para businessId: ${req.user?.businessId}` });
 });

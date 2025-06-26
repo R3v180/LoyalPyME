@@ -1,4 +1,5 @@
-// frontend/src/modules/camarero/services/publicOrderApiService.ts (MODIFICADO)
+// frontend/src/modules/camarero/services/publicOrderApiService.ts
+// Version 2.0.0 - Updated submission handler with rewards logic
 
 import axios from 'axios';
 import {
@@ -6,6 +7,7 @@ import {
     AddItemsToOrderPayloadDto,
     BackendOrderResponse,
     OrderItemFE,
+    CreateOrderItemDto, // Importar este tipo
 } from '../types/publicOrder.types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL_PUBLIC || 'http://localhost:3000/public';
@@ -52,49 +54,61 @@ export const addItemsToExistingOrderApi = async (
 };
 
 
-// --- CAMBIO PRINCIPAL: Se añade el parámetro 'requestingCustomerId' a la firma de la función ---
+/**
+ * Orquesta el envío de un nuevo pedido o la adición de ítems a uno existente,
+ * incluyendo la información de las recompensas canjeadas.
+ * 
+ * @param cartItems - Los ítems en el carrito del frontend.
+ * @param generalOrderNotes - Notas generales para el pedido.
+ * @param activeOrderId - ID del pedido activo, si se están añadiendo ítems.
+ * @param businessSlug - El slug del negocio.
+ * @param tableIdentifier - El identificador de la mesa.
+ * @param requestingCustomerId - El ID del cliente LCo logueado.
+ * @param appliedDiscountId - El ID de la recompensa de descuento aplicada al total.
+ * @returns La respuesta del backend con el ID y número del pedido.
+ */
 export const handleOrderSubmission = async (
     cartItems: OrderItemFE[],
     generalOrderNotes: string,
     activeOrderId: string | null,
     businessSlug: string,
-    tableIdentifier?: string,
-    requestingCustomerId?: string | null // <-- NUEVO PARÁMETRO
+    tableIdentifier: string | undefined,
+    requestingCustomerId: string | null | undefined,
+    appliedDiscountId: string | null | undefined // <-- ACEPTAR EL NUEVO ARGUMENTO
 ): Promise<BackendOrderResponse> => {
-// --- FIN DEL CAMBIO ---
-
-    const dtoItems = cartItems.map(feItem => ({
+    
+    // Mapear los items del carrito al DTO que espera el backend.
+    // Ahora incluimos el `redeemedRewardId` si existe.
+    const dtoItems: CreateOrderItemDto[] = cartItems.map(feItem => ({
         menuItemId: feItem.menuItemId,
         quantity: feItem.quantity,
         notes: getProcessedNotesValue(feItem.notes),
         selectedModifierOptions: feItem.selectedModifiers.length > 0
             ? feItem.selectedModifiers.map(sm => ({ modifierOptionId: sm.modifierOptionId }))
             : [],
+        redeemedRewardId: feItem.redeemedRewardId || null, // Incluir el ID de la recompensa del ítem
     }));
 
-    // --- CAMBIO: Se elimina la lógica de leer localStorage de aquí ---
-    // Ya no es necesario, el ID del cliente viene como argumento
-    // let customerIdForPayload: string | null = null;
-    // ... lógica de localStorage eliminada ...
-    // --- FIN DEL CAMBIO ---
-
     if (activeOrderId) {
-        // Al añadir ítems, el customerId ya está en el pedido original, no se pasa de nuevo.
-        // Esta parte se mantiene igual.
+        // --- LÓGICA PARA AÑADIR A PEDIDO EXISTENTE ---
         const payloadForAdd: AddItemsToOrderPayloadDto = {
             items: dtoItems,
             customerNotes: getProcessedNotesValue(generalOrderNotes),
+            // Pasamos el descuento aquí también. El backend decidirá si puede aplicarlo
+            // o si ya existe uno.
+            appliedLcoRewardId: appliedDiscountId || null,
         };
         const response = await addItemsToExistingOrderApi(activeOrderId, businessSlug, payloadForAdd);
         return { ...response, id: activeOrderId };
+
     } else {
+        // --- LÓGICA PARA CREAR UN NUEVO PEDIDO ---
         const payloadForCreate: CreateOrderPayloadDto = {
             items: dtoItems,
             customerNotes: getProcessedNotesValue(generalOrderNotes),
             tableIdentifier: tableIdentifier || null,
-            // --- CAMBIO: Se usa el nuevo parámetro ---
             customerId: requestingCustomerId || null,
-            // --- FIN DEL CAMBIO ---
+            appliedLcoRewardId: appliedDiscountId || null, // Pasar el ID del descuento aplicado
         };
         return submitNewOrder(businessSlug, payloadForCreate);
     }

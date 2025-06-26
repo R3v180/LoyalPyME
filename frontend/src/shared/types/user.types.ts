@@ -1,7 +1,8 @@
-// frontend/src/types/customer.ts
-// Version: 1.1.3 (Ensure OrderType is exported)
+// frontend/src/shared/types/user.types.ts
+// Version: 1.2.1 - Add advanced fields to Reward interface and correct DisplayReward
 
 import React from 'react';
+import { RewardType, DiscountType } from './enums'; // Importar los nuevos enums
 
 export enum UserRole {
     SUPER_ADMIN = 'SUPER_ADMIN',
@@ -23,14 +24,11 @@ export enum OrderStatus {
     PAID = 'PAID', CANCELLED = 'CANCELLED', PAYMENT_FAILED = 'PAYMENT_FAILED',
 }
 
-// ---- AÑADIR Y EXPORTAR OrderType SI NO EXISTE ----
 export enum OrderType {
   DINE_IN = 'DINE_IN',
   TAKE_AWAY = 'TAKE_AWAY',
   DELIVERY = 'DELIVERY',
 }
-// ---- FIN AÑADIR/EXPORTAR OrderType ----
-
 
 export enum TierCalculationBasis {
     SPEND = 'SPEND',
@@ -81,6 +79,7 @@ export interface UserData {
     businessSlug?: string | null;
     businessLogoUrl?: string | null;
 }
+
 export interface Reward {
     id: string;
     name_es: string | null;
@@ -93,7 +92,19 @@ export interface Reward {
     imageUrl?: string | null;
     createdAt?: string;
     updatedAt?: string;
+    // --- Nuevos campos alineados con el backend ---
+    type: RewardType;
+    linkedMenuItemId: string | null;
+    discountType: DiscountType | null;
+    discountValue: string | number | null; // Prisma Decimal se serializa como string
+    validFrom: string | null;
+    validUntil: string | null;
+    usageLimit: number | null;
+    usageLimitPerUser: number | null;
+    requiredTierId: string | null;
+    isStackable: boolean;
 }
+
 export interface GrantedReward {
     id: string;
     status: string;
@@ -102,8 +113,10 @@ export interface GrantedReward {
     assignedBy?: { name?: string | null; email: string; } | null;
     business?: { name: string; } | null;
 }
+
 export type DisplayReward =
-    {
+    // Parte para Recompensas de Puntos (no regalos)
+    ({
         isGift: false;
         id: string;
         name_es: string | null;
@@ -115,7 +128,15 @@ export type DisplayReward =
         grantedRewardId?: undefined;
         assignedByString?: undefined;
         assignedAt?: undefined;
-    } |
+        
+        // --- CAMPOS CORREGIDOS Y AÑADIDOS ---
+        type: RewardType;
+        linkedMenuItemId: string | null;
+        discountType: DiscountType | null;
+        discountValue: string | number | null;
+        // --- FIN CAMPOS CORREGIDOS ---
+    }) |
+    // Parte para Regalos
     {
         isGift: true;
         grantedRewardId: string;
@@ -128,6 +149,11 @@ export type DisplayReward =
         imageUrl?: string | null;
         assignedByString: string;
         assignedAt: string;
+        // Los regalos no son de tipo descuento, pero podemos añadir `type` para consistencia
+        type: null; // Los regalos no tienen un tipo de recompensa canjeable
+        discountType?: undefined;
+        discountValue?: undefined;
+        linkedMenuItemId?: undefined;
     };
 
 export interface UseProfileResult {
@@ -151,7 +177,7 @@ export type ActivityType =
     | 'POINTS_REDEEMED_REWARD'
     | 'GIFT_REDEEMED'
     | 'POINTS_ADJUSTED_ADMIN'
-    | 'POINTS_EARNED_ORDER_LC'; // Asegúrate que este también esté si lo usas en el frontend
+    | 'POINTS_EARNED_ORDER_LC';
 
 export interface ActivityLogItem {
   id: string;

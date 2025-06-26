@@ -1,5 +1,5 @@
-// frontend/src/types/publicOrder.types.ts
-// Version: 1.0.5 (Correct property name from orderNotes to customerNotes)
+// frontend/src/modules/camarero/types/publicOrder.types.ts
+// Version: 1.1.0 - Add redeemedRewardId to OrderItemFE
 
 import { PublicMenuItem } from './menu.types';
 
@@ -24,6 +24,8 @@ export interface OrderItemFE {
     totalPriceForItem: number;
     notes?: string | null;
     selectedModifiers: SelectedModifierFE[];
+    // --- CAMPO AÑADIDO ---
+    redeemedRewardId?: string | null; // ID de la Reward usada para obtener este ítem gratis
 }
 
 export interface ConfiguringItemState {
@@ -45,21 +47,25 @@ export interface CreateOrderItemDto {
     quantity: number;
     notes?: string | null;
     selectedModifierOptions?: CreateOrderItemModifierDto[] | null;
+    // --- CAMPO AÑADIDO PARA CANJE DE ITEM ---
+    redeemedRewardId?: string | null; 
 }
 
 export interface CreateOrderPayloadDto {
     tableIdentifier?: string | null;
     customerId?: string | null;
-    // --- CORRECCIÓN AQUÍ ---
-    customerNotes: string | null; // Antes era orderNotes
-    // --- FIN CORRECCIÓN ---
+    customerNotes: string | null;
     items: CreateOrderItemDto[];
     businessId?: string;
+    // --- CAMPO AÑADIDO PARA DESCUENTO TOTAL ---
+    appliedLcoRewardId?: string | null;
 }
 
 export interface AddItemsToOrderPayloadDto {
     items: CreateOrderItemDto[];
     customerNotes: string | null;
+    // --- CAMPO AÑADIDO PARA DESCUENTO TOTAL (en adición de items) ---
+    appliedLcoRewardId?: string | null;
 }
 
 // --- Tipos para las Respuestas de la API de Pedidos ---

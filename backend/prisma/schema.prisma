@@ -1,4 +1,5 @@
 // backend/prisma/schema.prisma
+// Version: 20240618.7 - Final with LF line endings
 
 generator client {
   provider        = "prisma-client-js"
@@ -13,11 +14,10 @@ datasource db {
 
 // ---------- ENUMS ----------
 
-// --- Enums existentes (sin cambios) ---
 enum UserRole {
+  SUPER_ADMIN
   BUSINESS_ADMIN
   CUSTOMER_FINAL
-  SUPER_ADMIN
   WAITER
   KITCHEN_STAFF
   BAR_STAFF
@@ -114,7 +114,6 @@ enum TableStatus {
   RESERVED
 }
 
-// --- NUEVO ENUM PARA AUDITORÍA DE SUPERADMIN ---
 enum SuperAdminActionType {
   BUSINESS_STATUS_TOGGLED
   MODULE_LOYALTY_TOGGLED
@@ -122,133 +121,280 @@ enum SuperAdminActionType {
   SUBSCRIPTION_PRICE_UPDATED
   MANUAL_PAYMENT_RECORDED
   IMPERSONATION_STARTED
-  IMPERSONATION_ENDED // Opcional, para un log más completo
+  IMPERSONATION_ENDED
+}
+
+/// Clasifica el comportamiento fundamental de una recompensa.
+enum RewardType {
+  /// Un producto específico del menú se añade gratis al carrito.
+  MENU_ITEM
+  /// Un descuento (fijo o %) se aplica a UN solo ítem del carrito.
+  DISCOUNT_ON_ITEM
+  /// Un descuento (fijo o %) se aplica al TOTAL del pedido.
+  DISCOUNT_ON_TOTAL
+}
+
+/// Especifica si un descuento es un porcentaje o una cantidad monetaria fija.
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
 }
 
 
 // ---------- MODELS ----------
 
 model Business {
-  id                      String    @id @default(uuid())
-  name                    String
-  slug                    String    @unique
-  logoUrl                 String?
-  brandingColorPrimary    String?   @default("#007bff")
-  brandingColorSecondary  String?   @default("#6c757d")
-  pointsPerEuro           Float     @default(1)
-  qrCodeExpirationMinutes Int       @default(30)
-  tierSystemEnabled       Boolean   @default(false)
-  tierCalculationBasis    TierCalculationBasis?
-  tierCalculationPeriodMonths Int?  @default(0)
-  tierDowngradePolicy     TierDowngradePolicy @default(NEVER)
-  inactivityPeriodMonths  Int?      @default(6)
-  isActive                Boolean   @default(true)
-  isLoyaltyCoreActive     Boolean   @default(false)
-  isCamareroActive        Boolean   @default(false)
-  
-  // ===============================================
-  // === NUEVOS CAMPOS PARA GESTIÓN DE SUSCRIPCIÓN ===
-  // ===============================================
-  monthlyPrice            Decimal?  @default(0.00) @db.Decimal(10, 2)
-  currency                String    @default("EUR")
-  // ===============================================
-
-  users            User[]
-  rewards          Reward[]
-  qrCodes          QrCode[]
-  tiers            Tier[]
-  activityLogs     ActivityLog[]
-  grantedRewards   GrantedReward[]
-  tables           Table[]               @relation("BusinessTables")
-  menuCategories   MenuCategory[]        @relation("BusinessMenuCategories")
-  menuItems        MenuItem[]            @relation("BusinessMenuItems")
-  modifierGroups   ModifierGroup[]       @relation("BusinessModifierGroups")
-  orders           Order[]               @relation("BusinessOrders")
-  staffPins        StaffPin[]            @relation("BusinessStaffPins")
-  tableNotifications TableNotification[]
-  reservations     Reservation[]
-  
-  // --- NUEVAS RELACIONES ---
-  payments         BusinessPayment[]     @relation("BusinessPayments")
-  auditLogEntries  SuperAdminActivityLog[] @relation("TargetBusiness")
-  // --- FIN NUEVAS RELACIONES ---
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                        String                  @id @default(uuid())
+  name                      String
+  slug                      String                  @unique
+  logoUrl                   String?
+  brandingColorPrimary      String?                 @default("#007bff")
+  brandingColorSecondary    String?                 @default("#6c757d")
+  pointsPerEuro             Float                   @default(1)
+  qrCodeExpirationMinutes   Int                     @default(30)
+  tierSystemEnabled         Boolean                 @default(false)
+  tierCalculationBasis      TierCalculationBasis?
+  tierCalculationPeriodMonths Int?                    @default(0)
+  tierDowngradePolicy       TierDowngradePolicy     @default(NEVER)
+  inactivityPeriodMonths    Int?                    @default(6)
+  isActive                  Boolean                 @default(true)
+  isLoyaltyCoreActive       Boolean                 @default(false)
+  isCamareroActive          Boolean                 @default(false)
+  monthlyPrice              Decimal?                @default(0.00) @db.Decimal(10, 2)
+  currency                  String                  @default("EUR")
+  users                     User[]
+  rewards                   Reward[]
+  qrCodes                   QrCode[]
+  tiers                     Tier[]
+  activityLogs              ActivityLog[]
+  grantedRewards            GrantedReward[]
+  tables                    Table[]                 @relation("BusinessTables")
+  menuCategories            MenuCategory[]          @relation("BusinessMenuCategories")
+  menuItems                 MenuItem[]              @relation("BusinessMenuItems")
+  modifierGroups            ModifierGroup[]         @relation("BusinessModifierGroups")
+  orders                    Order[]                 @relation("BusinessOrders")
+  staffPins                 StaffPin[]              @relation("BusinessStaffPins")
+  tableNotifications        TableNotification[]
+  reservations              Reservation[]
+  payments                  BusinessPayment[]       @relation("BusinessPayments")
+  auditLogEntries           SuperAdminActivityLog[] @relation("TargetBusiness")
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
 
   @@map("businesses")
 }
 
 model User {
-  id                   String    @id @default(uuid())
-  email                String    @unique
+  id                   String       @id @default(uuid())
+  email                String       @unique
   password             String
   name                 String?
-  phone                String?   @unique
-  documentId           String?   @unique
+  phone                String?      @unique
+  documentId           String?      @unique
   documentType         DocumentType?
   role                 UserRole
-  points               Int       @default(0)
-  totalSpend           Float     @default(0)
-  totalVisits          Int       @default(0)
+  points               Int          @default(0)
+  totalSpend           Float        @default(0)
+  totalVisits          Int          @default(0)
   tierAchievedAt       DateTime?
   lastActivityAt       DateTime?
-  resetPasswordToken   String?   @map("reset_password_token")
-  resetPasswordExpires DateTime? @map("reset_password_expires_at")
-  isActive             Boolean   @default(true)
-  isFavorite           Boolean?  @default(false)
-  adminNotes           String?   @db.Text
+  resetPasswordToken   String?      @map("reset_password_token")
+  resetPasswordExpires DateTime?    @map("reset_password_expires_at")
+  isActive             Boolean      @default(true)
+  isFavorite           Boolean?     @default(false)
+  adminNotes           String?      @db.Text
   businessId           String?
-  business             Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
-
-  qrcodesUsed     QrCode[]
-  activityLogs    ActivityLog[]
-  currentTierId   String?
-  currentTier     Tier?          @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
-  grantedRewards  GrantedReward[] @relation("CustomerGrantedRewards")
-  assignedRewards GrantedReward[] @relation("AdminAssignedRewards")
-  
-  waiterTakenOrders Order[] @relation("WaiterTakenOrders")
-  itemsServedByWaiter OrderItem[] @relation("ItemsServedByStaff")
-  ordersPaidByStaff   Order[] @relation("OrdersPaidByStaff")
-  customerLCOrders    Order[] @relation("CustomerLCOrders")
-  staffPin        StaffPin?  @relation("UserStaffPin")
-
+  business             Business?    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  qrcodesUsed          QrCode[]
+  activityLogs         ActivityLog[]
+  currentTierId        String?
+  currentTier          Tier?        @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
+  grantedRewards       GrantedReward[] @relation("CustomerGrantedRewards")
+  assignedRewards      GrantedReward[] @relation("AdminAssignedRewards")
+  waiterTakenOrders    Order[]      @relation("WaiterTakenOrders")
+  itemsServedByWaiter  OrderItem[]  @relation("ItemsServedByStaff")
+  ordersPaidByStaff    Order[]      @relation("OrdersPaidByStaff")
+  customerLCOrders     Order[]      @relation("CustomerLCOrders")
+  staffPin             StaffPin?    @relation("UserStaffPin")
   resolvedTableNotifications TableNotification[] @relation("ResolvedTableNotifications")
-  customerReservations         Reservation[]       @relation("CustomerReservations")
-
-  // --- NUEVAS RELACIONES PARA AUDITORÍA ---
-  recordedPayments     BusinessPayment[]       @relation("RecordedPayments")
+  customerReservations Reservation[] @relation("CustomerReservations")
+  recordedPayments     BusinessPayment[] @relation("RecordedPayments")
   superAdminActivities SuperAdminActivityLog[] @relation("AdminActionBy")
-  // --- FIN NUEVAS RELACIONES ---
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
 
   @@index([businessId])
   @@index([currentTierId])
 }
 
+model Reward {
+  id                 String       @id @default(cuid())
+  businessId         String
+  business           Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name_es            String
+  name_en            String?
+  description_es     String?      @db.Text
+  description_en     String?      @db.Text
+  imageUrl           String?
+  pointsCost         Int
+  isActive           Boolean      @default(true)
+  type               RewardType   @default(DISCOUNT_ON_TOTAL)
+  discountType       DiscountType?
+  discountValue      Decimal?     @db.Decimal(10, 2)
+  validFrom          DateTime?
+  validUntil         DateTime?
+  usageLimit         Int?
+  usageLimitPerUser  Int?
+  requiredTierId     String?
+  requiredTier       Tier?        @relation(fields: [requiredTierId], references: [id], onDelete: SetNull)
+  isStackable        Boolean      @default(false)
+  linkedMenuItemId   String?
+  linkedMenuItem     MenuItem?    @relation("MenuItemAsRewardTarget", fields: [linkedMenuItemId], references: [id], onDelete: SetNull)
+  grantedRewards     GrantedReward[]
+  activityLogs       ActivityLog[]
+  orders             Order[]      @relation("OrderDiscountReward")
+  orderItems         OrderItem[]  @relation("RedeemedWithReward")
+  orderItemsDiscounted OrderItem[]  @relation("DiscountedWithReward")
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
-// ===============================================
-// === NUEVO MODELO: BusinessPayment             ===
-// ===============================================
+  @@unique([businessId, name_es], name: "unique_reward_name_es_business")
+  @@index([businessId, isActive, type])
+}
+
+model MenuItem {
+  id                   String        @id @default(uuid())
+  sku                  String?
+  name_es              String
+  name_en              String?
+  description_es       String?       @db.Text
+  description_en       String?       @db.Text
+  price                Decimal       @db.Decimal(10, 2)
+  imageUrl             String?
+  allergens            String[]
+  tags                 String[]
+  isAvailable          Boolean       @default(true)
+  position             Int           @default(0)
+  preparationTime      Int?
+  calories             Int?
+  kdsDestination       String?
+  categoryId           String
+  category             MenuCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  businessId           String
+  business             Business      @relation("BusinessMenuItems", fields: [businessId], references: [id])
+  modifierGroups       ModifierGroup[]
+  orderItems           OrderItem[]   @relation("MenuItemOrderItems")
+  rewardsLinkingToThis Reward[]      @relation("MenuItemAsRewardTarget")
+  trackInventory       Boolean       @default(false)
+  stockQuantity        Int?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@unique([categoryId, name_es])
+  @@unique([businessId, sku], name: "unique_business_sku")
+  @@index([businessId])
+  @@index([categoryId])
+  @@index([isAvailable])
+  @@index([sku])
+}
+
+model Order {
+  id                                String      @id @default(cuid())
+  orderNumber                         String
+  status                              OrderStatus @default(RECEIVED)
+  totalAmount                         Decimal     @default(0.00) @db.Decimal(10, 2)
+  discountAmount                      Decimal?    @db.Decimal(10, 2)
+  finalAmount                         Decimal?    @db.Decimal(10, 2)
+  notes                               String?     @db.Text
+  source                              String      @default("CUSTOMER_APP")
+  tableId                             String?
+  table                               Table?      @relation("TableOrders", fields: [tableId], references: [id], onDelete: SetNull)
+  customerLCoId                       String?
+  customerLCo                         User?       @relation("CustomerLCOrders", fields: [customerLCoId], references: [id], onDelete: SetNull)
+  waiterId                            String?
+  waiter                              User?       @relation("WaiterTakenOrders", fields: [waiterId], references: [id], onDelete: SetNull)
+  businessId                          String
+  business                            Business    @relation("BusinessOrders", fields: [businessId], references: [id], onDelete: Cascade)
+  items                               OrderItem[] @relation("OrderOrderItems")
+  appliedLcoRewardId                String?
+  appliedLcoReward                  Reward?     @relation("OrderDiscountReward", fields: [appliedLcoRewardId], references: [id], onDelete: SetNull)
+  appliedLcoRewardDiscountAmount    Decimal?    @db.Decimal(10, 2)
+  appliedLcoTierBenefitDiscountAmount Float?
+  activityLog                         ActivityLog[]
+  isBillRequested                     Boolean     @default(false)
+  paidByUserId                        String?
+  paidByUser                          User?       @relation("OrdersPaidByStaff", fields: [paidByUserId], references: [id], onDelete: SetNull)
+  paymentMethodUsed                   String?
+  createdAt                           DateTime    @default(now())
+  updatedAt                           DateTime    @updatedAt
+  confirmedAt                         DateTime?
+  billedAt                            DateTime?
+  paidAt                              DateTime?
+  orderType                           OrderType   @default(DINE_IN)
+  paymentMethodPreference             String?
+  amountToPayWith                     String?
+  paymentIntentId                     String?
+  paymentProvider                     String?
+  deliveryAddressJson                 String?
+  deliveryFee                         Float?
+  estimatedDeliveryTime               DateTime?
+
+  @@unique([businessId, orderNumber])
+  @@index([businessId, status])
+  @@index([tableId])
+  @@index([customerLCoId])
+  @@index([waiterId])
+  @@index([orderType])
+  @@index([paidByUserId])
+}
+
+model OrderItem {
+  id                        String                    @id @default(cuid())
+  quantity                  Int                       @default(1)
+  priceAtPurchase           Decimal                   @db.Decimal(10, 2)
+  totalItemPrice            Decimal                   @db.Decimal(10, 2)
+  notes                     String?                   @db.Text
+  status                    OrderItemStatus           @default(PENDING_KDS)
+  kdsDestination            String?
+  orderId                   String
+  order                     Order                     @relation("OrderOrderItems", fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId                String?
+  menuItem                  MenuItem?                 @relation("MenuItemOrderItems", fields: [menuItemId], references: [id], onDelete: SetNull)
+  itemNameSnapshot          String?
+  itemDescriptionSnapshot   String?
+  servedById                String?
+  servedBy                  User?                     @relation("ItemsServedByStaff", fields: [servedById], references: [id], onDelete: SetNull)
+  preparedAt                DateTime?
+  servedAt                  DateTime?
+  cancellationReason        String?
+  redeemedRewardId          String?
+  redeemedReward          Reward?                   @relation("RedeemedWithReward", fields: [redeemedRewardId], references: [id], onDelete: SetNull)
+  appliedDiscountRewardId   String?
+  appliedDiscountReward     Reward?                   @relation("DiscountedWithReward", fields: [appliedDiscountRewardId], references: [id], onDelete: SetNull)
+  appliedDiscountAmount     Decimal?                  @db.Decimal(10, 2)
+  selectedModifiers         OrderItemModifierOption[] @relation("OrderItemWithOptions")
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+
+  @@index([orderId])
+  @@index([menuItemId])
+  @@index([servedById])
+  @@index([status])
+  @@index([kdsDestination])
+}
+
 model BusinessPayment {
-  id          String   @id @default(cuid())
-  paymentDate DateTime @default(now())
-  amountPaid  Decimal  @db.Decimal(10, 2)
-  month       Int
-  year        Int
-  paymentMethod String? // Ej: "Transferencia", "Manual"
-  notes       String?  @db.Text
-
-  // Relación con el Negocio
-  businessId String
-  business   Business @relation("BusinessPayments", fields: [businessId], references: [id], onDelete: Cascade)
-
-  // Relación con el Super Admin que registró el pago
+  id                String   @id @default(cuid())
+  paymentDate       DateTime @default(now())
+  amountPaid        Decimal  @db.Decimal(10, 2)
+  month             Int
+  year              Int
+  paymentMethod     String?
+  notes             String?  @db.Text
+  businessId        String
+  business          Business @relation("BusinessPayments", fields: [businessId], references: [id], onDelete: Cascade)
   recordedByAdminId String
-  recordedBy        User   @relation("RecordedPayments", fields: [recordedByAdminId], references: [id], onDelete:Restrict) // Restrict para no borrar al superadmin si tiene pagos registrados
+  recordedBy        User     @relation("RecordedPayments", fields: [recordedByAdminId], references: [id], onDelete: Restrict)
 
   @@unique([businessId, year, month])
   @@index([businessId])
@@ -256,23 +402,15 @@ model BusinessPayment {
   @@map("business_payments")
 }
 
-
-// ===============================================
-// === NUEVO MODELO: SuperAdminActivityLog       ===
-// ===============================================
 model SuperAdminActivityLog {
-  id              String      @id @default(cuid())
-  timestamp       DateTime    @default(now())
-  actionType      SuperAdminActionType
-  details         Json? // Para guardar metadatos como {"oldValue": "x", "newValue": "y"}
-  
-  // Quién realizó la acción
-  adminUserId     String
-  adminUser       User   @relation("AdminActionBy", fields: [adminUserId], references: [id], onDelete: Restrict)
-  
-  // Sobre qué negocio se realizó (si aplica)
-  targetBusinessId  String?
-  targetBusiness    Business? @relation("TargetBusiness", fields: [targetBusinessId], references: [id], onDelete: SetNull)
+  id               String               @id @default(cuid())
+  timestamp        DateTime             @default(now())
+  actionType       SuperAdminActionType
+  details          Json?
+  adminUserId      String
+  adminUser        User                 @relation("AdminActionBy", fields: [adminUserId], references: [id], onDelete: Restrict)
+  targetBusinessId String?
+  targetBusiness   Business?            @relation("TargetBusiness", fields: [targetBusinessId], references: [id], onDelete: SetNull)
 
   @@index([adminUserId])
   @@index([targetBusinessId])
@@ -280,64 +418,44 @@ model SuperAdminActivityLog {
   @@map("superadmin_activity_logs")
 }
 
-
-// --- Modelos existentes (sin cambios) ---
-
-model Reward {
-  id               String   @id @default(uuid())
-  name_es          String
-  name_en          String?
-  description_es   String?  @db.Text
-  description_en   String?  @db.Text
-  pointsCost       Int
-  isActive         Boolean  @default(true)
-  imageUrl         String?
-  businessId       String
-  business         Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  grantedRewards   GrantedReward[]
-  activityLogs     ActivityLog[]
-  ordersApplied    Order[]
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  @@unique([businessId, name_es], name: "unique_reward_name_es_business")
-  @@unique([businessId, name_en], name: "unique_reward_name_en_business")
-  @@index([businessId])
-}
-
 model QrCode {
-  id           String      @id @default(uuid())
-  token        String      @unique
+  id           String       @id @default(uuid())
+  token        String       @unique
   businessId   String
-  business     Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business     Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
   amount       Float
   ticketNumber String
   pointsEarned Int?
   status       QrCodeStatus @default(PENDING)
   expiresAt    DateTime
   userId       String?
-  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   completedAt  DateTime?
   activityLogs ActivityLog[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
   @@index([businessId])
   @@index([userId])
 }
 
 model Tier {
-  id                  String   @id @default(uuid())
+  id                  String        @id @default(uuid())
   name                String
   level               Int
   minValue            Float
-  description         String?  @db.Text
-  benefitsDescription String?  @db.Text
-  isActive            Boolean  @default(true)
+  description         String?       @db.Text
+  benefitsDescription String?       @db.Text
+  isActive            Boolean       @default(true)
   businessId          String
-  business            Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business            Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   users               User[]
   benefits            TierBenefit[]
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  rewards             Reward[]
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
   @@unique([businessId, name])
   @@unique([businessId, level])
   @@index([businessId])
@@ -353,6 +471,7 @@ model TierBenefit {
   isActive    Boolean     @default(true)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
   @@index([tierId])
 }
 
@@ -374,6 +493,7 @@ model ActivityLog {
   relatedOrderId         String?
   relatedOrder           Order?         @relation(fields: [relatedOrderId], references: [id], onDelete: SetNull)
   createdAt              DateTime       @default(now())
+
   @@index([userId])
   @@index([businessId])
   @@index([type])
@@ -384,7 +504,7 @@ model ActivityLog {
 }
 
 model GrantedReward {
-  id           String      @id @default(uuid())
+  id           String      @id @default(cuid())
   userId       String
   user         User        @relation("CustomerGrantedRewards", fields: [userId], references: [id], onDelete: Cascade)
   rewardId     String
@@ -398,6 +518,7 @@ model GrantedReward {
   redeemedAt   DateTime?
   expiresAt    DateTime?
   activityLog  ActivityLog[]
+
   @@index([userId])
   @@index([rewardId])
   @@index([assignedById])
@@ -419,6 +540,7 @@ model Table {
   status             TableStatus         @default(AVAILABLE)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+
   @@unique([businessId, identifier])
   @@index([businessId])
   @@index([businessId, status])
@@ -438,46 +560,13 @@ model MenuCategory {
   items          MenuItem[]
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
+
   @@unique([businessId, name_es])
   @@index([businessId])
 }
 
-model MenuItem {
-  id                      String          @id @default(uuid())
-  sku                     String?
-  name_es                 String
-  name_en                 String?
-  description_es          String?         @db.Text
-  description_en          String?         @db.Text
-  price                   Decimal         @db.Decimal(10, 2)
-  imageUrl                String?
-  allergens               String[]
-  tags                    String[]
-  isAvailable             Boolean         @default(true)
-  position                Int             @default(0)
-  preparationTime         Int?
-  calories                Int?
-  kdsDestination          String?
-  categoryId              String
-  category                MenuCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  businessId              String
-  business                Business        @relation("BusinessMenuItems", fields: [businessId], references: [id])
-  modifierGroups          ModifierGroup[]
-  orderItems              OrderItem[]     @relation("MenuItemOrderItems")
-  trackInventory          Boolean         @default(false)
-  stockQuantity           Int?
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
-  @@unique([categoryId, name_es])
-  @@unique([businessId, sku], name: "unique_business_sku")
-  @@index([businessId])
-  @@index([categoryId])
-  @@index([isAvailable])
-  @@index([sku])
-}
-
 model ModifierGroup {
-  id            String           @id @default(uuid())
+  id            String           @id @default(cuid())
   name_es       String
   name_en       String?
   uiType        String           @default("RADIO")
@@ -492,13 +581,14 @@ model ModifierGroup {
   options       ModifierOption[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+
   @@unique([menuItemId, name_es])
   @@index([menuItemId])
   @@index([businessId])
 }
 
 model ModifierOption {
-  id                        String                    @id @default(uuid())
+  id                        String                    @id @default(cuid())
   name_es                   String
   name_en                   String?
   priceAdjustment           Decimal                   @default(0.00) @db.Decimal(10, 2)
@@ -510,86 +600,9 @@ model ModifierOption {
   orderItemModifierOptions OrderItemModifierOption[] @relation("OptionInOrderItems")
   createdAt                 DateTime                  @default(now())
   updatedAt                 DateTime                  @updatedAt
+
   @@unique([groupId, name_es])
   @@index([groupId])
-}
-
-model Order {
-  id                                String      @id @default(uuid())
-  orderNumber                         String
-  status                              OrderStatus @default(RECEIVED)
-  totalAmount                         Decimal     @default(0.00) @db.Decimal(10, 2)
-  discountAmount                      Decimal?    @db.Decimal(10, 2)
-  finalAmount                         Decimal?    @db.Decimal(10, 2)
-  notes                               String?     @db.Text
-  source                              String      @default("CUSTOMER_APP")
-  tableId                             String?
-  table                               Table?      @relation("TableOrders", fields: [tableId], references: [id], onDelete: SetNull)
-  customerLCoId                       String?
-  customerLCo                         User?       @relation("CustomerLCOrders", fields: [customerLCoId], references: [id], onDelete: SetNull)
-  waiterId                            String?
-  waiter                              User?       @relation("WaiterTakenOrders", fields: [waiterId], references: [id], onDelete: SetNull)
-  businessId                          String
-  business                            Business    @relation("BusinessOrders", fields: [businessId], references: [id], onDelete: Cascade)
-  items                               OrderItem[] @relation("OrderOrderItems")
-  createdAt                           DateTime    @default(now())
-  updatedAt                           DateTime    @updatedAt
-  confirmedAt                         DateTime?
-  billedAt                            DateTime?
-  paidAt                              DateTime?
-  orderType                           OrderType   @default(DINE_IN)
-  paymentMethodPreference             String?
-  amountToPayWith                     String?
-  paymentIntentId                     String?
-  paymentProvider                     String?
-  deliveryAddressJson                 String?
-  deliveryFee                         Float?
-  estimatedDeliveryTime               DateTime?
-  appliedLcoRewardId                  String?
-  appliedLcoReward                    Reward?     @relation(fields: [appliedLcoRewardId], references: [id], onDelete: SetNull)
-  appliedLcoRewardDiscountAmount      Float?
-  appliedLcoTierBenefitDiscountAmount Float?
-  activityLog                         ActivityLog[]
-  isBillRequested                     Boolean     @default(false)
-  paidByUserId                        String?
-  paidByUser                          User?       @relation("OrdersPaidByStaff", fields: [paidByUserId], references: [id], onDelete: SetNull)
-  paymentMethodUsed                   String?
-  @@unique([businessId, orderNumber])
-  @@index([businessId, status])
-  @@index([tableId])
-  @@index([customerLCoId])
-  @@index([waiterId])
-  @@index([orderType])
-  @@index([paidByUserId])
-}
-
-model OrderItem {
-  id                        String                    @id @default(uuid())
-  quantity                  Int                       @default(1)
-  priceAtPurchase           Decimal                   @db.Decimal(10, 2)
-  totalItemPrice            Decimal                   @db.Decimal(10, 2)
-  notes                     String?                   @db.Text
-  status                    OrderItemStatus           @default(PENDING_KDS)
-  kdsDestination            String?
-  orderId                   String
-  order                     Order                     @relation("OrderOrderItems", fields: [orderId], references: [id], onDelete: Cascade)
-  menuItemId                String?
-  menuItem                  MenuItem?                 @relation("MenuItemOrderItems", fields: [menuItemId], references: [id], onDelete: SetNull)
-  itemNameSnapshot          String?
-  itemDescriptionSnapshot   String?
-  servedById                String?
-  servedBy                  User?                     @relation("ItemsServedByStaff", fields: [servedById], references: [id], onDelete: SetNull)
-  preparedAt                DateTime?
-  servedAt                  DateTime?
-  cancellationReason        String?
-  selectedModifiers         OrderItemModifierOption[] @relation("OrderItemWithOptions")
-  createdAt                 DateTime                  @default(now())
-  updatedAt                 DateTime                  @updatedAt
-  @@index([orderId])
-  @@index([menuItemId])
-  @@index([servedById])
-  @@index([status])
-  @@index([kdsDestination])
 }
 
 model OrderItemModifierOption {
@@ -600,6 +613,7 @@ model OrderItemModifierOption {
   optionNameSnapshot            String?
   optionPriceAdjustmentSnapshot Decimal?       @db.Decimal(10, 2)
   createdAt                     DateTime       @default(now())
+
   @@id([orderItemId, modifierOptionId])
   @@index([orderItemId])
   @@index([modifierOptionId])
@@ -616,6 +630,7 @@ model StaffPin {
   business    Business @relation("BusinessStaffPins", fields: [businessId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
   @@index([businessId])
 }
 
@@ -634,6 +649,7 @@ model TableNotification {
   resolvedAt           DateTime?
   resolvedByUserId     String?
   resolvedByUser       User?               @relation("ResolvedTableNotifications", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
   @@index([businessId, tableId, createdAt])
   @@index([isResolved])
 }
@@ -657,6 +673,7 @@ model Reservation {
   checkInTime       DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+  
   @@index([businessId, dateTime])
   @@index([businessId, customerId])
   @@index([businessId, guestPhone])

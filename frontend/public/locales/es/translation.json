@@ -1011,13 +1011,34 @@
     "errorMarkingServed": "Error al marcar el ítem como servido.",
     "navLinkPickup": "Recoger Pedidos"
   },
-    "homePage": {
+  "homePage": {
     "welcomeTitle": "Bienvenido a LoyalPyME",
-    "description": "La plataforma todo en uno para que las PYMES fidelicen a sus clientes y optimicen su servicio.",
-    "businessButton": "Soy un Negocio",
-    "customerButton": "Soy un Cliente",
-    "infoTextPart1": "Si eres un cliente y conoces el identificador del negocio, puedes acceder a su menú directamente desde la página de",
-    "infoTextLink": " inicio de sesión"
+    "heroTitle": "Fideliza Clientes y Digitaliza tu Servicio. Todo en un Mismo Lugar.",
+    "heroSubtitle": "LoyalPyME es la plataforma definitiva para que restaurantes, cafeterías y PYMES creen programas de lealtad y optimicen su operativa con una carta digital inteligente.",
+    "ctaBusiness": "Crear Cuenta de Negocio",
+    "ctaLogin": "Ya tengo una cuenta",
+    "featuresSection": {
+      "superTitle": "Potencia Tu Negocio",
+      "title": "Una Solución, Múltiples Beneficios"
+    },
+    "features": {
+      "loyalty": {
+        "title": "Programas de Lealtad",
+        "desc": "Crea un sistema de puntos y niveles para que tus clientes vuelvan una y otra vez. Recompensa su fidelidad con productos y beneficios exclusivos."
+      },
+      "waiter": {
+        "title": "Módulo Camarero Digital",
+        "desc": "Digitaliza tu carta, permite que los clientes pidan desde su móvil y optimiza la comunicación con cocina a través de nuestro sistema KDS."
+      },
+      "synergy": {
+        "title": "Sinergia Total",
+        "desc": "Cuando un cliente pide desde la carta, ¡automáticamente gana puntos! Los dos módulos trabajan juntos para maximizar el engagement y las ventas."
+      }
+    },
+    "finalCta": {
+      "title": "¿Listo para empezar?",
+      "desc": "Crea tu cuenta hoy mismo y descubre cómo LoyalPyME puede transformar tu negocio."
+    }
   },
   "waiterOrderManagement": {
     "title": "Gestión de Pedidos de Sala",

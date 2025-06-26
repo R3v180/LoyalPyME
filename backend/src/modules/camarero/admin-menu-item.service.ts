@@ -1,21 +1,16 @@
-// backend/src/camarero/admin-menu-item.service.ts
+// backend/src/modules/camarero/admin-menu-item.service.ts
 import { PrismaClient, MenuItem, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 export type CreateMenuItemData = Omit<
     Prisma.MenuItemCreateInput,
-    'business' | 'category' | 'modifierGroups' | 'orderItems'
+    'business' | 'category' | 'modifierGroups' | 'orderItems' | 'rewardsLinkingToThis'
 > & { categoryId: string };
 
 export type UpdateMenuItemData = Partial<
-    Omit<Prisma.MenuItemUncheckedUpdateInput, 'id' | 'businessId' | 'createdAt' | 'updatedAt' | 'modifierGroups' | 'orderItems' | 'category'>
-    // No necesitamos omitir 'businessId' si no lo vamos a permitir cambiar desde aquí.
-    // 'id', 'createdAt', 'updatedAt' son gestionados por Prisma o no deberían ser actualizables.
-    // 'category' como relación se maneja a través de 'categoryId'.
-    // 'modifierGroups' y 'orderItems' son relaciones que se gestionarían por separado.
+    Omit<Prisma.MenuItemUncheckedUpdateInput, 'id' | 'businessId' | 'createdAt' | 'updatedAt' | 'modifierGroups' | 'orderItems' | 'category' | 'rewardsLinkingToThis'>
 >;
-
 
 export const createMenuItem = async (
     businessId: string,
@@ -32,14 +27,12 @@ export const createMenuItem = async (
             throw new Error(`Categoría con ID ${categoryId} no encontrada o no pertenece al negocio ${businessId}.`);
         }
 
-        const skuValue = data.sku // data.sku puede ser string | null | undefined
-            ? (typeof data.sku === 'string' ? data.sku.trim() : data.sku) // si es string, triméalo
-            : null; // si es undefined o null, queda como null
+        const skuValue = data.sku ? (typeof data.sku === 'string' ? data.sku.trim() : data.sku) : null;
 
         const newItem = await prisma.menuItem.create({
             data: {
                 ...data,
-                sku: skuValue || null, // Asegurar que se envíe null si es cadena vacía después del trim
+                sku: skuValue || null,
                 business: { connect: { id: businessId } },
                 category: { connect: { id: categoryId } },
             }
@@ -128,22 +121,16 @@ export const updateMenuItem = async (
             throw new Error(`Ítem de menú con ID ${menuItemId} no encontrado o no pertenece a este negocio.`);
         }
 
-        // --- CORRECCIÓN en la construcción de updatePayload ---
-        // Clonamos 'data' para no modificar el objeto original y tiparlo correctamente
         const updatePayload: Prisma.MenuItemUpdateInput = { ...data } as Prisma.MenuItemUpdateInput;
 
-        // Manejo específico para SKU: si se proporciona, trimear si es string, o pasar null.
-        // Si no se proporciona (undefined), no se incluye en updatePayload, por lo que no se actualiza.
         if (data.sku !== undefined) {
             if (typeof data.sku === 'string') {
-                updatePayload.sku = data.sku.trim() || null; // Si después de trim es vacío, se vuelve null
-            } else { // data.sku es null
+                updatePayload.sku = data.sku.trim() || null;
+            } else {
                 updatePayload.sku = null;
             }
         }
-        // --- FIN CORRECCIÓN ---
         
-        // Si se intenta cambiar categoryId
         if (data.categoryId && typeof data.categoryId === 'string' && data.categoryId !== existingItem.categoryId) {
             const newCategory = await prisma.menuCategory.findFirst({
                 where: { id: data.categoryId, businessId: businessId },
@@ -152,16 +139,13 @@ export const updateMenuItem = async (
             if (!newCategory) {
                 throw new Error(`La nueva categoría de destino (ID: ${data.categoryId}) no es válida o no pertenece a este negocio.`);
             }
-            // 'categoryId' se pasará directamente en updatePayload si está en 'data'
-            // y el tipo UpdateMenuItemData lo permite (MenuItemUncheckedUpdateInput lo hace).
         }
 
         return await prisma.menuItem.update({
             where: { id: menuItemId },
-            data: updatePayload, // Aquí updatePayload contiene los campos procesados
+            data: updatePayload,
         });
     } catch (error) {
-        // ... (manejo de errores sin cambios) ...
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
             console.warn(`[MI_SVC] Unique constraint violation on update for item ${menuItemId}:`, error.meta);
             const target = error.meta?.target as string[];
@@ -199,7 +183,6 @@ export const deleteMenuItem = async (menuItemId: string, businessId: string): Pr
             where: { id: menuItemId }
         });
     } catch (error) {
-        // ... (manejo de errores sin cambios) ...
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             throw new Error(`Ítem de menú con ID ${menuItemId} no encontrado al intentar eliminar.`);
         }
@@ -212,5 +195,31 @@ export const deleteMenuItem = async (menuItemId: string, businessId: string): Pr
         }
         console.error(`[MI_SVC] Error deleting menu item ${menuItemId}:`, error);
         throw new Error("Error de base de datos al eliminar el ítem de menú.");
+    }
+};
+
+// --- NUEVA FUNCIÓN AÑADIDA ---
+/**
+ * Obtiene todos los MenuItem disponibles para un negocio, ordenados por categoría y posición.
+ * Ideal para rellenar selectores en el panel de administración.
+ * @param businessId El ID del negocio.
+ * @returns Una lista de objetos MenuItem.
+ */
+export const getAllMenuItemsForBusiness = async (businessId: string): Promise<MenuItem[]> => {
+    console.log(`[MI_SVC] Fetching ALL menu items for business ${businessId}`);
+    try {
+        return await prisma.menuItem.findMany({
+            where: {
+                businessId: businessId,
+                isAvailable: true // Solo traer ítems que el cliente puede ver/pedir
+            },
+            orderBy: [
+                { category: { position: 'asc' } }, // Ordenar por la posición de la categoría
+                { position: 'asc' }                // Luego por la posición del ítem dentro de la categoría
+            ],
+        });
+    } catch (error) {
+        console.error(`[MI_SVC] Error fetching all menu items for business ${businessId}:`, error);
+        throw new Error("Error al obtener todos los ítems de menú.");
     }
 };

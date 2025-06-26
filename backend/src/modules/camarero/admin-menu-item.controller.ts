@@ -1,4 +1,4 @@
-// backend/src/camarero/admin-menu-item.controller.ts
+// backend/src/modules/camarero/admin-menu-item.controller.ts
 import { Request, Response, NextFunction } from 'express';
 import * as menuItemAdminService from './admin-menu-item.service';
 import { Prisma } from '@prisma/client'; // Para tipos de error
@@ -18,14 +18,12 @@ export const createMenuItemHandler = async (req: Request, res: Response, next: N
         allergens, tags, isAvailable, position, preparationTime, calories, kdsDestination, sku
     } = req.body;
 
-    // Validación básica (mejorar con Zod)
     if (!name_es || typeof name_es !== 'string' || name_es.trim() === '') {
         return res.status(400).json({ message: "El campo 'name_es' (nombre en español) es obligatorio." });
     }
     if (price === undefined || typeof price !== 'number' || price < 0) {
         return res.status(400).json({ message: "El campo 'price' es obligatorio y debe ser un número positivo." });
     }
-    // Aquí podrías añadir más validaciones para los otros campos (tipos, formatos)
 
     try {
         const menuItemData: Omit<menuItemAdminService.CreateMenuItemData, 'businessId' | 'categoryId'> = {
@@ -33,7 +31,7 @@ export const createMenuItemHandler = async (req: Request, res: Response, next: N
             name_en: name_en?.trim() || null,
             description_es: description_es?.trim() || null,
             description_en: description_en?.trim() || null,
-            price: new Prisma.Decimal(price), // Convertir a Decimal para Prisma
+            price: new Prisma.Decimal(price),
             imageUrl: imageUrl || null,
             allergens: Array.isArray(allergens) ? allergens.filter(a => typeof a === 'string') : [],
             tags: Array.isArray(tags) ? tags.filter(t => typeof t === 'string') : [],
@@ -50,7 +48,7 @@ export const createMenuItemHandler = async (req: Request, res: Response, next: N
         if (error.message && (error.message.includes('Ya existe un ítem') || error.message.includes('Conflicto de unicidad'))) {
             return res.status(409).json({ message: error.message });
         }
-        if (error.message && error.message.startsWith('Categoría con ID')) { // Error del servicio si la categoría no es válida
+        if (error.message && error.message.startsWith('Categoría con ID')) {
             return res.status(400).json({ message: error.message });
         }
         next(error);
@@ -61,7 +59,7 @@ export const createMenuItemHandler = async (req: Request, res: Response, next: N
 export const getMenuItemsByCategoryHandler = async (req: Request, res: Response, next: NextFunction) => {
     const businessId = req.user?.businessId;
     const { categoryId } = req.params;
-    const { isAvailable } = req.query; // Filtro opcional
+    const { isAvailable } = req.query;
 
     if (!businessId) return res.status(403).json({ message: "Identificador de negocio no encontrado." });
     if (!categoryId) return res.status(400).json({ message: "Se requiere ID de la categoría." });
@@ -75,7 +73,7 @@ export const getMenuItemsByCategoryHandler = async (req: Request, res: Response,
         res.status(200).json(items);
     } catch (error: any) {
         if (error.message && error.message.startsWith('Categoría con ID')) {
-            return res.status(404).json({ message: error.message }); // Si la categoría no existe
+            return res.status(404).json({ message: error.message });
         }
         next(error);
     }
@@ -114,10 +112,8 @@ export const updateMenuItemHandler = async (req: Request, res: Response, next: N
     }
 
     try {
-        // Construir el objeto de datos para el servicio, procesando cada campo
         const serviceUpdateData: menuItemAdminService.UpdateMenuItemData = {};
 
-        // Campos string opcionales
         if (updateDataFromRequest.name_es !== undefined) serviceUpdateData.name_es = String(updateDataFromRequest.name_es).trim();
         if (updateDataFromRequest.name_en !== undefined) serviceUpdateData.name_en = updateDataFromRequest.name_en === null ? null : String(updateDataFromRequest.name_en).trim() || null;
         if (updateDataFromRequest.description_es !== undefined) serviceUpdateData.description_es = updateDataFromRequest.description_es === null ? null : String(updateDataFromRequest.description_es).trim() || null;
@@ -126,7 +122,6 @@ export const updateMenuItemHandler = async (req: Request, res: Response, next: N
         if (updateDataFromRequest.kdsDestination !== undefined) serviceUpdateData.kdsDestination = updateDataFromRequest.kdsDestination === null ? null : String(updateDataFromRequest.kdsDestination).trim() || null;
         if (updateDataFromRequest.sku !== undefined) serviceUpdateData.sku = updateDataFromRequest.sku === null ? null : String(updateDataFromRequest.sku).trim() || null;
         
-        // Campos numéricos
         if (updateDataFromRequest.price !== undefined) {
             const priceNum = parseFloat(updateDataFromRequest.price);
             if (isNaN(priceNum) || priceNum < 0) return res.status(400).json({ message: "El precio debe ser un número positivo." });
@@ -146,13 +141,11 @@ export const updateMenuItemHandler = async (req: Request, res: Response, next: N
             if (serviceUpdateData.calories !== null && isNaN(serviceUpdateData.calories)) return res.status(400).json({ message: "Las calorías deben ser un número o nulo." });
         }
 
-        // Campos booleanos
         if (updateDataFromRequest.isAvailable !== undefined) {
             if (typeof updateDataFromRequest.isAvailable !== 'boolean') return res.status(400).json({ message: "isAvailable debe ser booleano." });
             serviceUpdateData.isAvailable = updateDataFromRequest.isAvailable;
         }
 
-        // Campos array
         if (updateDataFromRequest.allergens !== undefined) {
             if (!Array.isArray(updateDataFromRequest.allergens) || !updateDataFromRequest.allergens.every((s: any) => typeof s === 'string')) return res.status(400).json({ message: "Los alérgenos deben ser un array de strings." });
             serviceUpdateData.allergens = updateDataFromRequest.allergens;
@@ -162,7 +155,6 @@ export const updateMenuItemHandler = async (req: Request, res: Response, next: N
             serviceUpdateData.tags = updateDataFromRequest.tags;
         }
         
-        // Campo categoryId (para mover el ítem de categoría)
         if (updateDataFromRequest.categoryId !== undefined) {
             if (typeof updateDataFromRequest.categoryId !== 'string' || updateDataFromRequest.categoryId.trim() === '') return res.status(400).json({ message: "categoryId debe ser un string válido si se proporciona." });
             serviceUpdateData.categoryId = updateDataFromRequest.categoryId.trim();
@@ -203,9 +195,29 @@ export const deleteMenuItemHandler = async (req: Request, res: Response, next: N
          if (error.message && error.message.includes('no encontrado')) {
             return res.status(404).json({ message: error.message });
         }
-        if (error.message && error.message.includes('está en uso')) { // Mensaje del servicio para P2003
+        if (error.message && error.message.includes('está en uso')) {
             return res.status(409).json({ message: error.message });
         }
+        next(error);
+    }
+};
+
+// --- NUEVO HANDLER AÑADIDO ---
+/**
+ * GET /api/camarero/admin/menu/items/all
+ * Obtiene una lista simplificada de todos los items de un negocio.
+ * Útil para selectores en el panel de administración (ej. al crear recompensas).
+ */
+export const getAllMenuItemsForBusinessHandler = async (req: Request, res: Response, next: NextFunction) => {
+    const businessId = req.user?.businessId;
+    if (!businessId) {
+        return res.status(403).json({ message: "Identificador de negocio no encontrado." });
+    }
+
+    try {
+        const items = await menuItemAdminService.getAllMenuItemsForBusiness(businessId);
+        res.status(200).json(items);
+    } catch (error) {
         next(error);
     }
 };
