@@ -1,5 +1,5 @@
 // frontend/src/shared/types/user.types.ts
-// Version: 1.2.1 - Add advanced fields to Reward interface and correct DisplayReward
+// Version: 1.2.2 - Added kdsDestination to Reward interface
 
 import React from 'react';
 import { RewardType, DiscountType } from './enums'; // Importar los nuevos enums
@@ -103,6 +103,8 @@ export interface Reward {
     usageLimitPerUser: number | null;
     requiredTierId: string | null;
     isStackable: boolean;
+    // --- CAMPO AÑADIDO PARA EL DESTINO KDS ---
+    kdsDestination?: string | null;
 }
 
 export interface GrantedReward {

@@ -1,5 +1,5 @@
 // backend/prisma/schema.prisma
-// Version: 20240626.8 - Added GENERIC_FREE_PRODUCT to RewardType enum
+// Version: 20240630.1 - Added kdsDestination to Reward model
 
 generator client {
   provider        = "prisma-client-js"
@@ -252,6 +252,7 @@ model Reward {
   isStackable        Boolean     @default(false)
   linkedMenuItemId   String?
   linkedMenuItem     MenuItem?   @relation("MenuItemAsRewardTarget", fields: [linkedMenuItemId], references: [id], onDelete: SetNull)
+  kdsDestination     String?     // <-- CAMPO AÑADIDO
   grantedRewards     GrantedReward[]
   activityLogs       ActivityLog[]
   orders             Order[]     @relation("OrderDiscountReward")
@@ -525,6 +526,7 @@ model GrantedReward {
   @@index([rewardId])
   @@index([assignedById])
   @@index([businessId])
+  @@unique([userId, rewardId])
 }
 
 model Table {
