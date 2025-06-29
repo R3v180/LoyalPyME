@@ -22,6 +22,7 @@
     "@mantine/notifications": "^7.17.4",
     "@tabler/icons-react": "^3.31.0",
     "axios": "^1.8.4",
+    "date-fns": "^4.1.0",
     "html5-qrcode": "^2.3.8",
     "i18next": "^23.13.2",
     "i18next-browser-languagedetector": "^8.0.1",

@@ -1,8 +1,8 @@
 // frontend/src/shared/types/user.types.ts
-// Version: 1.2.2 - Added kdsDestination to Reward interface
+// Version: 1.2.4 - Final version with all required fields for the new rewards flow.
 
 import React from 'react';
-import { RewardType, DiscountType } from './enums'; // Importar los nuevos enums
+import { RewardType, DiscountType } from './enums';
 
 export enum UserRole {
     SUPER_ADMIN = 'SUPER_ADMIN',
@@ -92,32 +92,31 @@ export interface Reward {
     imageUrl?: string | null;
     createdAt?: string;
     updatedAt?: string;
-    // --- Nuevos campos alineados con el backend ---
     type: RewardType;
     linkedMenuItemId: string | null;
     discountType: DiscountType | null;
-    discountValue: string | number | null; // Prisma Decimal se serializa como string
+    discountValue: string | number | null;
     validFrom: string | null;
     validUntil: string | null;
     usageLimit: number | null;
     usageLimitPerUser: number | null;
     requiredTierId: string | null;
     isStackable: boolean;
-    // --- CAMPO AÑADIDO PARA EL DESTINO KDS ---
     kdsDestination?: string | null;
 }
 
 export interface GrantedReward {
     id: string;
-    status: string;
+    status: string; // PENDING, AVAILABLE, APPLIED, EXPIRED
     assignedAt: string;
+    redeemedAt: string | null; // Momento en que se "compra" con puntos
+    expiresAt: string | null; // <-- CAMPO AÑADIDO
     reward: Pick<Reward, 'id' | 'name_es' | 'name_en' | 'description_es' | 'description_en' | 'imageUrl'>;
     assignedBy?: { name?: string | null; email: string; } | null;
     business?: { name: string; } | null;
 }
 
 export type DisplayReward =
-    // Parte para Recompensas de Puntos (no regalos)
     ({
         isGift: false;
         id: string;
@@ -130,15 +129,11 @@ export type DisplayReward =
         grantedRewardId?: undefined;
         assignedByString?: undefined;
         assignedAt?: undefined;
-        
-        // --- CAMPOS CORREGIDOS Y AÑADIDOS ---
         type: RewardType;
         linkedMenuItemId: string | null;
         discountType: DiscountType | null;
         discountValue: string | number | null;
-        // --- FIN CAMPOS CORREGIDOS ---
     }) |
-    // Parte para Regalos
     {
         isGift: true;
         grantedRewardId: string;
@@ -151,8 +146,7 @@ export type DisplayReward =
         imageUrl?: string | null;
         assignedByString: string;
         assignedAt: string;
-        // Los regalos no son de tipo descuento, pero podemos añadir `type` para consistencia
-        type: null; // Los regalos no tienen un tipo de recompensa canjeable
+        type: null;
         discountType?: undefined;
         discountValue?: undefined;
         linkedMenuItemId?: undefined;
@@ -179,7 +173,10 @@ export type ActivityType =
     | 'POINTS_REDEEMED_REWARD'
     | 'GIFT_REDEEMED'
     | 'POINTS_ADJUSTED_ADMIN'
-    | 'POINTS_EARNED_ORDER_LC';
+    | 'POINTS_EARNED_ORDER_LC'
+    | 'REWARD_ACQUIRED'
+    | 'REWARD_APPLIED_TO_ORDER';
+
 
 export interface ActivityLogItem {
   id: string;

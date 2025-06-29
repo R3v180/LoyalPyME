@@ -1,11 +1,12 @@
-// filename: backend/src/rewards/rewards.service.ts
-// Version: 1.2.1 (Use generated i18n Reward types correctly)
+// backend/src/modules/loyalpyme/rewards/rewards.service.ts
+// Version: 2.0.1 - Fixed missing DiscountType import
 
-import { PrismaClient, Reward, Prisma, GrantedReward } from '@prisma/client';
+import { PrismaClient, Reward, Prisma, GrantedReward, GrantedRewardStatus, ActivityType, RewardType, DiscountType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Interfaz CreateRewardData (Usa los campos correctos del schema)
+// --- INTERFACES ACTUALIZADAS ---
+// Interfaz para la creación, ahora incluye todos los campos del nuevo formulario
 interface CreateRewardData {
     name_es: string;
     name_en: string;
@@ -14,176 +15,218 @@ interface CreateRewardData {
     pointsCost: number;
     businessId: string;
     imageUrl?: string | null;
+    type: RewardType;
+    discountType?: DiscountType | null;
+    discountValue?: number | string | null;
+    linkedMenuItemId?: string | null;
+    kdsDestination?: string | null;
 }
 
+// Interfaz para la actualización, ahora es un parcial de la de creación
+type UpdateRewardData = Partial<CreateRewardData>;
+
+
+// --- SERVICIOS CRUD EXISTENTES (REVISADOS) ---
+
 /**
- * Creates a new reward for a specific business with i18n fields.
+ * Creates a new reward for a specific business.
  */
 export const createReward = async (rewardData: CreateRewardData): Promise<Reward> => {
-    console.log(`[Rewards SVC] Creating reward for business ${rewardData.businessId}: ${rewardData.name_es} / ${rewardData.name_en}`);
-    console.log('[DEBUG createReward] Saving data:', { ...rewardData });
+    console.log(`[Rewards SVC] Creating reward for business ${rewardData.businessId}: ${rewardData.name_es}`);
     try {
-        // Prisma create ya espera los campos correctos (name_es, etc.)
-        // según el cliente generado después de la migración
         const newReward = await prisma.reward.create({
             data: {
-                name_es: rewardData.name_es,
-                name_en: rewardData.name_en,
-                description_es: rewardData.description_es,
-                description_en: rewardData.description_en,
-                pointsCost: rewardData.pointsCost,
-                businessId: rewardData.businessId,
-                imageUrl: rewardData.imageUrl,
+                ...rewardData,
+                discountValue: rewardData.discountValue ? new Prisma.Decimal(rewardData.discountValue.toString()) : undefined,
             },
         });
-        console.log('[DEBUG createReward] Reward created:', newReward);
         return newReward;
     } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError) {
-            console.error(`[Rewards SVC] Prisma error creating reward: ${error.code}`, error);
-             if (error.code === 'P2002') {
-                const target = (error.meta?.target as string[]) || [];
-                // Usamos name_es en el mensaje como ejemplo
-                if (target.includes('name_es')) { throw new Error(`Ya existe una recompensa con el nombre (ES) "${rewardData.name_es}" para este negocio.`); }
-                if (target.includes('name_en')) { throw new Error(`Ya existe una recompensa con el nombre (EN) "${rewardData.name_en}" para este negocio.`); }
-                 throw new Error(`Conflicto de unicidad al crear la recompensa (nombre ES o EN ya existen).`);
-             }
-        } else { console.error(`[Rewards SVC] Unexpected error creating reward:`, error); }
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+            throw new Error(`Ya existe una recompensa con este nombre para el negocio.`);
+        }
+        console.error(`[Rewards SVC] Unexpected error creating reward:`, error);
         throw new Error('Error al crear la recompensa.');
     }
 };
 
-// --- Tipo RewardListItem ACTUALIZADO ---
-// Ahora usa los campos correctos que seleccionaremos
-type RewardListItem = Pick<
-    Reward,
-    'id' | 'name_es' | 'name_en' | 'pointsCost' | 'description_es' | 'description_en' | 'isActive' | 'imageUrl'
->;
-
 /**
- * Finds all rewards for a specific business, selecting i18n fields.
+ * Finds all rewards for a specific business.
  */
-export const findRewardsByBusiness = async (businessId: string): Promise<RewardListItem[]> => {
-    console.log(`[Rewards SVC] Finding ALL rewards (with i18n fields) for business ${businessId}`);
-    // Select ya está actualizado para seleccionar los campos correctos
-    const selectFields = {
-        id: true,
-        name_es: true,
-        name_en: true,
-        pointsCost: true,
-        description_es: true,
-        description_en: true,
-        isActive: true,
-        imageUrl: true
-    };
-    console.log('[DEBUG findRewardsByBusiness] Using select:', selectFields);
+export const findRewardsByBusiness = async (businessId: string): Promise<Reward[]> => {
+    console.log(`[Rewards SVC] Finding ALL rewards for business ${businessId}`);
     try {
-        const rewardsFound = await prisma.reward.findMany({
-            where: { businessId: businessId, },
-            select: selectFields,
-            // Usar name_es para ordenar (o name_en si se prefiere)
-            orderBy: [ { pointsCost: 'asc' }, { name_es: 'asc' } ]
+        return await prisma.reward.findMany({
+            where: { businessId: businessId },
+            orderBy: [{ pointsCost: 'asc' }, { name_es: 'asc' }]
         });
-        console.log('[DEBUG findRewardsByBusiness] Rewards found:', rewardsFound);
-        // El tipo de retorno ahora coincide con RewardListItem actualizado
-        return rewardsFound;
     } catch (error) {
         console.error(`[Rewards SVC] Error finding rewards for business ${businessId}:`, error);
         throw new Error('Error al buscar las recompensas.');
     }
 };
 
-
 /**
- * Finds a single reward by its ID, ensuring it belongs to a specific business.
- * (Returns full object including i18n fields)
+ * Finds a single reward by its ID.
  */
 export const findRewardById = async (id: string, businessId: string): Promise<Reward | null> => {
-     console.log(`[Rewards SVC] Finding reward by ID ${id} for business ${businessId}`);
-     try {
-         // findFirst devuelve el tipo Reward completo (que ahora tiene name_es, etc.)
-         const reward = await prisma.reward.findFirst({ where: { id: id, businessId: businessId } });
-         return reward;
-     } catch (error) {
-         console.error(`[Rewards SVC] Error finding reward by ID ${id}:`, error);
-         throw new Error('Error al buscar la recompensa por ID.');
-     }
+    console.log(`[Rewards SVC] Finding reward by ID ${id} for business ${businessId}`);
+    try {
+        return await prisma.reward.findFirst({ where: { id, businessId } });
+    } catch (error) {
+        console.error(`[Rewards SVC] Error finding reward by ID ${id}:`, error);
+        throw new Error('Error al buscar la recompensa por ID.');
+    }
 };
 
-// --- Tipo UpdateRewardData ACTUALIZADO ---
-// Ahora Partial<Pick<...>> usa los campos correctos
-type UpdateRewardData = Partial<Pick<
-    Reward,
-    'name_es' | 'name_en' | 'description_es' | 'description_en' | 'pointsCost' | 'isActive' | 'imageUrl'
->>;
 
 /**
- * Updates an existing reward with i18n fields, ensuring it belongs to a specific business.
+ * Updates an existing reward.
  */
-export const updateReward = async (
-    id: string,
-    businessId: string,
-    updateData: UpdateRewardData // Usa el tipo actualizado
-): Promise<Reward> => {
+export const updateReward = async (id: string, businessId: string, updateData: UpdateRewardData): Promise<Reward> => {
     console.log(`[Rewards SVC] Updating reward ID ${id} for business ${businessId}`);
     const existingReward = await findRewardById(id, businessId);
-    if (!existingReward) { throw new Error(`Recompensa con ID ${id} no encontrada o no pertenece al negocio ${businessId}.`); }
+    if (!existingReward) {
+        throw new Error(`Recompensa con ID ${id} no encontrada o no pertenece al negocio.`);
+    }
 
-    console.log('[DEBUG updateReward] Updating with data:', { ...updateData });
     try {
-        // updateData ya debe contener los nombres de campo correctos (name_es, etc.)
-        const updatedReward = await prisma.reward.update({
-            where: { id: id },
-            data: updateData,
+        const dataToUpdate: Prisma.RewardUpdateInput = { ...updateData };
+        if (updateData.discountValue !== undefined && updateData.discountValue !== null) {
+            dataToUpdate.discountValue = new Prisma.Decimal(updateData.discountValue.toString());
+        }
+
+        return await prisma.reward.update({
+            where: { id },
+            data: dataToUpdate,
         });
-        console.log('[DEBUG updateReward] Reward updated:', updatedReward);
-        return updatedReward;
     } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError) {
-            console.error(`[Rewards SVC] Prisma error updating reward ${id}: ${error.code}`, error);
-            // Comprobar unicidad en ambos nombres si se están actualizando
-             if (error.code === 'P2002') {
-                const target = (error.meta?.target as string[]) || [];
-                 if (target.includes('name_es') && updateData.name_es) { // Comprobar si se intentó actualizar name_es
-                     throw new Error(`Ya existe otra recompensa con el nombre (ES) "${updateData.name_es}" para este negocio.`);
-                 }
-                  if (target.includes('name_en') && updateData.name_en) { // Comprobar si se intentó actualizar name_en
-                     throw new Error(`Ya existe otra recompensa con el nombre (EN) "${updateData.name_en}" para este negocio.`);
-                  }
-                 throw new Error(`Conflicto de unicidad al actualizar la recompensa (nombre ES o EN ya existen).`);
-             }
-            throw new Error(`Error de base de datos al actualizar recompensa: ${error.message}`);
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+            throw new Error(`Conflicto de unicidad al actualizar la recompensa (el nombre ya existe).`);
         }
         console.error(`[Rewards SVC] Unexpected error updating reward ${id}:`, error);
         throw new Error('Error inesperado al actualizar la recompensa.');
     }
 };
 
+
 /**
- * Deletes an existing reward, ensuring it belongs to a specific business.
+ * Deletes an existing reward.
  */
 export const deleteReward = async (id: string, businessId: string): Promise<Reward> => {
     console.log(`[Rewards SVC] Deleting reward ID ${id} for business ${businessId}`);
-    const existingReward = await findRewardById(id, businessId); // Ahora existingReward tiene name_es, name_en
-    if (!existingReward) { throw new Error(`Recompensa con ID ${id} no encontrada o no pertenece al negocio ${businessId}.`); }
+    const existingReward = await findRewardById(id, businessId);
+    if (!existingReward) {
+        throw new Error(`Recompensa no encontrada.`);
+    }
 
     const relatedGrantsCount = await prisma.grantedReward.count({ where: { rewardId: id } });
     if (relatedGrantsCount > 0) {
-        // Usar name_es o name_en (o ID) en el mensaje de error
-        const displayName = existingReward.name_es || existingReward.name_en || `ID ${id}`;
-        throw new Error(`No se puede eliminar la recompensa "${displayName}" porque está siendo utilizada (ej: ha sido asignada como regalo ${relatedGrantsCount} veces).`);
+        throw new Error(`No se puede eliminar la recompensa "${existingReward.name_es}" porque está siendo utilizada.`);
     }
+
     try {
-        // delete no necesita cambios, usa el where { id }
-        return await prisma.reward.delete({ where: { id: id } });
+        return await prisma.reward.delete({ where: { id } });
     } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError) {
-            console.error(`[Rewards SVC] Prisma error deleting reward ${id}: ${error.code}`, error);
-            throw new Error(`Error de base de datos al eliminar recompensa: ${error.message}`);
-        }
-        console.error(`[Rewards SVC] Unexpected error deleting reward ${id}:`, error);
+        console.error(`[Rewards SVC] Error deleting reward ${id}:`, error);
         throw new Error('Error inesperado al eliminar la recompensa.');
     }
 };
 
-// End of File: backend/src/rewards/rewards.service.ts
+
+// --- NUEVOS SERVICIOS PARA EL FLUJO "REDIMIR Y APLICAR" ---
+
+/**
+ * Permite a un usuario gastar sus puntos para "comprar" una recompensa,
+ * que se guardará en su cuenta como un cupón disponible.
+ * @param userId El ID del usuario que redime.
+ * @param rewardId El ID de la recompensa a redimir.
+ * @returns El `GrantedReward` (cupón) creado.
+ */
+export const redeemRewardForLater = async (userId: string, rewardId: string): Promise<GrantedReward> => {
+    console.log(`[Rewards SVC] User ${userId} is attempting to acquire reward ${rewardId}`);
+
+    return prisma.$transaction(async (tx) => {
+        // 1. Obtener datos del usuario y de la recompensa en una sola consulta
+        const user = await tx.user.findUnique({ where: { id: userId } });
+        const reward = await tx.reward.findUnique({ where: { id: rewardId } });
+
+        if (!user) throw new Error("Usuario no encontrado.");
+        if (!reward) throw new Error("Recompensa no encontrada.");
+        if (!reward.isActive) throw new Error("Esta recompensa no está activa actualmente.");
+        
+        // 2. Verificar si el usuario tiene suficientes puntos
+        if (user.points < reward.pointsCost) {
+            throw new Error(`No tienes suficientes puntos. Necesitas ${reward.pointsCost} y tienes ${user.points}.`);
+        }
+
+        // 3. Debitar los puntos del usuario
+        const updatedUser = await tx.user.update({
+            where: { id: userId },
+            data: {
+                points: {
+                    decrement: reward.pointsCost
+                }
+            }
+        });
+        console.log(`[Rewards SVC] Debited ${reward.pointsCost} points from user ${userId}. New balance: ${updatedUser.points}`);
+
+        // 4. Crear el "cupón" o "vale" digital (GrantedReward)
+        const newGrantedReward = await tx.grantedReward.create({
+            data: {
+                userId: user.id,
+                rewardId: reward.id,
+                businessId: reward.businessId,
+                status: GrantedRewardStatus.AVAILABLE,
+                redeemedAt: new Date(), // 'redeemedAt' ahora significa 'adquirido en'
+            }
+        });
+        console.log(`[Rewards SVC] Created AVAILABLE GrantedReward ${newGrantedReward.id} for user ${userId}`);
+
+        // 5. Registrar la transacción en el historial
+        await tx.activityLog.create({
+            data: {
+                userId: user.id,
+                businessId: reward.businessId,
+                type: ActivityType.REWARD_ACQUIRED,
+                pointsChanged: -reward.pointsCost,
+                description: `Has obtenido la recompensa: "${reward.name_es}"`,
+                relatedRewardId: reward.id,
+                relatedGrantedRewardId: newGrantedReward.id,
+            }
+        });
+        
+        return newGrantedReward;
+    });
+};
+
+
+/**
+ * Obtiene todos los cupones disponibles (listos para aplicar) de un usuario.
+ * @param userId El ID del usuario.
+ * @returns Una lista de `GrantedReward` con sus recompensas asociadas.
+ */
+export const getAvailableRewardsForUser = async (userId: string): Promise<GrantedReward[]> => {
+    console.log(`[Rewards SVC] Fetching AVAILABLE granted rewards for user ${userId}`);
+    try {
+        return await prisma.grantedReward.findMany({
+            where: {
+                userId,
+                status: GrantedRewardStatus.AVAILABLE,
+                // Opcional: añadir filtro de expiración
+                // expiresAt: { gte: new Date() } 
+            },
+            include: {
+                reward: true // Incluir toda la información de la recompensa para la UI
+            },
+            orderBy: {
+                assignedAt: 'desc'
+            }
+        });
+    } catch (error) {
+        console.error(`[Rewards SVC] Error fetching available rewards for user ${userId}:`, error);
+        throw new Error('Error al obtener tus recompensas disponibles.');
+    }
+};
+
+// End of File

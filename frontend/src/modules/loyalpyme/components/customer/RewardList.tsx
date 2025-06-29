@@ -1,16 +1,17 @@
-// filename: frontend/src/components/customer/RewardList.tsx
-// Version: 1.5.1 (Wrap Tooltip child in Box to fix ref error)
+// frontend/src/modules/loyalpyme/components/customer/RewardList.tsx
+// Version 1.6.0 - Added isAcquireFlow prop to dynamically change button text
 
 import React from 'react';
 import {
     SimpleGrid, Card, Button, Alert, Group, Text, Badge, Tooltip, Title,
-    AspectRatio, Image as MantineImage, Stack, Box // <-- Añadido Box
+    AspectRatio, Image as MantineImage, Stack, Box
 } from '@mantine/core';
-import { IconGift, IconAlertCircle, IconInfoCircle, IconCoin } from '@tabler/icons-react';
+import { IconGift, IconAlertCircle, IconInfoCircle, IconCoin, IconCirclePlus } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
-import { DisplayReward } from '../../types/customer';
+// --- RUTA CORREGIDA ---
+import { DisplayReward } from '../../../../shared/types/user.types';
 
-// Props (sin cambios)
+// --- PROPS ACTUALIZADAS ---
 interface RewardListProps {
     rewards: DisplayReward[];
     userPoints: number | undefined;
@@ -20,6 +21,7 @@ interface RewardListProps {
     loadingGrantedRewards: boolean;
     onRedeemPoints: (rewardId: string) => void;
     onRedeemGift: (grantedRewardId: string, rewardName: string) => void;
+    isAcquireFlow?: boolean; // <-- Nuevo prop para cambiar el comportamiento
 }
 
 const RewardList: React.FC<RewardListProps> = ({
@@ -27,10 +29,11 @@ const RewardList: React.FC<RewardListProps> = ({
     userPoints,
     redeemingRewardId,
     errorRewards,
-    // loadingRewards,
+    // loadingRewards, // Descomentar si se usan para mostrar loaders individuales
     // loadingGrantedRewards,
     onRedeemPoints,
-    onRedeemGift
+    onRedeemGift,
+    isAcquireFlow = false // <-- Valor por defecto
 }) => {
     const { t, i18n } = useTranslation();
     const currentLanguage = i18n.language;
@@ -38,7 +41,9 @@ const RewardList: React.FC<RewardListProps> = ({
     const formatDate = (dateString: string | undefined) => { if (!dateString) return '?'; try { return new Date(dateString).toLocaleDateString(i18n.language); } catch { return '?'; } };
 
     if (errorRewards) { return ( <Alert icon={<IconAlertCircle size="1rem" />} title={t('common.error')} color="red" mt="lg"> {t('customerDashboard.errorLoadingRewards', { error: errorRewards })} </Alert> ); }
-    if (rewards.length === 0) { return <Text mt="md">{t('customerDashboard.noRewardsAvailable')}</Text>; }
+    if (rewards.length === 0 && !isAcquireFlow) { return <Text mt="md">{t('customerDashboard.noRewardsAvailable')}</Text>; }
+    if (rewards.length === 0 && isAcquireFlow) { return <Text mt="md">{t('customerDashboard.noRewardsInCatalog')}</Text>; }
+
 
     return (
         <>
@@ -49,6 +54,13 @@ const RewardList: React.FC<RewardListProps> = ({
                     const isPointsRedeemDisabled = typeof userPoints === 'undefined' || userPoints < item.pointsCost || redeemingRewardId === item.id || !!redeemingRewardId;
                     const isGiftRedeemDisabled = redeemingRewardId === item.grantedRewardId || !!redeemingRewardId;
                     const isCurrentlyRedeemingThis = redeemingRewardId === (item.isGift ? item.grantedRewardId : item.id);
+
+                    // --- LÓGICA DE BOTÓN ACTUALIZADA ---
+                    const buttonText = isAcquireFlow
+                        ? t('customerDashboard.acquireRewardButton', 'Obtener por {{count}} Puntos', { count: item.pointsCost })
+                        : t('customerDashboard.redeemRewardButton', 'Canjear Recompensa');
+                    
+                    const buttonIcon = isAcquireFlow ? <IconCirclePlus size={16}/> : <IconCoin size={16}/>;
 
                     return (
                         <Card shadow="sm" padding="sm" radius="md" withBorder key={item.isGift ? `G-${item.grantedRewardId}` : `R-${item.id}`}>
@@ -64,23 +76,39 @@ const RewardList: React.FC<RewardListProps> = ({
                                     <>
                                         <Group gap="xs" mt="sm" justify='space-between'>
                                             <Badge color="lime" variant='light' size="lg" radius="sm">{t('customerDashboard.giftFree')}</Badge>
-                                            {/* --- MODIFICACIÓN: Envolver hijo de Tooltip en Box --- */}
                                             <Tooltip multiline w={220} withArrow position="top" label={t('customerDashboard.giftAssignedBy', { assigner: item.assignedByString, date: formatDate(item.assignedAt) })}>
-                                                <Box style={{ display: 'inline-block', cursor: 'help' }}> {/* Añadir Box wrapper */}
+                                                <Box style={{ display: 'inline-block', cursor: 'help' }}>
                                                     <Group gap={4}>
                                                         <IconInfoCircle size={16} stroke={1.5} style={{ display: 'block' }}/>
                                                         <Text size="xs" c="dimmed">{t('customerDashboard.giftInfo')}</Text>
                                                     </Group>
                                                 </Box>
                                             </Tooltip>
-                                            {/* --- FIN MODIFICACIÓN --- */}
                                         </Group>
                                         <Button variant="filled" color="yellow" fullWidth mt="sm" radius="md" size="sm" onClick={() => onRedeemGift(item.grantedRewardId!, displayName)} disabled={isGiftRedeemDisabled} loading={isCurrentlyRedeemingThis} leftSection={<IconGift size={16}/>}> {t('customerDashboard.redeemGiftButton')} </Button>
                                     </>
                                 ) : (
                                     <>
-                                        <Group justify="space-between" align="center" mt="sm"> <Text fw={500} size="sm">{item.pointsCost} {t('common.points')}</Text> {(userPoints !== undefined && userPoints >= item.pointsCost) && ( <Badge color="green" variant="light" size="xs">Asequible</Badge> )} </Group>
-                                        <Button variant="light" color="blue" fullWidth mt="sm" radius="md" size="sm" onClick={() => onRedeemPoints(item.id)} disabled={isPointsRedeemDisabled} loading={isCurrentlyRedeemingThis} leftSection={<IconCoin size={16}/>}> {!isPointsRedeemDisabled || isCurrentlyRedeemingThis ? t('customerDashboard.redeemRewardButton') : t('customerDashboard.insufficientPoints')} </Button>
+                                        <Group justify="space-between" align="center" mt="sm">
+                                            <Text fw={500} size="sm">{item.pointsCost} {t('common.points')}</Text>
+                                            {(userPoints !== undefined && userPoints >= item.pointsCost) && ( <Badge color="green" variant="light" size="xs">Asequible</Badge> )}
+                                        </Group>
+                                        <Button
+                                            variant="light"
+                                            color="blue"
+                                            fullWidth
+                                            mt="sm"
+                                            radius="md"
+                                            size="sm"
+                                            onClick={() => onRedeemPoints(item.id)}
+                                            disabled={isPointsRedeemDisabled}
+                                            loading={isCurrentlyRedeemingThis}
+                                            leftSection={buttonIcon}
+                                        >
+                                            {!isPointsRedeemDisabled || isCurrentlyRedeemingThis
+                                                ? buttonText
+                                                : t('customerDashboard.insufficientPoints')}
+                                        </Button>
                                     </>
                                 )}
                             </Stack>
