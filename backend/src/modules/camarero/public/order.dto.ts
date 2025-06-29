@@ -1,5 +1,4 @@
-// backend/src/public/order.dto.ts
-// Versión 1.7.1 (Add IsArray() to selectedModifierOptions and make optional)
+// backend/src/modules/camarero/public/order.dto.ts
 
 import { Type } from 'class-transformer';
 import {
@@ -34,13 +33,17 @@ export class CreateOrderItemDto {
   @IsString()
   notes?: string;
 
-  // --- CORRECCIÓN AQUÍ ---
-  @IsOptional() // El array completo es opcional
-  @IsArray({ message: 'Los modificadores seleccionados deben ser un array.' }) // Asegurarse de que, si viene, sea un array
+  @IsOptional()
+  @IsArray({ message: 'Los modificadores seleccionados deben ser un array.' })
   @ValidateNested({ each: true })
   @Type(() => SelectedOrderModifierOptionDto)
   selectedModifierOptions?: SelectedOrderModifierOptionDto[];
-  // --- FIN CORRECCIÓN ---
+
+  // --- LÍNEA AÑADIDA ---
+  @IsOptional()
+  @IsUUID()
+  redeemedRewardId?: string | null;
+  // --- FIN LÍNEA AÑADIDA ---
 }
 
 // DTO principal para crear un pedido
@@ -65,9 +68,15 @@ export class CreateOrderDto {
   @IsUUID()
   @IsOptional()
   customerId?: string;
+
+  // --- LÍNEA AÑADIDA ---
+  @IsOptional()
+  @IsUUID()
+  appliedLcoRewardId?: string | null;
+  // --- FIN LÍNEA AÑADIDA ---
 }
 
-// --- DTOs para AÑADIR ítems a un pedido existente (también corregido) ---
+// --- DTOs para AÑADIR ítems a un pedido existente ---
 
 export class AddItemsOrderItemDto {
     @IsUUID()
@@ -82,13 +91,17 @@ export class AddItemsOrderItemDto {
     @IsString()
     notes?: string;
     
-    // --- CORRECCIÓN AQUÍ ---
     @IsOptional()
     @IsArray({ message: 'Los modificadores seleccionados deben ser un array.' })
     @ValidateNested({ each: true })
     @Type(() => SelectedOrderModifierOptionDto)
     selectedModifierOptions?: SelectedOrderModifierOptionDto[];
-    // --- FIN CORRECCIÓN ---
+
+    // --- LÍNEA AÑADIDA ---
+    @IsOptional()
+    @IsUUID()
+    redeemedRewardId?: string | null;
+    // --- FIN LÍNEA AÑADIDA ---
 }
 
 export class AddItemsToOrderDto {
@@ -100,9 +113,15 @@ export class AddItemsToOrderDto {
     @IsString({ message: 'Las notas del cliente deben ser texto.' })
     @IsOptional()
     customerNotes?: string;
+
+    // --- LÍNEA AÑADIDA ---
+    @IsOptional()
+    @IsUUID()
+    appliedLcoRewardId?: string | null;
+    // --- FIN LÍNEA AÑADIDA ---
 }
 
-// DTO para solicitar la cuenta (sin cambios)
+// DTO para solicitar la cuenta
 export class RequestBillClientPayloadDto {
   @IsOptional()
   @IsString({ message: 'La preferencia de pago debe ser texto.' })

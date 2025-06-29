@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "RewardType" ADD VALUE 'GENERIC_FREE_PRODUCT';
