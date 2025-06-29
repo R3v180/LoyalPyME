@@ -1,5 +1,5 @@
 // backend/prisma/schema.prisma
-// Version: 20240630.1 - Added kdsDestination to Reward model
+// Version: 20240630.3 - Definitive Rewards Flow Refactor
 
 generator client {
   provider        = "prisma-client-js"
@@ -57,12 +57,14 @@ enum BenefitType {
 
 enum ActivityType {
   POINTS_EARNED_QR
-  POINTS_REDEEMED_REWARD
+  POINTS_REDEEMED_REWARD // Para el canje desde el dashboard
   GIFT_REDEEMED
   POINTS_ADJUSTED_ADMIN
   TIER_UPGRADE
   TIER_DOWNGRADE
   POINTS_EARNED_ORDER_LC
+  REWARD_ACQUIRED // Nuevo: cuando se gastan puntos para obtener un "cupón"
+  REWARD_APPLIED_TO_ORDER // Nuevo: cuando se aplica el cupón a un pedido
 }
 
 enum OrderStatus {
@@ -140,6 +142,14 @@ enum RewardType {
 enum DiscountType {
   PERCENTAGE
   FIXED_AMOUNT
+}
+
+// --- NUEVO ENUM PARA ESTADO DE RECOMPENSAS OTORGADAS/CANJEADAS ---
+enum GrantedRewardStatus {
+  PENDING   // Asignado por un admin (regalo), pendiente de aceptar/ver por el cliente.
+  AVAILABLE // Adquirido por el cliente con puntos, listo para ser aplicado a un pedido.
+  APPLIED   // Ya ha sido aplicado a un pedido.
+  EXPIRED   // Ha caducado sin ser usado.
 }
 
 
@@ -252,7 +262,7 @@ model Reward {
   isStackable        Boolean     @default(false)
   linkedMenuItemId   String?
   linkedMenuItem     MenuItem?   @relation("MenuItemAsRewardTarget", fields: [linkedMenuItemId], references: [id], onDelete: SetNull)
-  kdsDestination     String?     // <-- CAMPO AÑADIDO
+  kdsDestination     String?
   grantedRewards     GrantedReward[]
   activityLogs       ActivityLog[]
   orders             Order[]     @relation("OrderDiscountReward")
@@ -341,6 +351,7 @@ model Order {
   deliveryAddressJson                 String?
   deliveryFee                         Float?
   estimatedDeliveryTime               DateTime?
+  appliedRewards                      GrantedReward[] @relation("AppliedRewards")
 
   @@unique([businessId, orderNumber])
   @@index([businessId, status])
@@ -507,26 +518,30 @@ model ActivityLog {
 }
 
 model GrantedReward {
-  id           String      @id @default(cuid())
-  userId       String
-  user         User        @relation("CustomerGrantedRewards", fields: [userId], references: [id], onDelete: Cascade)
-  rewardId     String
-  reward       Reward      @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  businessId   String
-  business     Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  assignedById String?
-  assignedBy   User?       @relation("AdminAssignedRewards", fields: [assignedById], references: [id], onDelete: SetNull)
-  status       String      @default("PENDING")
-  assignedAt   DateTime    @default(now())
-  redeemedAt   DateTime?
-  expiresAt    DateTime?
-  activityLog  ActivityLog[]
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation("CustomerGrantedRewards", fields: [userId], references: [id], onDelete: Cascade)
+  rewardId       String
+  reward         Reward      @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  businessId     String
+  business       Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  assignedById   String?
+  assignedBy     User?       @relation("AdminAssignedRewards", fields: [assignedById], references: [id], onDelete: SetNull)
+  // --- CAMPO ACTUALIZADO ---
+  status         GrantedRewardStatus @default(PENDING)
+  assignedAt     DateTime    @default(now())
+  redeemedAt     DateTime? // Se mantiene, ahora representa el momento de la REDENCIÓN (gasto de puntos)
+  expiresAt      DateTime?
+  activityLog    ActivityLog[]
+  // --- NUEVA RELACIÓN ---
+  appliedToOrderId String?
+  appliedToOrder   Order?  @relation("AppliedRewards", fields: [appliedToOrderId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([rewardId])
   @@index([assignedById])
   @@index([businessId])
-  @@unique([userId, rewardId])
+  @@unique([userId, rewardId, appliedToOrderId], name: "unique_user_reward_order") // Un usuario solo puede tener un regalo/cupón de una recompensa específica sin aplicar, O aplicado a un único pedido.
 }
 
 model Table {
