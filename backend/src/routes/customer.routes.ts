@@ -1,31 +1,30 @@
 // backend/src/routes/customer.routes.ts
-// Version 2.0.0 - Added route to fetch available rewards for a customer
+// Version 2.2.0 (Add available-coupons route and import activityRouter)
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
 
 import { checkRole } from '../shared/middleware/role.middleware';
-import { checkModuleActive } from '../shared/middleware/module.middleware'; // Importar para consistencia
+import { checkModuleActive } from '../shared/middleware/module.middleware';
 
 import {
     getCustomerRewardsHandler,
     getPendingGrantedRewardsHandler,
     redeemGrantedRewardHandler,
     getCustomerTiersHandler,
-    getCustomerBusinessConfigHandler
+    getCustomerBusinessConfigHandler,
+    getAvailableCouponsHandler // <-- Lo crearemos a continuación
 } from '../modules/loyalpyme/customer/customer.controller';
 
-// --- Importar el nuevo handler de recompensas ---
-import { getAvailableRewardsHandler } from '../modules/loyalpyme/rewards/rewards.controller';
-
+// --- IMPORTACIÓN AÑADIDA ---
 import activityRouter from './activity.routes';
-
+// --- FIN IMPORTACIÓN AÑADIDA ---
 
 const router = Router();
 const loyaltyCoreRequired = checkModuleActive('LOYALTY_CORE');
 
 
-// --- Rutas existentes para Clientes (se añade loyaltyCoreRequired para consistencia) ---
+// Rutas existentes para Clientes
 router.get(
     '/rewards',
     checkRole([UserRole.CUSTOMER_FINAL]),
@@ -47,14 +46,13 @@ router.post(
     redeemGrantedRewardHandler
 );
 
-// --- NUEVA RUTA PARA OBTENER CUPONES DISPONIBLES ---
+// Obtiene los cupones que el usuario ha adquirido y están listos para usar
 router.get(
-    '/available-rewards', // -> GET /api/customer/available-rewards
+    '/available-coupons',
     checkRole([UserRole.CUSTOMER_FINAL]),
     loyaltyCoreRequired,
-    getAvailableRewardsHandler
+    getAvailableCouponsHandler // <-- Handler que crearemos ahora
 );
-// --- FIN NUEVA RUTA ---
 
 router.get(
     '/tiers',
@@ -70,6 +68,7 @@ router.get(
     getCustomerBusinessConfigHandler
 );
 
+// --- CORRECCIÓN: Ahora activityRouter está definido ---
 router.use('/activity', checkRole([UserRole.CUSTOMER_FINAL]), loyaltyCoreRequired, activityRouter);
 
 

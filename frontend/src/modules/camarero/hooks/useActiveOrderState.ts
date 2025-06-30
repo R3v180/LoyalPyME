@@ -1,15 +1,17 @@
-// frontend/src/hooks/useActiveOrderState.ts
+// frontend/src/modules/camarero/hooks/useActiveOrderState.ts
+// Version 1.1.0 - Corrected logic to handle PENDING_PAYMENT as an active state.
+
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { OrderStatus as PageOrderStatus, PublicOrderStatusInfo as PagePublicOrderStatusInfo } from '../pages/OrderStatusPage'; // Asegúrate que la ruta es correcta
+import { OrderStatus } from '../../../shared/types/user.types';
+import { PublicOrderStatusInfo } from '../types/publicOrder.types'; // Importar desde la ubicación central
 
-// Importar tipo ActiveOrderInfo
 interface ActiveOrderInfo {
     orderId: string;
     orderNumber: string;
     businessSlug: string;
     tableIdentifier?: string;
-    savedAt: number; // timestamp de cuando se guardó
+    savedAt: number;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL_PUBLIC || 'http://localhost:3000/public';
@@ -20,9 +22,9 @@ export interface UseActiveOrderStateReturn {
     activeOrderNumber: string | null;
     canCurrentlyAddToExistingOrder: boolean;
     loadingActiveOrderStatus: boolean;
-    checkActiveOrderStatus: () => Promise<void>; // Para una comprobación manual si es necesario
+    checkActiveOrderStatus: () => Promise<void>;
     clearActiveOrder: () => void;
-    setActiveOrderManually: (orderId: string, orderNumber: string) => void; // Para cuando se crea un nuevo pedido
+    setActiveOrderManually: (orderId: string, orderNumber: string) => void;
 }
 
 export const useActiveOrderState = (businessSlug: string | undefined, tableIdentifier: string | undefined): UseActiveOrderStateReturn => {
@@ -31,15 +33,28 @@ export const useActiveOrderState = (businessSlug: string | undefined, tableIdent
     const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
     const [activeOrderNumber, setActiveOrderNumber] = useState<string | null>(null);
     const [canCurrentlyAddToExistingOrder, setCanCurrentlyAddToExistingOrder] = useState<boolean>(false);
-    const [loadingActiveOrderStatus, setLoadingActiveOrderStatus] = useState<boolean>(true); // Inicia en true
-
-    const canAddMoreItemsToOrderStatus = useCallback((status: PageOrderStatus | undefined): boolean => {
+    const [loadingActiveOrderStatus, setLoadingActiveOrderStatus] = useState<boolean>(true);
+    
+    // --- CORRECCIÓN 1: Nueva función para determinar si un pedido está "activo" para el cliente ---
+    const isOrderActiveForClient = useCallback((status: OrderStatus | undefined): boolean => {
         if (!status) return false;
+        // Un pedido está activo si se está preparando O si está pendiente de pago.
         return [
-            PageOrderStatus.RECEIVED, PageOrderStatus.IN_PROGRESS, PageOrderStatus.PARTIALLY_READY,
-            PageOrderStatus.ALL_ITEMS_READY, PageOrderStatus.COMPLETED
+            OrderStatus.RECEIVED, OrderStatus.IN_PROGRESS, OrderStatus.PARTIALLY_READY,
+            OrderStatus.ALL_ITEMS_READY, OrderStatus.COMPLETED, OrderStatus.PENDING_PAYMENT
         ].includes(status);
     }, []);
+
+    // Función para determinar si se pueden AÑADIR ítems
+    const canAddMoreItemsToOrderStatus = useCallback((status: OrderStatus | undefined): boolean => {
+        if (!status) return false;
+        // Solo se puede añadir si no está pendiente de pago o ya pagado/cancelado.
+        return [
+            OrderStatus.RECEIVED, OrderStatus.IN_PROGRESS, OrderStatus.PARTIALLY_READY,
+            OrderStatus.ALL_ITEMS_READY, OrderStatus.COMPLETED
+        ].includes(status);
+    }, []);
+
 
     const checkActiveOrderStatus = useCallback(async (currentOrderId?: string, currentOrderNumber?: string) => {
         const orderIdToCheck = currentOrderId || activeOrderId;
@@ -53,13 +68,17 @@ export const useActiveOrderState = (businessSlug: string | undefined, tableIdent
 
         setLoadingActiveOrderStatus(true);
         try {
-            const response = await axios.get<PagePublicOrderStatusInfo>(`${API_BASE_URL}/order/${orderIdToCheck}/status`);
-            if (response.data && canAddMoreItemsToOrderStatus(response.data.orderStatus)) {
-                setCanCurrentlyAddToExistingOrder(true);
-                // Reafirmar el estado si la comprobación fue exitosa, en caso de que currentOrderId viniera de localStorage y aún no estuviera en el estado
+            const response = await axios.get<PublicOrderStatusInfo>(`${API_BASE_URL}/order/${orderIdToCheck}/status`);
+            
+            // --- CORRECCIÓN 2: Lógica de estado actualizada ---
+            if (response.data && isOrderActiveForClient(response.data.orderStatus)) {
+                // El pedido SIGUE ACTIVO.
                 setActiveOrderId(orderIdToCheck);
                 setActiveOrderNumber(orderNumberToCheck);
+                // Ahora, comprobamos por separado si se le pueden añadir más cosas.
+                setCanCurrentlyAddToExistingOrder(canAddMoreItemsToOrderStatus(response.data.orderStatus));
             } else {
+                // El pedido ya no está activo (fue pagado, cancelado o no se encontró).
                 setCanCurrentlyAddToExistingOrder(false);
                 if (activeOrderKey) localStorage.removeItem(activeOrderKey);
                 setActiveOrderId(null);
@@ -74,44 +93,33 @@ export const useActiveOrderState = (businessSlug: string | undefined, tableIdent
         } finally {
             setLoadingActiveOrderStatus(false);
         }
-    }, [activeOrderId, activeOrderNumber, activeOrderKey, canAddMoreItemsToOrderStatus]);
-
+    }, [activeOrderId, activeOrderNumber, activeOrderKey, isOrderActiveForClient, canAddMoreItemsToOrderStatus]);
 
     useEffect(() => {
-        // console.log(`[useActiveOrderState] useEffect triggered. activeOrderKey: ${activeOrderKey}`);
         if (activeOrderKey) {
             const storedActiveOrderInfo = localStorage.getItem(activeOrderKey);
             if (storedActiveOrderInfo) {
                 try {
                     const parsedInfo: ActiveOrderInfo = JSON.parse(storedActiveOrderInfo);
                     if (parsedInfo.orderId && parsedInfo.orderNumber) {
-                        // console.log(`[useActiveOrderState] Found active order in localStorage: ${parsedInfo.orderId}`);
                         setActiveOrderId(parsedInfo.orderId);
                         setActiveOrderNumber(parsedInfo.orderNumber);
                         checkActiveOrderStatus(parsedInfo.orderId, parsedInfo.orderNumber);
                     } else {
-                        // console.log(`[useActiveOrderState] Invalid info in localStorage for key ${activeOrderKey}, removing.`);
                         localStorage.removeItem(activeOrderKey);
-                        setActiveOrderId(null); setActiveOrderNumber(null); setCanCurrentlyAddToExistingOrder(false);
                         setLoadingActiveOrderStatus(false);
                     }
                 } catch (e) {
-                    // console.error(`[useActiveOrderState] Error parsing localStorage for key ${activeOrderKey}:`, e);
                     localStorage.removeItem(activeOrderKey);
-                    setActiveOrderId(null); setActiveOrderNumber(null); setCanCurrentlyAddToExistingOrder(false);
                     setLoadingActiveOrderStatus(false);
                 }
             } else {
-                // console.log(`[useActiveOrderState] No active order info in localStorage for key ${activeOrderKey}.`);
-                setActiveOrderId(null); setActiveOrderNumber(null); setCanCurrentlyAddToExistingOrder(false);
                 setLoadingActiveOrderStatus(false);
             }
         } else {
-            // console.log(`[useActiveOrderState] activeOrderKey is null.`);
-            setActiveOrderId(null); setActiveOrderNumber(null); setCanCurrentlyAddToExistingOrder(false);
             setLoadingActiveOrderStatus(false);
         }
-    }, [activeOrderKey, checkActiveOrderStatus]); // Ejecutar solo cuando activeOrderKey cambia
+    }, [activeOrderKey, checkActiveOrderStatus]);
 
     const clearActiveOrder = useCallback(() => {
         if (activeOrderKey) {
@@ -120,7 +128,6 @@ export const useActiveOrderState = (businessSlug: string | undefined, tableIdent
         setActiveOrderId(null);
         setActiveOrderNumber(null);
         setCanCurrentlyAddToExistingOrder(false);
-        // console.log(`[useActiveOrderState] Active order cleared.`);
     }, [activeOrderKey]);
 
     const setActiveOrderManually = useCallback((orderId: string, orderNumber: string) => {
@@ -129,18 +136,16 @@ export const useActiveOrderState = (businessSlug: string | undefined, tableIdent
             localStorage.setItem(activeOrderKey, JSON.stringify(activeOrderData));
             setActiveOrderId(orderId);
             setActiveOrderNumber(orderNumber);
-            setCanCurrentlyAddToExistingOrder(true); // Asumimos que un nuevo pedido puede tener ítems añadidos
-            // console.log(`[useActiveOrderState] Active order set manually: ${orderId}`);
+            setCanCurrentlyAddToExistingOrder(true);
         }
     }, [activeOrderKey, businessSlug, tableIdentifier]);
-
 
     return {
         activeOrderId,
         activeOrderNumber,
         canCurrentlyAddToExistingOrder,
         loadingActiveOrderStatus,
-        checkActiveOrderStatus: () => checkActiveOrderStatus(), // Envolver para que no requiera params
+        checkActiveOrderStatus: () => checkActiveOrderStatus(),
         clearActiveOrder,
         setActiveOrderManually,
     };

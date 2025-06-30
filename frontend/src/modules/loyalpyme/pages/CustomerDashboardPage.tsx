@@ -1,5 +1,5 @@
-// filename: frontend/src/pages/CustomerDashboardPage.tsx
-// Version: 3.0.15 (Pass redemption handlers/state to SummaryTab)
+// frontend/src/modules/loyalpyme/pages/CustomerDashboardPage.tsx
+// Version: 3.1.0 (Corrected prop names for RewardsTab component)
 
 import { useState, useCallback, useMemo } from 'react';
 import { Container, Title, Alert, Tabs, Text, Space, LoadingOverlay } from '@mantine/core';
@@ -38,27 +38,139 @@ function CustomerDashboardPage() {
     const { t } = useTranslation();
     // Hooks de datos
     const { userData, loading: loadingUser, error: errorUser, refetch: refetchUser, setUserData } = useUserProfileData();
-    const { displayRewards, loadingRewards, loadingGrantedRewards, errorRewards, refreshRewards } = useCustomerRewardsData();
+    // Adquirimos los nuevos cupones disponibles además de los datos de recompensas existentes
+    const { displayRewards, availableCoupons, loadingRewards, loadingGrantedRewards, errorRewards, refreshRewards, loadingCoupons, errorCoupons } = useCustomerRewardsData();
     const { allTiers, businessConfig, loading: loadingTierData, error: errorTierData, refetch: refetchTierData } = useCustomerTierData();
     // Estados locales de UI
     const [validatingQr, setValidatingQr] = useState(false);
-    const [redeemingRewardId, setRedeemingRewardId] = useState<string | null>(null); // ID de la recompensa/regalo que se está canjeando
+    // Renombrado para claridad: este estado sigue el ID de la recompensa que se está "adquiriendo" del catálogo
+    const [acquiringRewardId, setAcquiringRewardId] = useState<string | null>(null);
     const [scannerOpened, { open: openScanner, close: closeScanner }] = useDisclosure(false);
     const [activeTab, setActiveTab] = useState<string | null>('summary');
-    // Handlers (sin cambios)
+    
+    // Handlers
     const handleRefetchAll = useCallback(async () => { await Promise.all([refetchUser(), refreshRewards(), refetchTierData()]); }, [refetchUser, refreshRewards, refetchTierData]);
-    const handleValidateQr = useCallback(async (token: string) => { setValidatingQr(true); try { const response = await axiosInstance.post<any>('/points/validate-qr', { qrToken: token }); const apiUser = response.data.user; const pointsEarned = response.data.pointsEarned ?? 0; if (!apiUser) { throw new Error(t('customerDashboard.errorValidatingQrMessage')); } notifications.show({ title: t('common.success'), message: t('customerDashboard.successQrValidation', { points: pointsEarned }), color: 'green', icon: <IconCircleCheck /> }); const currentUserData = userData; setUserData(prev => { if (!prev) return null; let newTierData: UserData['currentTier'] = null; if (apiUser.currentTierId) { const keepOldBenefits = prev.currentTier?.id === apiUser.currentTierId; newTierData = { id: apiUser.currentTierId, name: apiUser.currentTierName || prev.currentTier?.name || '', benefits: keepOldBenefits ? (prev.currentTier?.benefits || []) : [] }; } const newPoints: number = apiUser.points ?? currentUserData?.points ?? 0; const newTotalSpend: number = apiUser.totalSpend ?? currentUserData?.totalSpend ?? 0; const newTotalVisits: number = apiUser.totalVisits ?? currentUserData?.totalVisits ?? 0; return { ...prev, points: newPoints, totalSpend: newTotalSpend, totalVisits: newTotalVisits, currentTier: newTierData }; }); await handleRefetchAll(); } catch (err) { const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.errorValidatingQrMessage')); notifications.show({ title: t('customerDashboard.errorValidatingQr'), message: errorMsg, color: 'red', icon: <IconAlertCircle /> }); } finally { setValidatingQr(false); } }, [handleRefetchAll, t, setUserData, userData]);
-    const handleRedeemReward = useCallback(async (rewardId: string) => { setRedeemingRewardId(rewardId); try { await axiosInstance.post<any>(`/points/redeem-reward/${rewardId}`); notifications.show({ title: t('customerDashboard.successRedeemRewardTitle'), message: t('customerDashboard.successRedeemRewardMessage'), color: 'teal', icon: <IconGift /> }); await handleRefetchAll(); } catch (err) { const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.errorRedeemMessage')); notifications.show({ title: t('customerDashboard.errorRedeemTitle'), message: errorMsg, color: 'red', icon: <IconAlertCircle /> }); } finally { setRedeemingRewardId(null); } }, [handleRefetchAll, t]);
-    const handleRedeemGrantedReward = useCallback(async (grantedRewardId: string, rewardName: string) => { setRedeemingRewardId(grantedRewardId); try { await axiosInstance.post(`/customer/granted-rewards/${grantedRewardId}/redeem`); notifications.show({ title: t('customerDashboard.successRedeemGiftTitle'), message: t('customerDashboard.successRedeemGiftMessage', { rewardName }), color: 'green', icon: <IconCircleCheck /> }); await handleRefetchAll(); } catch (err) { const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.errorRedeemGiftMessage')); notifications.show({ title: t('customerDashboard.errorRedeemTitle'), message: errorMsg, color: 'red', icon: <IconAlertCircle /> }); } finally { setRedeemingRewardId(null); } }, [handleRefetchAll, t]);
 
-     // Memo tierDisplayData (sin cambios)
-     const tierDisplayData = useMemo((): TierDisplayMemoResult => { const initialLoadingState: TierDisplayMemoResult = { progressBarData: null, nextTierName: null, nextTierBenefits: [] }; if (loadingUser || loadingTierData || !userData || !allTiers || !businessConfig || !businessConfig.tierCalculationBasis) { return initialLoadingState; } const sortTiersLocal = (tiers: TierData[]): TierData[] => [...tiers].sort((a, b) => a.level - b.level); const currentMetricValueFunc = (): number => { switch (businessConfig.tierCalculationBasis) { case TierCalculationBasis.SPEND: return userData.totalSpend ?? 0; case TierCalculationBasis.VISITS: return userData.totalVisits ?? 0; case TierCalculationBasis.POINTS_EARNED: return userData.points ?? 0; default: return 0; }}; const currentMetricValue = currentMetricValueFunc(); const sortedTiers = sortTiersLocal(allTiers); const currentTierIndex = sortedTiers.findIndex(t => t.id === userData.currentTier?.id); const currentTier = currentTierIndex !== -1 ? sortedTiers[currentTierIndex] : null; const currentTierMinValue = currentTier?.minValue ?? 0; const nextTier = currentTierIndex !== -1 && currentTierIndex < sortedTiers.length - 1 ? sortedTiers[currentTierIndex + 1] : null; let progressBarResult: ProgressBarDataType = null; let nextTierNameResult: string | null = null; let nextTierBenefitsResult: TierBenefitData[] = []; if (!nextTier) { progressBarResult = { type: 'max_level' as const, currentTierName: currentTier?.name || t('customerDashboard.baseTier') }; } else { nextTierNameResult = nextTier.name; nextTierBenefitsResult = nextTier.benefits ?? []; const nextTierMinValue = nextTier.minValue; const range = Math.max(0.01, nextTierMinValue - currentTierMinValue); const progressInTier = Math.max(0, currentMetricValue - currentTierMinValue); let percentage = (progressInTier / range) * 100; percentage = Math.max(0, Math.min(100, percentage)); let unit = ''; switch (businessConfig.tierCalculationBasis) { case TierCalculationBasis.SPEND: unit = '€'; break; case TierCalculationBasis.VISITS: unit = t('customerDashboard.progressUnitVisits'); break; case TierCalculationBasis.POINTS_EARNED: unit = t('common.points'); break; } const currentValueLabel = `${currentMetricValue.toLocaleString(undefined, { maximumFractionDigits: businessConfig.tierCalculationBasis === TierCalculationBasis.SPEND ? 2 : 0 })}`; const targetValueLabel = `${nextTierMinValue.toLocaleString(undefined, { maximumFractionDigits: businessConfig.tierCalculationBasis === TierCalculationBasis.SPEND ? 2 : 0 })}`; if (nextTierNameResult) { progressBarResult = { type: 'progress' as const, percentage: percentage, currentValueLabel: currentValueLabel, targetValueLabel: targetValueLabel, unit: unit, nextTierName: nextTierNameResult }; } else { progressBarResult = { type: 'max_level' as const, currentTierName: currentTier?.name || t('customerDashboard.baseTier') }; } } return { progressBarData: progressBarResult, nextTierName: nextTierNameResult, nextTierBenefits: nextTierBenefitsResult }; }, [userData, allTiers, businessConfig, loadingUser, loadingTierData, t]);
-    // Memo currentTierBenefits (sin cambios)
+    const handleValidateQr = useCallback(async (token: string) => {
+        setValidatingQr(true);
+        try {
+            const response = await axiosInstance.post<any>('/points/validate-qr', { qrToken: token });
+            const apiUser = response.data.user;
+            const pointsEarned = response.data.pointsEarned ?? 0;
+            if (!apiUser) { throw new Error(t('customerDashboard.errorValidatingQrMessage')); }
+            notifications.show({ title: t('common.success'), message: t('customerDashboard.successQrValidation', { points: pointsEarned }), color: 'green', icon: <IconCircleCheck /> });
+            const currentUserData = userData;
+            setUserData(prev => {
+                if (!prev) return null;
+                let newTierData: UserData['currentTier'] = null;
+                if (apiUser.currentTierId) {
+                    const keepOldBenefits = prev.currentTier?.id === apiUser.currentTierId;
+                    newTierData = { id: apiUser.currentTierId, name: apiUser.currentTierName || prev.currentTier?.name || '', benefits: keepOldBenefits ? (prev.currentTier?.benefits || []) : [] };
+                }
+                const newPoints: number = apiUser.points ?? currentUserData?.points ?? 0;
+                const newTotalSpend: number = apiUser.totalSpend ?? currentUserData?.totalSpend ?? 0;
+                const newTotalVisits: number = apiUser.totalVisits ?? currentUserData?.totalVisits ?? 0;
+                return { ...prev, points: newPoints, totalSpend: newTotalSpend, totalVisits: newTotalVisits, currentTier: newTierData };
+            });
+            await handleRefetchAll();
+        } catch (err) {
+            const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.errorValidatingQrMessage'));
+            notifications.show({ title: t('customerDashboard.errorValidatingQr'), message: errorMsg, color: 'red', icon: <IconAlertCircle /> });
+        } finally {
+            setValidatingQr(false);
+        }
+    }, [handleRefetchAll, t, setUserData, userData]);
+
+    const handleAcquireReward = useCallback(async (rewardId: string) => {
+        setAcquiringRewardId(rewardId);
+        try {
+            // Usamos el nuevo endpoint para "adquirir" la recompensa
+            await axiosInstance.post(`/rewards/${rewardId}/redeem`);
+            notifications.show({
+                title: t('customerDashboard.acquireRewardSuccessTitle', '¡Recompensa Obtenida!'),
+                message: t('customerDashboard.acquireRewardSuccessMessage', 'Tu nueva recompensa está disponible en "Mis Cupones".'),
+                color: 'teal', icon: <IconGift />
+            });
+            await handleRefetchAll();
+        } catch (err) {
+            const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.acquireRewardError', 'Error al obtener la recompensa.'));
+            notifications.show({ title: t('customerDashboard.errorAcquireTitle', 'Error al Obtener'), message: errorMsg, color: 'red', icon: <IconAlertCircle /> });
+        } finally {
+            setAcquiringRewardId(null);
+        }
+    }, [handleRefetchAll, t]);
+
+    const handleRedeemGrantedReward = useCallback(async (grantedRewardId: string, rewardName: string) => {
+        setAcquiringRewardId(grantedRewardId); // Reutilizamos el estado de carga
+        try {
+            await axiosInstance.post(`/customer/granted-rewards/${grantedRewardId}/redeem`);
+            notifications.show({ title: t('customerDashboard.successRedeemGiftTitle'), message: t('customerDashboard.successRedeemGiftMessage', { rewardName }), color: 'green', icon: <IconCircleCheck /> });
+            await handleRefetchAll();
+        } catch (err) {
+            const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.errorRedeemGiftMessage'));
+            notifications.show({ title: t('customerDashboard.errorRedeemTitle'), message: errorMsg, color: 'red', icon: <IconAlertCircle /> });
+        } finally {
+            setAcquiringRewardId(null);
+        }
+    }, [handleRefetchAll, t]);
+
+     // Memo tierDisplayData
+     const tierDisplayData = useMemo((): TierDisplayMemoResult => {
+        const initialLoadingState: TierDisplayMemoResult = { progressBarData: null, nextTierName: null, nextTierBenefits: [] };
+        if (loadingUser || loadingTierData || !userData || !allTiers || !businessConfig || !businessConfig.tierCalculationBasis) { return initialLoadingState; }
+        const sortTiersLocal = (tiers: TierData[]): TierData[] => [...tiers].sort((a, b) => a.level - b.level);
+        const currentMetricValueFunc = (): number => {
+            switch (businessConfig.tierCalculationBasis) {
+                case TierCalculationBasis.SPEND: return userData.totalSpend ?? 0;
+                case TierCalculationBasis.VISITS: return userData.totalVisits ?? 0;
+                case TierCalculationBasis.POINTS_EARNED: return userData.points ?? 0;
+                default: return 0;
+            }
+        };
+        const currentMetricValue = currentMetricValueFunc();
+        const sortedTiers = sortTiersLocal(allTiers);
+        const currentTierIndex = sortedTiers.findIndex(t => t.id === userData.currentTier?.id);
+        const currentTier = currentTierIndex !== -1 ? sortedTiers[currentTierIndex] : null;
+        const currentTierMinValue = currentTier?.minValue ?? 0;
+        const nextTier = currentTierIndex !== -1 && currentTierIndex < sortedTiers.length - 1 ? sortedTiers[currentTierIndex + 1] : null;
+        let progressBarResult: ProgressBarDataType = null;
+        let nextTierNameResult: string | null = null;
+        let nextTierBenefitsResult: TierBenefitData[] = [];
+        if (!nextTier) {
+            progressBarResult = { type: 'max_level' as const, currentTierName: currentTier?.name || t('customerDashboard.baseTier') };
+        } else {
+            nextTierNameResult = nextTier.name;
+            nextTierBenefitsResult = nextTier.benefits ?? [];
+            const nextTierMinValue = nextTier.minValue;
+            const range = Math.max(0.01, nextTierMinValue - currentTierMinValue);
+            const progressInTier = Math.max(0, currentMetricValue - currentTierMinValue);
+            let percentage = (progressInTier / range) * 100;
+            percentage = Math.max(0, Math.min(100, percentage));
+            let unit = '';
+            switch (businessConfig.tierCalculationBasis) {
+                case TierCalculationBasis.SPEND: unit = '€'; break;
+                case TierCalculationBasis.VISITS: unit = t('customerDashboard.progressUnitVisits'); break;
+                case TierCalculationBasis.POINTS_EARNED: unit = t('common.points'); break;
+            }
+            const currentValueLabel = `${currentMetricValue.toLocaleString(undefined, { maximumFractionDigits: businessConfig.tierCalculationBasis === TierCalculationBasis.SPEND ? 2 : 0 })}`;
+            const targetValueLabel = `${nextTierMinValue.toLocaleString(undefined, { maximumFractionDigits: businessConfig.tierCalculationBasis === TierCalculationBasis.SPEND ? 2 : 0 })}`;
+            if (nextTierNameResult) {
+                progressBarResult = { type: 'progress' as const, percentage: percentage, currentValueLabel: currentValueLabel, targetValueLabel: targetValueLabel, unit: unit, nextTierName: nextTierNameResult };
+            } else {
+                progressBarResult = { type: 'max_level' as const, currentTierName: currentTier?.name || t('customerDashboard.baseTier') };
+            }
+        }
+        return { progressBarData: progressBarResult, nextTierName: nextTierNameResult, nextTierBenefits: nextTierBenefitsResult };
+    }, [userData, allTiers, businessConfig, loadingUser, loadingTierData, t]);
+    
     const currentTierBenefits = useMemo(() => { return userData?.currentTier?.benefits ?? []; }, [userData?.currentTier]);
-    // Estados carga/error (sin cambios)
-    const isLoading = loadingUser || loadingTierData || loadingRewards || loadingGrantedRewards;
-    const mainError = errorUser || errorTierData || errorRewards;
-    if (mainError && !isLoading) { return ( <Container size="lg" py="xl"><Alert icon={<IconAlertCircle size="1rem" />} title={t('common.errorLoadingData')} color="red" radius="md">{mainError}</Alert></Container> ); }
+    
+    const isLoading = loadingUser || loadingTierData || loadingRewards || loadingGrantedRewards || loadingCoupons;
+    const mainError = errorUser || errorTierData || errorRewards || errorCoupons;
+
+    if (mainError && !isLoading) {
+        return ( <Container size="lg" py="xl"><Alert icon={<IconAlertCircle size="1rem" />} title={t('common.errorLoadingData')} color="red" radius="md">{mainError}</Alert></Container> );
+    }
 
     // Renderizado Principal
     return (
@@ -77,7 +189,6 @@ function CustomerDashboardPage() {
                         </Tabs.List>
                         <Space h="xl" />
                         <Tabs.Panel value="summary">
-                             {/* --- MODIFICADO: Añadir props a SummaryTab --- */}
                             <SummaryTab
                                 userData={userData}
                                 loadingUser={loadingUser}
@@ -93,25 +204,28 @@ function CustomerDashboardPage() {
                                 scannerOpened={scannerOpened}
                                 onOpenScanner={openScanner}
                                 onCloseScanner={closeScanner}
-                                // Nuevas props para canje:
                                 userPoints={userData.points}
-                                redeemingRewardId={redeemingRewardId}
+                                redeemingRewardId={acquiringRewardId} // Pasamos el estado de "adquiriendo"
                                 onRedeemGift={handleRedeemGrantedReward}
-                                onRedeemPoints={handleRedeemReward}
+                                onRedeemPoints={handleAcquireReward} // Pasamos la función de "adquirir"
                             />
-                             {/* --- FIN MODIFICACIÓN --- */}
                         </Tabs.Panel>
                         <Tabs.Panel value="rewards">
+                             {/* ----- CORRECCIÓN APLICADA AQUÍ ----- */}
                              <RewardsTab
                                  displayRewards={displayRewards}
                                  userPoints={userData.points}
-                                 redeemingRewardId={redeemingRewardId}
-                                 loadingRewards={loadingRewards} // Pasamos estos loadings aunque RewardList no los use (por ahora)
-                                 loadingGrantedRewards={loadingGrantedRewards} // Pasamos estos loadings
+                                 acquiringRewardId={acquiringRewardId}
+                                 loadingRewards={loadingRewards}
+                                 loadingGrantedRewards={loadingGrantedRewards}
                                  errorRewards={errorRewards}
-                                 onRedeemPoints={handleRedeemReward}
+                                 onAcquireReward={handleAcquireReward} // <- Prop corregida
                                  onRedeemGift={handleRedeemGrantedReward}
+                                 availableCoupons={availableCoupons}
+                                 loadingCoupons={loadingCoupons}
+                                 errorCoupons={errorCoupons}
                              />
+                             {/* ----- FIN DE LA CORRECCIÓN ----- */}
                          </Tabs.Panel>
                          <Tabs.Panel value="activity"><ActivityTab /></Tabs.Panel>
                          <Tabs.Panel value="offers"><OffersTab /></Tabs.Panel>

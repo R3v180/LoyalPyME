@@ -1,7 +1,8 @@
 // frontend/src/modules/camarero/types/publicOrder.types.ts
-// Version: 1.1.0 - Add redeemedRewardId to OrderItemFE
+// Version 1.2.0 - Add PublicOrderStatusInfo and its sub-types
 
 import { PublicMenuItem } from './menu.types';
+import { OrderStatus, OrderItemStatus } from '../../../shared/types/user.types'; // Importar enums
 
 // --- Tipos para el Frontend del Carrito y Configuración de Ítems ---
 export interface SelectedModifierFE {
@@ -24,8 +25,7 @@ export interface OrderItemFE {
     totalPriceForItem: number;
     notes?: string | null;
     selectedModifiers: SelectedModifierFE[];
-    // --- CAMPO AÑADIDO ---
-    redeemedRewardId?: string | null; // ID de la Reward usada para obtener este ítem gratis
+    redeemedRewardId?: string | null;
 }
 
 export interface ConfiguringItemState {
@@ -47,7 +47,6 @@ export interface CreateOrderItemDto {
     quantity: number;
     notes?: string | null;
     selectedModifierOptions?: CreateOrderItemModifierDto[] | null;
-    // --- CAMPO AÑADIDO PARA CANJE DE ITEM ---
     redeemedRewardId?: string | null; 
 }
 
@@ -57,14 +56,12 @@ export interface CreateOrderPayloadDto {
     customerNotes: string | null;
     items: CreateOrderItemDto[];
     businessId?: string;
-    // --- CAMPO AÑADIDO PARA DESCUENTO TOTAL ---
     appliedLcoRewardId?: string | null;
 }
 
 export interface AddItemsToOrderPayloadDto {
     items: CreateOrderItemDto[];
     customerNotes: string | null;
-    // --- CAMPO AÑADIDO PARA DESCUENTO TOTAL (en adición de items) ---
     appliedLcoRewardId?: string | null;
 }
 
@@ -81,4 +78,34 @@ export interface ActiveOrderInfo {
     businessSlug: string;
     tableIdentifier?: string;
     savedAt: number;
+}
+
+// --- NUEVAS INTERFACES EXPORTADAS PARA EL ESTADO DEL PEDIDO ---
+export interface PublicModifierStatusInfo {
+    optionNameSnapshot: string | null;
+    optionPriceAdjustmentSnapshot: number; // Ya es número
+}
+
+export interface PublicOrderItemStatusInfo {
+    id: string;
+    itemNameSnapshot: string | null;
+    quantity: number;
+    status: OrderItemStatus;
+    priceAtPurchase: number;
+    totalItemPrice: number;
+    selectedModifiers: PublicModifierStatusInfo[];
+}
+
+export interface PublicOrderStatusInfo {
+    orderId: string;
+    orderNumber: string;
+    orderStatus: OrderStatus;
+    items: PublicOrderItemStatusInfo[];
+    tableIdentifier?: string | null;
+    orderNotes?: string | null;
+    createdAt: string; // La API lo envía como string ISO
+    isBillRequested?: boolean;
+    totalAmount: number;
+    discountAmount: number | null;
+    finalAmount: number;
 }

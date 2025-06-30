@@ -1,5 +1,4 @@
 // backend/src/modules/camarero/public/order.dto.ts
-
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -12,21 +11,23 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-// DTO para cada opción de modificador seleccionada DENTRO de un ítem de pedido
+// DTO para cada opción de modificador seleccionada
 export class SelectedOrderModifierOptionDto {
-  @IsString()
-  @IsNotEmpty({ message: 'modifierOptionId no puede estar vacío.'})
+  // --- CORRECCIÓN FINAL ---
+  // Cambiado de @IsUUID a @IsString porque el ID de ModifierOption en Prisma es un cuid(), no un uuid().
+  @IsString({ message: 'El ID de la opción de modificador debe ser un string válido.'})
+  @IsNotEmpty({ message: 'El ID de la opción de modificador no puede estar vacío.'})
   modifierOptionId!: string;
 }
 
 // DTO para cada ítem de pedido en la creación
 export class CreateOrderItemDto {
-  @IsUUID()
-  @IsNotEmpty({ message: 'El ID del artículo del menú no puede estar vacío al crear.' })
+  @IsUUID('4', { message: 'El ID del artículo del menú debe ser un UUID válido.' })
+  @IsNotEmpty({ message: 'El ID del artículo del menú no puede estar vacío.' })
   menuItemId!: string;
 
-  @IsNumber({}, { message: 'La cantidad debe ser un número al crear.' })
-  @Min(1, { message: 'La cantidad debe ser como mínimo 1 al crear.' })
+  @IsNumber({}, { message: 'La cantidad debe ser un número.' })
+  @Min(1, { message: 'La cantidad debe ser como mínimo 1.' })
   quantity!: number;
 
   @IsOptional()
@@ -39,25 +40,23 @@ export class CreateOrderItemDto {
   @Type(() => SelectedOrderModifierOptionDto)
   selectedModifierOptions?: SelectedOrderModifierOptionDto[];
 
-  // --- LÍNEA AÑADIDA ---
   @IsOptional()
-  @IsUUID()
+  @IsString()
   redeemedRewardId?: string | null;
-  // --- FIN LÍNEA AÑADIDA ---
 }
 
 // DTO principal para crear un pedido
 export class CreateOrderDto {
   @IsOptional()
   @IsString()
-  businessId?: string;
+  businessId?: string; // Aunque no se usa directamente, lo mantenemos por si acaso
 
   @IsString({ message: 'El identificador de mesa debe ser texto.' })
   @IsOptional()
   tableIdentifier?: string;
 
-  @IsArray({ message: 'Los ítems deben ser un array al crear.' })
-  @ValidateNested({ each: true, message: 'Cada ítem debe ser válido al crear.' })
+  @IsArray({ message: 'Los ítems deben ser un array.' })
+  @ValidateNested({ each: true, message: 'Cada ítem debe ser válido.' })
   @Type(() => CreateOrderItemDto)
   items!: CreateOrderItemDto[];
 
@@ -65,21 +64,18 @@ export class CreateOrderDto {
   @IsOptional()
   customerNotes?: string;
 
-  @IsUUID()
+  @IsString()
   @IsOptional()
   customerId?: string;
-
-  // --- LÍNEA AÑADIDA ---
+  
   @IsOptional()
-  @IsUUID()
+  @IsString() // El ID de la recompensa es un CUID (string)
   appliedLcoRewardId?: string | null;
-  // --- FIN LÍNEA AÑADIDA ---
 }
 
-// --- DTOs para AÑADIR ítems a un pedido existente ---
-
+// DTOs para AÑADIR ítems a un pedido existente
 export class AddItemsOrderItemDto {
-    @IsUUID()
+    @IsUUID('4', { message: 'El ID del artículo del menú debe ser un UUID válido.' })
     @IsNotEmpty({ message: 'El ID del artículo del menú no puede estar vacío.' })
     menuItemId!: string;
 
@@ -97,11 +93,9 @@ export class AddItemsOrderItemDto {
     @Type(() => SelectedOrderModifierOptionDto)
     selectedModifierOptions?: SelectedOrderModifierOptionDto[];
 
-    // --- LÍNEA AÑADIDA ---
     @IsOptional()
-    @IsUUID()
+    @IsString()
     redeemedRewardId?: string | null;
-    // --- FIN LÍNEA AÑADIDA ---
 }
 
 export class AddItemsToOrderDto {
@@ -114,11 +108,9 @@ export class AddItemsToOrderDto {
     @IsOptional()
     customerNotes?: string;
 
-    // --- LÍNEA AÑADIDA ---
     @IsOptional()
-    @IsUUID()
+    @IsString()
     appliedLcoRewardId?: string | null;
-    // --- FIN LÍNEA AÑADIDA ---
 }
 
 // DTO para solicitar la cuenta
@@ -126,4 +118,11 @@ export class RequestBillClientPayloadDto {
   @IsOptional()
   @IsString({ message: 'La preferencia de pago debe ser texto.' })
   paymentPreference?: string;
+}
+
+// DTO para aplicar una recompensa a un pedido.
+export class ApplyRewardDto {
+    @IsString()
+    @IsNotEmpty({ message: 'Se requiere el ID del cupón (grantedRewardId).' })
+    grantedRewardId!: string;
 }

@@ -1,5 +1,5 @@
-// filename: backend/src/customer/customer.controller.ts
-// Version: 2.2.0 (Add handler for customer to get business config)
+// backend/src/modules/loyalpyme/customer/customer.controller.ts
+// Version: 2.3.0 (Add getAvailableCouponsHandler)
 
 import { Request, Response, NextFunction } from 'express';
 
@@ -8,12 +8,10 @@ import {
     findActiveRewardsForCustomer,
     getPendingGrantedRewards,
     redeemGrantedReward,
-    // --- NUEVO: Importar futura función de servicio ---
-    getCustomerFacingBusinessConfig // Aún no existe, se creará en customer.service
-    // --- FIN NUEVO ---
+    getCustomerFacingBusinessConfig,
+    getAvailableCouponsForUser // <-- IMPORTACIÓN AÑADIDA
 } from './customer.service';
 
-// Importar TierService para el handler de tiers del cliente
 import * as TierService from '../tiers/tiers.service';
 
 
@@ -111,43 +109,53 @@ export const getCustomerTiersHandler = async (req: Request, res: Response, next:
     }
 };
 
-// --- NUEVO HANDLER ---
 /**
  * Handler para que el cliente obtenga la configuración relevante de su negocio.
  * GET /api/customer/business-config
  */
 export const getCustomerBusinessConfigHandler = async (req: Request, res: Response, next: NextFunction) => {
-    // El middleware authenticateToken ya verificó el token y añadió req.user
-    // El middleware checkRole ya verificó que es CUSTOMER_FINAL
     if (!req.user || !req.user.businessId) {
-        // Doble check por si acaso o si la info no se cargó bien
         console.error('[CUST_CTRL] Error: businessId missing from req.user for business-config request.');
         return res.status(401).json({ message: 'Información de negocio no encontrada en la sesión.' });
     }
     const businessId = req.user.businessId;
-    const userId = req.user.id; // Útil para logs
+    const userId = req.user.id; 
 
     console.log(`[CUST_CTRL] User ${userId} requesting business config for business ${businessId}.`);
 
     try {
-        // Llamar a la nueva función del servicio (que crearemos a continuación)
         const config = await getCustomerFacingBusinessConfig(businessId);
 
         if (!config) {
-            // Esto podría pasar si el negocio asociado al usuario ya no existe, por ejemplo
             console.warn(`[CUST_CTRL] Business config not found for businessId: ${businessId}`);
             return res.status(404).json({ message: 'No se encontró la configuración para el negocio asociado.' });
         }
 
-        // Devolver solo la configuración relevante para el cliente
         res.status(200).json(config);
 
     } catch (error) {
         console.error(`[CUST_CTRL] Error getting business config for user ${userId}, business ${businessId}:`, error);
-        next(error); // Pasar al manejador de errores global
+        next(error);
     }
 };
-// --- FIN NUEVO HANDLER ---
 
+// --- NUEVO HANDLER AÑADIDO ---
+/**
+ * Handler para que el cliente obtenga sus cupones disponibles (GrantedRewards con estado AVAILABLE).
+ * GET /api/customer/available-coupons
+ */
+export const getAvailableCouponsHandler = async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ message: 'Información de usuario no encontrada en la sesión.' });
+    }
+    const userId = req.user.id;
+    console.log(`[CUST_CTRL] User ${userId} requesting their available coupons.`);
 
-// End of File: backend/src/customer/customer.controller.ts
+    try {
+        const availableCoupons = await getAvailableCouponsForUser(userId);
+        res.status(200).json(availableCoupons);
+    } catch (error) {
+        console.error(`[CUST_CTRL] Error fetching available coupons for user ${userId}:`, error);
+        next(error);
+    }
+};

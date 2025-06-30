@@ -1,17 +1,17 @@
-// backend/src/public/order.service.ts
-// Versión 2.1.0 (Refactored to use dedicated sub-services for creation, modification, and payment logic)
+// backend/src/modules/camarero/public/order.service.ts
+// Versión 2.2.0 - Aligned with corrected order.types.ts
+
 import {
     Injectable,
     Logger,
-    // Las excepciones específicas ya no se lanzan desde aquí, sino desde los sub-servicios.
 } from '@nestjs/common';
 import {
     PrismaClient,
     Order,
-    // Ya no se necesitan la mayoría de los otros tipos de Prisma aquí
+    Prisma,
 } from '@prisma/client';
 
-// Importar los nuevos servicios que harán el trabajo pesado
+// Importar los servicios que hacen el trabajo pesado
 import { OrderCreationService } from './order-creation.service';
 import { OrderModificationService } from './order-modification.service';
 import { OrderPaymentService } from './order-payment.service';
@@ -20,19 +20,17 @@ import { OrderPaymentService } from './order-payment.service';
 import {
     CreateOrderPayloadInternalDto,
     PublicOrderStatusInfo,
-    PublicOrderItemStatusInfo,
     FrontendAddItemsToOrderDto,
-} from './order.types'; // Asumiendo que se llama order.types.ts
+} from './order.types';
 
 @Injectable()
 export class OrderService {
     private readonly logger = new Logger(OrderService.name);
 
-    // Instanciar los nuevos servicios. En un entorno NestJS completo, se inyectarían.
     private readonly orderCreationService: OrderCreationService;
     private readonly orderModificationService: OrderModificationService;
     private readonly orderPaymentService: OrderPaymentService;
-    private readonly prisma: PrismaClient; // Necesario solo para getOrderStatus si se queda aquí
+    private readonly prisma: PrismaClient;
 
     constructor() {
         this.orderCreationService = new OrderCreationService();
@@ -42,68 +40,28 @@ export class OrderService {
         this.logger.log("OrderService (Public Orchestrator) instantiated");
     }
 
-    /**
-     * Orquesta la creación de un nuevo pedido delegando al OrderCreationService.
-     */
-    async createOrder(
-        businessSlug: string,
-        payload: CreateOrderPayloadInternalDto,
-        requestingCustomerId?: string | null
-    ): Promise<Order> {
+    // --- MÉTODOS DE ORQUESTACIÓN (sin cambios) ---
+    async createOrder(businessSlug: string, payload: CreateOrderPayloadInternalDto, requestingCustomerId?: string | null): Promise<Order> {
         this.logger.log(`[OrderService -> Create] Orchestrating new order for business slug '${businessSlug}'.`);
-        // La lógica compleja ahora vive en OrderCreationService
         return this.orderCreationService.createNewOrder(businessSlug, payload, requestingCustomerId);
     }
-
-    /**
-     * Orquesta la adición de ítems a un pedido existente delegando al OrderModificationService.
-     */
-    async addItemsToOrder(
-        orderId: string,
-        addItemsDto: FrontendAddItemsToOrderDto,
-        businessSlug: string,
-        requestingCustomerId?: string | null,
-    ): Promise<Order> {
+    async addItemsToOrder(orderId: string, addItemsDto: FrontendAddItemsToOrderDto, businessSlug: string, requestingCustomerId?: string | null): Promise<Order> {
         this.logger.log(`[OrderService -> AddItems] Orchestrating add items to order '${orderId}' for business slug '${businessSlug}'.`);
-        // La lógica compleja ahora vive en OrderModificationService
-        return this.orderModificationService.addItemsToExistingOrder(
-            orderId,
-            addItemsDto,
-            businessSlug,
-            requestingCustomerId
-        );
+        return this.orderModificationService.addItemsToExistingOrder(orderId, addItemsDto, businessSlug, requestingCustomerId);
     }
-
-    /**
-     * Orquesta la solicitud de cuenta por parte de un cliente delegando al OrderPaymentService.
-     */
-    async requestBillForClient(
-        orderId: string,
-        paymentPreference?: string | null
-    ): Promise<Order> {
+    async requestBillForClient(orderId: string, paymentPreference?: string | null): Promise<Order> {
         this.logger.log(`[OrderService -> RequestBillClient] Orchestrating client bill request for order '${orderId}'.`);
-        // La lógica compleja ahora vive en OrderPaymentService
         return this.orderPaymentService.requestBillForClient(orderId, paymentPreference);
     }
-
-    /**
-     * Orquesta el marcado de un pedido como pagado delegando al OrderPaymentService.
-     * Este método sería llamado típicamente desde un servicio de staff (como WaiterService), no directamente desde un controlador público.
-     */
-    async markOrderAsPaid(
-        orderId: string,
-        paidByStaffId: string,
-        businessId: string,
-        paymentDetails?: { method?: string; notes?: string }
-    ): Promise<Order> {
+    async markOrderAsPaid(orderId: string, paidByStaffId: string, businessId: string, paymentDetails?: { method?: string; notes?: string }): Promise<Order> {
         this.logger.log(`[OrderService -> MarkPaid] Orchestrating mark order '${orderId}' as PAID by staff '${paidByStaffId}'.`);
-        // La lógica compleja ahora vive en OrderPaymentService
         return this.orderPaymentService.markOrderAsPaid(orderId, paidByStaffId, businessId, paymentDetails);
     }
+    // --- FIN MÉTODOS DE ORQUESTACIÓN ---
 
     /**
-     * Obtiene la información pública del estado de un pedido.
-     * Esta función es principalmente de lectura y puede permanecer aquí.
+     * Obtiene la información pública del estado de un pedido, convirtiendo los datos
+     * al formato esperado por la interfaz `PublicOrderStatusInfo`.
      */
     async getOrderStatus(orderId: string): Promise<PublicOrderStatusInfo | null> {
         this.logger.log(`[OrderService -> GetStatus] Fetching public status for order '${orderId}'.`);
@@ -112,13 +70,25 @@ export class OrderService {
                 where: { id: orderId },
                 select: {
                     id: true, orderNumber: true, status: true, notes: true, createdAt: true,
-                    isBillRequested: true,
+                    isBillRequested: true, totalAmount: true, discountAmount: true, finalAmount: true,
                     table: { select: { identifier: true } },
                     items: {
-                        select: { id: true, itemNameSnapshot: true, itemDescriptionSnapshot: true, quantity: true, status: true },
-                        orderBy: { createdAt: 'asc' }
-                    }
-                }
+                        where: { status: { not: 'CANCELLED' } },
+                        select: {
+                            id: true,
+                            // --- CORRECCIÓN 1: Seleccionar el campo `itemNameSnapshot` ---
+                            itemNameSnapshot: true,
+                            quantity: true, status: true, priceAtPurchase: true, totalItemPrice: true,
+                            selectedModifiers: {
+                                select: {
+                                    optionNameSnapshot: true,
+                                    optionPriceAdjustmentSnapshot: true,
+                                },
+                            },
+                        },
+                        orderBy: { createdAt: 'asc' },
+                    },
+                },
             });
 
             if (!order) {
@@ -126,30 +96,41 @@ export class OrderService {
                 return null;
             }
 
-            const itemsInfo: PublicOrderItemStatusInfo[] = order.items.map(item => ({
-                id: item.id,
-                menuItemName_es: item.itemNameSnapshot,
-                menuItemName_en: null, // Si tuvieras itemNameSnapshot_en, lo usarías aquí
-                quantity: item.quantity,
-                status: item.status,
-            }));
-
-            const orderStatusInfo: PublicOrderStatusInfo = {
+            // --- CORRECCIÓN 2: Mapeo explícito y conversión de tipos ---
+            const responseData: PublicOrderStatusInfo = {
                 orderId: order.id,
                 orderNumber: order.orderNumber,
                 orderStatus: order.status,
-                items: itemsInfo,
-                tableIdentifier: order.table?.identifier || null,
+                items: order.items.map(item => ({
+                    id: item.id,
+                    // Asignar el snapshot al campo correcto de la interfaz
+                    itemNameSnapshot: item.itemNameSnapshot,
+                    quantity: item.quantity,
+                    status: item.status,
+                    // Convertir de Decimal a number
+                    priceAtPurchase: item.priceAtPurchase.toNumber(),
+                    totalItemPrice: item.totalItemPrice.toNumber(),
+                    selectedModifiers: item.selectedModifiers.map(mod => ({
+                        optionNameSnapshot: mod.optionNameSnapshot,
+                        // Convertir Decimal | null a number, usando 0 como fallback
+                        optionPriceAdjustmentSnapshot: mod.optionPriceAdjustmentSnapshot?.toNumber() ?? 0
+                    }))
+                })),
+                tableIdentifier: order.table?.identifier,
                 orderNotes: order.notes,
                 createdAt: order.createdAt,
                 isBillRequested: order.isBillRequested,
+                // Convertir Decimal a number
+                totalAmount: order.totalAmount.toNumber(),
+                discountAmount: order.discountAmount?.toNumber() ?? null,
+                // Usar fallback si finalAmount es null y luego convertir a number
+                finalAmount: (order.finalAmount ?? order.totalAmount).toNumber(),
             };
 
-            this.logger.log(`[OrderService -> GetStatus] Status for order '${orderId}': ${orderStatusInfo.orderStatus}`);
-            return orderStatusInfo;
+            return responseData;
+
         } catch (error) {
             this.logger.error(`[OrderService -> GetStatus] Error fetching status for order '${orderId}':`, error);
-            // Relanzar para que el controlador lo maneje
             throw error;
         }
     }

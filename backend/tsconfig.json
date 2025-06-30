@@ -2,16 +2,27 @@
   "compilerOptions": {
     "target": "es2022",
     "module": "commonjs",
-    "rootDir": "./src",
+    // --- CAMBIO PRINCIPAL: Ajustar rootDir ---
+    "rootDir": ".", // La raíz ahora es la carpeta principal del backend
+    // --- FIN DEL CAMBIO ---
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "experimentalDecorators": true, // <--- AÑADIDO
-    "emitDecoratorMetadata": true   // <--- AÑADIDO
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "prisma/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests", // Excluimos la carpeta de tests para que no se compile a /dist
+    "**/*.test.ts", // Excluimos archivos de test
+    "**/*.spec.ts" // Excluimos archivos de spec
   ]
 }

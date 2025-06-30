@@ -1,5 +1,5 @@
 // frontend/src/modules/camarero/pages/PublicMenuViewPage.tsx
-// Version 2.3.1 - Final Corrected Version with All Imports, Logic, and Types
+// Version 2.4.2 - Final version with unused 'clearActiveOrder' function removed.
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
@@ -48,7 +48,7 @@ const PublicMenuViewPage: React.FC = () => {
     const { displayRewards, errorRewards } = useCustomerRewardsData();
     const {
         activeOrderId, activeOrderNumber, canCurrentlyAddToExistingOrder,
-        loadingActiveOrderStatus, clearActiveOrder, setActiveOrderManually,
+        loadingActiveOrderStatus, setActiveOrderManually,
     } = useActiveOrderState(businessSlug, tableIdentifierFromParams);
     const {
         currentOrderItems, orderNotes, totalCartItems,
@@ -62,7 +62,7 @@ const PublicMenuViewPage: React.FC = () => {
     
     const [activeAccordionItems, setActiveAccordionItems] = useState<string[]>([]);
     const [isCartOpen, { open: openCart, close: closeCart }] = useDisclosure(false);
-    const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+    const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
     const [appliedDiscount, setAppliedDiscount] = useState<DisplayReward | null>(null);
 
     useEffect(() => {
@@ -199,14 +199,26 @@ const PublicMenuViewPage: React.FC = () => {
                         </Paper>
                     )}
 
-                    {activeOrderId && canCurrentlyAddToExistingOrder && !configuringItem && (
-                        <Paper shadow="md" p="lg" radius="md" withBorder mb="xl" bg={colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.blue[0]}>
-                            <Group justify="space-between" align="center"><Group><IconInfoCircle size={24} color={theme.colors.blue[6]} /><Stack gap={0}><Text fw={500}>{t('publicMenu.activeOrder.addingToOrderTitle', {orderNumber: activeOrderNumber})}</Text><Text size="sm">{t('publicMenu.activeOrder.addingToOrderMsg')}</Text></Stack></Group><Button variant="outline" size="xs" component={Link} to={`/order-status/${activeOrderId}`} state={{ orderNumber: activeOrderNumber, businessSlug, tableIdentifier: tableIdentifierFromParams }}>{t('publicMenu.activeOrder.viewStatusButton')}</Button></Group>
-                        </Paper>
-                    )}
-                    {activeOrderId && !canCurrentlyAddToExistingOrder && !loadingActiveOrderStatus && !configuringItem && (
-                        <Paper shadow="md" p="lg" radius="md" withBorder mb="xl" bg={colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[0]}>
-                            <Group justify="space-between" align="center"><Group><IconAlertCircle size={24} color={theme.colors.orange[6]} /><Stack gap={0}><Text fw={500}>{t('publicMenu.activeOrder.cannotAddTitle', {orderNumber: activeOrderNumber})}</Text><Text size="sm">{t('publicMenu.activeOrder.cannotAddMsg')}</Text></Stack></Group><Button variant="outline" size="xs" onClick={clearActiveOrder}>{t('publicMenu.activeOrder.startNewButtonAlt')}</Button></Group>
+                    {activeOrderId && !configuringItem && (
+                        <Paper shadow="md" p="lg" radius="md" withBorder mb="xl" bg={canCurrentlyAddToExistingOrder ? (colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.blue[0]) : (colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[0])}>
+                            <Group justify="space-between" align="center">
+                                <Group>
+                                    <IconInfoCircle size={24} color={canCurrentlyAddToExistingOrder ? theme.colors.blue[6] : theme.colors.orange[6]} />
+                                    <Stack gap={0}>
+                                        <Text fw={500}>{t(canCurrentlyAddToExistingOrder ? 'publicMenu.activeOrder.addingToOrderTitle' : 'publicMenu.activeOrder.cannotAddTitle', { orderNumber: activeOrderNumber })}</Text>
+                                        <Text size="sm">{t(canCurrentlyAddToExistingOrder ? 'publicMenu.activeOrder.addingToOrderMsg' : 'publicMenu.activeOrder.cannotAddMsg')}</Text>
+                                    </Stack>
+                                </Group>
+                                <Button
+                                    variant="outline"
+                                    size="xs"
+                                    component={Link}
+                                    to={`/order-status/${activeOrderId}`}
+                                    state={{ orderNumber: activeOrderNumber, businessSlug, tableIdentifier: tableIdentifierFromParams }}
+                                >
+                                    {t('publicMenu.activeOrder.viewStatusButton')}
+                                </Button>
+                            </Group>
                         </Paper>
                     )}
                     

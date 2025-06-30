@@ -1,13 +1,12 @@
-// backend/src/routes/public-order.routes.ts (CORREGIDO)
+// backend/src/routes/public-order.routes.ts
 import { Router } from 'express';
-// --- RUTA CORREGIDA ---
 import {
     createPublicOrderHandler,
     getPublicOrderStatusHandler,
     addItemsToExistingOrderHandler,
-    requestBillByClientHandler
+    requestBillByClientHandler,
+    applyRewardHandler // <-- Este import ahora funcionará
 } from '../modules/camarero/public/order.controller';
-// --- FIN RUTA CORREGIDA ---
 
 const publicOrderRouter = Router();
 
@@ -33,6 +32,12 @@ publicOrderRouter.post(
 publicOrderRouter.post(
     '/:orderId/request-bill',
     requestBillByClientHandler
+);
+
+// Ruta para aplicar una recompensa (cupón) a un pedido
+publicOrderRouter.patch(
+    '/:orderId/apply-reward',
+    applyRewardHandler
 );
 
 export default publicOrderRouter;

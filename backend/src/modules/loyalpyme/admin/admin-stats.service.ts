@@ -1,7 +1,7 @@
-// filename: backend/src/admin/admin-stats.service.ts
-// Version: 1.2.1 (Count points-based redemptions from ActivityLog)
+// backend/src/modules/loyalpyme/admin/admin-stats.service.ts
+// Version: 1.3.0 (Use correct APPLIED status enum for redeemed rewards count)
 
-import { PrismaClient, UserRole, QrCodeStatus, Prisma, ActivityType } from '@prisma/client';
+import { PrismaClient, UserRole, QrCodeStatus, Prisma, ActivityType, GrantedRewardStatus } from '@prisma/client'; // <-- GrantedRewardStatus AÑADIDO
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 
 const prisma = new PrismaClient();
@@ -16,7 +16,7 @@ export interface AdminOverviewStatsData {
     rewardsRedeemedPrevious7Days: number;
 }
 
-// Helper Functions (sin cambios respecto a tu versión anterior que funcionaba parcialmente)
+// Helper Functions
 async function _getTotalActiveCustomers(businessId: string): Promise<number> {
     return prisma.user.count({
         where: { businessId, isActive: true, role: UserRole.CUSTOMER_FINAL }
@@ -37,43 +37,39 @@ async function _getPointsIssuedSum(businessId: string, startDate: Date, endDate:
     return result._sum.pointsEarned ?? 0;
 }
 
-// --- FUNCIÓN MODIFICADA PARA CONTAR TODOS LOS CANJES ---
 async function _getRewardsRedeemedCount(businessId: string, startDate: Date, endDate: Date): Promise<number> {
-    let giftedRedeemedCount = 0;
+    let giftedAndAppliedCount = 0;
     let pointsRedeemedCount = 0;
 
     try {
-        // Contar regalos canjeados (como estaba antes)
-        giftedRedeemedCount = await prisma.grantedReward.count({
-            where: { businessId, status: 'REDEEMED', redeemedAt: { gte: startDate, lte: endDate } }
+        // Contar cupones que han sido APLICADOS a un pedido
+        giftedAndAppliedCount = await prisma.grantedReward.count({
+            // --- CORRECCIÓN AQUÍ ---
+            where: { businessId, status: GrantedRewardStatus.APPLIED, redeemedAt: { gte: startDate, lte: endDate } }
         });
     } catch (error) {
-        console.error(`[AdminStatsService] Error counting gifted redeemed rewards:`, error);
-        // Continuar para intentar contar los otros canjes, pero loguear el error
+        console.error(`[AdminStatsService] Error counting applied/gifted rewards:`, error);
     }
 
     try {
-        // Contar recompensas canjeadas por puntos (usando ActivityLog)
+        // Contar recompensas del flujo antiguo (canje directo por puntos)
         pointsRedeemedCount = await prisma.activityLog.count({
             where: {
                 businessId,
-                type: ActivityType.POINTS_REDEEMED_REWARD, // Usar el tipo de actividad correcto
-                createdAt: { gte: startDate, lte: endDate } // Usar createdAt del log
+                type: ActivityType.POINTS_REDEEMED_REWARD,
+                createdAt: { gte: startDate, lte: endDate }
             }
         });
     } catch (error) {
         console.error(`[AdminStatsService] Error counting points redeemed rewards:`, error);
-        // Continuar, pero loguear el error
     }
     
-    // Log más seguro para depuración
     const startDateStr = startDate ? startDate.toISOString() : 'N/A';
     const endDateStr = endDate ? endDate.toISOString() : 'N/A';
-    console.log(`[AdminStatsService DEBUG] Period: ${startDateStr} to ${endDateStr}. Gifted redeemed: ${giftedRedeemedCount}, Points redeemed: ${pointsRedeemedCount}`);
+    console.log(`[AdminStatsService DEBUG] Period: ${startDateStr} to ${endDateStr}. Applied/Gifted count: ${giftedAndAppliedCount}, Direct Points redeemed: ${pointsRedeemedCount}`);
     
-    return giftedRedeemedCount + pointsRedeemedCount;
+    return giftedAndAppliedCount + pointsRedeemedCount;
 }
-// --- FIN FUNCIÓN MODIFICADA ---
 
 
 export const getOverviewStats = async (businessId: string): Promise<AdminOverviewStatsData> => {
@@ -81,12 +77,10 @@ export const getOverviewStats = async (businessId: string): Promise<AdminOvervie
 
     try {
         const now = new Date();
-        // Definición precisa de los rangos de fechas
-        const startOfLast7Days = startOfDay(subDays(now, 6)); // Incluye hoy y los 6 días anteriores
-        const endOfLast7Days = endOfDay(now);                 // Hasta el final del día de hoy
-
-        const startOfPrevious7Days = startOfDay(subDays(now, 13)); // Empieza hace 13 días
-        const endOfPrevious7Days = endOfDay(subDays(now, 7));   // Termina al final del día hace 7 días
+        const startOfLast7Days = startOfDay(subDays(now, 6));
+        const endOfLast7Days = endOfDay(now);
+        const startOfPrevious7Days = startOfDay(subDays(now, 13));
+        const endOfPrevious7Days = endOfDay(subDays(now, 7));
 
         console.log(`[AdminStatsService DEBUG] Date Ranges - Last 7: ${startOfLast7Days.toISOString()} - ${endOfLast7Days.toISOString()}`);
         console.log(`[AdminStatsService DEBUG] Date Ranges - Prev 7: ${startOfPrevious7Days.toISOString()} - ${endOfPrevious7Days.toISOString()}`);
@@ -95,10 +89,10 @@ export const getOverviewStats = async (businessId: string): Promise<AdminOvervie
             totalActiveCustomers,
             newCustomersLast7Days,
             pointsIssuedLast7Days,
-            rewardsRedeemedLast7Days, // Usará la función modificada
+            rewardsRedeemedLast7Days,
             newCustomersPrevious7Days,
             pointsIssuedPrevious7Days,
-            rewardsRedeemedPrevious7Days, // Usará la función modificada
+            rewardsRedeemedPrevious7Days,
         ] = await Promise.all([
             _getTotalActiveCustomers(businessId),
             _getNewCustomersCount(businessId, startOfLast7Days, endOfLast7Days),
@@ -124,7 +118,6 @@ export const getOverviewStats = async (businessId: string): Promise<AdminOvervie
 
     } catch (error) {
         console.error(`[AdminStatsService] CRITICAL Error calculating overview stats for business ${businessId}:`, error);
-        // Es importante que el error se propague para que el controlador lo maneje
         throw new Error('Error crítico al obtener las estadísticas del dashboard.');
     }
 };

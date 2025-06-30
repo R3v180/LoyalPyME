@@ -10,6 +10,6 @@
       "*.test.ts",
       "*.spec.ts"
     ],
-    "exec": "node dist/index.js",
+"exec": "node dist/src/index.js",
     "delay": "1500ms"
   }
