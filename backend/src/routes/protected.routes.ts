@@ -1,21 +1,33 @@
 // backend/src/routes/protected.routes.ts
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
+
+// Se importan los handlers del controlador de perfil
+import {
+    getProfileHandler,
+    updateProfileHandler,
+    changePasswordHandler
+} from '../modules/loyalpyme/customer/profile.controller';
+
+// --- CORRECCIÓN: Importar el middleware de multer ---
+import uploadImageMemory from '../shared/middleware/multer.config';
 
 const router = Router();
 
-// El middleware authenticateToken ya se aplica ANTES de que se llegue a este handler
-// cuando se monta el router en index.ts con app.use('/api/profile', authenticateToken, protectedRouter);
+// El middleware de autenticación ya se aplica antes de montar este router
 
-router.get('/', (req: Request, res: Response) => {
-  // --- AÑADIR LOG AQUÍ ---
-  console.log('[PROTECTED ROUTE /api/profile DEBUG] req.user object before sending response:', JSON.stringify(req.user, null, 2));
-  // --- FIN LOG ---
+// GET /api/profile (sin cambios)
+router.get('/', getProfileHandler);
 
-  if (!req.user) {
-    console.error("[PROTECTED ROUTE /api/profile DEBUG] Error: req.user is missing in /api/profile route handler!");
-    return res.status(401).json({ message: 'Authentication failed. User data not available.' });
-  }
-  res.json(req.user); // Esto es lo que recibe el frontend
-});
+// --- CORRECCIÓN: Aplicar el middleware de multer a la ruta PUT ---
+// Ahora, esta ruta aceptará un campo de formulario llamado 'profileImage'
+router.put(
+    '/',
+    uploadImageMemory.single('profileImage'), // 'profileImage' debe coincidir con el nombre del campo en el FormData del frontend
+    updateProfileHandler
+);
+// --- FIN DE LA CORRECCIÓN ---
+
+// POST /api/profile/change-password (sin cambios)
+router.post('/change-password', changePasswordHandler);
 
 export default router;

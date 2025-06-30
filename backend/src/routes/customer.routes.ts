@@ -1,5 +1,5 @@
 // backend/src/routes/customer.routes.ts
-// Version 2.2.0 (Add available-coupons route and import activityRouter)
+// Version 2.3.0 - Add /orders route for purchase history
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
@@ -13,62 +13,34 @@ import {
     redeemGrantedRewardHandler,
     getCustomerTiersHandler,
     getCustomerBusinessConfigHandler,
-    getAvailableCouponsHandler // <-- Lo crearemos a continuación
+    getAvailableCouponsHandler,
+    getCustomerOrdersHandler // <-- NUEVA IMPORTACIÓN
 } from '../modules/loyalpyme/customer/customer.controller';
 
-// --- IMPORTACIÓN AÑADIDA ---
 import activityRouter from './activity.routes';
-// --- FIN IMPORTACIÓN AÑADIDA ---
 
 const router = Router();
 const loyaltyCoreRequired = checkModuleActive('LOYALTY_CORE');
 
 
-// Rutas existentes para Clientes
+// Rutas existentes para Clientes (sin cambios)
+router.get('/rewards', checkRole([UserRole.CUSTOMER_FINAL]), loyaltyCoreRequired, getCustomerRewardsHandler);
+router.get('/granted-rewards', checkRole([UserRole.CUSTOMER_FINAL]), loyaltyCoreRequired, getPendingGrantedRewardsHandler);
+router.post('/granted-rewards/:grantedRewardId/redeem', checkRole([UserRole.CUSTOMER_FINAL]), loyaltyCoreRequired, redeemGrantedRewardHandler);
+router.get('/available-coupons', checkRole([UserRole.CUSTOMER_FINAL]), loyaltyCoreRequired, getAvailableCouponsHandler);
+router.get('/tiers', checkRole([UserRole.CUSTOMER_FINAL]), loyaltyCoreRequired, getCustomerTiersHandler);
+router.get('/business-config', checkRole([UserRole.CUSTOMER_FINAL]), loyaltyCoreRequired, getCustomerBusinessConfigHandler);
+
+// --- NUEVA RUTA PARA EL HISTORIAL DE PEDIDOS ---
+// Esta ruta obtendrá la lista paginada de pedidos pagados del cliente.
 router.get(
-    '/rewards',
+    '/orders',
     checkRole([UserRole.CUSTOMER_FINAL]),
-    loyaltyCoreRequired,
-    getCustomerRewardsHandler
+    loyaltyCoreRequired, // Lo mantenemos ya que el historial está ligado al cliente de LCo
+    getCustomerOrdersHandler // El nuevo handler que crearemos en el controlador
 );
+// --- FIN NUEVA RUTA ---
 
-router.get(
-    '/granted-rewards',
-    checkRole([UserRole.CUSTOMER_FINAL]),
-    loyaltyCoreRequired,
-    getPendingGrantedRewardsHandler
-);
-
-router.post(
-    '/granted-rewards/:grantedRewardId/redeem',
-    checkRole([UserRole.CUSTOMER_FINAL]),
-    loyaltyCoreRequired,
-    redeemGrantedRewardHandler
-);
-
-// Obtiene los cupones que el usuario ha adquirido y están listos para usar
-router.get(
-    '/available-coupons',
-    checkRole([UserRole.CUSTOMER_FINAL]),
-    loyaltyCoreRequired,
-    getAvailableCouponsHandler // <-- Handler que crearemos ahora
-);
-
-router.get(
-    '/tiers',
-    checkRole([UserRole.CUSTOMER_FINAL]),
-    loyaltyCoreRequired,
-    getCustomerTiersHandler
-);
-
-router.get(
-    '/business-config',
-    checkRole([UserRole.CUSTOMER_FINAL]),
-    loyaltyCoreRequired,
-    getCustomerBusinessConfigHandler
-);
-
-// --- CORRECCIÓN: Ahora activityRouter está definido ---
 router.use('/activity', checkRole([UserRole.CUSTOMER_FINAL]), loyaltyCoreRequired, activityRouter);
 
 

@@ -1,10 +1,10 @@
 // frontend/src/modules/loyalpyme/pages/CustomerDashboardPage.tsx
-// Version: 3.1.0 (Corrected prop names for RewardsTab component)
+// Version 3.4.1 - Final cleanup, removed OffersTab import.
 
 import { useState, useCallback, useMemo } from 'react';
 import { Container, Title, Alert, Tabs, Text, Space, LoadingOverlay } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconCircleCheck, IconGift, IconLayoutDashboard, IconHistory, IconSpeakerphone, IconUserCircle } from '@tabler/icons-react';
+import { IconAlertCircle, IconCircleCheck, IconGift, IconLayoutDashboard, IconHistory, IconUserCircle, IconReceipt } from '@tabler/icons-react';
 import axiosInstance from '../../../shared/services/axiosInstance';
 import { AxiosError } from 'axios';
 import { useDisclosure } from '@mantine/hooks';
@@ -18,7 +18,7 @@ import { useCustomerTierData } from '../hooks/useCustomerTierData';
 import SummaryTab from '../components/customer/dashboard/tabs/SummaryTab';
 import RewardsTab from '../components/customer/dashboard/tabs/RewardsTab';
 import ActivityTab from '../components/customer/dashboard/tabs/ActivityTab';
-import OffersTab from '../components/customer/dashboard/tabs/OffersTab';
+import PurchaseHistoryTab from '../components/customer/dashboard/tabs/PurchaseHistoryTab';
 import ProfileTab from '../components/customer/dashboard/tabs/ProfileTab';
 
 // Tipos
@@ -36,21 +36,16 @@ interface TierDisplayMemoResult { progressBarData: ProgressBarDataType; nextTier
 
 function CustomerDashboardPage() {
     const { t } = useTranslation();
-    // Hooks de datos
     const { userData, loading: loadingUser, error: errorUser, refetch: refetchUser, setUserData } = useUserProfileData();
-    // Adquirimos los nuevos cupones disponibles además de los datos de recompensas existentes
     const { displayRewards, availableCoupons, loadingRewards, loadingGrantedRewards, errorRewards, refreshRewards, loadingCoupons, errorCoupons } = useCustomerRewardsData();
     const { allTiers, businessConfig, loading: loadingTierData, error: errorTierData, refetch: refetchTierData } = useCustomerTierData();
-    // Estados locales de UI
     const [validatingQr, setValidatingQr] = useState(false);
-    // Renombrado para claridad: este estado sigue el ID de la recompensa que se está "adquiriendo" del catálogo
     const [acquiringRewardId, setAcquiringRewardId] = useState<string | null>(null);
     const [scannerOpened, { open: openScanner, close: closeScanner }] = useDisclosure(false);
     const [activeTab, setActiveTab] = useState<string | null>('summary');
     
-    // Handlers
+    // Handlers (sin cambios)
     const handleRefetchAll = useCallback(async () => { await Promise.all([refetchUser(), refreshRewards(), refetchTierData()]); }, [refetchUser, refreshRewards, refetchTierData]);
-
     const handleValidateQr = useCallback(async (token: string) => {
         setValidatingQr(true);
         try {
@@ -80,11 +75,9 @@ function CustomerDashboardPage() {
             setValidatingQr(false);
         }
     }, [handleRefetchAll, t, setUserData, userData]);
-
     const handleAcquireReward = useCallback(async (rewardId: string) => {
         setAcquiringRewardId(rewardId);
         try {
-            // Usamos el nuevo endpoint para "adquirir" la recompensa
             await axiosInstance.post(`/rewards/${rewardId}/redeem`);
             notifications.show({
                 title: t('customerDashboard.acquireRewardSuccessTitle', '¡Recompensa Obtenida!'),
@@ -99,9 +92,8 @@ function CustomerDashboardPage() {
             setAcquiringRewardId(null);
         }
     }, [handleRefetchAll, t]);
-
     const handleRedeemGrantedReward = useCallback(async (grantedRewardId: string, rewardName: string) => {
-        setAcquiringRewardId(grantedRewardId); // Reutilizamos el estado de carga
+        setAcquiringRewardId(grantedRewardId);
         try {
             await axiosInstance.post(`/customer/granted-rewards/${grantedRewardId}/redeem`);
             notifications.show({ title: t('customerDashboard.successRedeemGiftTitle'), message: t('customerDashboard.successRedeemGiftMessage', { rewardName }), color: 'green', icon: <IconCircleCheck /> });
@@ -113,9 +105,7 @@ function CustomerDashboardPage() {
             setAcquiringRewardId(null);
         }
     }, [handleRefetchAll, t]);
-
-     // Memo tierDisplayData
-     const tierDisplayData = useMemo((): TierDisplayMemoResult => {
+    const tierDisplayData = useMemo((): TierDisplayMemoResult => {
         const initialLoadingState: TierDisplayMemoResult = { progressBarData: null, nextTierName: null, nextTierBenefits: [] };
         if (loadingUser || loadingTierData || !userData || !allTiers || !businessConfig || !businessConfig.tierCalculationBasis) { return initialLoadingState; }
         const sortTiersLocal = (tiers: TierData[]): TierData[] => [...tiers].sort((a, b) => a.level - b.level);
@@ -162,9 +152,7 @@ function CustomerDashboardPage() {
         }
         return { progressBarData: progressBarResult, nextTierName: nextTierNameResult, nextTierBenefits: nextTierBenefitsResult };
     }, [userData, allTiers, businessConfig, loadingUser, loadingTierData, t]);
-    
     const currentTierBenefits = useMemo(() => { return userData?.currentTier?.benefits ?? []; }, [userData?.currentTier]);
-    
     const isLoading = loadingUser || loadingTierData || loadingRewards || loadingGrantedRewards || loadingCoupons;
     const mainError = errorUser || errorTierData || errorRewards || errorCoupons;
 
@@ -172,7 +160,6 @@ function CustomerDashboardPage() {
         return ( <Container size="lg" py="xl"><Alert icon={<IconAlertCircle size="1rem" />} title={t('common.errorLoadingData')} color="red" radius="md">{mainError}</Alert></Container> );
     }
 
-    // Renderizado Principal
     return (
         <Container size="lg" py="xl">
             <LoadingOverlay visible={loadingUser && !userData} overlayProps={{ radius: 'sm', blur: 2 }} />
@@ -181,11 +168,11 @@ function CustomerDashboardPage() {
                     <Title order={2} ta="center" mb="xl">{t('customerDashboard.title')}</Title>
                     <Tabs value={activeTab} onChange={setActiveTab} keepMounted={false}>
                         <Tabs.List grow>
-                            <Tabs.Tab value="summary" leftSection={<IconLayoutDashboard size={16} />}>{t('customerDashboard.tabSummary')}</Tabs.Tab>
-                            <Tabs.Tab value="rewards" leftSection={<IconGift size={16} />}>{t('customerDashboard.tabRewards')}</Tabs.Tab>
-                            <Tabs.Tab value="activity" leftSection={<IconHistory size={16} />}>{t('customerDashboard.tabActivity')}</Tabs.Tab>
-                            <Tabs.Tab value="offers" leftSection={<IconSpeakerphone size={16} />} disabled>{t('customerDashboard.tabOffers')}</Tabs.Tab>
-                            <Tabs.Tab value="profile" leftSection={<IconUserCircle size={16} />} disabled>{t('customerDashboard.tabProfile')}</Tabs.Tab>
+                            <Tabs.Tab value="summary" leftSection={<IconLayoutDashboard size={16} />}>{t('customerDashboard.tabSummary', 'Resumen')}</Tabs.Tab>
+                            <Tabs.Tab value="rewards" leftSection={<IconGift size={16} />}>{t('customerDashboard.tabRewards', 'Recompensas')}</Tabs.Tab>
+                            <Tabs.Tab value="history" leftSection={<IconReceipt size={16} />}>{t('customerDashboard.tabHistory', 'Mis Pedidos')}</Tabs.Tab>
+                            <Tabs.Tab value="activity" leftSection={<IconHistory size={16} />}>{t('customerDashboard.tabActivity', 'Actividad de Puntos')}</Tabs.Tab>
+                            <Tabs.Tab value="profile" leftSection={<IconUserCircle size={16} />}>{t('customerDashboard.tabProfile', 'Mi Perfil')}</Tabs.Tab>
                         </Tabs.List>
                         <Space h="xl" />
                         <Tabs.Panel value="summary">
@@ -205,13 +192,12 @@ function CustomerDashboardPage() {
                                 onOpenScanner={openScanner}
                                 onCloseScanner={closeScanner}
                                 userPoints={userData.points}
-                                redeemingRewardId={acquiringRewardId} // Pasamos el estado de "adquiriendo"
+                                redeemingRewardId={acquiringRewardId}
                                 onRedeemGift={handleRedeemGrantedReward}
-                                onRedeemPoints={handleAcquireReward} // Pasamos la función de "adquirir"
+                                onRedeemPoints={handleAcquireReward}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="rewards">
-                             {/* ----- CORRECCIÓN APLICADA AQUÍ ----- */}
                              <RewardsTab
                                  displayRewards={displayRewards}
                                  userPoints={userData.points}
@@ -219,17 +205,22 @@ function CustomerDashboardPage() {
                                  loadingRewards={loadingRewards}
                                  loadingGrantedRewards={loadingGrantedRewards}
                                  errorRewards={errorRewards}
-                                 onAcquireReward={handleAcquireReward} // <- Prop corregida
+                                 onAcquireReward={handleAcquireReward}
                                  onRedeemGift={handleRedeemGrantedReward}
                                  availableCoupons={availableCoupons}
                                  loadingCoupons={loadingCoupons}
                                  errorCoupons={errorCoupons}
                              />
-                             {/* ----- FIN DE LA CORRECCIÓN ----- */}
                          </Tabs.Panel>
-                         <Tabs.Panel value="activity"><ActivityTab /></Tabs.Panel>
-                         <Tabs.Panel value="offers"><OffersTab /></Tabs.Panel>
-                         <Tabs.Panel value="profile"><ProfileTab /></Tabs.Panel>
+                         <Tabs.Panel value="history">
+                            <PurchaseHistoryTab />
+                         </Tabs.Panel>
+                         <Tabs.Panel value="activity">
+                            <ActivityTab />
+                         </Tabs.Panel>
+                         <Tabs.Panel value="profile">
+                            <ProfileTab />
+                         </Tabs.Panel>
                     </Tabs>
                 </>
             )}

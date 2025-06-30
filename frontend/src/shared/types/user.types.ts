@@ -1,6 +1,4 @@
 // frontend/src/shared/types/user.types.ts
-// Version: 1.2.4 - Final version with all required fields for the new rewards flow.
-
 import React from 'react';
 import { RewardType, DiscountType } from './enums';
 
@@ -61,6 +59,10 @@ export interface UserData {
     id: string;
     email: string;
     name?: string | null;
+    // --- CAMPOS AÑADIDOS ---
+    phone?: string | null;
+    imageUrl?: string | null;
+    // --- FIN CAMPOS AÑADIDOS ---
     role: UserRole;
     businessId: string | null;
     isActive: boolean;
@@ -109,8 +111,8 @@ export interface GrantedReward {
     id: string;
     status: string; // PENDING, AVAILABLE, APPLIED, EXPIRED
     assignedAt: string;
-    redeemedAt: string | null; // Momento en que se "compra" con puntos
-    expiresAt: string | null; // <-- CAMPO AÑADIDO
+    redeemedAt: string | null;
+    expiresAt: string | null;
     reward: Pick<Reward, 'id' | 'name_es' | 'name_en' | 'description_es' | 'description_en' | 'imageUrl'>;
     assignedBy?: { name?: string | null; email: string; } | null;
     business?: { name: string; } | null;

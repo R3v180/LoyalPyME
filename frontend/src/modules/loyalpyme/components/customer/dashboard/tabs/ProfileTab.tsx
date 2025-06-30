@@ -1,24 +1,33 @@
-// filename: frontend/src/components/customer/dashboard/tabs/ProfileTab.tsx
-// Version: 1.0.0 (Placeholder component for Profile Tab)
-
+// frontend/src/modules/loyalpyme/components/customer/dashboard/tabs/ProfileTab.tsx
 import React from 'react';
-import { Text } from '@mantine/core';
+import { Title, Stack, Grid } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
+import { useUserProfileData } from '../../../../hooks/useUserProfileData';
+import ProfileInfoForm from './profile/ProfileInfoForm';
+// La importación de ChangePasswordForm se ha eliminado.
 
-// No props needed for this placeholder initially
-// interface ProfileTabProps {}
-
-const ProfileTab: React.FC = (/* props: ProfileTabProps */) => {
+const ProfileTab: React.FC = () => {
     const { t } = useTranslation();
+    const { userData, loading, error, refetch } = useUserProfileData();
 
     return (
-        <Text c="dimmed">
-            ({t('common.upcomingFeatureTitle', 'Próximamente')}) {t('customerDashboard.tabProfile', 'Mi Perfil')}
-        </Text>
-        // Future: Replace with actual profile view/edit component
+        <Stack>
+            <Title order={3}>{t('customerDashboard.tabProfile')}</Title>
+            <Grid>
+                {/* Hacemos que la columna ocupe todo el ancho disponible */}
+                <Grid.Col span={12}>
+                    <ProfileInfoForm
+                        userData={userData}
+                        isLoading={loading}
+                        error={error}
+                        onProfileUpdate={refetch}
+                    />
+                </Grid.Col>
+                
+                {/* La columna para ChangePasswordForm se ha eliminado por completo. */}
+            </Grid>
+        </Stack>
     );
 };
 
 export default ProfileTab;
-
-// End of File: frontend/src/components/customer/dashboard/tabs/ProfileTab.tsx

@@ -1,5 +1,5 @@
 // backend/prisma/schema.prisma
-// Version: 20240630.4 - Corrected a flawed unique constraint on GrantedReward
+// Version: 20240701.1 - Added imageUrl to User model
 
 generator client {
   provider        = "prisma-client-js"
@@ -213,6 +213,10 @@ model User {
   resetPasswordExpires DateTime?     @map("reset_password_expires_at")
   isActive             Boolean       @default(true)
   isFavorite           Boolean?      @default(false)
+  
+  // --- CAMPO AÑADIDO ---
+  imageUrl             String?       // URL para la foto de perfil del usuario
+
   adminNotes           String?       @db.Text
   businessId           String?
   business             Business?     @relation(fields: [businessId], references: [id], onDelete: Cascade)
@@ -538,7 +542,6 @@ model GrantedReward {
   @@index([rewardId])
   @@index([assignedById])
   @@index([businessId])
-  // @@unique([userId, rewardId, appliedToOrderId], name: "unique_user_reward_order") // Eliminado para permitir múltiples cupones de la misma recompensa
 }
 
 model Table {

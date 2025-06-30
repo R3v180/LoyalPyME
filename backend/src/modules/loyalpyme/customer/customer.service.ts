@@ -1,5 +1,5 @@
 // backend/src/modules/loyalpyme/customer/customer.service.ts
-// Version: 2.5.0 (Add getAvailableCouponsForUser service)
+// Version: 2.6.0 (Add getCustomerOrders for purchase history)
 
 import {
     PrismaClient,
@@ -10,10 +10,40 @@ import {
     Business,
     TierCalculationBasis,
     ActivityType,
-    GrantedRewardStatus // <-- AÑADIDO
+    GrantedRewardStatus,
+    Order, // <-- NUEVA IMPORTACIÓN
+    OrderStatus // <-- NUEVA IMPORTACIÓN
 } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// --- DEFINICIÓN DE TIPOS PARA LA RESPUESTA ---
+
+// Definimos la forma exacta de los datos de un pedido para el historial
+export type OrderHistoryItem = Pick<Order, 'id' | 'orderNumber' | 'finalAmount' | 'paidAt'> & {
+    items: Array<{
+        itemNameSnapshot: string | null;
+        quantity: number;
+        totalItemPrice: Prisma.Decimal;
+        priceAtPurchase: Prisma.Decimal;
+        redeemedRewardId: string | null;
+        selectedModifiers: Array<{
+            optionNameSnapshot: string | null;
+            optionPriceAdjustmentSnapshot: Prisma.Decimal;
+        }>;
+    }>;
+};
+
+// Definimos la estructura de la respuesta paginada
+export interface PaginatedOrdersResponse {
+    orders: OrderHistoryItem[];
+    totalPages: number;
+    currentPage: number;
+    totalItems: number;
+}
+
+
+// --- SERVICIOS EXISTENTES (SIN CAMBIOS) ---
 
 export type CustomerBusinessConfig = Pick<Business, 'tierCalculationBasis'> | null;
 
@@ -147,12 +177,6 @@ export const getCustomerFacingBusinessConfig = async (businessId: string): Promi
     }
 };
 
-// --- NUEVA FUNCIÓN AÑADIDA ---
-/**
- * Encuentra todos los cupones que un usuario ha adquirido y están listos para ser aplicados.
- * @param userId - ID del usuario.
- * @returns Lista de `GrantedReward` con estado 'AVAILABLE'.
- */
 export const getAvailableCouponsForUser = async (userId: string): Promise<GrantedReward[]> => {
     console.log(`[CUST_SVC] Fetching available coupons (GrantedRewards) for user ${userId}`);
     try {
@@ -160,14 +184,12 @@ export const getAvailableCouponsForUser = async (userId: string): Promise<Grante
             where: {
                 userId: userId,
                 status: GrantedRewardStatus.AVAILABLE,
-                // Opcional: Podríamos añadir un filtro por fecha de expiración si existiera
-                // expiresAt: { gte: new Date() } 
             },
             include: {
-                reward: true // Incluimos toda la información de la recompensa para mostrarla en el frontend
+                reward: true 
             },
             orderBy: {
-                assignedAt: 'desc' // Mostrar los más recientes primero
+                assignedAt: 'desc'
             }
         });
         return coupons;
@@ -176,3 +198,80 @@ export const getAvailableCouponsForUser = async (userId: string): Promise<Grante
         throw new Error('Error al obtener los cupones disponibles.');
     }
 };
+
+
+// --- NUEVA FUNCIÓN PARA EL HISTORIAL DE PEDIDOS ---
+/**
+ * Obtiene el historial paginado de pedidos pagados para un usuario.
+ * @param userId - El ID del cliente.
+ * @param page - El número de página a obtener.
+ * @param limit - El número de pedidos por página.
+ * @returns Un objeto con la lista de pedidos y la información de paginación.
+ */
+export const getCustomerOrders = async (
+    userId: string,
+    page: number,
+    limit: number
+): Promise<PaginatedOrdersResponse> => {
+    console.log(`[CUST_SVC] Fetching order history for user ${userId}, Page: ${page}, Limit: ${limit}`);
+
+    const skip = (page - 1) * limit;
+
+    const whereClause: Prisma.OrderWhereInput = {
+        customerLCoId: userId,
+        status: OrderStatus.PAID,
+    };
+
+    try {
+        // Usamos una transacción para asegurar que el conteo y la obtención de datos sean consistentes
+        const [totalItems, orders] = await prisma.$transaction([
+            prisma.order.count({ where: whereClause }),
+            prisma.order.findMany({
+                where: whereClause,
+                select: {
+                    id: true,
+                    orderNumber: true,
+                    finalAmount: true,
+                    paidAt: true,
+                    items: {
+                        where: {
+                            status: { not: 'CANCELLED' } // Excluimos ítems cancelados del detalle
+                        },
+                        select: {
+                            itemNameSnapshot: true,
+                            quantity: true,
+                            totalItemPrice: true,
+                            priceAtPurchase: true,
+                            redeemedRewardId: true,
+                            selectedModifiers: {
+                                select: {
+                                    optionNameSnapshot: true,
+                                    optionPriceAdjustmentSnapshot: true,
+                                }
+                            }
+                        }
+                    }
+                },
+                orderBy: { paidAt: 'desc' }, // Ordenar por fecha de pago, los más recientes primero
+                skip: skip,
+                take: limit,
+            })
+        ]);
+
+        const totalPages = Math.ceil(totalItems / limit);
+
+        console.log(`[CUST_SVC] Found ${orders.length} orders for user ${userId} on page ${page}. Total: ${totalItems}`);
+
+        return {
+            orders: orders as OrderHistoryItem[], // Hacemos un cast al tipo que hemos definido
+            totalPages,
+            currentPage: page,
+            totalItems,
+        };
+
+    } catch (error) {
+        console.error(`[CUST_SVC] Error fetching order history for user ${userId}:`, error);
+        throw new Error('Error al obtener el historial de pedidos desde la base de datos.');
+    }
+};
+// --- FIN NUEVA FUNCIÓN ---

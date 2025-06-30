@@ -1,5 +1,5 @@
 // backend/src/modules/loyalpyme/customer/customer.controller.ts
-// Version: 2.3.0 (Add getAvailableCouponsHandler)
+// Version: 2.4.0 (Add getCustomerOrdersHandler for purchase history)
 
 import { Request, Response, NextFunction } from 'express';
 
@@ -9,11 +9,14 @@ import {
     getPendingGrantedRewards,
     redeemGrantedReward,
     getCustomerFacingBusinessConfig,
-    getAvailableCouponsForUser // <-- IMPORTACIÓN AÑADIDA
+    getAvailableCouponsForUser,
+    getCustomerOrders // <-- NUEVA IMPORTACIÓN DEL SERVICIO
 } from './customer.service';
 
 import * as TierService from '../tiers/tiers.service';
 
+
+// --- HANDLERS EXISTENTES (SIN CAMBIOS) ---
 
 /**
  * Handler para que el cliente obtenga las recompensas activas de su negocio.
@@ -139,7 +142,6 @@ export const getCustomerBusinessConfigHandler = async (req: Request, res: Respon
     }
 };
 
-// --- NUEVO HANDLER AÑADIDO ---
 /**
  * Handler para que el cliente obtenga sus cupones disponibles (GrantedRewards con estado AVAILABLE).
  * GET /api/customer/available-coupons
@@ -159,3 +161,41 @@ export const getAvailableCouponsHandler = async (req: Request, res: Response, ne
         next(error);
     }
 };
+
+// --- NUEVO HANDLER PARA EL HISTORIAL DE PEDIDOS ---
+/**
+ * Handler para obtener el historial de pedidos pagados del cliente, con paginación.
+ * GET /api/customer/orders
+ */
+export const getCustomerOrdersHandler = async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ message: 'Usuario no autenticado.' });
+    }
+
+    // Leer parámetros de paginación de la query, con valores por defecto seguros.
+    const pageQuery = req.query.page as string | undefined;
+    const limitQuery = req.query.limit as string | undefined;
+    
+    const page = parseInt(pageQuery || '1', 10);
+    const limit = parseInt(limitQuery || '10', 10);
+
+    // Validación básica de los parámetros
+    if (isNaN(page) || page < 1) {
+        return res.status(400).json({ message: 'El parámetro "page" debe ser un número positivo.' });
+    }
+    if (isNaN(limit) || limit < 1 || limit > 50) { // Limitar el máximo por petición
+        return res.status(400).json({ message: 'El parámetro "limit" debe ser un número entre 1 y 50.' });
+    }
+
+    console.log(`[CUST_CTRL] Request for orders history for user ${userId}. Page: ${page}, Limit: ${limit}`);
+    
+    try {
+        const paginatedResult = await getCustomerOrders(userId, page, limit);
+        res.status(200).json(paginatedResult);
+    } catch (error) {
+        // La función de servicio ya logueará el error. Aquí solo lo pasamos al manejador global.
+        next(error);
+    }
+};
+// --- FIN NUEVO HANDLER ---
