@@ -9,7 +9,8 @@ import { useForm, zodResolver } from '@mantine/form';
 import { z } from 'zod';
 import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
-import { IconDeviceFloppy, IconCheck, IconX, IconAlertCircle, IconCrop, IconCameraRotate, IconPhoto } from '@tabler/icons-react';
+// --- CORRECCIÓN: Se elimina IconPhoto ---
+import { IconDeviceFloppy, IconCheck, IconX, IconAlertCircle, IconCrop, IconCameraRotate } from '@tabler/icons-react';
 
 import { UserData } from '../../../../../../../shared/types/user.types';
 import axiosInstance from '../../../../../../../shared/services/axiosInstance';
@@ -60,8 +61,6 @@ const ProfileInfoForm: React.FC<ProfileInfoFormProps> = ({ userData, isLoading, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userData]);
     
-    // --- CORRECCIÓN CLAVE ---
-    // El botón se activa si (el formulario de texto está sucio) O (hay una nueva imagen para subir)
     const hasUnsavedChanges = form.isDirty() || imageBlob !== null;
 
     const handleSubmit = async (values: ProfileFormValues) => {
@@ -86,6 +85,7 @@ const ProfileInfoForm: React.FC<ProfileInfoFormProps> = ({ userData, isLoading, 
             notifications.show({ title: t('common.success'), message: t('profileForm.updateSuccess'), color: 'green', icon: <IconCheck /> });
             onProfileUpdate();
             setImageBlob(null);
+
         } catch (err: any) {
             const errorMsg = err.response?.data?.message || t('profileForm.updateError');
             notifications.show({ title: t('common.error'), message: errorMsg, color: 'red', icon: <IconX /> });
@@ -124,8 +124,7 @@ const ProfileInfoForm: React.FC<ProfileInfoFormProps> = ({ userData, isLoading, 
                             <Button
                                 type="submit"
                                 loading={isSubmitting}
-                                // --- CORRECCIÓN PRINCIPAL AQUÍ ---
-                                disabled={!hasUnsavedChanges || !form.isValid() || isSubmitting}
+                                disabled={!hasUnsavedChanges || !form.isValid()}
                                 leftSection={<IconDeviceFloppy size={18} />}
                             >
                                 {t('common.saveChanges')}
@@ -154,7 +153,7 @@ const ProfileImageUploader: React.FC<{
     const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             setCrop(undefined);
-            props.onCropComplete(null, props.currentImageUrl); // Limpiar blob pero mantener preview
+            props.onCropComplete(null, props.currentImageUrl);
             const reader = new FileReader();
             reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''));
             reader.readAsDataURL(e.target.files[0]);
@@ -162,9 +161,18 @@ const ProfileImageUploader: React.FC<{
     };
 
     const onImageLoad = (e: SyntheticEvent<HTMLImageElement>) => {
-        const { width, height } = e.currentTarget;
-        const newCrop = centerCrop(makeAspectCrop({ unit: '%', width: 100 }, 1, width, height), width, height);
-        setCrop(newCrop);
+        const { width, height, naturalWidth, naturalHeight } = e.currentTarget;
+        const percentCrop = centerCrop(makeAspectCrop({ unit: '%', width: 100 }, 1, width, height), width, height);
+        setCrop(percentCrop);
+        if (naturalWidth && naturalHeight) {
+            const pixelCrop: PixelCrop = {
+                unit: 'px', x: (percentCrop.x / 100) * naturalWidth,
+                y: (percentCrop.y / 100) * naturalHeight,
+                width: (percentCrop.width / 100) * naturalWidth,
+                height: (percentCrop.height / 100) * naturalHeight,
+            };
+            setCompletedCrop(pixelCrop);
+        }
     };
 
     const handleConfirmCrop = async () => {

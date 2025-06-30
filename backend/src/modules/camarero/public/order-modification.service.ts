@@ -1,29 +1,31 @@
-// backend/src/public/order-modification.service.ts
+// backend/src/modules/camarero/public/order-modification.service.ts
 import {
     PrismaClient,
     Prisma,
     Order,
     OrderStatus,
-    OrderItemStatus,
+    TableStatus,
 } from '@prisma/client';
 import {
     Injectable,
     Logger,
     NotFoundException,
     BadRequestException,
-    InternalServerErrorException,
 } from '@nestjs/common';
 
-import { OrderItemProcessorService, ProcessedOrderItemData } from './order-item-processor.service';
+// --- CORRECCIÓN: Importar ProcessedOrderItemData desde order.types.ts ---
+import { OrderItemProcessorService } from './order-item-processor.service';
+import { ProcessedOrderItemData } from './order.types'; // <-- Se importa desde aquí
+import { TableService } from '../../../shared/services/table.service';
 
-// Importar tipos desde el archivo centralizado
+// Importar los tipos necesarios desde el archivo centralizado
 import {
     FrontendAddItemsToOrderDto,
-    FrontendAddItemsOrderItemDto, // Este tipo ahora debería tener 'notes' y 'selectedModifierOptions'
-    OrderItemInternalDto,         // Tipo que espera OrderItemProcessorService
-    SelectedModifierOptionInternalDto // Tipo que espera OrderItemProcessorService
+    FrontendAddItemsOrderItemDto,
+    OrderItemInternalDto,
 } from './order.types';
 
+// Interfaz BusinessContextForOrder (sin cambios)
 interface BusinessContextForOrder {
     id: string;
     isActive: boolean;
@@ -34,17 +36,19 @@ interface BusinessContextForOrder {
 export class OrderModificationService {
     private readonly logger = new Logger(OrderModificationService.name);
     private readonly orderItemProcessorService: OrderItemProcessorService;
+    private readonly tableService: TableService;
     private prisma: PrismaClient;
 
     constructor() {
         this.prisma = new PrismaClient();
         this.orderItemProcessorService = new OrderItemProcessorService();
+        this.tableService = new TableService();
         this.logger.log("OrderModificationService instantiated");
     }
 
     async addItemsToExistingOrder(
         orderId: string,
-        addItemsDto: FrontendAddItemsToOrderDto, // DTO del frontend
+        addItemsDto: FrontendAddItemsToOrderDto,
         businessSlug: string,
         _requestingCustomerId?: string | null
     ): Promise<Order> {
@@ -80,20 +84,17 @@ export class OrderModificationService {
                 throw new BadRequestException(`No se pueden añadir ítems a un pedido en estado '${order.status}'.`);
             }
 
-            // --- CORRECCIÓN EN EL MAPEO Y TIPADO ---
-            // Mapear FrontendAddItemsOrderItemDto a OrderItemInternalDto
             const itemsToProcessDto: OrderItemInternalDto[] = addItemsDto.items.map((item: FrontendAddItemsOrderItemDto) => ({
                 menuItemId: item.menuItemId,
                 quantity: item.quantity,
-                notes: item.notes, // 'notes' ahora existe en FrontendAddItemsOrderItemDto
+                notes: item.notes,
                 selectedModifierOptions: item.selectedModifierOptions?.map(
-                    (sm: { modifierOptionId: string }) => ({ // Tipo explícito para 'sm'
+                    (sm: { modifierOptionId: string }) => ({
                         modifierOptionId: sm.modifierOptionId
                     })
-                ) || [], // Asegurar que sea un array vacío si es undefined
+                ) || [],
             }));
-            // --- FIN CORRECCIÓN ---
-
+            
             const processedNewItems: ProcessedOrderItemData[] =
                 await this.orderItemProcessorService.processOrderItems(
                     tx,
@@ -101,12 +102,7 @@ export class OrderModificationService {
                     itemsToProcessDto
                 );
 
-            // ... (resto de la lógica de la función sin cambios)...
-            if (processedNewItems.length === 0 && addItemsDto.items.length > 0) {
-                this.logger.warn(`[OrderModificationService TX] All new items in payload were invalid. No items to add to order '${orderId}'.`);
-                throw new BadRequestException('Ninguno de los nuevos ítems proporcionados pudo ser procesado.');
-            }
-             if (processedNewItems.length === 0 && addItemsDto.items.length === 0) {
+            if (processedNewItems.length === 0 && addItemsDto.items.length === 0) {
                 this.logger.warn(`[OrderModificationService TX] No new items provided in the payload to add to order '${orderId}'.`);
                 throw new BadRequestException('No se proporcionaron ítems para añadir al pedido.');
             }
@@ -156,9 +152,7 @@ export class OrderModificationService {
                         itemDescriptionSnapshot: pItem.itemDescriptionSnapshot,
                         status: pItem.status,
                         ...(pItem.modifierOptionsToCreate.length > 0 && {
-                            selectedModifiers: {
-                                createMany: { data: pItem.modifierOptionsToCreate },
-                            },
+                            selectedModifiers: { createMany: { data: pItem.modifierOptionsToCreate } },
                         }),
                     })),
                 },
@@ -183,8 +177,7 @@ export class OrderModificationService {
         });
     }
 
-    private async _validateBusinessForOrdering(businessSlug: string): Promise<BusinessContextForOrder> {
-        // ... (sin cambios)
+    private async _validateBusinessForOrdering(businessSlug: string) {
         const business = await this.prisma.business.findUnique({
             where: { slug: businessSlug },
             select: { id: true, isActive: true, isCamareroActive: true },

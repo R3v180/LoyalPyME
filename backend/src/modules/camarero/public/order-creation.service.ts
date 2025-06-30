@@ -1,44 +1,14 @@
-// backend/src/modules/camarero/public/order-creation.service.ts (CORREGIDO)
+// backend/src/modules/camarero/public/order-creation.service.ts
 import {
-    PrismaClient,
-    Prisma,
-    Order,
-    OrderStatus,
-    TableStatus,
+    PrismaClient, Prisma, Order, OrderStatus, TableStatus, RewardType, DiscountType, ActivityType,
 } from '@prisma/client';
 import {
-    Injectable,
-    Logger,
-    NotFoundException,
-    BadRequestException,
-    InternalServerErrorException,
+    Injectable, Logger, NotFoundException, BadRequestException,
 } from '@nestjs/common';
 
-// Importar los servicios que vamos a usar
-import { OrderItemProcessorService, ProcessedOrderItemData } from './order-item-processor.service';
-// --- RUTA CORREGIDA ---
+import { OrderItemProcessorService } from './order-item-processor.service';
 import { TableService } from '../../../shared/services/table.service';
-
-// Tipos del payload que este servicio espera
-export interface CreateOrderPayloadInternalDto {
-    tableIdentifier?: string | null;
-    customerId?: string | null;
-    orderNotes?: string | null;
-    items: OrderItemInternalDto[];
-}
-
-interface OrderItemInternalDto {
-    menuItemId: string;
-    quantity: number;
-    notes?: string | null;
-    selectedModifierOptions?: { modifierOptionId: string }[] | null;
-}
-
-interface BusinessContextForOrder {
-    id: string;
-    isActive: boolean;
-    isCamareroActive: boolean;
-}
+import { CreateOrderPayloadInternalDto } from './order.types';
 
 @Injectable()
 export class OrderCreationService {
@@ -51,7 +21,6 @@ export class OrderCreationService {
         this.prisma = new PrismaClient();
         this.orderItemProcessorService = new OrderItemProcessorService();
         this.tableService = new TableService();
-        this.logger.log("OrderCreationService instantiated");
     }
 
     async createNewOrder(
@@ -59,48 +28,83 @@ export class OrderCreationService {
         payload: CreateOrderPayloadInternalDto,
         requestingCustomerId?: string | null
     ): Promise<Order> {
-        this.logger.log(`[OrderCreationService] Attempting to create new order for business slug '${businessSlug}'. Items: ${payload.items.length}`);
-
+        this.logger.log(`[OrderCreationService] Creating new order for business slug '${businessSlug}'.`);
+        
         const businessContext = await this.validateBusinessForOrdering(businessSlug);
         const businessId = businessContext.id;
+        const finalCustomerId = payload.customerId || requestingCustomerId;
 
         return this.prisma.$transaction(async (tx) => {
-            this.logger.log(`[OrderCreationService TX] Transaction started for new order.`);
+            this.logger.log(`[TX] Order creation transaction started for business ${businessId}.`);
 
-            const processedItems: ProcessedOrderItemData[] =
-                await this.orderItemProcessorService.processOrderItems(
-                    tx,
-                    businessId,
-                    payload.items
-                );
-
-            if (processedItems.length === 0 && payload.items.length > 0) {
-                this.logger.warn(`[OrderCreationService TX] All items in payload were invalid. No items to create for order.`);
-                throw new BadRequestException('Ninguno de los ítems proporcionados pudo ser procesado.');
-            }
-            if (processedItems.length === 0 && payload.items.length === 0) {
-                 this.logger.warn(`[OrderCreationService TX] No items provided in the payload.`);
-                 throw new BadRequestException('El pedido debe contener al menos un ítem.');
-            }
-
-            const totalAmount = processedItems.reduce(
-                (sum, item) => sum.add(item.totalItemPrice),
-                new Prisma.Decimal(0)
+            const processedItems = await this.orderItemProcessorService.processOrderItems(
+                tx, businessId, payload.items
             );
-            this.logger.log(`[OrderCreationService TX] Calculated totalAmount: ${totalAmount}`);
+            if (processedItems.length === 0) throw new BadRequestException('El pedido debe contener al menos un ítem válido.');
 
+            let subtotal = processedItems.reduce(
+                (sum, item) => sum.add(item.totalItemPrice), new Prisma.Decimal(0)
+            );
+            
+            let discountAmount = new Prisma.Decimal(0);
+            
+            if (finalCustomerId) {
+                const customer = await tx.user.findUnique({ where: { id: finalCustomerId }});
+                if (!customer) throw new BadRequestException('El cliente asociado al pedido no existe.');
+                
+                let totalPointsToDebit = 0;
+
+                for (const item of processedItems) {
+                    if (item.redeemedRewardId) {
+                        const reward = await tx.reward.findUnique({ where: { id: item.redeemedRewardId }});
+                        if (!reward || !reward.isActive || reward.type !== RewardType.MENU_ITEM) {
+                            throw new BadRequestException(`La recompensa para '${item.itemNameSnapshot}' no es válida.`);
+                        }
+                        totalPointsToDebit += reward.pointsCost;
+                    }
+                }
+
+                if (payload.appliedLcoRewardId) {
+                    const discountReward = await tx.reward.findUnique({ where: { id: payload.appliedLcoRewardId } });
+                    if (!discountReward || !discountReward.isActive || !(discountReward.type === RewardType.DISCOUNT_ON_ITEM || discountReward.type === RewardType.DISCOUNT_ON_TOTAL)) {
+                        throw new BadRequestException('La recompensa de descuento general no es válida.');
+                    }
+                    totalPointsToDebit += discountReward.pointsCost;
+
+                    if (discountReward.discountType === DiscountType.FIXED_AMOUNT && discountReward.discountValue) {
+                        discountAmount = new Prisma.Decimal(discountReward.discountValue);
+                    } else if (discountReward.discountType === DiscountType.PERCENTAGE && discountReward.discountValue) {
+                        discountAmount = subtotal.mul(new Prisma.Decimal(discountReward.discountValue).div(100));
+                    }
+                }
+                
+                if (customer.points < totalPointsToDebit) {
+                    throw new BadRequestException(`Puntos insuficientes. Necesitas ${totalPointsToDebit} y tienes ${customer.points}.`);
+                }
+
+                if (totalPointsToDebit > 0) {
+                    await tx.user.update({
+                        where: { id: customer.id },
+                        data: { points: { decrement: totalPointsToDebit } }
+                    });
+                    this.logger.log(`[TX] Debited ${totalPointsToDebit} points from customer ${customer.id}.`);
+                }
+            } else if (payload.appliedLcoRewardId || processedItems.some(i => i.redeemedRewardId)) {
+                throw new BadRequestException('Debes iniciar sesión para usar recompensas.');
+            }
+
+            const finalAmount = subtotal.sub(discountAmount).isNegative() ? new Prisma.Decimal(0) : subtotal.sub(discountAmount);
             const orderNumber = await this._generateOrderNumber(tx, businessId);
-            this.logger.log(`[OrderCreationService TX] Generated orderNumber: ${orderNumber}`);
 
             const orderCreateData: Prisma.OrderCreateInput = {
                 business: { connect: { id: businessId } },
-                orderNumber: orderNumber,
+                orderNumber,
                 notes: payload.orderNotes,
-                totalAmount: totalAmount,
-                finalAmount: totalAmount,
+                totalAmount: subtotal,
+                discountAmount,
+                finalAmount,
                 status: OrderStatus.RECEIVED,
-                isBillRequested: false,
-                source: payload.customerId || requestingCustomerId ? 'CUSTOMER_APP' : 'CUSTOMER_APP_ANONYMOUS',
+                source: finalCustomerId ? 'CUSTOMER_APP' : 'CUSTOMER_APP_ANONYMOUS',
                 orderType: payload.tableIdentifier ? 'DINE_IN' : 'TAKE_AWAY',
                 items: {
                     create: processedItems.map(pItem => ({
@@ -113,81 +117,59 @@ export class OrderCreationService {
                         itemNameSnapshot: pItem.itemNameSnapshot,
                         itemDescriptionSnapshot: pItem.itemDescriptionSnapshot,
                         status: pItem.status,
+                        redeemedRewardId: pItem.redeemedRewardId,
                         ...(pItem.modifierOptionsToCreate.length > 0 && {
-                            selectedModifiers: {
-                                createMany: {
-                                    data: pItem.modifierOptionsToCreate,
-                                },
-                            },
+                            selectedModifiers: { createMany: { data: pItem.modifierOptionsToCreate } },
                         }),
                     })),
                 },
             };
 
+            // --- CORRECCIÓN AQUÍ ---
+            // Usar 'appliedLcoReward' para conectar la relación, en lugar de 'appliedLcoRewardId'
+            if (payload.appliedLcoRewardId) {
+                orderCreateData.appliedLcoReward = {
+                    connect: { id: payload.appliedLcoRewardId }
+                };
+            }
+            // --- FIN DE LA CORRECCIÓN ---
+
             if (payload.tableIdentifier) {
-                const table = await this.tableService.findTableByIdentifier(
-                    tx,
-                    businessId,
-                    payload.tableIdentifier
-                );
+                const table = await this.tableService.findTableByIdentifier(tx, businessId, payload.tableIdentifier);
                 if (table) {
                     orderCreateData.table = { connect: { id: table.id } };
                     await this.tableService.updateTableStatus(tx, table.id, TableStatus.OCCUPIED);
-                    this.logger.log(`[OrderCreationService TX] Table '${payload.tableIdentifier}' (ID: ${table.id}) connected and set to OCCUPIED.`);
-                } else {
-                    this.logger.warn(`[OrderCreationService TX] Table identifier '${payload.tableIdentifier}' provided but table not found for business '${businessId}'. Order will be created without table assignment.`);
                 }
             }
 
-            const finalCustomerId = payload.customerId || requestingCustomerId;
             if (finalCustomerId) {
-                const customerExists = await tx.user.findFirst({ where: { id: finalCustomerId, businessId: businessId }});
-                if(customerExists) {
-                    orderCreateData.customerLCo = { connect: { id: finalCustomerId } };
-                    this.logger.log(`[OrderCreationService TX] CustomerLCoId '${finalCustomerId}' connected to order.`);
-                } else {
-                    this.logger.warn(`[OrderCreationService TX] CustomerLCoId '${finalCustomerId}' provided but not found for business '${businessId}'. Order will be created without LCo customer.`);
-                }
+                orderCreateData.customerLCo = { connect: { id: finalCustomerId } };
             }
-
+            
             const newOrder = await tx.order.create({
                 data: orderCreateData,
                 include: { items: { include: { selectedModifiers: true } }, table: true },
             });
 
-            this.logger.log(`[OrderCreationService TX] Order ${newOrder.id} (Number: ${newOrder.orderNumber}) created successfully with ${newOrder.items.length} item(s).`);
+            this.logger.log(`[TX] Order ${newOrder.id} (Number: ${newOrder.orderNumber}) created successfully.`);
             return newOrder;
         });
     }
-
-    private async validateBusinessForOrdering(businessSlug: string): Promise<BusinessContextForOrder> {
+    
+    private async validateBusinessForOrdering(businessSlug: string) {
         const business = await this.prisma.business.findUnique({
             where: { slug: businessSlug },
             select: { id: true, isActive: true, isCamareroActive: true },
         });
-
-        if (!business) {
-            this.logger.warn(`[OrderCreationService] Business with slug '${businessSlug}' not found.`);
-            throw new NotFoundException(`Negocio con slug '${businessSlug}' no encontrado.`);
-        }
-        if (!business.isActive) {
-            this.logger.warn(`[OrderCreationService] Business '${businessSlug}' is not active.`);
-            throw new BadRequestException(`El negocio '${businessSlug}' no está activo y no puede recibir pedidos.`);
-        }
-        if (!business.isCamareroActive) {
-            this.logger.warn(`[OrderCreationService] Camarero module not active for business '${businessSlug}'.`);
-            throw new BadRequestException(`El módulo de pedidos (Camarero) no está activo para el negocio '${businessSlug}'.`);
-        }
-        this.logger.log(`[OrderCreationService] Business '${businessSlug}' validated for ordering. ID: ${business.id}`);
+        if (!business) throw new NotFoundException(`Negocio con slug '${businessSlug}' no encontrado.`);
+        if (!business.isActive) throw new BadRequestException(`El negocio '${businessSlug}' no está activo.`);
+        if (!business.isCamareroActive) throw new BadRequestException(`El módulo de pedidos no está activo para '${businessSlug}'.`);
         return business;
     }
 
     private async _generateOrderNumber(tx: Prisma.TransactionClient, businessId: string): Promise<string> {
-        const orderCount = await tx.order.count({
-            where: { businessId: businessId },
-        });
+        const orderCount = await tx.order.count({ where: { businessId: businessId } });
         const datePrefix = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        const newCount = orderCount + 1;
-        return `P-${datePrefix}-${String(newCount).padStart(5, '0')}`;
+        return `P-${datePrefix}-${String(orderCount + 1).padStart(5, '0')}`;
     }
 }
