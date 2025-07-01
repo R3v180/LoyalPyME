@@ -225,6 +225,7 @@
     "tabActivity": "My Activity",
     "tabOffers": "Offers & News",
     "tabProfile": "My Profile",
+    "tabHistory": "My Orders",
     "summary": {
       "pendingGifts_one": "You have {{count}} pending gift:",
       "pendingGifts_other": "You have {{count}} pending gifts:",
@@ -257,7 +258,23 @@
     },
     "rewards": {
       "affordable": "Affordable"
-    }
+    },
+    "historyTab": {
+      "title": "My Order History",
+      "noOrders": "You have no registered orders yet.",
+      "totalOrders": "{{count}} order(s) in total"
+    },
+    "availableCouponsTitle": "My Available Coupons",
+    "noAvailableCoupons": "You don't have any available coupons. Redeem your points in the catalog to get them!",
+    "couponExpires": "Expires on:",
+    "rewardsCatalogTitle": "Rewards Catalog",
+    "giftsSectionTitle": "Received Gifts",
+    "acquireRewardButton": "Get for {{count}} Points",
+    "acquireRewardSuccessTitle": "Reward Acquired!",
+    "acquireRewardSuccessMessage": "The reward is now available in 'My Coupons' to use whenever you want.",
+    "acquireRewardError": "Could not acquire the reward.",
+    "errorAcquireTitle": "Error Acquiring",
+    "errorRedeemGiftMessage": "Could not redeem the gift."
   },
   "adminCommon": {
     "dashboard": "Dashboard",
@@ -345,11 +362,11 @@
       "errorNameRequired": "Reward name cannot be empty.",
       "errorPointsCostInvalid": "Cost in points must be a number equal to or greater than zero.",
       "nameEsLabel": "Name (ES)",
-      "nameEsPlaceholder": "E.g.: Café Gratis",
+      "nameEsPlaceholder": "Ej: Café Gratis",
       "nameEnLabel": "Name (EN)",
       "nameEnPlaceholder": "E.g.: Free Coffee",
       "descriptionEsLabel": "Description (ES, Optional)",
-      "descriptionEsPlaceholder": "E.g.: Un café espresso o americano",
+      "descriptionEsPlaceholder": "Ej: Un café espresso o americano",
       "descriptionEnLabel": "Description (EN, Optional)",
       "descriptionEnPlaceholder": "E.g.: One espresso or americano coffee",
       "imageLabel": "Image",
@@ -650,7 +667,15 @@
     "moduleChangeError": "Error changing module '{{moduleName}}' status.",
     "moduleLoyaltyCore": "LoyalPyME Core",
     "moduleCamarero": "LoyalPyME Waiter",
-    "businessFallbackName": "the business"
+    "businessFallbackName": "the business",
+    "statusPaid": "Up to date",
+    "statusPending": "Pending",
+    "statusOverdue": "Overdue",
+    "filterAll": "All",
+    "manageSubscriptionTooltip": "Manage Subscription and Payments",
+    "impersonateTooltip": "Log in as this administrator",
+    "tableHeaderPrice": "Price/month",
+    "tableHeaderPaymentStatus": "Payment Status"
   },
   "adminCamarero": {
     "manageMenu": "Manage Menu",
@@ -917,7 +942,11 @@
       "addItemsToOrderButton": "Add {{count}} items to Order #{{orderNumber}}",
       "itemsAddedSuccessTitle": "Items Added",
       "itemsAddedSuccessMsg": "Items added to order #{{orderNumber}}.",
-      "addItemsErrorTitle": "Error Adding Items"
+      "addItemsErrorTitle": "Error Adding Items",
+      "redeemedItemBadge": "Reward",
+      "rewardsSectionTitle": "My Rewards",
+      "applyRewardButton": "View and Apply Rewards",
+      "discountApplied": "Discount:"
     },
     "unnamedModifier": "Unnamed Modifier",
     "activeOrder": {
@@ -1011,6 +1040,35 @@
     "errorMarkingServed": "Error marking item as served.",
     "navLinkPickup": "Pickup Orders"
   },
+  "homePage": {
+    "welcomeTitle": "Welcome to LoyalPyME",
+    "heroTitle": "Engage Customers and Digitize Your Service. All in One Place.",
+    "heroSubtitle": "LoyalPyME is the ultimate platform for restaurants, cafes, and SMEs to create loyalty programs and optimize their operations with a smart digital menu.",
+    "ctaBusiness": "Create Business Account",
+    "ctaLogin": "I already have an account",
+    "featuresSection": {
+      "superTitle": "Power Up Your Business",
+      "title": "One Solution, Multiple Benefits"
+    },
+    "features": {
+      "loyalty": {
+        "title": "Loyalty Programs",
+        "desc": "Create a points and tiers system to keep your customers coming back. Reward their loyalty with exclusive products and benefits."
+      },
+      "waiter": {
+        "title": "Digital Waiter Module",
+        "desc": "Digitize your menu, allow customers to order from their phones, and streamline communication with the kitchen through our KDS system."
+      },
+      "synergy": {
+        "title": "Total Synergy",
+        "desc": "When a customer orders from the digital menu, they automatically earn points! The two modules work together to maximize engagement and sales."
+      }
+    },
+    "finalCta": {
+      "title": "Ready to get started?",
+      "desc": "Create your account today and discover how LoyalPyME can transform your business."
+    }
+  },
   "waiterOrderManagement": {
     "title": "Floor Order Management",
     "filterStatusLabel": "Filter by Status:",
@@ -1037,5 +1095,49 @@
     "paymentNotesPlaceholder": "Additional details...",
     "confirmPaymentButton": "Confirm Payment",
     "navLinkTitle": "Manage Orders"
+  },
+  "orderBillView": {
+    "item": "Item",
+    "price": "Price",
+    "total": "Total",
+    "reward": "Reward",
+    "unnamedItem": "Unnamed Item",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "finalTotal": "TOTAL TO PAY"
+  },
+  "applyRewardModal": {
+    "title": "Apply Your Rewards",
+    "tabs": {
+      "coupons": "My Coupons",
+      "redeem": "Redeem with Points"
+    },
+    "noCoupons": "You don't have any available coupons to use.",
+    "noRewardsInCatalog": "There are no rewards in the catalog.",
+    "summary": {
+      "totalCost": "Total cost of selection:",
+      "availablePoints": "Available points: {{points}}",
+      "pointsBadge": "{{points}} Points"
+    },
+    "notEnoughPoints": "You don't have enough points for this selection.",
+    "applyButton": "Apply to Order",
+    "success": {
+      "title": "Success!",
+      "message": "The rewards have been successfully applied to your order."
+    }
+  },
+  "orderDetailModal": {
+    "title": "Order Details",
+    "viewTooltip": "View Details",
+    "headerOrder": "Order #",
+    "headerDate": "Date",
+    "headerTotal": "Total",
+    "downloadPdf": "Download PDF",
+    "sendByEmail": "Send by Email"
+  },
+  "profileForm": {
+    "noChanges": "No changes to save.",
+    "updateSuccess": "Profile updated successfully.",
+    "updateError": "Error updating profile."
   }
 }

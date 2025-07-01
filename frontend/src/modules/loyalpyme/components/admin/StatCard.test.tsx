@@ -1,16 +1,17 @@
-// filename: frontend/src/components/admin/StatCard.test.tsx
-// Version: 1.0.2 (Import screen directly from @testing-library/dom)
+// frontend/src/modules/loyalpyme/components/admin/StatCard.test.tsx
+// Version 1.0.3 - Corrected theme import path
 
 import React from 'react';
-// --- CAMBIO: Importar render y screen por separado ---
 import { render } from '@testing-library/react';
 import { screen } from '@testing-library/dom';
-// --- FIN CAMBIO ---
 import { describe, it, expect } from 'vitest';
 import StatCard from './StatCard';
 import { IconUsers } from '@tabler/icons-react';
 import { MantineProvider } from '@mantine/core';
-import { theme } from '../../theme';
+
+// --- CORRECCIÓN DE RUTA ---
+import { theme } from '../../../../theme';
+// --- FIN CORRECCIÓN ---
 
 describe('StatCard Component', () => {
 
@@ -66,5 +67,4 @@ describe('StatCard Component', () => {
         expect(screen.queryByText(/-/)).not.toBeInTheDocument();
         expect(screen.getByText('Loading Test')).toBeInTheDocument();
     });
-
 });

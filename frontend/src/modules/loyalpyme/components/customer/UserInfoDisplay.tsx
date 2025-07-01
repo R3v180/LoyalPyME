@@ -1,6 +1,5 @@
-// frontend/src/components/customer/UserInfoDisplay.tsx
-// La versión que me pasaste era frontend/src/components/customer/dashboard/UserInfoDisplay.tsx
-// Usaré esa ruta. Si es diferente, dímelo.
+// frontend/src/modules/loyalpyme/components/customer/UserInfoDisplay.tsx
+// Version 1.0.2 - Corrected type import path
 
 import React from 'react';
 import {
@@ -14,7 +13,11 @@ import {
 import { useTranslation } from 'react-i18next';
 import { TFunction } from 'i18next';
 import { useDisclosure, useMediaQuery } from '@mantine/hooks';
-import { UserData, TierBenefitData, TierCalculationBasis, TierData } from '../../types/customer'; // Asumiendo que TierData también se importa aquí si se usa
+
+// --- CORRECCIÓN DE RUTA ---
+import { UserData, TierBenefitData, TierCalculationBasis, TierData } from '../../../../shared/types/user.types';
+// --- FIN CORRECCIÓN ---
+
 
 type ProgressBarDataType = {
     type: 'progress';
@@ -29,12 +32,12 @@ type ProgressBarDataType = {
 } | null;
 
 export interface UserInfoDisplayProps {
-    userData: UserData | null; // UserData ahora tiene points? opcional
+    userData: UserData | null;
     loadingUser: boolean;
     errorUser: string | null;
     progressBarData: ProgressBarDataType;
     benefits: TierBenefitData[];
-    nextTierName: string | null; // Se usa para el popover
+    nextTierName: string | null;
     nextTierBenefits: TierBenefitData[];
     tierCalculationBasis?: TierCalculationBasis | null;
     allTiers?: TierData[];
@@ -58,9 +61,7 @@ const UserInfoDisplay: React.FC<UserInfoDisplayProps> = ({
     errorUser,
     progressBarData,
     benefits,
-    nextTierBenefits, // nextTierName se saca de progressBarData
-    // tierCalculationBasis, // No se usa directamente en el render
-    // allTiers // No se usa directamente en el render
+    nextTierBenefits,
 }) => {
     const { t } = useTranslation();
     const isMobile = useMediaQuery('(max-width: em(768px))');
@@ -70,10 +71,7 @@ const UserInfoDisplay: React.FC<UserInfoDisplayProps> = ({
     if (errorUser || !userData) { return ( <Card withBorder radius="md" p="xl"><Alert title={t('customerDashboard.errorLoadingProfileTitle')} color="red" icon={<IconAlertCircle size="1rem" />} data-testid="user-info-error">{errorUser || t('customerDashboard.errorLoadingProfileDefault')}</Alert></Card> ); }
 
     const currentTierDisplayName = userData.currentTier?.name ?? t('customerDashboard.baseTier');
-
-    // --- CORRECCIÓN AQUÍ para userData.points ---
-    const displayPoints = userData.points ?? 0; // Si points es undefined, mostrar 0
-    // --- FIN CORRECCIÓN ---
+    const displayPoints = userData.points ?? 0;
 
     const nextTierTitle = progressBarData?.type === 'progress' ? progressBarData.nextTierName : null;
     const popoverTitleText = nextTierTitle ? t('customerDashboard.nextTierBenefitsTitle', { tierName: nextTierTitle }) : '';
@@ -92,9 +90,7 @@ const UserInfoDisplay: React.FC<UserInfoDisplayProps> = ({
             <Stack gap="lg">
                 <Group justify="space-between">
                     <Text fz="lg" fw={600}>{userData.name || userData.email}</Text>
-                    {/* --- USAR displayPoints --- */}
                     <Text fz="lg" fw={700} c="blue">{displayPoints.toLocaleString()} {t('common.points')}</Text>
-                    {/* --- FIN USAR --- */}
                 </Group>
 
                 <Stack gap="xs">
@@ -105,13 +101,7 @@ const UserInfoDisplay: React.FC<UserInfoDisplayProps> = ({
 
                     {progressBarData?.type === 'progress' && nextTierContent && (
                         <Box>
-                            <Popover
-                                width={300}
-                                position="top"
-                                withArrow
-                                shadow="md"
-                                opened={popoverOpened}
-                            >
+                            <Popover width={300} position="top" withArrow shadow="md" opened={popoverOpened}>
                                 <Popover.Target>
                                     <Group
                                         wrap="nowrap"

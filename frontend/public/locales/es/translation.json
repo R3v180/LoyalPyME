@@ -225,6 +225,7 @@
     "tabActivity": "Mi Actividad",
     "tabOffers": "Ofertas y Noticias",
     "tabProfile": "Mi Perfil",
+    "tabHistory": "Mis Pedidos",
     "summary": {
       "pendingGifts_one": "Tienes {{count}} regalo pendiente:",
       "pendingGifts_other": "Tienes {{count}} regalos pendientes:",
@@ -257,7 +258,23 @@
     },
     "rewards": {
       "affordable": "Asequible"
-    }
+    },
+    "historyTab": {
+      "title": "Mi Historial de Pedidos",
+      "noOrders": "Aún no tienes pedidos registrados.",
+      "totalOrders": "{{count}} pedido(s) en total"
+    },
+    "noAvailableCoupons": "No tienes cupones disponibles. ¡Canjea tus puntos en el catálogo para obtenerlos!",
+    "couponExpires": "Caduca el:",
+    "availableCouponsTitle": "Mis Cupones Disponibles",
+    "rewardsCatalogTitle": "Catálogo de Recompensas",
+    "giftsSectionTitle": "Regalos Recibidos",
+    "acquireRewardButton": "Obtener por {{count}} Puntos",
+    "acquireRewardSuccessTitle": "¡Recompensa Adquirida!",
+    "acquireRewardSuccessMessage": "La recompensa ahora está disponible en 'Mis Cupones' para usarla cuando quieras.",
+    "acquireRewardError": "No se pudo adquirir la recompensa.",
+    "errorAcquireTitle": "Error al Adquirir",
+    "errorRedeemGiftMessage": "No se pudo canjear el regalo."
   },
   "adminCommon": {
     "dashboard": "Dashboard",
@@ -650,7 +667,15 @@
     "moduleChangeError": "Error al cambiar el estado del módulo '{{moduleName}}'.",
     "moduleLoyaltyCore": "LoyalPyME Core",
     "moduleCamarero": "LoyalPyME Camarero",
-    "businessFallbackName": "el negocio"
+    "businessFallbackName": "el negocio",
+    "statusPaid": "Al día",
+    "statusPending": "Pendiente",
+    "statusOverdue": "Atrasado",
+    "filterAll": "Todos",
+    "manageSubscriptionTooltip": "Gestionar Suscripción y Pagos",
+    "impersonateTooltip": "Iniciar sesión como este administrador",
+    "tableHeaderPrice": "Precio/mes",
+    "tableHeaderPaymentStatus": "Estado de Pago"
   },
   "adminCamarero": {
     "manageMenu": "Gestionar Carta",
@@ -917,7 +942,11 @@
       "addItemsToOrderButton": "Añadir {{count}} ítems al Pedido #{{orderNumber}}",
       "itemsAddedSuccessTitle": "Ítems Añadidos",
       "itemsAddedSuccessMsg": "Ítems añadidos al pedido #{{orderNumber}}.",
-      "addItemsErrorTitle": "Error al Añadir Ítems"
+      "addItemsErrorTitle": "Error al Añadir Ítems",
+      "redeemedItemBadge": "Recompensa",
+      "rewardsSectionTitle": "Mis Recompensas",
+      "applyRewardButton": "Ver y Aplicar Recompensas",
+      "discountApplied": "Descuento:"
     },
     "unnamedModifier": "Modificador sin nombre",
     "activeOrder": {
@@ -1066,5 +1095,49 @@
     "paymentNotesPlaceholder": "Detalles adicionales...",
     "confirmPaymentButton": "Confirmar Pago",
     "navLinkTitle": "Gestionar Pedidos"
+  },
+  "orderBillView": {
+    "item": "Ítem",
+    "price": "Precio",
+    "total": "Total",
+    "reward": "Recompensa",
+    "unnamedItem": "Ítem sin nombre",
+    "subtotal": "Subtotal",
+    "discount": "Descuento",
+    "finalTotal": "TOTAL A PAGAR"
+  },
+  "applyRewardModal": {
+    "title": "Aplica tus Recompensas",
+    "tabs": {
+      "coupons": "Mis Cupones",
+      "redeem": "Canjear con Puntos"
+    },
+    "noCoupons": "No tienes cupones disponibles para usar.",
+    "noRewardsInCatalog": "No hay recompensas en el catálogo.",
+    "summary": {
+      "totalCost": "Coste total de la selección:",
+      "availablePoints": "Puntos disponibles: {{points}}",
+      "pointsBadge": "{{points}} Puntos"
+    },
+    "notEnoughPoints": "No tienes suficientes puntos para esta selección.",
+    "applyButton": "Aplicar al Pedido",
+    "success": {
+      "title": "¡Éxito!",
+      "message": "Las recompensas se han aplicado correctamente a tu pedido."
+    }
+  },
+  "orderDetailModal": {
+    "title": "Detalle del Pedido",
+    "viewTooltip": "Ver Detalle",
+    "headerOrder": "Nº Pedido",
+    "headerDate": "Fecha",
+    "headerTotal": "Total",
+    "downloadPdf": "Descargar PDF",
+    "sendByEmail": "Enviar por Email"
+  },
+  "profileForm": {
+    "noChanges": "No hay cambios para guardar.",
+    "updateSuccess": "Perfil actualizado correctamente.",
+    "updateError": "Error al actualizar el perfil."
   }
 }

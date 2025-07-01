@@ -1,5 +1,5 @@
 // frontend/src/modules/camarero/pages/OrderStatusPage.tsx
-// Version 2.9.4 - Final, complete, and clean version.
+// Version 2.9.7 - Corrected prop name from 'coupons' to 'availableCoupons' in ApplyRewardModal call.
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useLocation, Link, useNavigate } from 'react-router-dom';
@@ -19,7 +19,7 @@ import { useDisclosure } from '@mantine/hooks';
 
 import axiosInstance from '../../../shared/services/axiosInstance';
 import { GrantedReward, OrderStatus, OrderItemStatus } from '../../../shared/types/user.types';
-import ApplyRewardModal from '../../loyalpyme/components/customer/ApplyRewardModal';
+import ApplyRewardModal, { AppliedSelections } from '../../loyalpyme/components/customer/ApplyRewardModal';
 import { PublicOrderStatusInfo } from '../types/publicOrder.types';
 import OrderBillView from '../components/public/menu/order/OrderBillView';
 
@@ -101,8 +101,13 @@ const OrderStatusPage: React.FC = () => {
         if (isOrderConsideredFinal(orderStatusData?.orderStatus) && activeOrderKey && orderStatusData?.orderId === orderId) { localStorage.removeItem(activeOrderKey); }
     }, [orderStatusData?.orderStatus, activeOrderKey, orderId]);
 
-    const handleApplyReward = async (grantedRewardId: string) => {
+    const handleApplyReward = async (selections: AppliedSelections) => {
         if (!orderId) return;
+        const discountToApply = selections.discount;
+        if (!discountToApply || !discountToApply.isGift || !discountToApply.grantedRewardId) {
+            closeApplyModal(); return;
+        }
+        const grantedRewardId = discountToApply.grantedRewardId;
         setIsApplyingReward(true);
         closeApplyModal();
         try {
@@ -120,8 +125,7 @@ const OrderStatusPage: React.FC = () => {
     
     const handleRequestBill = async () => {
         if (!orderId || !orderStatusData || isRequestingBill) return;
-        setIsRequestingBill(true);
-        setError(null);
+        setIsRequestingBill(true); setError(null);
         try {
             await axios.post(`${API_BASE_URL_PUBLIC}/order/${orderId}/request-bill`);
             notifications.show({ title: t('common.success'), message: t('orderStatusPage.billRequestedSuccess'), color: 'green', icon: <IconCircleCheck /> });
@@ -130,9 +134,7 @@ const OrderStatusPage: React.FC = () => {
             const msg = err.response?.data?.message || err.message || t('common.errorUnknown');
             setError(msg);
             notifications.show({ title: t('common.error'), message: t('orderStatusPage.errorRequestingBill', { message: msg }), color: 'red', icon: <IconAlertCircle /> });
-        } finally {
-            setIsRequestingBill(false);
-        }
+        } finally { setIsRequestingBill(false); }
     };
     
     const handleStartNewOrder = () => {
@@ -159,7 +161,7 @@ const OrderStatusPage: React.FC = () => {
     };
 
     const getOrderStatusText = (status: OrderStatus | undefined): string => {
-        if (!status) return t('common.loading', 'Cargando...');
+        if (!status) return t('common.loading');
         return String(t(`orderStatusPage.orderStatus.${status.toLowerCase()}`, status as string));
     };
 
@@ -183,7 +185,6 @@ const OrderStatusPage: React.FC = () => {
     const canRequestBill = orderStatus === OrderStatus.COMPLETED || orderStatus === OrderStatus.ALL_ITEMS_READY;
     const canApplyReward = orderStatus === OrderStatus.PENDING_PAYMENT && availableCoupons.length > 0 && !isApplyingReward;
     const showAddMoreItemsButton = canAddMoreItemsToOrder(orderStatus);
-    
     const showBillView = orderStatus === OrderStatus.PENDING_PAYMENT || orderStatus === OrderStatus.PAID;
     
     return (
@@ -193,54 +194,13 @@ const OrderStatusPage: React.FC = () => {
                     <Stack gap="lg">
                         <Title order={2} ta="center">{t('orderStatusPage.title')}</Title>
                         <Text ta="center" fz="xl" fw={700}>#{orderNumber || displayOrderNumber}</Text>
-                        
                         <Paper withBorder p="md" radius="sm" bg={i18n.language === 'dark' ? "dark.6" : "gray.0"}>
-                            <Group justify="space-between">
-                                <Text fw={500}>{t('orderStatusPage.generalStatus')}</Text>
-                                <Badge size="lg" color="blue" variant="filled">{getOrderStatusText(orderStatus)}</Badge>
-                            </Group>
+                            <Group justify="space-between"><Text fw={500}>{t('orderStatusPage.generalStatus')}</Text><Badge size="lg" color="blue" variant="filled">{getOrderStatusText(orderStatus)}</Badge></Group>
                             {orderTableIdentifier && <Text size="sm" mt="xs">{t('orderStatusPage.table')} <Text span fw={500}>{orderTableIdentifier}</Text></Text>}
                             <Text size="sm" c="dimmed" mt="xs">{t('orderStatusPage.placedAt')} {new Date(createdAt).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}</Text>
                         </Paper>
-
-                        {showBillView ? (
-                            <OrderBillView orderData={orderStatusData} />
-                        ) : (
-                            <>
-                                <Divider my="sm" label={t('orderStatusPage.itemsTitle')} labelPosition="center" />
-                                <Box>
-                                    <List spacing="md" listStyleType="none" p={0}>
-                                        {items.map((item) => {
-                                            const statusInfo = getOrderItemStatusInfo(item.status);
-                                            const itemName = item.itemNameSnapshot || 'Ítem sin nombre';
-                                            return (
-                                                <List.Item key={item.id} icon={<ThemeIcon color={statusInfo.color} size={24} radius="xl">{statusInfo.icon}</ThemeIcon>}>
-                                                    <Paper p="sm" radius="sm" withBorder style={{ flexGrow: 1 }}>
-                                                        <Group justify="space-between" wrap="nowrap">
-                                                            <Stack gap={2} style={{flexGrow: 1, minWidth: 0}}>
-                                                                <Text fw={500} truncate>{itemName}</Text>
-                                                                <Text size="sm" c="dimmed">{t('orderStatusPage.quantity')} {item.quantity}</Text>
-                                                            </Stack>
-                                                            <Text size="sm" c={statusInfo.color} style={{flexShrink: 0}}>{statusInfo.text}</Text>
-                                                        </Group>
-                                                    </Paper>
-                                                </List.Item>
-                                            );
-                                        })}
-                                    </List>
-                                </Box>
-                            </>
-                        )}
-                        
-                        {generalOrderNotes && (
-                            <>
-                                <Divider my="sm" label={t('orderStatusPage.orderNotesLabel')} labelPosition="center" />
-                                <Paper withBorder p="sm" radius="sm" bg={i18n.language === 'dark' ? "dark.6" : "gray.0"}>
-                                    <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{generalOrderNotes}</Text>
-                                </Paper>
-                            </>
-                        )}
-                        
+                        {showBillView ? (<OrderBillView orderData={orderStatusData} />) : ( <> <Divider my="sm" label={t('orderStatusPage.itemsTitle')} labelPosition="center" /> <Box><List spacing="md" listStyleType="none" p={0}>{items.map((item) => { const statusInfo = getOrderItemStatusInfo(item.status); const itemName = item.itemNameSnapshot || 'Ítem sin nombre'; return (<List.Item key={item.id} icon={<ThemeIcon color={statusInfo.color} size={24} radius="xl">{statusInfo.icon}</ThemeIcon>}><Paper p="sm" radius="sm" withBorder style={{ flexGrow: 1 }}><Group justify="space-between" wrap="nowrap"><Stack gap={2} style={{flexGrow: 1, minWidth: 0}}><Text fw={500} truncate>{itemName}</Text><Text size="sm" c="dimmed">{t('orderStatusPage.quantity')} {item.quantity}</Text></Stack><Text size="sm" c={statusInfo.color} style={{flexShrink: 0}}>{statusInfo.text}</Text></Group></Paper></List.Item>); })}</List></Box> </> )}
+                        {generalOrderNotes && (<><Divider my="sm" label={t('orderStatusPage.orderNotesLabel')} labelPosition="center" /><Paper withBorder p="sm" radius="sm" bg={i18n.language === 'dark' ? "dark.6" : "gray.0"}><Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{generalOrderNotes}</Text></Paper></>)}
                         <Group justify="space-between" mt="xl" wrap="nowrap">
                             <Group>
                                 {showAddMoreItemsButton && businessSlugForReturn && ( <Button component={Link} to={`/m/${businessSlugForReturn}${currentTableIdentifierForReturn ? `/${currentTableIdentifierForReturn}` : ''}`} variant="filled" leftSection={<IconPlus size={16} />} mr="sm">{t('orderStatusPage.addMoreItemsButton')}</Button> )}
@@ -255,7 +215,18 @@ const OrderStatusPage: React.FC = () => {
                 </Paper>
             </Container>
             
-            <ApplyRewardModal opened={applyModalOpened} onClose={closeApplyModal} coupons={availableCoupons} onApply={handleApplyReward} isApplying={isApplyingReward} />
+            <ApplyRewardModal
+                opened={applyModalOpened}
+                onClose={closeApplyModal}
+                // --- CORRECCIÓN DE PROP: `coupons` -> `availableCoupons` ---
+                availableCoupons={availableCoupons}
+                redeemableRewards={[]}
+                initialSelections={{ discount: null, freeItems: [] }}
+                onApply={handleApplyReward}
+                isApplying={isApplyingReward}
+                userPoints={0}
+                appliedLcoRewardIdOnActiveOrder={orderStatusData.appliedLcoRewardId}
+            />
         </>
     );
 };

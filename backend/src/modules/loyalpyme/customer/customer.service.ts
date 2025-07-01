@@ -1,5 +1,5 @@
 // backend/src/modules/loyalpyme/customer/customer.service.ts
-// Version: 2.6.0 (Add getCustomerOrders for purchase history)
+// VERSIÓN 3.1.1 - COMPLETA Y CORREGIDA
 
 import {
     PrismaClient,
@@ -8,18 +8,14 @@ import {
     User,
     GrantedReward,
     Business,
-    TierCalculationBasis,
     ActivityType,
     GrantedRewardStatus,
-    Order, // <-- NUEVA IMPORTACIÓN
-    OrderStatus // <-- NUEVA IMPORTACIÓN
+    Order,
+    OrderStatus,
 } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// --- DEFINICIÓN DE TIPOS PARA LA RESPUESTA ---
-
-// Definimos la forma exacta de los datos de un pedido para el historial
 export type OrderHistoryItem = Pick<Order, 'id' | 'orderNumber' | 'finalAmount' | 'paidAt'> & {
     items: Array<{
         itemNameSnapshot: string | null;
@@ -34,7 +30,6 @@ export type OrderHistoryItem = Pick<Order, 'id' | 'orderNumber' | 'finalAmount' 
     }>;
 };
 
-// Definimos la estructura de la respuesta paginada
 export interface PaginatedOrdersResponse {
     orders: OrderHistoryItem[];
     totalPages: number;
@@ -42,27 +37,24 @@ export interface PaginatedOrdersResponse {
     totalItems: number;
 }
 
-
-// --- SERVICIOS EXISTENTES (SIN CAMBIOS) ---
-
 export type CustomerBusinessConfig = Pick<Business, 'tierCalculationBasis'> | null;
 
-export const findActiveRewardsForCustomer = async ( businessId: string ): Promise<Reward[]> => {
-    console.log( `[CUST_SVC] Finding active rewards for customer view for business: ${businessId}` );
+export const findActiveRewardsForCustomer = async (businessId: string): Promise<Reward[]> => {
+    console.log(`[CUST_SVC] Finding active rewards for customer view for business: ${businessId}`);
     try {
         const rewards = await prisma.reward.findMany({
-            where: { 
-                businessId: businessId, 
-                isActive: true, 
+            where: {
+                businessId: businessId,
+                isActive: true,
             },
-            orderBy: { 
-                pointsCost: 'asc', 
+            orderBy: {
+                pointsCost: 'asc',
             },
         });
-        console.log( `[CUST_SVC] Found ${rewards.length} active rewards for business ${businessId}` );
+        console.log(`[CUST_SVC] Found ${rewards.length} active rewards for business ${businessId}`);
         return rewards;
     } catch (error) {
-        console.error( `[CUST_SVC] Error fetching active rewards for business ${businessId}:`, error );
+        console.error(`[CUST_SVC] Error fetching active rewards for business ${businessId}:`, error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
             throw new Error(`Error de base de datos al buscar recompensas: ${error.message}`);
         }
@@ -70,11 +62,19 @@ export const findActiveRewardsForCustomer = async ( businessId: string ): Promis
     }
 };
 
-export const getPendingGrantedRewards = async (userId: string): Promise<GrantedReward[]> => {
-    console.log(`[CUST_SVC] Fetching pending granted rewards for user ${userId}`);
+/**
+ * Obtiene TODOS los GrantedReward (regalos pendientes, cupones disponibles, etc.) de un usuario.
+ * @param userId - El ID del usuario.
+ * @returns Una lista de todos los `GrantedReward` del usuario.
+ */
+export const getAllGrantedRewardsForUser = async (userId: string): Promise<GrantedReward[]> => {
+    console.log(`[CUST_SVC] Fetching ALL granted rewards for user ${userId}`);
     try {
         const grantedRewards = await prisma.grantedReward.findMany({
-            where: { userId: userId, status: 'PENDING' },
+            where: {
+                userId: userId,
+                // Se elimina el filtro de estado para devolver TODOS
+            },
             include: {
                 reward: {
                     select: {
@@ -83,7 +83,9 @@ export const getPendingGrantedRewards = async (userId: string): Promise<GrantedR
                         name_en: true,
                         description_es: true,
                         description_en: true,
-                        imageUrl: true
+                        imageUrl: true,
+                        type: true,
+                        discountType: true,
                     }
                 },
                 assignedBy: { select: { name: true, email: true } },
@@ -91,10 +93,10 @@ export const getPendingGrantedRewards = async (userId: string): Promise<GrantedR
             },
             orderBy: { assignedAt: 'desc' }
         });
-        console.log(`[CUST_SVC] Found ${grantedRewards.length} pending granted rewards for user ${userId}`);
+        console.log(`[CUST_SVC] Found ${grantedRewards.length} total granted rewards for user ${userId}`);
         return grantedRewards;
     } catch (error) {
-        console.error(`[CUST_SVC] Error fetching pending granted rewards for user ${userId}:`, error);
+        console.error(`[CUST_SVC] Error fetching all granted rewards for user ${userId}:`, error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
              throw new Error(`Error de base de datos al buscar recompensas otorgadas: ${error.message}`);
         }
@@ -102,7 +104,7 @@ export const getPendingGrantedRewards = async (userId: string): Promise<GrantedR
     }
 };
 
-export const redeemGrantedReward = async ( userId: string, grantedRewardId: string ): Promise<GrantedReward> => {
+export const redeemGrantedReward = async (userId: string, grantedRewardId: string): Promise<GrantedReward> => {
     console.log(`[CUST_SVC] User ${userId} attempting to redeem granted reward ${grantedRewardId}`);
     try {
         const updatedGrantedReward = await prisma.$transaction(async (tx) => {
@@ -126,7 +128,7 @@ export const redeemGrantedReward = async ( userId: string, grantedRewardId: stri
             if (grantedReward.userId !== userId) { console.warn(`[CUST_SVC] Unauthorized attempt by user ${userId} to redeem granted reward ${grantedRewardId} belonging to user ${grantedReward.userId}`); throw new Error("Este regalo no te pertenece."); }
             
             if (grantedReward.status !== 'PENDING') {
-                const rewardDisplayName = grantedReward.reward.name_es || grantedReward.reward.name_en || `ID ${grantedReward.rewardId}`;
+                const rewardDisplayName = grantedReward.reward.name_es || grantedReward.reward.name_en || `ID ${grantedReward.reward.id}`;
                 throw new Error(`Este regalo (${rewardDisplayName}) ya fue canjeado o no es válido (Estado: ${grantedReward.status}).`);
             }
 
@@ -199,31 +201,14 @@ export const getAvailableCouponsForUser = async (userId: string): Promise<Grante
     }
 };
 
-
-// --- NUEVA FUNCIÓN PARA EL HISTORIAL DE PEDIDOS ---
-/**
- * Obtiene el historial paginado de pedidos pagados para un usuario.
- * @param userId - El ID del cliente.
- * @param page - El número de página a obtener.
- * @param limit - El número de pedidos por página.
- * @returns Un objeto con la lista de pedidos y la información de paginación.
- */
-export const getCustomerOrders = async (
-    userId: string,
-    page: number,
-    limit: number
-): Promise<PaginatedOrdersResponse> => {
+export const getCustomerOrders = async (userId: string, page: number, limit: number): Promise<PaginatedOrdersResponse> => {
     console.log(`[CUST_SVC] Fetching order history for user ${userId}, Page: ${page}, Limit: ${limit}`);
-
     const skip = (page - 1) * limit;
-
     const whereClause: Prisma.OrderWhereInput = {
         customerLCoId: userId,
         status: OrderStatus.PAID,
     };
-
     try {
-        // Usamos una transacción para asegurar que el conteo y la obtención de datos sean consistentes
         const [totalItems, orders] = await prisma.$transaction([
             prisma.order.count({ where: whereClause }),
             prisma.order.findMany({
@@ -234,9 +219,7 @@ export const getCustomerOrders = async (
                     finalAmount: true,
                     paidAt: true,
                     items: {
-                        where: {
-                            status: { not: 'CANCELLED' } // Excluimos ítems cancelados del detalle
-                        },
+                        where: { status: { not: 'CANCELLED' } },
                         select: {
                             itemNameSnapshot: true,
                             quantity: true,
@@ -252,26 +235,21 @@ export const getCustomerOrders = async (
                         }
                     }
                 },
-                orderBy: { paidAt: 'desc' }, // Ordenar por fecha de pago, los más recientes primero
+                orderBy: { paidAt: 'desc' },
                 skip: skip,
                 take: limit,
             })
         ]);
-
         const totalPages = Math.ceil(totalItems / limit);
-
         console.log(`[CUST_SVC] Found ${orders.length} orders for user ${userId} on page ${page}. Total: ${totalItems}`);
-
         return {
-            orders: orders as OrderHistoryItem[], // Hacemos un cast al tipo que hemos definido
+            orders: orders as OrderHistoryItem[],
             totalPages,
             currentPage: page,
             totalItems,
         };
-
     } catch (error) {
         console.error(`[CUST_SVC] Error fetching order history for user ${userId}:`, error);
         throw new Error('Error al obtener el historial de pedidos desde la base de datos.');
     }
 };
-// --- FIN NUEVA FUNCIÓN ---

@@ -1,4 +1,5 @@
-// frontend/src/components/admin/superadmin/SubscriptionManagementModal.tsx
+// frontend/src/modules/superadmin/components/SubscriptionManagementModal.tsx
+// Version 1.0.1 - Corrected type import path
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, Stack, Tabs, Title, Text, NumberInput, Button, Group, Table, Loader, Alert, Textarea, Select, LoadingOverlay, TextInput } from '@mantine/core';
@@ -8,7 +9,10 @@ import { notifications } from '@mantine/notifications';
 import { IconDeviceFloppy, IconHistory, IconSettings, IconCirclePlus, IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import * as superAdminService from '../services/superAdminService';
-import { SuperAdminBusiness, BusinessPayment } from '../../../types/superadmin.types';
+
+// --- CORRECCIÓN DE RUTA ---
+import { SuperAdminBusiness, BusinessPayment } from '../../../shared/types/superadmin.types';
+// --- FIN CORRECCIÓN ---
 
 interface SubscriptionManagementModalProps {
     opened: boolean;
@@ -23,15 +27,13 @@ const priceFormSchema = z.object({
 });
 type PriceFormValues = z.infer<typeof priceFormSchema>;
 
-// --- CAMBIO: Schema del formulario de pago adaptado ---
 const paymentFormSchema = z.object({
     amountPaid: z.number().min(0.01, { message: 'El importe debe ser mayor que 0.' }),
-    period: z.string().min(1, { message: 'Debe seleccionar un periodo.' }), // Ej: "2025-6"
+    period: z.string().min(1, { message: 'Debe seleccionar un periodo.' }),
     notes: z.string().optional(),
     paymentMethod: z.string().optional(),
 });
 type PaymentFormValues = z.infer<typeof paymentFormSchema>;
-
 
 const SubscriptionManagementModal: React.FC<SubscriptionManagementModalProps> = ({ opened, onClose, business, onSuccess }) => {
     const { i18n } = useTranslation();
@@ -42,7 +44,6 @@ const SubscriptionManagementModal: React.FC<SubscriptionManagementModalProps> = 
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [errorHistory, setErrorHistory] = useState<string | null>(null);
 
-    // --- NUEVO ESTADO para los periodos pendientes ---
     const [pendingPeriods, setPendingPeriods] = useState<{ value: string; label: string; }[]>([]);
     const [loadingPeriods, setLoadingPeriods] = useState(false);
 
@@ -76,7 +77,6 @@ const SubscriptionManagementModal: React.FC<SubscriptionManagementModalProps> = 
             }));
             setPendingPeriods(formattedPeriods);
 
-            // Pre-seleccionar el primer periodo pendiente en el formulario
             if (formattedPeriods.length > 0) {
                 paymentForm.setFieldValue('period', formattedPeriods[0].value);
             }
@@ -115,7 +115,6 @@ const SubscriptionManagementModal: React.FC<SubscriptionManagementModalProps> = 
     const handleRecordPayment = async (values: PaymentFormValues) => {
         if (!business) return;
         
-        // --- CAMBIO: Extraer mes y año del valor del 'period' ---
         const [year, month] = values.period.split('-').map(Number);
         if (!year || !month) {
             notifications.show({ title: 'Error', message: 'Periodo seleccionado no válido.', color: 'red' });
@@ -133,7 +132,6 @@ const SubscriptionManagementModal: React.FC<SubscriptionManagementModalProps> = 
             });
             notifications.show({ title: 'Éxito', message: 'Pago registrado correctamente.', color: 'green', icon: <IconCheck/> });
             
-            // Refrescar datos y resetear formulario
             paymentForm.reset();
             fetchDropdownData();
             onSuccess();
@@ -161,7 +159,6 @@ const SubscriptionManagementModal: React.FC<SubscriptionManagementModalProps> = 
                 </Tabs.List>
 
                 <Tabs.Panel value="config" pt="md">
-                    {/* (Sin cambios en esta pestaña) */}
                     <form onSubmit={priceForm.onSubmit(handleUpdatePrice)}>
                         <Stack>
                             <Text size="sm">Establece el precio mensual que se le cobrará a este negocio.</Text>
@@ -180,22 +177,19 @@ const SubscriptionManagementModal: React.FC<SubscriptionManagementModalProps> = 
                      <form onSubmit={paymentForm.onSubmit(handleRecordPayment)}>
                         <Stack>
                             <Text size="sm">Registra un pago manual para un periodo específico.</Text>
-                            
-                            {/* --- CAMBIO: Reemplazo de Mes/Año por un único Select --- */}
                             <Select
                                 label="Periodo a Pagar"
                                 placeholder={loadingPeriods ? "Cargando periodos..." : "Selecciona un mes pendiente"}
                                 data={pendingPeriods}
                                 required
-                                disabled={pendingPeriods.length === 0}
+                                disabled={pendingPeriods.length === 0 || loadingPeriods}
                                 {...paymentForm.getInputProps('period')}
                             />
-
                             <NumberInput label="Importe Pagado" required min={0.01} decimalScale={2} {...paymentForm.getInputProps('amountPaid')} />
                             <Textarea label="Notas (Opcional)" placeholder="Ej: Pago parcial, referencia de transferencia..." {...paymentForm.getInputProps('notes')} />
                              <TextInput label="Método de Pago (Opcional)" placeholder="Ej: Transferencia, Efectivo" {...paymentForm.getInputProps('paymentMethod')} />
                             <Group justify="flex-end" mt="md">
-                                <Button type="submit" color="green" leftSection={<IconCheck size={16}/>} loading={isSaving} disabled={pendingPeriods.length === 0}>
+                                <Button type="submit" color="green" leftSection={<IconCheck size={16}/>} loading={isSaving} disabled={pendingPeriods.length === 0 || loadingPeriods}>
                                     {pendingPeriods.length > 0 ? "Registrar Pago" : "Sin meses pendientes"}
                                 </Button>
                             </Group>

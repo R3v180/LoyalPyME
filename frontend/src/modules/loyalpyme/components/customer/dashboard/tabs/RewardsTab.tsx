@@ -1,41 +1,40 @@
 // frontend/src/modules/loyalpyme/components/customer/dashboard/tabs/RewardsTab.tsx
-// Version 2.0.0 - Implements the new "Acquire Reward" flow and separates available coupons.
+// VERSIÓN 3.0.1 - Corregido el mapeo de `pendingGifts` para incluir todas las propiedades de DisplayReward.
 
 import React from 'react';
 import { Box, Title, Stack, Divider } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 
-// --- NUEVOS COMPONENTES HIJOS ---
+// Componentes hijos que renderizan las listas
 import RewardList from '../../RewardList';
-import AvailableCouponsList from '../../AvailableCouponsList'; // Componente para mostrar cupones
+import AvailableCouponsList from '../../AvailableCouponsList'; 
 
-// --- IMPORTACIÓN CORREGIDA ---
-// La ruta ahora apunta al archivo de tipos compartidos correcto.
-import { DisplayReward, GrantedReward } from '../../../../../../shared/types/user.types';
+// Tipos necesarios
+import { Reward, GrantedReward, DisplayReward } from '../../../../../../shared/types/user.types';
 
-
-// --- PROPS ACTUALIZADAS ---
+// --- PROPS REFACTORIZADAS ---
 interface RewardsTabProps {
     // Para el catálogo de recompensas
-    displayRewards: DisplayReward[];
+    redeemableRewards: Reward[]; // Lista de recompensas del catálogo
     userPoints: number | undefined;
-    acquiringRewardId: string | null; // Cambiado de redeemingRewardId
+    acquiringRewardId: string | null;
     loadingRewards: boolean;
     errorRewards: string | null;
-    onAcquireReward: (rewardId: string) => Promise<void>; // Cambiado de onRedeemPoints
+    onAcquireReward: (rewardId: string) => Promise<void>;
 
-    // Para la nueva sección de cupones
-    availableCoupons: GrantedReward[]; // Los cupones que el usuario ya tiene
+    // Para la sección de cupones
+    availableCoupons: GrantedReward[];
     loadingCoupons: boolean;
     errorCoupons: string | null;
-
-    // Para los regalos (se mantiene igual por ahora)
-    loadingGrantedRewards: boolean;
+    
+    // Para la sección de regalos
+    pendingGifts: GrantedReward[];
+    loadingGifts: boolean;
     onRedeemGift: (grantedRewardId: string, rewardName: string) => Promise<void>;
 }
 
 const RewardsTab: React.FC<RewardsTabProps> = ({
-    displayRewards,
+    redeemableRewards,
     userPoints,
     acquiringRewardId,
     loadingRewards,
@@ -44,68 +43,93 @@ const RewardsTab: React.FC<RewardsTabProps> = ({
     availableCoupons,
     loadingCoupons,
     errorCoupons,
-    loadingGrantedRewards,
+    pendingGifts,
+    loadingGifts,
     onRedeemGift
 }) => {
     const { t } = useTranslation();
 
-    // Filtramos para separar los regalos de las recompensas normales
-    const gifts = displayRewards.filter(r => r.isGift);
-    const pointRewards = displayRewards.filter(r => !r.isGift);
+    // Transformamos los regalos pendientes a DisplayReward para que RewardList los pueda renderizar
+    const giftDisplayItems: DisplayReward[] = pendingGifts.map(gr => ({
+        isGift: true,
+        id: gr.reward.id,
+        grantedRewardId: gr.id,
+        name_es: gr.reward.name_es,
+        name_en: gr.reward.name_en,
+        description_es: gr.reward.description_es,
+        description_en: gr.reward.description_en,
+        pointsCost: 0,
+        imageUrl: gr.reward.imageUrl,
+        assignedAt: gr.assignedAt,
+        assignedByString: gr.assignedBy?.name || gr.assignedBy?.email || t('customerDashboard.summary.unknownAssigner'),
+        
+        // --- CORRECCIÓN: AÑADIR LAS PROPIEDADES QUE FALTABAN ---
+        type: gr.reward.type,
+        linkedMenuItemId: gr.reward.linkedMenuItemId,
+        discountType: gr.reward.discountType,
+        discountValue: Number(gr.reward.discountValue) || null, // Convertir a número por seguridad
+        // --- FIN DE LA CORRECCIÓN ---
+    }));
+    
+    // Transformamos las recompensas del catálogo a DisplayReward para RewardList
+    const catalogDisplayItems: DisplayReward[] = redeemableRewards.map(r => ({
+        isGift: false,
+        id: r.id,
+        name_es: r.name_es, name_en: r.name_en,
+        description_es: r.description_es, description_en: r.description_en,
+        pointsCost: r.pointsCost, imageUrl: r.imageUrl,
+        type: r.type, linkedMenuItemId: r.linkedMenuItemId,
+        discountType: r.discountType, discountValue: Number(r.discountValue) || null, // Convertir a número por seguridad
+    }));
 
     return (
-        <Box>
+        <Stack gap="xl">
             {/* Sección para los cupones que el usuario ya ha adquirido */}
-            <Stack mt="md">
+            <Box>
                 <Title order={4}>
-                    {t('customerDashboard.availableCouponsTitle', 'Mis Cupones Disponibles')}
+                    {t('customerDashboard.availableCouponsTitle')}
                 </Title>
                 <AvailableCouponsList
                     coupons={availableCoupons}
                     loading={loadingCoupons}
                     error={errorCoupons}
                 />
-            </Stack>
+            </Box>
             
-            <Divider my="xl" label="Catálogo de Recompensas" labelPosition="center" />
+            <Divider my="xl" label={t('customerDashboard.rewardsCatalogTitle')} labelPosition="center" />
 
             {/* Catálogo para adquirir nuevas recompensas con puntos */}
-            <Stack>
-                <Title order={4}>
-                    {t('customerDashboard.rewardsCatalogTitle', 'Catálogo para Canjear con Puntos')}
-                </Title>
+            <Box>
                 <RewardList
-                    rewards={pointRewards}
+                    rewards={catalogDisplayItems}
                     userPoints={userPoints}
                     redeemingRewardId={acquiringRewardId}
                     loadingRewards={loadingRewards}
-                    loadingGrantedRewards={false} // Ya no se maneja aquí
                     errorRewards={errorRewards}
-                    onRedeemPoints={onAcquireReward} // Pasamos la nueva función
-                    onRedeemGift={() => Promise.resolve()} // Los regalos se manejarán por separado
-                    isAcquireFlow={true} // Nuevo prop para cambiar el texto del botón
+                    onRedeemPoints={onAcquireReward}
+                    onRedeemGift={() => Promise.resolve()} // Esta acción no se usa aquí
+                    isAcquireFlow={true}
                 />
-            </Stack>
+            </Box>
 
-            {/* Mantenemos una sección separada para los regalos del admin */}
-            {gifts.length > 0 && (
-                 <Stack mt="xl">
+            {/* Sección separada para los regalos pendientes */}
+            {giftDisplayItems.length > 0 && (
+                 <Stack>
                     <Title order={4}>
-                        {t('customerDashboard.giftsSectionTitle', 'Regalos Recibidos')}
+                        {t('customerDashboard.giftsSectionTitle')}
                     </Title>
                     <RewardList
-                        rewards={gifts}
+                        rewards={giftDisplayItems}
                         userPoints={userPoints}
                         redeemingRewardId={acquiringRewardId}
-                        loadingRewards={false}
-                        loadingGrantedRewards={loadingGrantedRewards}
+                        loadingRewards={loadingGifts}
                         errorRewards={null}
                         onRedeemPoints={() => Promise.resolve()}
                         onRedeemGift={onRedeemGift}
                     />
                 </Stack>
             )}
-        </Box>
+        </Stack>
     );
 };
 

@@ -1,20 +1,19 @@
-// filename: frontend/src/components/customer/TierBenefitsDisplay.tsx
-// Version: 1.0.2 (Use i18n key for title)
+// frontend/src/modules/loyalpyme/components/customer/TierBenefitsDisplay.tsx
+// Version 1.0.3 - Corrected type import path and implemented benefit text formatting.
 
 import React from 'react';
 import { Paper, Title, List, ThemeIcon, Text, Stack } from '@mantine/core';
 import { IconCircleCheck } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
-// Importar el tipo desde el archivo de tipos compartido
-import { TierBenefitData } from '../../types/customer';
+// --- CORRECCIÓN DE RUTA ---
+import { TierBenefitData } from '../../../../shared/types/user.types';
+// --- FIN CORRECCIÓN ---
 
-// --- Props del Componente ---
 interface TierBenefitsDisplayProps {
     tierName: string;
     benefits: TierBenefitData[];
 }
-// --- Fin Props ---
 
 const TierBenefitsDisplay: React.FC<TierBenefitsDisplayProps> = ({ tierName, benefits }) => {
     const { t } = useTranslation();
@@ -22,17 +21,28 @@ const TierBenefitsDisplay: React.FC<TierBenefitsDisplayProps> = ({ tierName, ben
     if (!benefits || benefits.length === 0) {
         return null;
     }
+    
+    // --- LÓGICA MEJORADA PARA MOSTRAR BENEFICIOS ---
+    const formatBenefitText = (benefit: TierBenefitData) => {
+        switch (benefit.type) {
+            case 'POINTS_MULTIPLIER':
+                return t('benefits.pointsMultiplier', { value: benefit.value });
+            case 'EXCLUSIVE_REWARD_ACCESS':
+                return t('benefits.exclusiveRewardAccess', { value: benefit.value });
+            case 'CUSTOM_BENEFIT':
+            default:
+                return benefit.value;
+        }
+    };
+    // --- FIN LÓGICA MEJORADA ---
 
     return (
         <Paper shadow="sm" p="lg" mt="xl" mb="xl" withBorder radius="lg">
             <Stack gap="md">
-                {/* --- MODIFICACIÓN: Usar t() para el título --- */}
                 <Title order={4}>
                     {t('customerDashboard.tierBenefitsTitle', { tierName })}
                 </Title>
-                {/* --- FIN MODIFICACIÓN --- */}
 
-                {/* Lista de beneficios */}
                 <List
                     spacing="xs"
                     size="sm"
@@ -45,11 +55,8 @@ const TierBenefitsDisplay: React.FC<TierBenefitsDisplayProps> = ({ tierName, ben
                 >
                     {benefits.map((benefit) => (
                         <List.Item key={benefit.id}>
-                            {/* TODO: Mejorar la visualización según el 'benefit.type' */}
                             <Text fw={500} span>
-                                {benefit.type === 'POINTS_MULTIPLIER' ? `Multiplicador x${benefit.value}` :
-                                 benefit.type === 'EXCLUSIVE_REWARD_ACCESS' ? `Acceso a Recompensa Exclusiva (ID: ${benefit.value})` :
-                                 benefit.value}
+                                {formatBenefitText(benefit)}
                             </Text>
                             {benefit.description && (
                                 <Text size="xs" c="dimmed" display="block">
@@ -65,5 +72,3 @@ const TierBenefitsDisplay: React.FC<TierBenefitsDisplayProps> = ({ tierName, ben
 };
 
 export default TierBenefitsDisplay;
-
-// End of File: frontend/src/components/customer/TierBenefitsDisplay.tsx

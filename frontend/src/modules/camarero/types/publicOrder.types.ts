@@ -1,5 +1,5 @@
 // frontend/src/modules/camarero/types/publicOrder.types.ts
-// Version 1.2.0 - Add PublicOrderStatusInfo and its sub-types
+// Versión 1.2.1 - CORRECCIÓN: Añadir appliedLcoRewardId a PublicOrderStatusInfo
 
 import { PublicMenuItem } from './menu.types';
 import { OrderStatus, OrderItemStatus } from '../../../shared/types/user.types'; // Importar enums
@@ -25,7 +25,7 @@ export interface OrderItemFE {
     totalPriceForItem: number;
     notes?: string | null;
     selectedModifiers: SelectedModifierFE[];
-    redeemedRewardId?: string | null;
+    redeemedRewardId?: string | null; 
 }
 
 export interface ConfiguringItemState {
@@ -80,7 +80,7 @@ export interface ActiveOrderInfo {
     savedAt: number;
 }
 
-// --- NUEVAS INTERFACES EXPORTADAS PARA EL ESTADO DEL PEDIDO ---
+// --- INTERFACES EXPORTADAS PARA EL ESTADO DEL PEDIDO (CORREGIDAS) ---
 export interface PublicModifierStatusInfo {
     optionNameSnapshot: string | null;
     optionPriceAdjustmentSnapshot: number; // Ya es número
@@ -108,4 +108,5 @@ export interface PublicOrderStatusInfo {
     totalAmount: number;
     discountAmount: number | null;
     finalAmount: number;
+    appliedLcoRewardId: string | null; // <--- ¡AÑADIDA ESTA PROPIEDAD!
 }

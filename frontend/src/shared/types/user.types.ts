@@ -1,4 +1,6 @@
 // frontend/src/shared/types/user.types.ts
+// VERSIÓN 2.0.2: `discountValue` ahora es `any` para máxima flexibilidad en la deserialización.
+
 import React from 'react';
 import { RewardType, DiscountType } from './enums';
 
@@ -59,10 +61,8 @@ export interface UserData {
     id: string;
     email: string;
     name?: string | null;
-    // --- CAMPOS AÑADIDOS ---
     phone?: string | null;
     imageUrl?: string | null;
-    // --- FIN CAMPOS AÑADIDOS ---
     role: UserRole;
     businessId: string | null;
     isActive: boolean;
@@ -97,7 +97,12 @@ export interface Reward {
     type: RewardType;
     linkedMenuItemId: string | null;
     discountType: DiscountType | null;
-    discountValue: string | number | null;
+    // --- CORRECCIÓN CLAVE ---
+    // Aceptamos CUALQUIER tipo que venga de la API (string, number, objeto Decimal serializado)
+    // para evitar errores de tipado en la deserialización. La conversión a número se hará
+    // en el componente que lo necesite (ApplyRewardModal).
+    discountValue: any;
+    // --- FIN CORRECCIÓN ---
     validFrom: string | null;
     validUntil: string | null;
     usageLimit: number | null;
@@ -109,11 +114,11 @@ export interface Reward {
 
 export interface GrantedReward {
     id: string;
-    status: string; // PENDING, AVAILABLE, APPLIED, EXPIRED
+    status: string;
     assignedAt: string;
     redeemedAt: string | null;
     expiresAt: string | null;
-    reward: Pick<Reward, 'id' | 'name_es' | 'name_en' | 'description_es' | 'description_en' | 'imageUrl'>;
+    reward: Reward; 
     assignedBy?: { name?: string | null; email: string; } | null;
     business?: { name: string; } | null;
 }
@@ -134,7 +139,7 @@ export type DisplayReward =
         type: RewardType;
         linkedMenuItemId: string | null;
         discountType: DiscountType | null;
-        discountValue: string | number | null;
+        discountValue: number | null;
     }) |
     {
         isGift: true;
@@ -148,10 +153,10 @@ export type DisplayReward =
         imageUrl?: string | null;
         assignedByString: string;
         assignedAt: string;
-        type: null;
-        discountType?: undefined;
-        discountValue?: undefined;
-        linkedMenuItemId?: undefined;
+        type: RewardType; 
+        linkedMenuItemId: string | null; 
+        discountType: DiscountType | null; 
+        discountValue: number | null;
     };
 
 export interface UseProfileResult {
@@ -178,7 +183,6 @@ export type ActivityType =
     | 'POINTS_EARNED_ORDER_LC'
     | 'REWARD_ACQUIRED'
     | 'REWARD_APPLIED_TO_ORDER';
-
 
 export interface ActivityLogItem {
   id: string;

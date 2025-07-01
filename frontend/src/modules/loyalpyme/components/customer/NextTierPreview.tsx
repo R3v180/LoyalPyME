@@ -1,44 +1,34 @@
-// filename: frontend/src/components/customer/NextTierPreview.tsx
-// Version: 1.0.1 (Remove unused imports/function, use i18n for title)
+// frontend/src/modules/loyalpyme/components/customer/NextTierPreview.tsx
+// Version 1.0.2 - Corrected type import path
 
 import React from 'react';
-// --- MODIFICACIÓN: Quitar Paper ---
 import { Title, List, ThemeIcon, Text, Stack, Box } from '@mantine/core';
-// --- MODIFICACIÓN: Quitar iconos no usados ---
-import { IconSparkles } from '@tabler/icons-react'; // Mantenemos IconSparkles
-// --- FIN MODIFICACIÓN ---
+import { IconSparkles } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
-// Importar el tipo desde el archivo de tipos compartido
-import { TierBenefitData } from '../../types/customer';
+// --- CORRECCIÓN DE RUTA ---
+import { TierBenefitData } from '../../../../shared/types/user.types';
+// --- FIN CORRECCIÓN ---
 
-// --- Props del Componente ---
+
 interface NextTierPreviewProps {
     nextTierName: string;
     nextTierBenefits: TierBenefitData[];
 }
-// --- Fin Props ---
 
 const NextTierPreview: React.FC<NextTierPreviewProps> = ({ nextTierName, nextTierBenefits }) => {
-    const { t } = useTranslation(); // Ahora sí se usa t
+    const { t } = useTranslation();
 
     if (!nextTierBenefits || nextTierBenefits.length === 0) {
         return null;
     }
 
-    // --- ELIMINADO: Función getBenefitIcon eliminada ---
-    // const getBenefitIcon = (type: string) => { ... };
-    // --- FIN ELIMINADO ---
-
-    // Función helper para formatear texto de beneficio (se mantiene)
     const formatBenefitText = (benefit: TierBenefitData) => {
         switch (benefit.type) {
             case 'POINTS_MULTIPLIER':
-                // TODO: Usar clave i18n
-                return <>Multiplicador de Puntos: <Text span fw={700}>x{benefit.value}</Text></>;
+                return <>{t('benefits.pointsMultiplier', { value: benefit.value })}</>;
             case 'EXCLUSIVE_REWARD_ACCESS':
-                 // TODO: Usar clave i18n
-                return <>Acceso Exclusivo: <Text span fw={500}>Recompensa ID {benefit.value}</Text></>;
+                return <>{t('benefits.exclusiveRewardAccess', { value: benefit.value })}</>;
             case 'CUSTOM_BENEFIT':
             default:
                 return benefit.value;
@@ -48,14 +38,10 @@ const NextTierPreview: React.FC<NextTierPreviewProps> = ({ nextTierName, nextTie
     return (
         <Box mt="xl">
             <Stack gap="md">
-                {/* --- MODIFICACIÓN: Usar t() para el título --- */}
                 <Title order={5} c="dimmed">
                     {t('customerDashboard.nextTierBenefitsTitle', { tierName: nextTierName })}
-                    {/* Asegúrate que la clave 'customerDashboard.nextTierBenefitsTitle' existe en tus JSON con valor tipo: "Al alcanzar {{tierName}} tendrás:" */}
                 </Title>
-                {/* --- FIN MODIFICACIÓN --- */}
 
-                {/* Lista de beneficios futuros */}
                 <List
                     spacing="sm"
                     size="sm"
@@ -85,5 +71,3 @@ const NextTierPreview: React.FC<NextTierPreviewProps> = ({ nextTierName, nextTie
 };
 
 export default NextTierPreview;
-
-// End of File: frontend/src/components/customer/NextTierPreview.tsx

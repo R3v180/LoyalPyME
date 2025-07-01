@@ -1,22 +1,21 @@
 // backend/src/modules/loyalpyme/customer/customer.controller.ts
-// Version: 2.4.0 (Add getCustomerOrdersHandler for purchase history)
+// VERSIÓN 3.0.0 - CORRECCIÓN DE HANDLER PARA DEVOLVER TODOS LOS GRANTED REWARDS
 
 import { Request, Response, NextFunction } from 'express';
 
-// Importar funciones desde el servicio de cliente
+// Importar funciones del servicio de cliente
 import {
     findActiveRewardsForCustomer,
-    getPendingGrantedRewards,
+    // La importación de getPendingGrantedRewards se elimina
+    getAllGrantedRewardsForUser, // <-- Se importa la nueva función
     redeemGrantedReward,
     getCustomerFacingBusinessConfig,
     getAvailableCouponsForUser,
-    getCustomerOrders // <-- NUEVA IMPORTACIÓN DEL SERVICIO
+    getCustomerOrders
 } from './customer.service';
 
 import * as TierService from '../tiers/tiers.service';
 
-
-// --- HANDLERS EXISTENTES (SIN CAMBIOS) ---
 
 /**
  * Handler para que el cliente obtenga las recompensas activas de su negocio.
@@ -40,23 +39,25 @@ export const getCustomerRewardsHandler = async (req: Request, res: Response, nex
 };
 
 /**
- * Handler para que el cliente obtenga sus regalos pendientes.
+ * Handler para que el cliente obtenga TODOS sus granted rewards (regalos pendientes, cupones disponibles, etc.).
  * GET /api/customer/granted-rewards
  */
-export const getPendingGrantedRewardsHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const getGrantedRewardsHandler = async (req: Request, res: Response, next: NextFunction) => {
      if (!req.user || !req.user.id) {
         console.error('[CUST_CTRL] Error: userId missing from req.user for granted rewards request.');
         return res.status(401).json({ message: 'Información de usuario no encontrada en la sesión.' });
     }
     const userId = req.user.id;
     const userEmail = req.user.email;
-    console.log(`[CUST_CTRL] User ${userId} (${userEmail || 'N/A'}) requesting pending granted rewards.`);
+    // Log actualizado para reflejar que se piden TODOS
+    console.log(`[CUST_CTRL] User ${userId} (${userEmail || 'N/A'}) requesting ALL granted rewards.`);
     try {
-        const grantedRewards = await getPendingGrantedRewards(userId);
+        // --- CORRECCIÓN CLAVE: Llamar a la nueva función del servicio ---
+        const grantedRewards = await getAllGrantedRewardsForUser(userId);
         res.status(200).json(grantedRewards);
     }
     catch (error) {
-        console.error(`[CUST_CTRL] Failed to fetch pending granted rewards for user ${userId}:`, error);
+        console.error(`[CUST_CTRL] Failed to fetch all granted rewards for user ${userId}:`, error);
         next(error);
     }
 };
@@ -78,7 +79,7 @@ export const redeemGrantedRewardHandler = async (req: Request, res: Response, ne
         const redeemedGrant = await redeemGrantedReward(userId, grantedRewardId);
         res.status(200).json({ message: 'Regalo canjeado con éxito.', grantedRewardId: redeemedGrant.id, rewardId: redeemedGrant.rewardId, redeemedAt: redeemedGrant.redeemedAt });
     }
-    catch (error) {
+    catch (error: any) {
         console.error(`[CUST_CTRL] Failed to redeem granted reward ${grantedRewardId} for user ${userId}:`, error);
         if (error instanceof Error && (error.message.includes('no te pertenece') || error.message.includes('no encontrado'))) {
             return res.status(403).json({ message: error.message });
@@ -89,7 +90,6 @@ export const redeemGrantedRewardHandler = async (req: Request, res: Response, ne
         next(error);
     }
 };
-
 
 /**
  * Handler para que el cliente obtenga los Tiers disponibles en su programa.
@@ -162,7 +162,6 @@ export const getAvailableCouponsHandler = async (req: Request, res: Response, ne
     }
 };
 
-// --- NUEVO HANDLER PARA EL HISTORIAL DE PEDIDOS ---
 /**
  * Handler para obtener el historial de pedidos pagados del cliente, con paginación.
  * GET /api/customer/orders
@@ -173,18 +172,16 @@ export const getCustomerOrdersHandler = async (req: Request, res: Response, next
         return res.status(401).json({ message: 'Usuario no autenticado.' });
     }
 
-    // Leer parámetros de paginación de la query, con valores por defecto seguros.
     const pageQuery = req.query.page as string | undefined;
     const limitQuery = req.query.limit as string | undefined;
     
     const page = parseInt(pageQuery || '1', 10);
     const limit = parseInt(limitQuery || '10', 10);
 
-    // Validación básica de los parámetros
     if (isNaN(page) || page < 1) {
         return res.status(400).json({ message: 'El parámetro "page" debe ser un número positivo.' });
     }
-    if (isNaN(limit) || limit < 1 || limit > 50) { // Limitar el máximo por petición
+    if (isNaN(limit) || limit < 1 || limit > 50) {
         return res.status(400).json({ message: 'El parámetro "limit" debe ser un número entre 1 y 50.' });
     }
 
@@ -194,8 +191,6 @@ export const getCustomerOrdersHandler = async (req: Request, res: Response, next
         const paginatedResult = await getCustomerOrders(userId, page, limit);
         res.status(200).json(paginatedResult);
     } catch (error) {
-        // La función de servicio ya logueará el error. Aquí solo lo pasamos al manejador global.
         next(error);
     }
 };
-// --- FIN NUEVO HANDLER ---

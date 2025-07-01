@@ -1,18 +1,15 @@
-// frontend/src/services/kdsService.ts
-// Version: 1.0.2 (Use baseURL from axiosInstance implicitly)
+// frontend/src/modules/camarero/services/kdsService.ts
+// Version 1.0.3 - Corrected type imports to point to the shared types file.
 
-import axiosInstance from '../../../shared/services/axiosInstance'; // Tu instancia configurada de Axios
-import { 
-    OrderItemStatus as AppOrderItemStatus, 
-    OrderStatus as AppOrderStatus  // Asegúrate que OrderStatus se importa si se usa en los tipos aquí
-} from '../pages/OrderStatusPage'; //
+import axiosInstance from '../../../shared/services/axiosInstance';
+// --- CORRECCIÓN: Importar los enums desde la fuente correcta de tipos compartidos ---
+import { OrderItemStatus, OrderStatus } from '../../../shared/types/user.types';
 
-// --- Tipos para la respuesta del GET /api/camarero/kds/items ---
-// (Estos tipos son los de la versión 1.0.1 que ya tienes en project-all-code.txt)
+// --- Tipos para la respuesta del GET (la estructura interna no cambia) ---
 export interface KdsListItem {
     id: string; 
     quantity: number;
-    status: AppOrderItemStatus;
+    status: OrderItemStatus; // Ahora usa el tipo importado correctamente
     notes: string | null;
     kdsDestination: string | null;
     menuItemName_es: string | null;
@@ -32,8 +29,7 @@ export interface KdsListItem {
     servedAt?: string | null; 
 }
 
-// --- Tipos para la respuesta del PATCH /api/camarero/kds/items/:orderItemId/status ---
-// (Estos tipos son los de la versión 1.0.1 que ya tienes en project-all-code.txt)
+// --- Tipos para la respuesta del PATCH (la estructura interna no cambia) ---
 interface ModifierOptionInfo {
     id: string;
     name_es: string | null;
@@ -83,7 +79,7 @@ interface MenuItemInfoForKdsPatchResponse {
 interface OrderInfoForKdsPatchResponse {
     id: string;
     orderNumber: string;
-    status: AppOrderStatus; 
+    status: OrderStatus; // Usa el tipo correcto
     totalAmount: string; 
     discountAmount: string | null; 
     finalAmount: string; 
@@ -117,7 +113,7 @@ export interface FullOrderItemKdsResponse {
     priceAtPurchase: string; 
     totalItemPrice: string; 
     notes: string | null;
-    status: AppOrderItemStatus; 
+    status: OrderItemStatus; // Usa el tipo correcto
     kdsDestination: string | null;
     orderId: string;
     menuItemId: string;
@@ -134,22 +130,18 @@ export interface FullOrderItemKdsResponse {
     selectedModifiers: SelectedModifierInfo[];
 }
 
-// --- CAMBIO: Definir solo la ruta relativa ---
-const KDS_API_PATH = '/camarero/kds'; 
-// --- FIN CAMBIO ---
+const KDS_API_PATH = '/camarero/kds';
 
 export const getItemsForKds = async (
     destination: string,
-    statusValues?: AppOrderItemStatus[]
+    statusValues?: OrderItemStatus[] // Usa el tipo correcto
 ): Promise<KdsListItem[]> => {
     try {
         const params: Record<string, string | string[]> = { destination: destination.toUpperCase() };
         if (statusValues && statusValues.length > 0) {
             params.status = statusValues; 
         }
-        // --- CAMBIO: Usar solo la ruta relativa ---
         const response = await axiosInstance.get<KdsListItem[]>(`${KDS_API_PATH}/items`, { params });
-        // --- FIN CAMBIO ---
         console.log('[kdsService.getItemsForKds] Raw response data:', response.data);
         return response.data;
     } catch (error) {
@@ -160,15 +152,13 @@ export const getItemsForKds = async (
 
 export const updateOrderItemKdsStatus = async (
     orderItemId: string,
-    newStatus: AppOrderItemStatus
+    newStatus: OrderItemStatus // Usa el tipo correcto
 ): Promise<FullOrderItemKdsResponse> => { 
     try {
-        // --- CAMBIO: Usar solo la ruta relativa ---
         const response = await axiosInstance.patch<FullOrderItemKdsResponse>(
             `${KDS_API_PATH}/items/${orderItemId}/status`,
             { newStatus } 
         );
-        // --- FIN CAMBIO ---
         console.log('[kdsService.updateOrderItemKdsStatus] Raw response data:', response.data);
         return response.data;
     } catch (error) {

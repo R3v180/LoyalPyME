@@ -1,17 +1,17 @@
-// backend/src/routes/index.ts (CORREGIDO)
+// backend/src/routes/index.ts
+// VERSIÓN CORREGIDA - ELIMINA EL MIDDLEWARE DE ROL GLOBAL PARA /rewards
+
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
 
-// --- RUTAS CORREGIDAS ---
+// Middlewares
 import { authenticateToken } from '../shared/middleware/auth.middleware';
 import { checkRole } from '../shared/middleware/role.middleware';
-// --- FIN RUTAS CORREGIDAS ---
 
-
-// Routers (las rutas relativas aquí son correctas, no necesitan cambio)
+// Routers
 import authRouter from './auth.routes';
 import protectedRouter from './protected.routes';
-import rewardsRouter from './rewards.routes';
+import rewardsRouter from './rewards.routes'; // Importa el router que ya corregimos
 import pointsRouter from './points.routes';
 import customerRouter from './customer.routes';
 import tierRouter from './tiers.routes';
@@ -37,20 +37,25 @@ apiRouter.use('/camarero/admin', camareroAdminRouter);
 apiRouter.use('/camarero/kds', camareroKdsRouter);
 apiRouter.use('/camarero/staff', waiterRouter);
 
-// Aplicar autenticación general
+// Aplicar autenticación general A PARTIR DE AQUÍ
 apiRouter.use(authenticateToken);
 
-// Rutas protegidas
-apiRouter.use('/profile', protectedRouter);
-apiRouter.use('/rewards', checkRole([UserRole.BUSINESS_ADMIN]), rewardsRouter);
-apiRouter.use('/points', pointsRouter);
+// --- CORRECCIÓN CLAVE AQUÍ ---
+// Montamos /rewards SIN el middleware checkRole. La lógica de roles
+// ya está dentro de rewards.routes.ts para cada ruta específica.
+apiRouter.use('/rewards', rewardsRouter);
+// --- FIN DE LA CORRECCIÓN ---
+
+// Rutas protegidas que sí tienen un rol común
+apiRouter.use('/profile', protectedRouter); // No necesita rol, solo autenticación
+apiRouter.use('/points', pointsRouter); // La lógica de rol está dentro
 apiRouter.use('/customer', checkRole([UserRole.CUSTOMER_FINAL]), customerRouter);
 apiRouter.use('/tiers', checkRole([UserRole.BUSINESS_ADMIN]), tierRouter);
 apiRouter.use('/admin', checkRole([UserRole.BUSINESS_ADMIN]), adminRouter);
 apiRouter.use('/uploads', checkRole([UserRole.BUSINESS_ADMIN, UserRole.SUPER_ADMIN]), uploadsRouter);
 
-// Router para las rutas /public
-const publicRouterApi = Router(); // Renombrado para evitar conflicto de nombres
+// Router para las rutas /public (sin cambios)
+const publicRouterApi = Router();
 publicRouterApi.use('/businesses', businessRouter);
 publicRouterApi.use('/menu', publicMenuRouter);
 publicRouterApi.use('/order', publicOrderRouter);
