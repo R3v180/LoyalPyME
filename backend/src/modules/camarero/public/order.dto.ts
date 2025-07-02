@@ -13,8 +13,6 @@ import {
 
 // DTO para cada opción de modificador seleccionada
 export class SelectedOrderModifierOptionDto {
-  // --- CORRECCIÓN FINAL ---
-  // Cambiado de @IsUUID a @IsString porque el ID de ModifierOption en Prisma es un cuid(), no un uuid().
   @IsString({ message: 'El ID de la opción de modificador debe ser un string válido.'})
   @IsNotEmpty({ message: 'El ID de la opción de modificador no puede estar vacío.'})
   modifierOptionId!: string;
@@ -42,14 +40,14 @@ export class CreateOrderItemDto {
 
   @IsOptional()
   @IsString()
-  redeemedRewardId?: string | null;
+  redeemedRewardId?: string | null; // <-- CAMPO AÑADIDO
 }
 
 // DTO principal para crear un pedido
 export class CreateOrderDto {
   @IsOptional()
   @IsString()
-  businessId?: string; // Aunque no se usa directamente, lo mantenemos por si acaso
+  businessId?: string; 
 
   @IsString({ message: 'El identificador de mesa debe ser texto.' })
   @IsOptional()
@@ -69,7 +67,7 @@ export class CreateOrderDto {
   customerId?: string;
   
   @IsOptional()
-  @IsString() // El ID de la recompensa es un CUID (string)
+  @IsString()
   appliedLcoRewardId?: string | null;
 }
 
@@ -95,7 +93,7 @@ export class AddItemsOrderItemDto {
 
     @IsOptional()
     @IsString()
-    redeemedRewardId?: string | null;
+    redeemedRewardId?: string | null; // <-- CAMPO AÑADIDO
 }
 
 export class AddItemsToOrderDto {

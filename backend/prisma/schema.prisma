@@ -1,5 +1,5 @@
 // backend/prisma/schema.prisma
-// Version: 20240701.1 - Added imageUrl to User model
+// Version: 20240701.2 - Added REWARD_REDEEMED_IN_LC_ORDER to ActivityType enum
 
 generator client {
   provider        = "prisma-client-js"
@@ -65,6 +65,7 @@ enum ActivityType {
   POINTS_EARNED_ORDER_LC
   REWARD_ACQUIRED
   REWARD_APPLIED_TO_ORDER
+  REWARD_REDEEMED_IN_LC_ORDER // <-- VALOR AÑADIDO
 }
 
 enum OrderStatus {
@@ -213,10 +214,7 @@ model User {
   resetPasswordExpires DateTime?     @map("reset_password_expires_at")
   isActive             Boolean       @default(true)
   isFavorite           Boolean?      @default(false)
-  
-  // --- CAMPO AÑADIDO ---
-  imageUrl             String?       // URL para la foto de perfil del usuario
-
+  imageUrl             String?
   adminNotes           String?       @db.Text
   businessId           String?
   business             Business?     @relation(fields: [businessId], references: [id], onDelete: Cascade)

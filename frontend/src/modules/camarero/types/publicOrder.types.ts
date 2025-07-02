@@ -1,19 +1,17 @@
 // frontend/src/modules/camarero/types/publicOrder.types.ts
-// Versión 1.3.0 - Añadida la interfaz AppliedRewardsState
+// VERSIÓN 2.1.1 - Eliminada dependencia de @prisma/client.
 
-import { PublicMenuItem } from './menu.types';
+// Los enums y tipos compartidos deben estar en un lugar común, como 'shared/types'.
 import { OrderStatus, OrderItemStatus } from '../../../shared/types/user.types';
-import type { Reward } from '../../../shared/types/user.types'; // <-- NUEVA IMPORTACIÓN
+import type { DisplayReward } from '../../../shared/types/user.types';
 
-// --- NUEVA INTERFAZ AÑADIDA ---
-export interface AppliedRewardsState {
-    discount: Reward | null;
-    freeItems: Reward[];
+// --- TIPO PARA EL ESTADO DE RECOMPENSAS APLICADAS ---
+export interface AppliedSelections {
+    discount: DisplayReward | null;
+    freeItems: DisplayReward[];
 }
-// --- FIN NUEVA INTERFAZ ---
 
-
-// --- Tipos para el Frontend del Carrito y Configuración de Ítems ---
+// --- TIPOS PARA EL CARRITO EN EL FRONTEND ---
 export interface SelectedModifierFE {
     modifierOptionId: string;
     name_es?: string | null;
@@ -34,11 +32,12 @@ export interface OrderItemFE {
     totalPriceForItem: number;
     notes?: string | null;
     selectedModifiers: SelectedModifierFE[];
-    redeemedRewardId?: string | null; 
+    redeemedRewardId?: string | null;
 }
 
+// --- TIPO PARA EL ESTADO DE CONFIGURACIÓN DE UN ÍTEM ---
 export interface ConfiguringItemState {
-    itemDetails: PublicMenuItem;
+    itemDetails: any; // Debería ser PublicMenuItem
     quantity: number;
     selectedOptionsByGroup: Record<string, string[] | string>;
     currentUnitPrice: number;
@@ -46,58 +45,66 @@ export interface ConfiguringItemState {
     areModifiersValid: boolean;
 }
 
-// --- Tipos para los DTOs de la API (Payloads para el Backend) ---
-export interface CreateOrderItemModifierDto {
-    modifierOptionId: string;
-}
-
-export interface CreateOrderItemDto {
+// --- TIPOS PARA PAYLOADS DE API (USADOS EN FRONTEND Y BACKEND) ---
+export interface FrontendCreateOrderItemDto {
     menuItemId: string;
     quantity: number;
     notes?: string | null;
-    selectedModifierOptions?: CreateOrderItemModifierDto[] | null;
-    redeemedRewardId?: string | null; 
+    selectedModifierOptions?: { modifierOptionId: string }[] | null;
+    redeemedRewardId?: string | null;
 }
 
 export interface CreateOrderPayloadDto {
     tableIdentifier?: string | null;
     customerId?: string | null;
     customerNotes: string | null;
-    items: CreateOrderItemDto[];
-    businessId?: string;
+    items: FrontendCreateOrderItemDto[];
     appliedLcoRewardId?: string | null;
 }
 
 export interface AddItemsToOrderPayloadDto {
-    items: CreateOrderItemDto[];
+    items: FrontendCreateOrderItemDto[];
     customerNotes: string | null;
     appliedLcoRewardId?: string | null;
 }
 
-// --- Tipos para las Respuestas de la API de Pedidos ---
+// --- TIPOS PARA LA LÓGICA INTERNA DEL BACKEND ---
+// Estos tipos pueden vivir en el frontend, pero sin dependencias de Prisma.
+// Representan la "forma" de los datos que el backend procesará.
+export interface ModifierOptionToCreate {
+    modifierOptionId: string;
+    optionNameSnapshot: string;
+    optionPriceAdjustmentSnapshot: number;
+}
+
+export interface ProcessedOrderItemData {
+    menuItemId: string;
+    quantity: number;
+    priceAtPurchase: number; // Usamos 'number' en el frontend
+    totalItemPrice: number;  // Usamos 'number' en el frontend
+    notes?: string | null;
+    kdsDestination: string | null;
+    itemNameSnapshot: string;
+    itemDescriptionSnapshot: string | null;
+    status: OrderItemStatus;
+    modifierOptionsToCreate: ModifierOptionToCreate[];
+    redeemedRewardId?: string | null;
+}
+
+// --- TIPOS PARA RESPUESTAS DE API (USADOS EN FRONTEND) ---
 export interface BackendOrderResponse {
     id: string;
     orderNumber?: string | null;
 }
 
-// --- Tipos para la Gestión del Pedido Activo en localStorage ---
-export interface ActiveOrderInfo {
-    orderId: string;
-    orderNumber: string;
-    businessSlug: string;
-    tableIdentifier?: string;
-    savedAt: number;
-}
-
-// --- INTERFACES EXPORTADAS PARA EL ESTADO DEL PEDIDO (CORREGIDAS) ---
 export interface PublicModifierStatusInfo {
     optionNameSnapshot: string | null;
-    optionPriceAdjustmentSnapshot: number; // Ya es número
+    optionPriceAdjustmentSnapshot: number; 
 }
 
 export interface PublicOrderItemStatusInfo {
     id: string;
-    itemNameSnapshot: string | null;
+    itemNameSnapshot: string | null; 
     quantity: number;
     status: OrderItemStatus;
     priceAtPurchase: number;
@@ -112,7 +119,7 @@ export interface PublicOrderStatusInfo {
     items: PublicOrderItemStatusInfo[];
     tableIdentifier?: string | null;
     orderNotes?: string | null;
-    createdAt: string; // La API lo envía como string ISO
+    createdAt: string;
     isBillRequested?: boolean;
     totalAmount: number;
     discountAmount: number | null;

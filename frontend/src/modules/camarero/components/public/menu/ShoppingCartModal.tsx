@@ -1,29 +1,23 @@
 // frontend/src/modules/camarero/components/public/menu/ShoppingCartModal.tsx
-// VERSIÓN 2.2.0 - REFACTORIZADO: Recibe el descuento calculado como prop
+// VERSIÓN 3.0.1 - FINAL. Lógica de descuentos eliminada.
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     Modal, Text, Stack, Group, Button, Divider, ScrollArea, Box, NumberInput,
     ActionIcon, Textarea, Paper, Tooltip, useMantineTheme, Badge, useMantineColorScheme
 } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import {
-    IconTrash, IconSend, IconCirclePlus, IconCircleMinus, IconShoppingCartOff,
-    IconTicket, IconX
+    IconTrash, IconSend, IconCirclePlus, IconCircleMinus, IconShoppingCartOff
 } from '@tabler/icons-react';
-import { useLayoutUserData } from '../../../../../shared/hooks/useLayoutUserData';
 import { OrderItemFE } from '../../../types/publicOrder.types';
-import type { DisplayReward } from '../../../../../shared/types/user.types';
 
-// --- PROPS REFACTORIZADAS ---
+// --- PROPS SIMPLIFICADAS ---
 interface ShoppingCartModalProps {
     opened: boolean;
     onClose: () => void;
     orderItems: OrderItemFE[];
     orderNotes: string;
-    subtotal: number; // Prop para el subtotal sin descuento
-    totalWithDiscount: number; // Prop para el total FINAL ya calculado
-    appliedDiscount: DisplayReward | null; // Prop para saber QUÉ descuento se aplicó
     onUpdateItemQuantity: (cartItemId: string, newQuantity: number) => void;
     onRemoveItem: (cartItemId: string) => void;
     onUpdateOrderNotes: (notes: string) => void;
@@ -32,27 +26,23 @@ interface ShoppingCartModalProps {
     onClearCart: () => void;
     isAddingToExistingOrder?: boolean;
     activeOrderNumber?: string | null;
-    onOpenRewardModal: () => void;
-    onRemoveDiscount: () => void;
 }
 
 const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({
-    opened, onClose, orderItems, orderNotes, subtotal, totalWithDiscount, appliedDiscount, 
+    opened, onClose, orderItems, orderNotes, 
     onUpdateItemQuantity, onRemoveItem, onUpdateOrderNotes, 
     onSubmitOrder, isSubmittingOrder, onClearCart,
-    isAddingToExistingOrder, activeOrderNumber,
-    onOpenRewardModal, onRemoveDiscount
+    isAddingToExistingOrder, activeOrderNumber
 }) => {
     const { t, i18n } = useTranslation();
-    const { userData } = useLayoutUserData();
     const theme = useMantineTheme();
     const { colorScheme } = useMantineColorScheme();
     const currentLanguage = i18n.language;
 
-    // --- LÓGICA DE CÁLCULO ELIMINADA ---
-    // El cálculo del descuento ahora se hace en el componente padre (PublicMenuViewPage)
-    // y se pasa a través de las props `subtotal` y `totalWithDiscount`.
-    const calculatedDiscountAmount = subtotal - totalWithDiscount;
+    // El total ahora se calcula aquí directamente
+    const totalAmount = useMemo(() => {
+        return orderItems.reduce((sum, item) => sum + item.totalPriceForItem, 0);
+    }, [orderItems]);
 
     const handleQuantityChange = (cartItemId: string, value: number | string) => {
         onUpdateItemQuantity(cartItemId, Math.max(1, Number(value)));
@@ -123,45 +113,14 @@ const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({
                     </ScrollArea.Autosize>
                 )}
                 
-                {userData && (
-                    <>
-                        <Divider my="sm" label={t('publicMenu.cart.rewardsSectionTitle')} labelPosition="center" />
-                        <Button
-                            variant="light"
-                            color="blue"
-                            fullWidth
-                            onClick={onOpenRewardModal}
-                            leftSection={<IconTicket size={18} />}
-                        >
-                            {t('publicMenu.cart.applyRewardButton')}
-                        </Button>
-                    </>
-                )}
-
                 <Divider my="sm" />
                 <Textarea label={t('publicMenu.cart.orderNotesLabel')} placeholder={t('publicMenu.cart.orderNotesPlaceholder')} value={orderNotes} onChange={(event) => onUpdateOrderNotes(event.currentTarget.value)} minRows={2} disabled={isSubmittingOrder} />
                 <Divider my="sm" />
 
-                <Stack gap={4}>
-                    <Group justify="space-between"><Text size="sm">{t('publicMenu.cart.subtotal')}</Text><Text size="sm">{subtotal.toLocaleString(currentLanguage, { style: 'currency', currency: 'EUR' })}</Text></Group>
-                    {appliedDiscount && (
-                        <Group justify="space-between">
-                            <Group gap="xs">
-                                <Text size="sm" c="green">{t('publicMenu.cart.discountApplied')}</Text>
-                                <Tooltip label="Quitar descuento">
-                                    <ActionIcon size="xs" color="red" variant="subtle" onClick={onRemoveDiscount}>
-                                        <IconX/>
-                                    </ActionIcon>
-                                </Tooltip>
-                            </Group>
-                            <Text size="sm" c="green">{`- ${calculatedDiscountAmount.toLocaleString(currentLanguage, { style: 'currency', currency: 'EUR' })}`}</Text>
-                        </Group>
-                    )}
-                    <Group justify="space-between" mt="sm">
-                        <Text fw={700} size="lg">{t(isAddingToExistingOrder ? 'publicMenu.cart.totalAddItems' : 'publicMenu.cart.totalOrder')}</Text>
-                        <Text fw={700} size="lg">{totalWithDiscount.toLocaleString(currentLanguage, { style: 'currency', currency: 'EUR' })}</Text>
-                    </Group>
-                </Stack>
+                <Group justify="flex-end" mt="sm">
+                    <Text fw={700} size="lg">{t(isAddingToExistingOrder ? 'publicMenu.cart.totalAddItems' : 'publicMenu.cart.totalOrder')}</Text>
+                    <Text fw={700} size="lg">{totalAmount.toLocaleString(currentLanguage, { style: 'currency', currency: 'EUR' })}</Text>
+                </Group>
 
                 <Group justify="flex-end" mt="xl">
                     <Button variant="default" onClick={onClose} disabled={isSubmittingOrder}>{t('publicMenu.cart.continueShopping')}</Button>

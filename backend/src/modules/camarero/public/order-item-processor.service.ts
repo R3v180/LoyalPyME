@@ -75,7 +75,7 @@ export class OrderItemProcessorService {
         for (const itemDto of itemsDto) {
             const menuItem = await this.fetchAndValidateMenuItem(tx, itemDto.menuItemId, businessId);
 
-            // --- CORRECCIÓN PRINCIPAL ---
+            // --- LÓGICA PRINCIPAL AÑADIDA ---
             // Si el ítem viene con un ID de recompensa, lo procesamos como un ítem gratuito.
             if (itemDto.redeemedRewardId) {
                 this.logger.log(`[OrderItemProcessor] Item '${menuItem.name_es}' is a redeemed reward (ID: ${itemDto.redeemedRewardId}). Setting price to 0.`);
@@ -97,7 +97,7 @@ export class OrderItemProcessorService {
                 // Saltamos al siguiente ítem del bucle, ya que este ya está procesado.
                 continue;
             }
-            // --- FIN DE LA CORRECCIÓN ---
+            // --- FIN DE LA LÓGICA AÑADIDA ---
 
             // Si no es un ítem de recompensa, se procesa normalmente.
             const {

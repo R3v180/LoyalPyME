@@ -1,25 +1,22 @@
 // frontend/src/modules/loyalpyme/components/customer/dashboard/tabs/SummaryTab.tsx
-// Version 1.5.4 - Corrected type import path
+// VERSIÓN 3.0.1 - Corregidas las importaciones y eliminadas variables no usadas.
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
-    Stack, Grid, Paper, Title, Group, Text, Box, Image as MantineImage,
-    AspectRatio, Button, Alert, Loader, Center,
-    SimpleGrid, Badge
+    Stack, Grid, Paper, Title, Text, Button, Alert, Group
 } from '@mantine/core';
-import { IconGift, IconArrowRight, IconCoin, IconToolsKitchen2 } from '@tabler/icons-react';
+import { IconGift, IconToolsKitchen2, IconAlertCircle } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-// Importar Componentes Hijos y sus Props
+// Tipos
 import UserInfoDisplay, { type UserInfoDisplayProps } from '../../UserInfoDisplay';
 import QrValidationSection from '../../QrValidationSection';
+import RewardList from '../../RewardList';
+import AvailableCouponsList from '../../AvailableCouponsList';
+import type { UserData, TierBenefitData, Reward, GrantedReward, DisplayReward } from '../../../../../../shared/types/user.types';
+import { RewardType } from '../../../../../../shared/types/enums';
 
-// --- CORRECCIÓN DE RUTA ---
-import type { DisplayReward, UserData, TierBenefitData } from '../../../../../../shared/types/user.types';
-// --- FIN CORRECCIÓN ---
-
-// Props del componente
 interface SummaryTabProps {
     userData: UserData | null;
     loadingUser: boolean;
@@ -28,12 +25,19 @@ interface SummaryTabProps {
     currentTierBenefits: TierBenefitData[];
     nextTierName: string | null;
     nextTierBenefits: TierBenefitData[];
-    displayRewards: DisplayReward[] | null;
+    
+    // Props de recompensas
+    redeemableRewards: Reward[];
     userPoints: number | undefined;
+    loadingRewards: boolean;
+    errorRewards: string | null;
+    pendingGifts: GrantedReward[];
+    availableCoupons: GrantedReward[];
     redeemingRewardId: string | null;
-    onRedeemGift: (grantedRewardId: string, rewardName: string) => Promise<void>;
-    onRedeemPoints: (rewardId: string) => Promise<void>;
-    setActiveTab: (tabValue: string | null) => void;
+    onRedeemPoints: (rewardId: string) => void;
+    onRedeemGift: (grantedRewardId: string, rewardName: string) => void;
+
+    // Props de acciones
     handleValidateQr: (token: string) => Promise<void>;
     validatingQr: boolean;
     scannerOpened: boolean;
@@ -41,177 +45,116 @@ interface SummaryTabProps {
     onCloseScanner: () => void;
 }
 
-const MAX_PREVIEW_ITEMS = 3;
-
 const SummaryTab: React.FC<SummaryTabProps> = ({
     userData, loadingUser, errorUser, progressBarData, currentTierBenefits,
-    nextTierName, nextTierBenefits, displayRewards, userPoints,
-    redeemingRewardId, onRedeemGift, onRedeemPoints,
-    setActiveTab, handleValidateQr, validatingQr, scannerOpened,
-    onOpenScanner, onCloseScanner
+    nextTierName, nextTierBenefits,
+    redeemableRewards, userPoints, loadingRewards, errorRewards,
+    pendingGifts, availableCoupons, redeemingRewardId, onRedeemPoints, onRedeemGift,
+    handleValidateQr, validatingQr, scannerOpened, onOpenScanner, onCloseScanner
 }) => {
-    const { t, i18n } = useTranslation();
-    const currentLanguage = i18n.language;
+    const { t } = useTranslation();
+    
+    // Lógica para transformar los datos para el componente RewardList
+    const giftDisplayItems: DisplayReward[] = pendingGifts.map(gr => ({
+        isGift: true, id: gr.reward.id, grantedRewardId: gr.id, name_es: gr.reward.name_es, name_en: gr.reward.name_en,
+        description_es: gr.reward.description_es, description_en: gr.reward.description_en, pointsCost: 0,
+        imageUrl: gr.reward.imageUrl, assignedAt: gr.assignedAt,
+        assignedByString: gr.assignedBy?.name || gr.assignedBy?.email || t('customerDashboard.summary.unknownAssigner'),
+        type: gr.reward.type, linkedMenuItemId: gr.reward.linkedMenuItemId,
+        discountType: gr.reward.discountType, discountValue: Number(gr.reward.discountValue) || null,
+    }));
 
-    const rewardsSummary = useMemo(() => {
-        const pendingGifts = displayRewards?.filter(r => r.isGift) ?? [];
-        const pointsRewards = displayRewards?.filter(r => !r.isGift && r.pointsCost > 0) ?? [];
-        
-        const previewItems = [...pendingGifts, ...pointsRewards].slice(0, MAX_PREVIEW_ITEMS);
-        return {
-            pendingGiftsCount: pendingGifts.length,
-            previewItems,
-            hasAnyRewards: !!displayRewards && displayRewards.length > 0
-        };
-    }, [displayRewards]);
-
-    if (loadingUser && !userData) {
-        return <Group justify="center" p="xl"><Loader /></Group>;
-    }
+    const catalogDisplayItems: DisplayReward[] = redeemableRewards
+        .filter(r => r.type !== RewardType.MENU_ITEM)
+        .map(r => ({
+            isGift: false, id: r.id, name_es: r.name_es, name_en: r.name_en,
+            description_es: r.description_es, description_en: r.description_en,
+            pointsCost: r.pointsCost, imageUrl: r.imageUrl, type: r.type,
+            linkedMenuItemId: r.linkedMenuItemId, discountType: r.discountType,
+            discountValue: Number(r.discountValue) || null,
+        }));
+    
+    const handleAcquireReward = (rewardId: string) => {
+        onRedeemPoints(rewardId);
+    };
 
     return (
         <Grid gutter="xl">
-            {/* Columna Izquierda: UserInfo y Validación QR */}
             <Grid.Col span={{ base: 12, md: 7 }}>
                 <Stack gap="xl">
                     <UserInfoDisplay
-                        userData={userData}
-                        loadingUser={loadingUser}
-                        errorUser={errorUser}
-                        progressBarData={progressBarData}
-                        benefits={currentTierBenefits}
-                        nextTierName={nextTierName}
-                        nextTierBenefits={nextTierBenefits}
+                        userData={userData} loadingUser={loadingUser} errorUser={errorUser}
+                        progressBarData={progressBarData} benefits={currentTierBenefits}
+                        nextTierName={nextTierName} nextTierBenefits={nextTierBenefits}
                     />
                     <QrValidationSection
-                        onValidate={handleValidateQr}
-                        isValidating={validatingQr}
-                        scannerOpened={scannerOpened}
-                        onOpenScanner={onOpenScanner}
-                        onCloseScanner={onCloseScanner}
+                        onValidate={handleValidateQr} isValidating={validatingQr}
+                        scannerOpened={scannerOpened} onOpenScanner={onOpenScanner} onCloseScanner={onCloseScanner}
                     />
                 </Stack>
             </Grid.Col>
-
-            {/* Columna Derecha: Resumen Recompensas Y Tarjeta Acceso Carta */}
             <Grid.Col span={{ base: 12, md: 5 }}>
-                <Stack gap="xl" style={{ height: '100%' }}>
-                    
-                    {/* Tarjeta de Acceso al Módulo Camarero */}
+                <Stack gap="xl">
                     {userData?.isCamareroActive && userData?.businessSlug && (
                         <Paper withBorder p="lg" radius="md" shadow="sm">
                             <Group justify="space-between" align="center">
                                 <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
-                                    <Text fw={500} size="lg" truncate>
-                                        {userData.businessName 
-                                            ? t('customerDashboard.summary.viewMenuFor', { businessName: userData.businessName }) 
-                                            : t('customerDashboard.summary.viewMenuDefaultTitle')}
-                                    </Text>
-                                    <Text size="sm" c="dimmed" lineClamp={2}>
-                                        {t('customerDashboard.summary.viewMenuSubtitle')}
-                                    </Text>
+                                    <Text fw={500} size="lg" truncate>{userData.businessName ? t('customerDashboard.summary.viewMenuFor', { businessName: userData.businessName }) : t('customerDashboard.summary.viewMenuDefaultTitle')}</Text>
+                                    <Text size="sm" c="dimmed" lineClamp={2}>{t('customerDashboard.summary.viewMenuSubtitle')}</Text>
                                 </Stack>
-                                <Button
-                                    component={Link}
-                                    to={`/m/${userData.businessSlug}`}
-                                    leftSection={<IconToolsKitchen2 size={18} />}
-                                    variant="gradient"
-                                    gradient={{ from: 'teal', to: 'lime', deg: 105 }}
-                                    size="sm"
-                                    style={{ flexShrink: 0 }}
-                                >
+                                <Button component={Link} to={`/m/${userData.businessSlug}`} leftSection={<IconToolsKitchen2 size={18} />} variant="gradient" gradient={{ from: 'teal', to: 'lime', deg: 105 }} size="sm">
                                     {t('customerDashboard.summary.viewMenuButton')}
                                 </Button>
                             </Group>
                         </Paper>
                     )}
-
-                    {/* Tarjeta de Recompensas (existente) */}
-                    {userData?.isLoyaltyCoreActive && (
-                        <Paper shadow="sm" p="lg" withBorder radius="md" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                            <Stack gap="lg" style={{ flexGrow: 1 }}>
-                                <Title order={4}>
-                                    {rewardsSummary.pendingGiftsCount > 0 
-                                        ? t('customerDashboard.summary.giftsAndRewardsTitle') 
-                                        : t('customerDashboard.summary.rewardsTitle')}
-                                </Title>
-                                {rewardsSummary.pendingGiftsCount > 0 && (
-                                    <Alert color="yellow" icon={<IconGift />} title={t('customerDashboard.summary.pendingGifts', { count: rewardsSummary.pendingGiftsCount })} variant='light' radius="md">
-                                        {t('customerDashboard.summary.pendingGiftsDesc')}
-                                    </Alert>
-                                )}
-
-                                {rewardsSummary.previewItems.length > 0 ? (
-                                    <SimpleGrid cols={MAX_PREVIEW_ITEMS === 3 ? 3 : 2} spacing="sm" verticalSpacing="md">
-                                        {rewardsSummary.previewItems.map(item => {
-                                            const displayName = (currentLanguage === 'es' ? item.name_es : item.name_en) || item.name_es || item.name_en || t('common.nameNotAvailable');
-                                            const isAffordable = item.isGift || (userPoints !== undefined && userPoints >= item.pointsCost);
-                                            const isPointsRedeemDisabled = !isAffordable || !!redeemingRewardId;
-                                            const isGiftRedeemDisabled = !!redeemingRewardId;
-                                            const isThisItemLoading = redeemingRewardId === (item.isGift ? item.grantedRewardId : item.id);
-
-                                            return (
-                                                <Stack 
-                                                    key={item.id + (item.isGift ? '-gift' : '-reward')} 
-                                                    gap={4} 
-                                                    align="center"
-                                                >
-                                                    <AspectRatio ratio={1 / 1} style={{ width: '80%', maxWidth: '80px' }}>
-                                                        <MantineImage src={item.imageUrl || '/placeholder-reward.png'} alt={displayName} radius="sm" fallbackSrc="/placeholder-reward.png" />
-                                                    </AspectRatio>
-                                                    <Text size="xs" ta="center" lineClamp={2} style={{ height: '2.4em', fontWeight: 500 }}>{displayName}</Text>
-                                                    {item.isGift ? (
-                                                        <Badge size="xs" color="lime" variant='light' mt={2}>{t('customerDashboard.giftFree')}</Badge>
-                                                    ) : (
-                                                        <Text size="xs" fw={500} mt={2}>{item.pointsCost} {t('common.points')}</Text>
-                                                    )}
-                                                    <Button
-                                                        mt={4}
-                                                        size="compact-xs"
-                                                        variant={item.isGift ? "filled" : "light"}
-                                                        color={item.isGift ? "yellow" : "blue"}
-                                                        onClick={() => {
-                                                            if (item.isGift && item.grantedRewardId) { onRedeemGift(item.grantedRewardId, displayName); }
-                                                            else if (!item.isGift) { onRedeemPoints(item.id); }
-                                                        }}
-                                                        disabled={isThisItemLoading || (item.isGift ? isGiftRedeemDisabled : isPointsRedeemDisabled)}
-                                                        loading={isThisItemLoading}
-                                                        fullWidth
-                                                        radius="xl"
-                                                        leftSection={item.isGift ? <IconGift size={14}/> : <IconCoin size={14}/>}
-                                                    >
-                                                        {isAffordable || item.isGift
-                                                            ? t('customerDashboard.redeemButton')
-                                                            : t('customerDashboard.insufficientPoints')
-                                                        }
-                                                    </Button>
-                                                </Stack>
-                                            );
-                                        })}
-                                    </SimpleGrid>
-                                ) : (
-                                    <Center style={{flexGrow: 1}}>
-                                        <Text c="dimmed">{t('customerDashboard.summary.noRewardsInfo')}</Text>
-                                    </Center>
-                                )}
-                                
-                                <Box mt="auto">
-                                    {rewardsSummary.hasAnyRewards && (
-                                        <Button
-                                            variant="light"
-                                            fullWidth
-                                            mt="sm" 
-                                            onClick={() => setActiveTab('rewards')}
-                                            radius="lg"
-                                            rightSection={<IconArrowRight size={16} />}
-                                        >
-                                            {t('customerDashboard.summary.viewAllButtonShort')}
-                                        </Button>
-                                    )}
-                                </Box>
+                    
+                    {pendingGifts.length > 0 && (
+                        <Paper withBorder p="lg" radius="md" shadow="sm">
+                            <Stack gap="md">
+                                <Title order={4}>{t('customerDashboard.giftsSectionTitle')}</Title>
+                                <Alert color="yellow" icon={<IconGift />} title={t('customerDashboard.summary.pendingGifts', { count: pendingGifts.length })} variant='light' radius="md">
+                                    {t('customerDashboard.summary.pendingGiftsDesc')}
+                                </Alert>
+                                <RewardList
+                                    rewards={giftDisplayItems}
+                                    userPoints={userPoints}
+                                    redeemingRewardId={redeemingRewardId}
+                                    errorRewards={errorRewards}
+                                    loadingRewards={loadingRewards}
+                                    onRedeemPoints={handleAcquireReward}
+                                    onRedeemGift={onRedeemGift}
+                                    isAcquireFlow={false}
+                                />
                             </Stack>
                         </Paper>
                     )}
+
+                    {availableCoupons.length > 0 && (
+                        <Paper withBorder p="lg" radius="md" shadow="sm">
+                             <Stack gap="md">
+                                <Title order={4}>{t('customerDashboard.availableCouponsTitle')}</Title>
+                                <AvailableCouponsList coupons={availableCoupons} loading={loadingRewards} error={errorRewards} />
+                            </Stack>
+                        </Paper>
+                    )}
+
+                    <Paper withBorder p="lg" radius="md" shadow="sm">
+                        <Stack gap="md">
+                            <Title order={4}>{t('customerDashboard.rewardsCatalogTitle')}</Title>
+                             {errorRewards && <Alert color="red" title={t('common.error')} icon={<IconAlertCircle />}>{errorRewards}</Alert>}
+                             <RewardList
+                                rewards={catalogDisplayItems}
+                                userPoints={userPoints}
+                                redeemingRewardId={redeemingRewardId}
+                                errorRewards={null}
+                                loadingRewards={loadingRewards}
+                                onRedeemPoints={handleAcquireReward}
+                                onRedeemGift={onRedeemGift}
+                                isAcquireFlow={true}
+                             />
+                        </Stack>
+                    </Paper>
                 </Stack>
             </Grid.Col>
         </Grid>

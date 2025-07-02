@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "ActivityType" ADD VALUE 'REWARD_REDEEMED_IN_LC_ORDER';

@@ -1,38 +1,34 @@
 // frontend/src/modules/camarero/components/public/menu/CategoryAccordion.tsx
-// Version 1.3.0 - Final Corrected Version
+// VERSIÓN 1.5.1 - CORREGIDO para pasar la firma de función correcta a onAddToCart.
 
 import React from 'react';
 import { Accordion, Group, Image, Stack, Title, Text } from '@mantine/core';
 import { IconChevronDown } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
-import {
-    PublicMenuCategory,
-    PublicMenuItem,
-    ModifierUiType
-} from '../../../types/menu.types';
-import MenuItemCard, { MenuItemCardConfiguringState } from './MenuItemCard';
+import { PublicMenuCategory, PublicMenuItem } from '../../../types/menu.types';
+import MenuItemCard from './MenuItemCard';
+import type { Reward, UserData } from '../../../../../shared/types/user.types';
 
-// --- INTERFAZ DE PROPS DEFINITIVA Y CORRECTA ---
+// --- INTERFAZ DE PROPS CORREGIDA ---
 interface CategoryAccordionProps {
     categories: PublicMenuCategory[];
     activeAccordionItems: string[];
     onAccordionChange: (value: string[]) => void;
-    configuringItemId: string | null;
-    configuringItemState: MenuItemCardConfiguringState | null;
-    onStartConfigureItem: (item: PublicMenuItem) => void;
-    onCancelConfiguration: () => void;
-    onConfigQuantityChange: (newQuantity: number) => void;
-    onConfigModifierSelectionChange: (groupId: string, newSelection: string | string[], groupUiType: ModifierUiType) => void;
-    onConfigNotesChange: (newNotes: string) => void;
-    onConfigAddToCart: () => void;
-    onSimpleAddToCart: (item: PublicMenuItem, quantity: number) => void;
+    redeemableItemsMap: Map<string, Reward>;
+    userData: UserData | null;
+    // La firma de onAddToCart ahora coincide con la de MenuItemCard
+    onAddToCart: (item: PublicMenuItem) => void; 
+    onRedeem: (item: PublicMenuItem) => void;
 }
 
 const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
-    categories, activeAccordionItems, onAccordionChange,
-    configuringItemId, configuringItemState, onStartConfigureItem, onCancelConfiguration,
-    onConfigQuantityChange, onConfigModifierSelectionChange, onConfigNotesChange,
-    onConfigAddToCart, onSimpleAddToCart,
+    categories,
+    activeAccordionItems,
+    onAccordionChange,
+    redeemableItemsMap,
+    userData,
+    onAddToCart,
+    onRedeem,
 }) => {
     const { t, i18n } = useTranslation();
 
@@ -51,9 +47,9 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
                         <Group wrap="nowrap">
                             {category.imageUrl && (<Image src={category.imageUrl} alt={(i18n.language === 'es' && category.name_es) ? category.name_es : (category.name_en || category.name_es || '')} w={60} h={60} fit="cover" radius="sm" />)}
                             <Stack gap={0}>
-                                <Title order={4}>{i18n.language === 'es' && category.name_es ? category.name_es : category.name_en || category.name_es || t('publicMenu.unnamedCategory')}</Title>
+                                <Title order={4}>{(i18n.language === 'es' ? category.name_es : category.name_en) || category.name_es || t('publicMenu.unnamedCategory')}</Title>
                                 {i18n.language === 'es' && category.description_es && <Text size="sm" c="dimmed" lineClamp={1}>{category.description_es}</Text>}
-                                {i18n.language === 'en' && category.description_en && <Text size="sm" c="dimmed" lineClamp={1}>{category.description_en}</Text>}
+                                {i18n.language !== 'es' && category.description_en && <Text size="sm" c="dimmed" lineClamp={1}>{category.description_en}</Text>}
                             </Stack>
                         </Group>
                     </Accordion.Control>
@@ -61,18 +57,20 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
                         {category.items.length > 0 ? (
                             <Stack gap="md" pt="md">
                                 {category.items.map((item) => {
-                                    const isConfiguringThisItem = configuringItemId === item.id;
+                                    const isRedeemable = redeemableItemsMap.has(item.id);
+                                    const rewardInfo = isRedeemable ? redeemableItemsMap.get(item.id) : undefined;
+                                    const canAfford = rewardInfo ? (userData?.points ?? 0) >= rewardInfo.pointsCost : false;
+                                    
                                     return (
                                         <MenuItemCard
-                                            key={item.id} item={item}
-                                            isConfiguringThisItem={isConfiguringThisItem}
-                                            currentConfig={isConfiguringThisItem ? configuringItemState : null}
-                                            onStartConfigure={() => onStartConfigureItem(item)}
-                                            onCancelConfiguration={onCancelConfiguration}
-                                            onQuantityChange={onConfigQuantityChange}
-                                            onModifierSelectionChange={onConfigModifierSelectionChange}
-                                            onNotesChange={onConfigNotesChange}
-                                            onAddToCart={isConfiguringThisItem ? onConfigAddToCart : () => onSimpleAddToCart(item, 1)}
+                                            key={item.id}
+                                            item={item}
+                                            // onAddToCart ahora se pasa directamente, ya que la firma coincide
+                                            onAddToCart={onAddToCart}
+                                            isRedeemable={isRedeemable}
+                                            rewardCost={rewardInfo?.pointsCost}
+                                            canAffordReward={canAfford}
+                                            onRedeem={onRedeem}
                                         />
                                     );
                                 })}

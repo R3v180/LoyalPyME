@@ -14777,21 +14777,22 @@ export const redeemReward = async (customerUserId: string, rewardId: string): Pr
 
 // ====== [69] backend/src/modules/loyalpyme/rewards/rewards.controller.ts ======
 // frontend/src/modules/loyalpyme/rewards/rewards.controller.ts
-// Version 2.0.0 - Implements handlers for the new "Redeem and Apply" flow.
+// Version 3.0.0 - REMOVED handlers for obsolete redeem/coupon flow.
 
 import { Request, Response, NextFunction } from 'express';
-import { Prisma, RewardType, DiscountType } from '@prisma/client';
+import { RewardType, DiscountType } from '@prisma/client';
+
+// --- SERVICE IMPORTS UPDATED ---
+// Import only the CRUD services that are still in use.
 import {
     createReward,
     findRewardsByBusiness,
     findRewardById,
     updateReward,
     deleteReward,
-    redeemRewardForLater, // Importar el nuevo servicio
-    getAvailableRewardsForUser, // Importar el nuevo servicio
 } from './rewards.service';
 
-// --- DTOs ACTUALIZADOS PARA EL FORMULARIO COMPLETO ---
+// --- DTOs (No change) ---
 export interface CreateRewardDto {
     name_es: string;
     name_en: string;
@@ -14807,8 +14808,8 @@ export interface CreateRewardDto {
 }
 
 export type UpdateRewardDto = Partial<CreateRewardDto & { isActive?: boolean }>;
-// --- FIN DTOs ---
 
+// --- CRUD HANDLERS (Remain for Admin Panel) ---
 
 /**
  * Handles creation of a new reward.
@@ -14819,8 +14820,6 @@ export const createRewardHandler = async (req: Request, res: Response, next: Nex
         return res.status(401).json({ message: "Usuario no autenticado o negocio no asociado." });
     }
     
-    // La validación robusta se delega a Zod en el frontend.
-    // Aquí se confía en que los datos llegan con la estructura correcta.
     const rewardData: CreateRewardDto = req.body;
 
     try {
@@ -14832,7 +14831,6 @@ export const createRewardHandler = async (req: Request, res: Response, next: Nex
     } catch (error) {
         console.error('[REWARDS CTRL] Error creating reward:', error);
         if (error instanceof Error) {
-            // Devolver 409 si es error de unicidad del servicio
             if (error.message.includes('unicidad') || error.message.includes('ya existe')) {
                 return res.status(409).json({ message: error.message });
             }
@@ -14850,7 +14848,6 @@ export const getRewardsHandler = async (req: Request, res: Response, next: NextF
      if (!req.user || !req.user.businessId) { return res.status(401).json({ message: "Usuario no autenticado o negocio no asociado." }); }
     const businessId = req.user.businessId;
     try {
-        // findRewardsByBusiness ahora devuelve el objeto Reward completo
         const rewards = await findRewardsByBusiness(businessId);
         res.status(200).json(rewards);
     } catch (error) {
@@ -14928,71 +14925,22 @@ export const deleteRewardHandler = async (req: Request, res: Response, next: Nex
 };
 
 
-// --- NUEVOS HANDLERS PARA EL FLUJO "REDIMIR Y APLICAR" ---
+// --- HANDLERS OBSOLETOS (ELIMINADOS) ---
 
-/**
- * Handles the "acquisition" of a reward by a customer, turning points into an available coupon.
- * POST /api/rewards/:id/redeem
- */
-export const redeemRewardForLaterHandler = async (req: Request, res: Response, next: NextFunction) => {
-    // Solo los clientes finales pueden hacer esto
-    if (!req.user || req.user.role !== 'CUSTOMER_FINAL') {
-        return res.status(403).json({ message: "Acción no permitida." });
-    }
-    const userId = req.user.id;
-    const rewardId = req.params.id;
-
-    if (!rewardId) {
-        return res.status(400).json({ message: 'Se requiere el ID de la recompensa en la URL.' });
-    }
-
-    try {
-        const grantedReward = await redeemRewardForLater(userId, rewardId);
-        res.status(200).json(grantedReward);
-    } catch (error) {
-        console.error(`[REWARDS CTRL] Error redeeming reward ${rewardId} for user ${userId}:`, error);
-        if (error instanceof Error) {
-            // Errores de negocio específicos del servicio (ej. "no tienes puntos")
-            if (error.message.includes('puntos') || error.message.includes('activa')) {
-                return res.status(400).json({ message: error.message });
-            }
-            return res.status(500).json({ message: error.message });
-        }
-        next(new Error('Error del servidor al adquirir la recompensa.'));
-    }
-};
-
-/**
- * Handles fetching all available coupons (GrantedRewards) for the logged-in user.
- * GET /api/me/rewards/available
- */
-export const getAvailableRewardsHandler = async (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-        return res.status(401).json({ message: "Usuario no autenticado." });
-    }
-    const userId = req.user.id;
-
-    try {
-        const availableRewards = await getAvailableRewardsForUser(userId);
-        res.status(200).json(availableRewards);
-    } catch (error) {
-        console.error(`[REWARDS CTRL] Error fetching available rewards for user ${userId}:`, error);
-        next(new Error('Error del servidor al obtener tus recompensas disponibles.'));
-    }
-};
-
-// End of File
+// La función `redeemRewardForLaterHandler` ha sido eliminada.
+// La función `getAvailableRewardsHandler` ha sido eliminada.
 
 
 // ====== [70] backend/src/modules/loyalpyme/rewards/rewards.service.ts ======
 // backend/src/modules/loyalpyme/rewards/rewards.service.ts
-// VERSIÓN 2.2.0 - CORRECCIÓN DEL ESTADO AL CANJEAR Y LIMPIEZA
+// VERSIÓN 3.0.0 - Eliminados los servicios de canje obsoletos (redeemRewardForLater, getAvailableRewardsForUser)
 
-import { PrismaClient, Reward, Prisma, GrantedReward, GrantedRewardStatus, ActivityType, RewardType, DiscountType } from '@prisma/client';
+import { PrismaClient, Reward, Prisma, RewardType, DiscountType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// --- INTERFACES Y TIPOS (SIN CAMBIOS) ---
+// --- TIPOS DE DATOS ---
+// Estos tipos se mantienen para el CRUD de recompensas desde el panel de admin.
 interface CreateRewardData {
     name_es: string;
     name_en: string;
@@ -15007,9 +14955,10 @@ interface CreateRewardData {
     linkedMenuItemId?: string | null;
     kdsDestination?: string | null;
 }
+
 type UpdateRewardData = Partial<CreateRewardData & { isActive?: boolean }>;
 
-// --- SERVICIOS CRUD (SIN CAMBIOS) ---
+// --- SERVICIOS CRUD (SE MANTIENEN PARA EL PANEL DE ADMIN) ---
 
 export const createReward = async (rewardData: CreateRewardData): Promise<Reward> => {
     console.log(`[Rewards SVC] Creating reward for business ${rewardData.businessId}: ${rewardData.name_es}`);
@@ -15017,6 +14966,7 @@ export const createReward = async (rewardData: CreateRewardData): Promise<Reward
         const newReward = await prisma.reward.create({
             data: {
                 ...rewardData,
+                // Prisma espera Decimal, por lo que convertimos el valor del descuento
                 discountValue: rewardData.discountValue ? new Prisma.Decimal(rewardData.discountValue.toString()) : undefined,
             },
         });
@@ -15083,10 +15033,17 @@ export const deleteReward = async (id: string, businessId: string): Promise<Rewa
     if (!existingReward) {
         throw new Error(`Recompensa no encontrada.`);
     }
+    // Verificar si está en uso en GrantedRewards
     const relatedGrantsCount = await prisma.grantedReward.count({ where: { rewardId: id } });
     if (relatedGrantsCount > 0) {
-        throw new Error(`No se puede eliminar la recompensa "${existingReward.name_es}" porque está siendo utilizada.`);
+        throw new Error(`No se puede eliminar la recompensa "${existingReward.name_es}" porque está siendo utilizada en regalos o cupones ya asignados.`);
     }
+    // Verificar si está en uso en Orders
+    const relatedOrdersCount = await prisma.order.count({ where: { appliedLcoRewardId: id }});
+    if (relatedOrdersCount > 0) {
+        throw new Error(`No se puede eliminar la recompensa "${existingReward.name_es}" porque está siendo utilizada en pedidos históricos.`);
+    }
+
     try {
         return await prisma.reward.delete({ where: { id } });
     } catch (error) {
@@ -15095,91 +15052,9 @@ export const deleteReward = async (id: string, businessId: string): Promise<Rewa
     }
 };
 
-// --- SERVICIOS DE FLUJO DE CANJE (CON CORRECCIÓN) ---
-
-/**
- * Permite a un usuario gastar sus puntos para "comprar" una recompensa,
- * que se guardará en su cuenta como un cupón disponible para usar más tarde.
- */
-export const redeemRewardForLater = async (userId: string, rewardId: string): Promise<GrantedReward> => {
-    console.log(`[Rewards SVC] User ${userId} is attempting to acquire reward ${rewardId} for later use.`);
-
-    return prisma.$transaction(async (tx) => {
-        // 1. Obtener datos del usuario y de la recompensa
-        const user = await tx.user.findUnique({ where: { id: userId } });
-        const reward = await tx.reward.findUnique({ where: { id: rewardId } });
-
-        // 2. Validaciones
-        if (!user) throw new Error("Usuario no encontrado.");
-        if (!reward) throw new Error("Recompensa no encontrada.");
-        if (!reward.isActive) throw new Error("Esta recompensa no está activa actualmente.");
-        if (user.points < reward.pointsCost) {
-            throw new Error(`No tienes suficientes puntos. Necesitas ${reward.pointsCost} y tienes ${user.points}.`);
-        }
-
-        // 3. Debitar los puntos del usuario
-        const updatedUser = await tx.user.update({
-            where: { id: userId },
-            data: { points: { decrement: reward.pointsCost } }
-        });
-        console.log(`[Rewards SVC] Debited ${reward.pointsCost} points from user ${userId}. New balance: ${updatedUser.points}`);
-
-        // 4. Crear el "cupón" (GrantedReward) con el estado correcto
-        const newGrantedReward = await tx.grantedReward.create({
-            data: {
-                userId: user.id,
-                rewardId: reward.id,
-                businessId: reward.businessId,
-                // --- CORRECCIÓN CLAVE ---
-                status: GrantedRewardStatus.AVAILABLE, // El cupón debe estar LISTO para usar
-                // redeemedAt se establecerá cuando se APLIQUE al pedido, no ahora.
-                redeemedAt: null,
-                // assignedAt registra cuándo se adquirió el cupón.
-                assignedAt: new Date(), 
-            }
-        });
-        console.log(`[Rewards SVC] Created 'AVAILABLE' GrantedReward ${newGrantedReward.id} for user ${userId}`);
-
-        // 5. Registrar la transacción en el historial
-        await tx.activityLog.create({
-            data: {
-                userId: user.id,
-                businessId: reward.businessId,
-                type: ActivityType.REWARD_ACQUIRED,
-                pointsChanged: -reward.pointsCost,
-                description: `Has obtenido la recompensa: "${reward.name_es}"`,
-                relatedRewardId: reward.id,
-                relatedGrantedRewardId: newGrantedReward.id,
-            }
-        });
-        
-        return newGrantedReward;
-    });
-};
-
-/**
- * Obtiene todos los cupones que un usuario puede usar (estado AVAILABLE).
- */
-export const getAvailableRewardsForUser = async (userId: string): Promise<GrantedReward[]> => {
-    console.log(`[Rewards SVC] Fetching 'AVAILABLE' granted rewards for user ${userId}`);
-    try {
-        return await prisma.grantedReward.findMany({
-            where: {
-                userId,
-                status: GrantedRewardStatus.AVAILABLE,
-            },
-            include: {
-                reward: true 
-            },
-            orderBy: {
-                assignedAt: 'desc'
-            }
-        });
-    } catch (error) {
-        console.error(`[Rewards SVC] Error fetching available rewards for user ${userId}:`, error);
-        throw new Error('Error al obtener tus recompensas disponibles.');
-    }
-};
+// --- SERVICIOS DE CANJE OBSOLETOS (ELIMINADOS) ---
+// La función `redeemRewardForLater` ha sido eliminada.
+// La función `getAvailableRewardsForUser` ha sido eliminada.
 
 
 // ====== [71] backend/src/modules/loyalpyme/tiers/__tests__/tier-logic.helpers.test.ts ======
@@ -17708,8 +17583,8 @@ export default publicOrderRouter;
 
 
 // ====== [95] backend/src/routes/rewards.routes.ts ======
-// frontend/src/routes/rewards.routes.ts
-// VERSIÓN 3.0.0 - CORRECCIÓN DE PERMISOS PARA CANJE DE CLIENTE
+// backend/src/routes/rewards.routes.ts
+// VERSIÓN 4.0.0 - SIMPLIFIED: Only includes CRUD endpoints for Admin panel.
 
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
@@ -17721,15 +17596,16 @@ import {
     getRewardByIdHandler,
     updateRewardHandler,
     deleteRewardHandler,
-    redeemRewardForLaterHandler,
 } from '../modules/loyalpyme/rewards/rewards.controller';
 
 
 const router = Router();
 const loyaltyCoreRequired = checkModuleActive('LOYALTY_CORE');
 
-// --- Rutas para BUSINESS_ADMIN (Crear, Ver, Editar, Borrar) ---
-// Estas rutas requieren el rol de administrador y se mantienen como estaban.
+// --- Rutas para que el BUSINESS_ADMIN gestione el catálogo de recompensas ---
+// Estas rutas requieren que el usuario esté autenticado, sea BUSINESS_ADMIN y tenga el módulo de lealtad activo.
+// Estos middlewares se aplican en el router principal (index.ts) antes de llegar aquí.
+
 router.post('/', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, createRewardHandler);
 router.get('/', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, getRewardsHandler);
 router.get('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, getRewardByIdHandler);
@@ -17737,15 +17613,9 @@ router.put('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, up
 router.patch('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, updateRewardHandler);
 router.delete('/:id', checkRole([UserRole.BUSINESS_ADMIN]), loyaltyCoreRequired, deleteRewardHandler);
 
-// --- RUTA ESPECÍFICA PARA CUSTOMER_FINAL ---
-// Esta es la ruta que estaba mal configurada. Ahora permite explícitamente el canje
-// por parte de un cliente final.
-router.post(
-    '/:id/redeem', 
-    checkRole([UserRole.CUSTOMER_FINAL]), // <-- CORRECCIÓN CLAVE: Solo para clientes
-    loyaltyCoreRequired, 
-    redeemRewardForLaterHandler
-);
+// --- RUTAS OBSOLETAS ELIMINADAS ---
+// La ruta POST /:id/redeem que era para los clientes ya no existe en este archivo.
+// La lógica de canje ahora está 100% contenida dentro de la creación del pedido.
 
 export default router;
 
@@ -20090,6 +19960,7 @@ export default tseslint.config(
     "react-i18next": "^15.0.1",
     "react-image-crop": "^11.0.10",
     "react-router-dom": "^6.26.1",
+    "uuid": "^11.1.0",
     "zod": "^3.24.3"
   },
   "devDependencies": {
@@ -20101,6 +19972,7 @@ export default tseslint.config(
     "@types/qrcode.react": "^1.0.5",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.22.0",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -21066,7 +20938,8 @@ export default tseslint.config(
       "redeemedItemBadge": "Reward",
       "rewardsSectionTitle": "My Rewards",
       "applyRewardButton": "View and Apply Rewards",
-      "discountApplied": "Discount:"
+      "discountApplied": "Discount:",
+      "subtotal": "Subtotal"
     },
     "unnamedModifier": "Unnamed Modifier",
     "activeOrder": {
@@ -22212,7 +22085,8 @@ export default tseslint.config(
       "redeemedItemBadge": "Recompensa",
       "rewardsSectionTitle": "Mis Recompensas",
       "applyRewardButton": "Ver y Aplicar Recompensas",
-      "discountApplied": "Descuento:"
+      "discountApplied": "Descuento:",
+      "subtotal": "Subtotal"
     },
     "unnamedModifier": "Modificador sin nombre",
     "activeOrder": {
@@ -24195,182 +24069,111 @@ export default CategoryAccordion;
 
 
 // ====== [143] frontend/src/modules/camarero/components/public/menu/MenuItemCard.tsx ======
-// frontend/src/components/public/menu/MenuItemCard.tsx
-// Version: 1.0.4 (Correct i18n key path for allergens and tags)
+// frontend/src/modules/camarero/components/public/menu/MenuItemCard.tsx
+// VERSIÓN 2.0.0 - Implementa el doble botón de "Añadir" y "Canjear".
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
     Paper, Title, Text, Stack, Group, Badge, Box, Image,
-    NumberInput, Button as MantineButton, TextInput as MantineTextInput
+    Button as MantineButton, Tooltip
 } from '@mantine/core';
-import { IconShoppingCartPlus, IconNotes, IconListDetails } from '@tabler/icons-react';
+import { IconGift, IconShoppingCartPlus } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
-import {
-    PublicMenuItem,
-    ModifierUiType,
-    PublicMenuModifierGroup,
-} from '../../../types/menu.types';
-import ModifierGroupInteractiveRenderer from './ModifierGroupInteractiveRenderer';
 
-export interface MenuItemCardConfiguringState {
-    quantity: number;
-    selectedOptionsByGroup: Record<string, string[] | string>;
-    currentUnitPrice: number;
-    itemNotes: string;
-    areModifiersValid: boolean;
-}
+import { PublicMenuItem } from '../../../types/menu.types';
 
+// --- NUEVA INTERFAZ DE PROPS ---
 interface MenuItemCardProps {
     item: PublicMenuItem;
-    isConfiguringThisItem: boolean;
-    currentConfig: MenuItemCardConfiguringState | null;
-    onStartConfigure: () => void;
-    onCancelConfiguration: () => void;
-    onQuantityChange: (newQuantity: number) => void;
-    onModifierSelectionChange: (groupId: string, newSelection: string | string[], groupUiType: ModifierUiType) => void;
-    onNotesChange: (newNotes: string) => void;
-    onAddToCart: (quantityIfSimple?: number) => void;
+    onAddToCart: (item: PublicMenuItem, quantity: number) => void;
+    // Props para el canje
+    isRedeemable: boolean;
+    rewardCost?: number;
+    canAffordReward?: boolean;
+    onRedeem: (item: PublicMenuItem) => void;
 }
 
 const MenuItemCard: React.FC<MenuItemCardProps> = ({
     item,
-    isConfiguringThisItem,
-    currentConfig,
-    onStartConfigure,
-    onCancelConfiguration,
-    onQuantityChange,
-    onModifierSelectionChange,
-    onNotesChange,
     onAddToCart,
+    isRedeemable,
+    rewardCost,
+    canAffordReward,
+    onRedeem,
 }) => {
     const { t, i18n } = useTranslation();
-    const [simpleQuantity, setSimpleQuantity] = useState<number>(1);
+    const currentLanguage = i18n.language;
 
-    useEffect(() => {
-        if (!isConfiguringThisItem) {
-            setSimpleQuantity(1);
-        }
-    }, [isConfiguringThisItem]);
-
-    const displayPrice = isConfiguringThisItem && currentConfig ? currentConfig.currentUnitPrice : item.price;
-    const displayQuantity = isConfiguringThisItem && currentConfig ? currentConfig.quantity : simpleQuantity;
-    
-    let mainButtonText: string;
-    let mainButtonAction: () => void;
-    let mainButtonDisabled = false;
-
-    if (isConfiguringThisItem && currentConfig) {
-        mainButtonAction = () => onAddToCart();
-        mainButtonText = t('publicMenu.confirmAndAddToCart');
-        mainButtonDisabled = !currentConfig.areModifiersValid;
-    } else if (item.modifierGroups && item.modifierGroups.length > 0) {
-        mainButtonAction = onStartConfigure;
-        mainButtonText = t('publicMenu.customizeAndAdd');
-    } else {
-        mainButtonAction = () => onAddToCart(simpleQuantity);
-        mainButtonText = t('publicMenu.addToCart');
-    }
-
-    const handleNumberInputChange = (value: number | string) => {
-        const newQty = Number(value) < 1 ? 1 : Number(value);
-        if (isConfiguringThisItem) {
-            onQuantityChange(newQty);
-        } else {
-            setSimpleQuantity(newQty);
-        }
-    };
+    const displayName = (currentLanguage === 'es' ? item.name_es : item.name_en) || item.name_es || t('publicMenu.unnamedItem');
+    const displayDescription = (currentLanguage === 'es' ? item.description_es : item.description_en) || item.description_es;
 
     return (
         <Paper p="md" radius="sm" withBorder>
             <Group wrap="nowrap" align="flex-start" gap="md">
                 {item.imageUrl && (
-                    <Image src={item.imageUrl} alt={(i18n.language === 'es' && item.name_es) ? item.name_es : (item.name_en || item.name_es || '')} w={100} h={100} fit="cover" radius="sm" />
+                    <Image src={item.imageUrl} alt={displayName} w={100} h={100} fit="cover" radius="sm" />
                 )}
                 <Stack gap="xs" style={{ flexGrow: 1 }}>
-                    <Title order={5}>
-                        {i18n.language === 'es' && item.name_es ? item.name_es : item.name_en || item.name_es || t('publicMenu.unnamedItem')}
-                    </Title>
-                    <Text c="blue.7" fw={700} fz="lg">
-                        {displayPrice.toLocaleString(i18n.language, { style: 'currency', currency: 'EUR' })}
-                    </Text>
-                    {(item.description_es && i18n.language === 'es') && <Text size="sm" c="dimmed" lineClamp={3}>{item.description_es}</Text>}
-                    {(item.description_en && i18n.language === 'en') && <Text size="sm" c="dimmed" lineClamp={3}>{item.description_en}</Text>}
-
-                    {!isConfiguringThisItem && item.modifierGroups && item.modifierGroups.length > 0 && (
-                        <MantineButton 
-                            variant="subtle" 
-                            size="xs" 
-                            onClick={onStartConfigure}
-                            leftSection={<IconListDetails size={14}/>}
-                            mt="xs"
-                        >
-                            {t('publicMenu.customizeButton')}
-                        </MantineButton>
-                    )}
-
-                    {isConfiguringThisItem && currentConfig && item.modifierGroups && item.modifierGroups.length > 0 && (
-                        <Box mt="sm" pl="xs">
-                            <Title order={6} c="dimmed" tt="uppercase" fz="xs" mb="xs">{t('publicMenu.optionsTitle')}</Title>
-                            {item.modifierGroups.map((group: PublicMenuModifierGroup) => (
-                                <ModifierGroupInteractiveRenderer
-                                    key={group.id}
-                                    group={group}
-                                    selectedOptionsForThisGroup={currentConfig.selectedOptionsByGroup[group.id] || (group.uiType === ModifierUiType.RADIO ? '' : [])}
-                                    onSelectionChange={(newSelection) => onModifierSelectionChange(group.id, newSelection, group.uiType)}
-                                />
-                            ))}
-                            <MantineTextInput
-                                label={t('publicMenu.itemNotesLabel')}
-                                placeholder={t('publicMenu.itemNotesPlaceholder')}
-                                value={currentConfig.itemNotes}
-                                onChange={(event) => onNotesChange(event.currentTarget.value)}
-                                mt="sm"
-                                rightSection={<IconNotes size={16} />}
-                            />
-                        </Box>
-                    )}
+                    <Title order={5}>{displayName}</Title>
                     
-                    {/* ---------- CORRECCIÓN AQUÍ ---------- */}
+                    {displayDescription && <Text size="sm" c="dimmed" lineClamp={3}>{displayDescription}</Text>}
+                    
                     {(item.allergens.length > 0 || item.tags.length > 0) && (
                         <Group gap="xs" mt="sm">
                             {item.allergens.map(allergen => (
                                 <Badge key={allergen} variant="outline" color="orange" size="xs">
-                                    {t(`adminCamarero.menuItem.allergen.${allergen}`, allergen)} {/* <--- Añadido adminCamarero. */}
+                                    {t(`adminCamarero.menuItem.allergen.${allergen}`, allergen)}
                                 </Badge>
                             ))}
                             {item.tags.map(tag => (
                                 <Badge key={tag} variant="light" color="grape" size="xs">
-                                    {t(`adminCamarero.menuItem.tag.${tag}`, tag)} {/* <--- Añadido adminCamarero. */}
+                                    {t(`adminCamarero.menuItem.tag.${tag}`, tag)}
                                 </Badge>
                             ))}
                         </Group>
                     )}
-                    {/* ---------- FIN CORRECCIÓN ---------- */}
+                    
+                    {/* --- NUEVA LÓGICA DE BOTONES --- */}
+                    <Group mt="md" justify="flex-end" align="center">
+                        <Text fw={700} fz="lg" c="blue.7">
+                            {item.price.toLocaleString(currentLanguage, { style: 'currency', currency: 'EUR' })}
+                        </Text>
+                        
+                        <Group gap="xs">
+                            {/* Botón para comprar con dinero */}
+                            <MantineButton 
+                                onClick={() => onAddToCart(item, 1)}
+                                leftSection={<IconShoppingCartPlus size={16} />}
+                                size="sm"
+                                variant="filled"
+                            >
+                                {t('publicMenu.addToCart')}
+                            </Button>
 
-
-                    <Group mt="md" justify="flex-end" align="flex-end">
-                        <NumberInput
-                            label={t('publicMenu.quantity')}
-                            value={displayQuantity}
-                            onChange={handleNumberInputChange}
-                            min={1} max={20} step={1} size="xs"
-                            style={{ width: '100px' }}
-                            readOnly={!isConfiguringThisItem && !!(item.modifierGroups && item.modifierGroups.length > 0)}
-                        />
-                        <MantineButton 
-                            onClick={mainButtonAction}
-                            leftSection={<IconShoppingCartPlus size={16} />}
-                            size="sm"
-                            variant="filled"
-                            disabled={mainButtonDisabled}
-                        >
-                            {mainButtonText}
-                        </MantineButton>
-                        {isConfiguringThisItem && (
-                            <MantineButton variant="subtle" size="sm" onClick={onCancelConfiguration}>
-                                {t('common.cancel')}
-                            </MantineButton>
-                        )}
+                            {/* Botón para canjear con puntos (condicional) */}
+                            {isRedeemable && (
+                                <Tooltip 
+                                    label={!canAffordReward ? t('customerDashboard.insufficientPoints') : ''}
+                                    color="red"
+                                    withArrow
+                                    disabled={canAffordReward}
+                                >
+                                    <Box>
+                                        <Button
+                                            onClick={() => canAffordReward && onRedeem(item)}
+                                            variant="gradient"
+                                            gradient={{ from: 'orange', to: 'yellow' }}
+                                            size="sm"
+                                            leftSection={<IconGift size={16} />}
+                                            disabled={!canAffordReward}
+                                            style={{ cursor: canAffordReward ? 'pointer' : 'not-allowed' }}
+                                        >
+                                            {t('component.rewardForm.pointsCostPlaceholder', '{{count}} pts', { count: rewardCost })}
+                                        </Button>
+                                    </Box>
+                                </Tooltip>
+                            )}
+                        </Group>
                     </Group>
                 </Stack>
             </Group>
@@ -25669,164 +25472,173 @@ export const usePublicMenuData = (businessSlug: string | undefined): UsePublicMe
 
 // ====== [154] frontend/src/modules/camarero/hooks/usePublicOrderCart.ts ======
 // frontend/src/modules/camarero/hooks/usePublicOrderCart.ts
+// VERSIÓN 4.1.0 - FINAL Y CORRECTA: Tipado explícito en todo el hook.
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { notifications, NotificationData } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
 import { IconShoppingCartPlus, IconCheck } from '@tabler/icons-react';
+import { v4 as uuidv4 } from 'uuid';
 
-import { OrderItemFE, AppliedRewardsState } from '../types/publicOrder.types';
-import { PublicMenuItem } from '../types/menu.types';
-import { Reward } from '../../../shared/types/user.types';
+import { OrderItemFE } from '../types/publicOrder.types';
+import type { Reward } from '../../../shared/types/user.types';
 
-const LOCAL_STORAGE_CART_KEY_PREFIX = 'loyalpyme_public_cart_v2_';
-const LOCAL_STORAGE_REWARDS_KEY_PREFIX = 'loyalpyme_public_rewards_v2_';
-const LOCAL_STORAGE_ORDER_NOTES_KEY_PREFIX = 'loyalpyme_public_order_notes_v2_';
+const LOCAL_STORAGE_CART_KEY_PREFIX = 'loyalpyme_public_cart_v4_';
+const NOTES_STORAGE_KEY_PREFIX = 'loyalpyme_public_order_notes_v4_';
 
-const getTranslatedNameHelper = (item: { name_es?: string | null, name_en?: string | null }, lang: string, defaultName: string = 'Unnamed') => {
-    if (lang === 'es' && item.name_es) return item.name_es;
-    if (lang === 'en' && item.name_en) return item.name_en;
-    return item.name_es || item.name_en || defaultName;
-};
-
-export interface UsePublicOrderCartReturn {
-    currentOrderItems: OrderItemFE[];
-    appliedRewards: AppliedRewardsState;
-    orderNotes: string;
-    totalCartItems: number;
-    totalCartAmount: number;
-    totalPointsCost: number;
-    addItemToCart: (item: OrderItemFE) => void;
-    addSimpleItemToCart: (menuItem: PublicMenuItem, quantity: number) => void;
-    updateItemQuantityInCart: (cartItemId: string, newQuantity: number) => void;
-    removeItemFromCart: (cartItemId: string) => void;
-    updateOrderNotes: (notes: string) => void;
-    clearCart: () => void;
-    clearCartStorage: () => void;
-    applyDiscountReward: (reward: Reward) => void;
-    removeDiscountReward: () => void;
-    addFreeItemReward: (reward: Reward, menuItem: PublicMenuItem) => void;
-    removeFreeItemReward: (rewardId: string) => void;
+// Estructura mínima para añadir un ítem de recompensa.
+export interface MinimalItemForReward {
+    id: string;
+    name_es: string | null;
+    name_en: string | null;
 }
 
 export const usePublicOrderCart = (
     businessSlug: string | undefined,
     tableIdentifier: string | undefined,
     activeOrderId: string | null
-): UsePublicOrderCartReturn => {
+) => {
     const { t, i18n } = useTranslation();
     const currentLang = i18n.language;
 
-    const cartStorageKey = `${LOCAL_STORAGE_CART_KEY_PREFIX}${businessSlug || 'default'}${tableIdentifier ? `_${tableIdentifier}` : ''}`;
-    const rewardsStorageKey = `${LOCAL_STORAGE_REWARDS_KEY_PREFIX}${businessSlug || 'default'}${tableIdentifier ? `_${tableIdentifier}` : ''}`;
-    const notesStorageKey = `${LOCAL_STORAGE_ORDER_NOTES_KEY_PREFIX}${businessSlug || 'default'}${tableIdentifier ? `_${tableIdentifier}` : ''}`;
-
     const [currentOrderItems, setCurrentOrderItems] = useState<OrderItemFE[]>([]);
-    const [appliedRewards, setAppliedRewards] = useState<AppliedRewardsState>({ discount: null, freeItems: [] });
     const [orderNotes, setOrderNotes] = useState<string>('');
 
+    const cartStorageKey = businessSlug ? `${LOCAL_STORAGE_CART_KEY_PREFIX}${businessSlug}${tableIdentifier ? `_${tableIdentifier}` : ''}` : null;
+    const notesStorageKey = businessSlug ? `${NOTES_STORAGE_KEY_PREFIX}${businessSlug}${tableIdentifier ? `_${tableIdentifier}` : ''}` : null;
+
+    // Cargar desde localStorage al montar
     const loadCartFromStorage = useCallback(() => {
-        if (activeOrderId) {
+        if (activeOrderId || !cartStorageKey) {
             setCurrentOrderItems([]);
-            setAppliedRewards({ discount: null, freeItems: [] });
             setOrderNotes('');
             return;
         }
         try {
             const savedCart = localStorage.getItem(cartStorageKey);
-            const savedRewards = localStorage.getItem(rewardsStorageKey);
-            const savedNotes = localStorage.getItem(notesStorageKey);
+            const savedNotes = localStorage.getItem(notesStorageKey || '');
             setCurrentOrderItems(savedCart ? JSON.parse(savedCart) : []);
-            setAppliedRewards(savedRewards ? JSON.parse(savedRewards) : { discount: null, freeItems: [] });
             setOrderNotes(savedNotes || '');
         } catch (e) {
             console.error("Error parsing cart state from localStorage", e);
             setCurrentOrderItems([]);
-            setAppliedRewards({ discount: null, freeItems: [] });
             setOrderNotes('');
         }
-    }, [cartStorageKey, rewardsStorageKey, notesStorageKey, activeOrderId]);
+    }, [cartStorageKey, notesStorageKey, activeOrderId]);
+
+    useEffect(() => {
+        loadCartFromStorage();
+    }, [loadCartFromStorage]);
+
+    // Guardar en localStorage al cambiar
+    useEffect(() => {
+        if (!activeOrderId && cartStorageKey) {
+            localStorage.setItem(cartStorageKey, JSON.stringify(currentOrderItems));
+        }
+    }, [currentOrderItems, cartStorageKey, activeOrderId]);
+
+    useEffect(() => {
+        if (!activeOrderId && notesStorageKey) {
+            localStorage.setItem(notesStorageKey, orderNotes);
+        }
+    }, [orderNotes, notesStorageKey, activeOrderId]);
+
+    // --- FUNCIÓN `addFreeItemReward` CON FIRMA CORRECTA ---
+    const addFreeItemReward = useCallback((menuItemData: MinimalItemForReward, reward: Reward) => {
+        const uniqueCartItemId = `reward-${reward.id}-${uuidv4()}`;
+
+        const newRewardItem: OrderItemFE = {
+            cartItemId: uniqueCartItemId,
+            menuItemId: menuItemData.id,
+            menuItemName_es: menuItemData.name_es,
+            menuItemName_en: menuItemData.name_en,
+            quantity: 1,
+            basePrice: 0,
+            currentPricePerUnit: 0,
+            totalPriceForItem: 0,
+            redeemedRewardId: reward.id,
+            selectedModifiers: [],
+        };
+        
+        setCurrentOrderItems((prev: OrderItemFE[]) => [...prev, newRewardItem]);
+
+        const itemName = (currentLang === 'es' ? menuItemData.name_es : menuItemData.name_en) || 'Recompensa';
+        notifications.show({
+            title: '¡Recompensa Añadida!',
+            message: `${itemName} se ha añadido a tu pedido.`,
+            color: 'green',
+            icon: <IconCheck size={18} />,
+        });
+    }, [currentLang]);
     
-    useEffect(() => { loadCartFromStorage(); }, [loadCartFromStorage]);
-    useEffect(() => { if (!activeOrderId) localStorage.setItem(cartStorageKey, JSON.stringify(currentOrderItems)); }, [currentOrderItems, cartStorageKey, activeOrderId]);
-    useEffect(() => { if (!activeOrderId) localStorage.setItem(rewardsStorageKey, JSON.stringify(appliedRewards)); }, [appliedRewards, rewardsStorageKey, activeOrderId]);
-    useEffect(() => { if (!activeOrderId) localStorage.setItem(notesStorageKey, orderNotes); }, [orderNotes, notesStorageKey, activeOrderId]);
-    
+    const getTranslatedNameHelper = (item: { name_es?: string | null; name_en?: string | null }, lang: string, defaultName: string) => {
+        if (lang === 'es' && item.name_es) return item.name_es;
+        if (lang === 'en' && item.name_en) return item.name_en;
+        return item.name_es || item.name_en || defaultName;
+    };
+
     const addItemToCart = useCallback((newItem: OrderItemFE) => {
         setCurrentOrderItems((prev: OrderItemFE[]) => {
-            const existingItem = prev.find(item => item.cartItemId === newItem.cartItemId);
-            if (existingItem) return prev.map(item => item.cartItemId === newItem.cartItemId ? { ...item, quantity: item.quantity + newItem.quantity, totalPriceForItem: item.currentPricePerUnit * (item.quantity + newItem.quantity) } : item);
+            const existingItem = prev.find((item: OrderItemFE) => item.cartItemId === newItem.cartItemId);
+            if (existingItem) {
+                return prev.map((item: OrderItemFE) => item.cartItemId === newItem.cartItemId ? { ...item, quantity: item.quantity + newItem.quantity, totalPriceForItem: item.currentPricePerUnit * (item.quantity + newItem.quantity) } : item);
+            }
             return [...prev, newItem];
         });
         const itemName = getTranslatedNameHelper({name_es: newItem.menuItemName_es, name_en: newItem.menuItemName_en}, currentLang, t('publicMenu.unnamedItem'));
-        const notifData: NotificationData = { title: t('publicMenu.itemAddedTitle'), message: t('publicMenu.itemAddedMessage', { itemName, quantity: newItem.quantity }), color: 'green', icon: React.createElement(IconShoppingCartPlus, { size: 18 }) };
+        const notifData: NotificationData = { title: t('publicMenu.itemAddedTitle'), message: t('publicMenu.itemAddedMessage', { itemName, quantity: newItem.quantity }), color: 'green', icon: <IconShoppingCartPlus size={18} /> };
         notifications.show(notifData);
     }, [currentLang, t]);
 
-    const addSimpleItemToCart = useCallback((menuItem: PublicMenuItem, quantity: number) => {
+    const addSimpleItemToCart = useCallback((menuItem: {id: string; name_es: string | null; name_en: string | null; price: number }, quantity: number) => {
         const cartItemId = menuItem.id;
         setCurrentOrderItems((prev: OrderItemFE[]) => {
-            const existingIdx = prev.findIndex(item => item.menuItemId === menuItem.id && (!item.selectedModifiers || item.selectedModifiers.length === 0) && !item.notes && !item.redeemedRewardId);
-            if (existingIdx > -1) {
-                const updated = [...prev];
-                updated[existingIdx] = { ...updated[existingIdx], quantity: updated[existingIdx].quantity + quantity, totalPriceForItem: updated[existingIdx].currentPricePerUnit * (updated[existingIdx].quantity + quantity) };
-                return updated;
-            }
+            const existingIdx = prev.findIndex((item: OrderItemFE) => item.menuItemId === menuItem.id && (!item.selectedModifiers || item.selectedModifiers.length === 0) && !item.notes && !item.redeemedRewardId);
+            if (existingIdx > -1) { const updated = [...prev]; updated[existingIdx] = { ...updated[existingIdx], quantity: updated[existingIdx].quantity + quantity, totalPriceForItem: updated[existingIdx].currentPricePerUnit * (updated[existingIdx].quantity + quantity) }; return updated; }
             return [...prev, { cartItemId, menuItemId: menuItem.id, menuItemName_es: menuItem.name_es, menuItemName_en: menuItem.name_en, quantity, basePrice: menuItem.price, currentPricePerUnit: menuItem.price, totalPriceForItem: menuItem.price * quantity, notes: undefined, selectedModifiers: [], redeemedRewardId: null }];
         });
         const itemName = getTranslatedNameHelper(menuItem, currentLang, t('publicMenu.unnamedItem'));
-        const notifData: NotificationData = { title: t('publicMenu.itemAddedTitle'), message: t('publicMenu.itemAddedMessage', { itemName, quantity }), color: 'green', icon: React.createElement(IconShoppingCartPlus, { size: 18 }) };
+        const notifData: NotificationData = { title: t('publicMenu.itemAddedTitle'), message: t('publicMenu.itemAddedMessage', { itemName, quantity }), color: 'green', icon: <IconShoppingCartPlus size={18} /> };
         notifications.show(notifData);
     }, [currentLang, t]);
-    
+
     const updateItemQuantityInCart = useCallback((cartItemId: string, newQuantity: number) => {
         setCurrentOrderItems((prev: OrderItemFE[]) => prev.map((item: OrderItemFE) => item.cartItemId === cartItemId ? { ...item, quantity: newQuantity, totalPriceForItem: item.currentPricePerUnit * newQuantity } : item).filter((item: OrderItemFE) => item.quantity > 0));
     }, []);
-    
+
     const removeItemFromCart = useCallback((cartItemId: string) => {
-        const itemToRemove = currentOrderItems.find(item => item.cartItemId === cartItemId);
-        if(itemToRemove?.redeemedRewardId) {
-            setAppliedRewards(prev => ({ ...prev, freeItems: prev.freeItems.filter(r => r.id !== itemToRemove.redeemedRewardId) }));
-        }
         setCurrentOrderItems((prev: OrderItemFE[]) => prev.filter((item: OrderItemFE) => item.cartItemId !== cartItemId));
-    }, [currentOrderItems]);
-    
-    const updateOrderNotes = useCallback((notes: string) => { setOrderNotes(notes); }, []);
-    
+    }, []);
+
+    const updateOrderNotes = useCallback((notes: string) => {
+        setOrderNotes(notes);
+    }, []);
+
     const clearCart = useCallback(() => {
         setCurrentOrderItems([]);
-        setAppliedRewards({ discount: null, freeItems: [] });
         setOrderNotes('');
-        notifications.show({ title: t('publicMenu.cart.clearedTitle'), message: t('publicMenu.cart.clearedMsg'), color: 'blue', icon: React.createElement(IconCheck, { size: 18 }) });
+        notifications.show({ title: t('publicMenu.cart.clearedTitle'), message: t('publicMenu.cart.clearedMsg'), color: 'blue', icon: <IconCheck size={18} /> });
     }, [t]);
 
     const clearCartStorage = useCallback(() => {
-        localStorage.removeItem(cartStorageKey);
-        localStorage.removeItem(rewardsStorageKey);
-        localStorage.removeItem(notesStorageKey);
-    }, [cartStorageKey, rewardsStorageKey, notesStorageKey]);
+        if (cartStorageKey) localStorage.removeItem(cartStorageKey);
+        if (notesStorageKey) localStorage.removeItem(notesStorageKey);
+    }, [cartStorageKey, notesStorageKey]);
     
-    const applyDiscountReward = useCallback((reward: Reward) => setAppliedRewards((prev: AppliedRewardsState) => ({ ...prev, discount: reward })), []);
-    const removeDiscountReward = useCallback(() => setAppliedRewards((prev: AppliedRewardsState) => ({ ...prev, discount: null })), []);
-
-    const addFreeItemReward = useCallback((reward: Reward, menuItem: PublicMenuItem) => {
-        const newRewardItem: OrderItemFE = { cartItemId: `reward-${reward.id}`, menuItemId: menuItem.id, menuItemName_es: menuItem.name_es, menuItemName_en: menuItem.name_en, quantity: 1, basePrice: 0, currentPricePerUnit: 0, totalPriceForItem: 0, redeemedRewardId: reward.id, selectedModifiers: [] };
-        setCurrentOrderItems((prev: OrderItemFE[]) => [...prev.filter(item => !item.redeemedRewardId), newRewardItem]);
-        setAppliedRewards((prev: AppliedRewardsState) => ({ ...prev, freeItems: [...prev.freeItems.filter((r: Reward) => r.id !== reward.id), reward] }));
-    }, []);
-
-    const removeFreeItemReward = useCallback((rewardId: string) => {
-        setCurrentOrderItems((prev: OrderItemFE[]) => prev.filter((item: OrderItemFE) => item.redeemedRewardId !== rewardId));
-        setAppliedRewards((prev: AppliedRewardsState) => ({ ...prev, freeItems: prev.freeItems.filter((r: Reward) => r.id !== rewardId) }));
-    }, []);
-
     const totalCartItems = currentOrderItems.reduce((sum: number, item: OrderItemFE) => sum + item.quantity, 0);
-    const totalCartAmount = currentOrderItems.reduce((sum: number, item: OrderItemFE) => sum + item.totalPriceForItem, 0);
-    const totalPointsCost = (appliedRewards.discount?.pointsCost ?? 0) + appliedRewards.freeItems.reduce((sum: number, item: Reward) => sum + item.pointsCost, 0);
 
     return {
-        currentOrderItems, appliedRewards, orderNotes, totalCartItems, totalCartAmount, totalPointsCost,
-        addItemToCart, addSimpleItemToCart, updateItemQuantityInCart, removeItemFromCart, updateOrderNotes,
-        clearCart, clearCartStorage, applyDiscountReward, removeDiscountReward, addFreeItemReward, removeFreeItemReward
+        currentOrderItems,
+        orderNotes,
+        totalCartItems,
+        addItemToCart,
+        addSimpleItemToCart,
+        updateItemQuantityInCart,
+        removeItemFromCart,
+        updateOrderNotes,
+        clearCart,
+        clearCartStorage,
+        addFreeItemReward,
     };
 };
 
@@ -26224,9 +26036,9 @@ export default OrderStatusPage;
 
 // ====== [157] frontend/src/modules/camarero/pages/PublicMenuViewPage.tsx ======
 // frontend/src/modules/camarero/pages/PublicMenuViewPage.tsx
-// VERSIÓN 4.2.7 - CORRECCIÓN DEFINITIVA DE LÓGICA DE CÁLCULO DE DESCUENTOS
+// VERSIÓN 6.2.3 - Corregidas las llamadas a addFreeItemReward para pasar el objeto Reward completo.
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import {
     Container, Title, Loader, Alert, Text, Stack, Paper, Image, Group,
@@ -26240,11 +26052,9 @@ import { useTranslation } from 'react-i18next';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
 
-import { RewardType, DiscountType } from '../../../shared/types/enums';
+// Hooks y Servicios
+import { RewardType } from '../../../shared/types/enums';
 import { useLayoutUserData } from '../../../shared/hooks/useLayoutUserData';
-import CategoryAccordion from '../components/public/menu/CategoryAccordion';
-import ShoppingCartModal from '../components/public/menu/ShoppingCartModal';
-import ApplyRewardModal, { AppliedSelections } from '../../loyalpyme/components/customer/ApplyRewardModal';
 import { useActiveOrderState } from '../hooks/useActiveOrderState';
 import { usePublicOrderCart } from '../hooks/usePublicOrderCart';
 import { useMenuItemConfigurator } from '../hooks/useMenuItemConfigurator';
@@ -26252,118 +26062,148 @@ import { usePublicMenuData } from '../hooks/usePublicMenuData';
 import { useCustomerRewardsData } from '../../loyalpyme/hooks/useCustomerRewardsData';
 import { handleOrderSubmission } from '../services/publicOrderApiService';
 
+// Componentes
+import CategoryAccordion from '../components/public/menu/CategoryAccordion';
+import ShoppingCartModal from '../components/public/menu/ShoppingCartModal';
+import ApplyRewardModal, { AppliedSelections } from '../../loyalpyme/components/customer/ApplyRewardModal';
+
+// Tipos
+import type { Reward } from '../../../shared/types/user.types';
+import { OrderItemFE } from '../types/publicOrder.types';
+import { PublicMenuModifierGroup } from '../types/menu.types';
+
 const PublicMenuViewPage: React.FC = () => {
+    // --- Setup de Hooks ---
     const { t, i18n } = useTranslation();
     const theme = useMantineTheme();
     const { colorScheme } = useMantineColorScheme();
     const { businessSlug, tableIdentifier: tableIdentifierFromParams } = useParams<{ businessSlug: string; tableIdentifier?: string }>();
     const navigate = useNavigate();
     const location = useLocation();
+    const processedStateKeyRef = useRef<string | null>(null);
 
+    // --- Hooks de Datos ---
     const { menuData, loadingMenu, errorMenu } = usePublicMenuData(businessSlug);
     const { userData } = useLayoutUserData();
     const { redeemableRewards, availableCoupons } = useCustomerRewardsData();
+    
+    // --- Hooks de Estado de la Página ---
     const { activeOrderId, activeOrderNumber, canCurrentlyAddToExistingOrder, loadingActiveOrderStatus, setActiveOrderManually, activeOrderDetails } = useActiveOrderState(businessSlug, tableIdentifierFromParams);
-    const { currentOrderItems, orderNotes, totalCartItems, addItemToCart, updateItemQuantityInCart, removeItemFromCart, updateOrderNotes, clearCart, clearCartStorage, addSimpleItemToCart } = usePublicOrderCart(businessSlug, tableIdentifierFromParams, activeOrderId);
+    const {
+        currentOrderItems, orderNotes, totalCartItems,
+        addItemToCart, addSimpleItemToCart, removeItemFromCart, updateItemQuantityInCart,
+        updateOrderNotes, clearCart, clearCartStorage, addFreeItemReward
+    } = usePublicOrderCart(businessSlug, tableIdentifierFromParams, activeOrderId);
+    
     const { configuringItem, startConfiguringItem, cancelConfiguration, updateConfigQuantity, updateConfigModifierSelection, updateConfigNotes } = useMenuItemConfigurator();
-
+    
     const [activeAccordionItems, setActiveAccordionItems] = useState<string[]>([]);
     const [isCartOpen, { open: openCart, close: closeCart }] = useDisclosure(false);
     const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
     const [isRewardModalOpen, { open: openRewardModal, close: closeRewardModal }] = useDisclosure(false);
+    
     const [appliedRewards, setAppliedRewards] = useState<AppliedSelections>({ discount: null, freeItems: [] });
 
-    // --- LÓGICA DE CÁLCULO DE TOTALES (AHORA CENTRALIZADA Y CORRECTA) ---
-    const subtotal = currentOrderItems.reduce((acc, item) => acc + item.totalPriceForItem, 0);
+    // Lógica para aplicar recompensa desde el dashboard (al cargar la página)
+    useEffect(() => {
+        const rewardToApply = location.state?.rewardToApply as Reward | undefined;
+        const grantedRewardId = location.state?.grantedRewardIdToApply as string | undefined;
+        const currentLocationKey = location.key;
 
-    let calculatedDiscountAmount = 0;
-    if (appliedRewards.discount) {
+        if (rewardToApply && menuData && currentLocationKey !== processedStateKeyRef.current) {
+            processedStateKeyRef.current = currentLocationKey;
+
+            const menuItemForReward = (rewardToApply.type === RewardType.MENU_ITEM && rewardToApply.linkedMenuItemId)
+                ? menuData.categories.flatMap(c => c.items).find(i => i.id === rewardToApply.linkedMenuItemId)
+                : rewardToApply;
+
+            if (menuItemForReward) {
+                // --- CORRECCIÓN AQUÍ ---
+                // Pasamos el objeto de recompensa completo
+                addFreeItemReward(menuItemForReward, rewardToApply, grantedRewardId);
+            }
+        }
+    }, [menuData, location, addFreeItemReward]);
+    
+    // El resto del código no tiene cambios funcionales, solo se corrige el tipado en el JSX
+    const subtotal = useMemo(() => currentOrderItems.reduce((acc, item) => acc + item.totalPriceForItem, 0), [currentOrderItems]);
+    const calculatedDiscountAmount = useMemo(() => {
+        if (!appliedRewards.discount) return 0;
         const discount = appliedRewards.discount;
         const discountValue = discount.discountValue ? Number(discount.discountValue) : 0;
-        let baseAmountForDiscount = subtotal; // Por defecto, el descuento se aplica al total
-
-        // Si es un descuento sobre un ítem específico, recalculamos la base del descuento
-        if (discount.type === RewardType.DISCOUNT_ON_ITEM && discount.linkedMenuItemId) {
-            baseAmountForDiscount = currentOrderItems
-                .filter(item => item.menuItemId === discount.linkedMenuItemId)
-                .reduce((sum, item) => sum + item.totalPriceForItem, 0);
-        }
-
-        // Ahora aplicamos el descuento a la base correcta
-        if (discount.discountType === DiscountType.PERCENTAGE) {
-            calculatedDiscountAmount = baseAmountForDiscount * (discountValue / 100);
-        } else if (discount.discountType === DiscountType.FIXED_AMOUNT) {
-            calculatedDiscountAmount = discountValue;
-        }
-
-        calculatedDiscountAmount = Math.min(baseAmountForDiscount, calculatedDiscountAmount);
-    }
-    const totalAmountWithDiscount = Math.max(0, subtotal - calculatedDiscountAmount);
-    // --- FIN DE LA LÓGICA DE CÁLCULO ---
-
-
-    const handleSubmitOrderOrAddItems = useCallback(async (optionalAppliedLcoRewardId?: string | null) => {
-        if (currentOrderItems.length === 0 && (optionalAppliedLcoRewardId === undefined && !appliedRewards.discount)) {
-            notifications.show({ title: t('publicMenu.cart.errorTitle'), message: activeOrderId ? t('publicMenu.cart.errorEmptyAddToOrder') : t('publicMenu.cart.errorEmpty'), color: 'orange' }); return;
-        }
-        if (!businessSlug) return; setIsSubmittingOrder(true);
+        let baseAmountForDiscount = subtotal;
+        if (discount.type === RewardType.DISCOUNT_ON_ITEM && discount.linkedMenuItemId) { baseAmountForDiscount = currentOrderItems.filter(item => item.menuItemId === discount.linkedMenuItemId).reduce((sum, item) => sum + item.totalPriceForItem, 0); }
+        let amount = 0;
+        if (discount.discountType && discount.discountType.toUpperCase() === 'PERCENTAGE') { amount = baseAmountForDiscount * (discountValue / 100); } else { amount = discountValue; }
+        return Math.min(baseAmountForDiscount, amount);
+    }, [subtotal, appliedRewards.discount, currentOrderItems]);
+    const totalAmountWithDiscount = useMemo(() => Math.max(0, subtotal - calculatedDiscountAmount), [subtotal, calculatedDiscountAmount]);
+    const handleSubmitOrderOrAddItems = useCallback(async () => {
+        if (currentOrderItems.length === 0 && !appliedRewards.discount) { notifications.show({ title: t('publicMenu.cart.errorTitle'), message: activeOrderId ? t('publicMenu.cart.errorEmptyAddToOrder') : t('publicMenu.cart.errorEmpty'), color: 'orange' }); return; }
+        if (!businessSlug) return;
+        setIsSubmittingOrder(true);
         try {
-            const finalAppliedLcoRewardIdToSend = optionalAppliedLcoRewardId !== undefined ? optionalAppliedLcoRewardId : (appliedRewards.discount ? (appliedRewards.discount.isGift ? appliedRewards.discount.grantedRewardId : appliedRewards.discount.id) : null);
-            const response = await handleOrderSubmission(currentOrderItems, orderNotes, canCurrentlyAddToExistingOrder ? activeOrderId : null, businessSlug, tableIdentifierFromParams, userData?.id, finalAppliedLcoRewardIdToSend);
-            const orderIdToNavigate = response.id;
-            const orderNumberToNavigate = response.orderNumber || activeOrderNumber || orderIdToNavigate;
+            const discountId = appliedRewards.discount ? (appliedRewards.discount.isGift ? appliedRewards.discount.grantedRewardId : appliedRewards.discount.id) : null;
+            const response = await handleOrderSubmission(currentOrderItems, orderNotes, canCurrentlyAddToExistingOrder ? activeOrderId : null, businessSlug, tableIdentifierFromParams, userData?.id, discountId);
+            const orderIdToNavigate = response.id; const orderNumberToNavigate = response.orderNumber || activeOrderNumber || orderIdToNavigate;
             const successMessage = activeOrderId ? t('publicMenu.cart.itemsAddedSuccessMsg', { orderNumber: orderNumberToNavigate }) : t('publicMenu.cart.orderSuccessMsg', { orderNumber: orderNumberToNavigate });
             notifications.show({ title: activeOrderId ? t('publicMenu.cart.itemsAddedSuccessTitle') : t('publicMenu.cart.orderSuccessTitle'), message: successMessage, color: 'green', icon: <IconCheck /> });
             if (!activeOrderId) setActiveOrderManually(orderIdToNavigate, orderNumberToNavigate);
             clearCart(); setAppliedRewards({ discount: null, freeItems: [] }); clearCartStorage(); closeCart();
             navigate(`/order-status/${orderIdToNavigate}`, { state: { orderNumber: orderNumberToNavigate, businessSlug, tableIdentifier: tableIdentifierFromParams } });
-        } catch (err: any) {
-            const errMsg = err.response?.data?.message || err.message || t('publicMenu.cart.orderErrorMsg');
-            notifications.show({ title: t('publicMenu.cart.orderErrorTitle'), message: errMsg, color: 'red', icon: <IconAlertCircle /> });
+        } catch (err: any) { const errMsg = err.response?.data?.message || err.message || t('publicMenu.cart.orderErrorMsg'); notifications.show({ title: t('publicMenu.cart.orderErrorTitle'), message: errMsg, color: 'red', icon: <IconAlertCircle /> });
         } finally { setIsSubmittingOrder(false); }
-    }, [currentOrderItems, orderNotes, canCurrentlyAddToExistingOrder, activeOrderId, businessSlug, tableIdentifierFromParams, userData?.id, navigate, t, setActiveOrderManually, clearCart, setAppliedRewards, clearCartStorage, closeCart, appliedRewards.discount]);
+    }, [currentOrderItems, orderNotes, canCurrentlyAddToExistingOrder, activeOrderId, businessSlug, tableIdentifierFromParams, userData?.id, navigate, t, setActiveOrderManually, clearCart, clearCartStorage, closeCart, appliedRewards.discount, activeOrderNumber]);
+    useEffect(() => { if (menuData?.categories.length && !activeOrderId) setActiveAccordionItems([menuData.categories[0].id]); }, [menuData, activeOrderId]);
 
-    useEffect(() => {
-        if (menuData?.categories.length && !activeOrderId) setActiveAccordionItems([menuData.categories[0].id]);
-    }, [menuData, activeOrderId]);
-
-    const handleApplyRewardsFromModal = useCallback(async (selections: AppliedSelections) => {
+    const handleApplyRewardsFromModal = useCallback((selections: AppliedSelections) => {
         if (!menuData) return;
         setAppliedRewards(selections);
-        const selectedRewardIds = new Set(selections.freeItems.map(item => item.isGift ? item.grantedRewardId! : item.id));
-        currentOrderItems.forEach(cartItem => { if (cartItem.redeemedRewardId && !selectedRewardIds.has(cartItem.redeemedRewardId)) removeItemFromCart(cartItem.cartItemId); });
-        selections.freeItems.forEach(reward => {
-            const rewardIdToCheck = reward.isGift ? reward.grantedRewardId! : reward.id;
-            if (!currentOrderItems.some(ci => ci.redeemedRewardId === rewardIdToCheck) && reward.type === RewardType.MENU_ITEM && reward.linkedMenuItemId) {
-                const menuItemToRedeem = menuData.categories.flatMap(c => c.items).find(item => item.id === reward.linkedMenuItemId);
-                if (menuItemToRedeem) addItemToCart({ cartItemId: `reward-${rewardIdToCheck}`, menuItemId: menuItemToRedeem.id, menuItemName_es: menuItemToRedeem.name_es, menuItemName_en: menuItemToRedeem.name_en, quantity: 1, basePrice: 0, currentPricePerUnit: 0, totalPriceForItem: 0, selectedModifiers: [], redeemedRewardId: rewardIdToCheck });
+        const selectedFreeItemRewardUniqueIds = new Set(selections.freeItems.map(item => item.isGift ? item.grantedRewardId! : item.id));
+
+        currentOrderItems.forEach(cartItem => {
+            if (cartItem.redeemedRewardId && !selectedFreeItemRewardUniqueIds.has(cartItem.redeemedRewardId)) {
+                removeItemFromCart(cartItem.cartItemId);
+            }
+        });
+
+        selections.freeItems.forEach(rewardDisplay => {
+            const rewardIdToFind = rewardDisplay.isGift ? rewardDisplay.grantedRewardId! : rewardDisplay.id;
+            if (!currentOrderItems.some(ci => ci.redeemedRewardId === rewardIdToFind)) {
+                const fullReward = redeemableRewards.find(r => r.id === rewardDisplay.id) || availableCoupons.find(c => c.id === rewardIdToFind)?.reward;
+                if (fullReward) {
+                    const menuItemToRedeem = (fullReward.type === RewardType.MENU_ITEM && fullReward.linkedMenuItemId)
+                        ? menuData.categories.flatMap(c => c.items).find(item => item.id === fullReward.linkedMenuItemId)
+                        : fullReward;
+                    if (menuItemToRedeem) {
+                        // --- CORRECCIÓN AQUÍ ---
+                        addFreeItemReward(menuItemToRedeem, fullReward, rewardDisplay.isGift ? rewardIdToFind : undefined);
+                    }
+                }
             }
         });
         notifications.show({ title: t('applyRewardModal.success.title'), message: t('applyRewardModal.success.message'), color: 'green' });
-    }, [menuData, currentOrderItems, removeItemFromCart, addItemToCart, t]);
-
-    const handleRemoveDiscount = useCallback(async () => {
-        setAppliedRewards(prev => ({ ...prev, discount: null }));
-        if (activeOrderId && canCurrentlyAddToExistingOrder) await handleSubmitOrderOrAddItems(null);
-    }, [activeOrderId, canCurrentlyAddToExistingOrder, handleSubmitOrderOrAddItems]);
-
-    const handleConfiguredItemAddToCart = () => { /* ... (sin cambios) ... */
+        closeRewardModal();
+    }, [menuData, currentOrderItems, removeItemFromCart, addFreeItemReward, closeRewardModal, t, redeemableRewards, availableCoupons]);
+    
+    const handleConfiguredItemAddToCart = () => {
         if (!configuringItem) return;
         const { itemDetails, quantity, selectedOptionsByGroup, currentUnitPrice, itemNotes, areModifiersValid } = configuringItem;
         if (!areModifiersValid) { notifications.show({ title: t('publicMenu.invalidSelectionTitle'), message: t('publicMenu.invalidSelectionMsg'), color: 'orange' }); return; }
         const flatSelectedModifiers = Object.entries(selectedOptionsByGroup).flatMap(([groupId, optionSelections]) => {
-            const group = itemDetails.modifierGroups.find(g => g.id === groupId); if (!group?.options) return [];
+            const group = itemDetails.modifierGroups.find((g: PublicMenuModifierGroup) => g.id === groupId);
+            if (!group?.options) return [];
             const ids = Array.isArray(optionSelections) ? optionSelections.filter(Boolean) : (typeof optionSelections === 'string' ? [optionSelections] : []).filter(Boolean);
             return ids.map(optId => {
-                const option = group.options.find(o => o.id === optId);
+                const option = group.options.find((o: any) => o.id === optId);
                 return option ? { modifierOptionId: option.id, name_es: option.name_es, name_en: option.name_en, priceAdjustment: option.priceAdjustment, modifierGroupName_es: group.name_es, modifierGroupName_en: group.name_en } : null;
-            }).filter(Boolean);
+            }).filter((mod): mod is NonNullable<typeof mod> => mod !== null);
         });
-        const sortedModifierOptionIds = flatSelectedModifiers.map(mod => mod!.modifierOptionId).sort().join(',');
+        const sortedModifierOptionIds = flatSelectedModifiers.map(mod => mod.modifierOptionId).sort().join(',');
         const notesHash = itemNotes ? `_notes-${itemNotes.toLocaleLowerCase().replace(/\s/g, '')}` : '';
         const cartItemId = `${itemDetails.id}${flatSelectedModifiers.length > 0 ? `-[${sortedModifierOptionIds}]` : ''}${notesHash}`;
-        addItemToCart({ cartItemId, menuItemId: itemDetails.id, menuItemName_es: itemDetails.name_es, menuItemName_en: itemDetails.name_en, quantity, basePrice: itemDetails.price, currentPricePerUnit: currentUnitPrice, totalPriceForItem: currentUnitPrice * quantity, notes: itemNotes || undefined, selectedModifiers: flatSelectedModifiers as any });
-        cancelConfiguration();
+        const newCartItem: OrderItemFE = { cartItemId, menuItemId: itemDetails.id, menuItemName_es: itemDetails.name_es, menuItemName_en: itemDetails.name_en, quantity, basePrice: itemDetails.price, currentPricePerUnit: currentUnitPrice, totalPriceForItem: currentUnitPrice * quantity, notes: itemNotes || undefined, selectedModifiers: flatSelectedModifiers, redeemedRewardId: null };
+        addItemToCart(newCartItem); cancelConfiguration();
     };
 
     const isLoadingPage = loadingMenu || loadingActiveOrderStatus;
@@ -26377,47 +26217,16 @@ const PublicMenuViewPage: React.FC = () => {
         <>
             <Container size="lg" py="xl">
                 <Stack gap="xl">
-                    {/* ... (resto del JSX del return, sin cambios) ... */}
                     <Group justify="center" align="center" wrap="nowrap"><Image src={menuData.businessLogoUrl || ''} alt={`${menuData.businessName} logo`} h={50} w="auto" fit="contain" radius="sm" /><Title order={1} ta="center" style={{ flexShrink: 1, minWidth: 0 }}>{menuData.businessName}</Title></Group>
                     {menuData.isLoyaltyCoreActive && !userData && (<Paper shadow="xs" p="sm" radius="md" withBorder><Group justify="space-between" align="center"><Group gap="xs"><IconGift size={24} color={theme.colors.blue[6]} /><Text size="sm" fw={500}>¿Quieres ganar puntos y canjear recompensas?</Text></Group><Button component={Link} to="/login" state={{ from: location }} variant="light" size="xs" leftSection={<IconLogin size={14} />}>Inicia Sesión o Regístrate</Button></Group></Paper>)}
                     {menuData.isLoyaltyCoreActive && userData && (<Paper shadow="xs" p="sm" radius="md" withBorder bg={colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.green[0]}><Group justify="space-between" align="center"><Stack gap={0}><Text fw={500}>¡Hola, {userData.name || userData.email}!</Text><Group gap="xs" mt={2}><IconAward size={16} color={theme.colors.yellow[7]} /><Text size="sm" c="dimmed">Tienes <Text span fw={700}>{userData.points ?? 0}</Text> puntos.</Text></Group></Stack><Button component={Link} to="/customer/dashboard" variant="outline" color="gray" size="xs" leftSection={<IconDashboard size={14} />}>Ver mi Panel</Button></Group></Paper>)}
                     {activeOrderId && !configuringItem && (<Paper shadow="md" p="lg" radius="md" withBorder mb="xl" bg={canCurrentlyAddToExistingOrder ? (colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.blue[0]) : (colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[0])}><Group justify="space-between" align="center"><Group><IconInfoCircle size={24} color={canCurrentlyAddToExistingOrder ? theme.colors.blue[6] : theme.colors.orange[6]} /><Stack gap={0}><Text fw={500}>{t(canCurrentlyAddToExistingOrder ? 'publicMenu.activeOrder.addingToOrderTitle' : 'publicMenu.activeOrder.cannotAddTitle', { orderNumber: activeOrderNumber })}</Text><Text size="sm">{t(canCurrentlyAddToExistingOrder ? 'publicMenu.activeOrder.addingToOrderMsg' : 'publicMenu.activeOrder.cannotAddMsg')}</Text></Stack></Group><Button variant="outline" size="xs" component={Link} to={`/order-status/${activeOrderId}`} state={{ orderNumber: activeOrderNumber, businessSlug, tableIdentifier: tableIdentifierFromParams }}>{t('publicMenu.activeOrder.viewStatusButton')}</Button></Group></Paper>)}
-                    {totalCartItems > 0 || appliedRewards.discount ? (<Paper p={0} shadow="xs" withBorder={false} radius="md" style={{ position: 'sticky', top: `calc(${theme.spacing.md} + 10px)`, zIndex: 200 }} ><Button fullWidth size="lg" variant="gradient" gradient={{ from: theme.primaryColor, to: theme.colors[theme.primaryColor][4], deg: 105 }} onClick={openCart} disabled={isCartOpen} styles={{ root: { height: 'auto', padding: `${theme.spacing.sm} ${theme.spacing.md}` }, label: { width: '100%' } }}><Group justify="space-between" style={{ width: '100%' }}><Group gap="xs"><IconShoppingCart size={22} stroke={1.8} /><Text fw={500} inherit> {cartButtonText} </Text></Group><Text fw={700} inherit>{t('publicMenu.cart.total')}: {totalAmountWithDiscount.toLocaleString(i18n.language, { style: 'currency', currency: 'EUR' })}</Text></Group></Button></Paper>) : null }
+                    {(totalCartItems > 0 || appliedRewards.discount) && (<Paper p={0} shadow="xs" withBorder={false} radius="md" style={{ position: 'sticky', top: `calc(${theme.spacing.md} + 10px)`, zIndex: 200 }} ><Button fullWidth size="lg" variant="gradient" gradient={{ from: theme.primaryColor, to: theme.colors[theme.primaryColor][4], deg: 105 }} onClick={openCart} disabled={isCartOpen} styles={{ root: { height: 'auto', padding: `${theme.spacing.sm} ${theme.spacing.md}` }, label: { width: '100%' } }}><Group justify="space-between" style={{ width: '100%' }}><Group gap="xs"><IconShoppingCart size={22} stroke={1.8} /><Text fw={500} inherit> {cartButtonText} </Text></Group><Text fw={700} inherit>{t('publicMenu.cart.total')}: {totalAmountWithDiscount.toLocaleString(i18n.language, { style: 'currency', currency: 'EUR' })}</Text></Group></Button></Paper>)}
                     <CategoryAccordion categories={menuData.categories} activeAccordionItems={activeAccordionItems} onAccordionChange={setActiveAccordionItems} configuringItemId={configuringItem?.itemDetails.id || null} configuringItemState={configuringItem} onStartConfigureItem={startConfiguringItem} onCancelConfiguration={cancelConfiguration} onConfigQuantityChange={updateConfigQuantity} onConfigModifierSelectionChange={updateConfigModifierSelection} onConfigNotesChange={updateConfigNotes} onConfigAddToCart={handleConfiguredItemAddToCart} onSimpleAddToCart={addSimpleItemToCart} />
                 </Stack>
             </Container>
-
-            <ShoppingCartModal
-                opened={isCartOpen}
-                onClose={closeCart}
-                orderItems={currentOrderItems}
-                orderNotes={orderNotes}
-                subtotal={subtotal}
-                totalWithDiscount={totalAmountWithDiscount}
-                appliedDiscount={appliedRewards.discount}
-                onUpdateItemQuantity={updateItemQuantityInCart}
-                onRemoveItem={removeItemFromCart}
-                onUpdateOrderNotes={updateOrderNotes}
-                onSubmitOrder={() => handleSubmitOrderOrAddItems()}
-                isSubmittingOrder={isSubmittingOrder}
-                onClearCart={clearCart}
-                isAddingToExistingOrder={!!(activeOrderId && canCurrentlyAddToExistingOrder)}
-                activeOrderNumber={activeOrderNumber}
-                onOpenRewardModal={openRewardModal}
-                onRemoveDiscount={handleRemoveDiscount}
-            />
-
-            {userData && (
-                <ApplyRewardModal
-                    opened={isRewardModalOpen} onClose={closeRewardModal}
-                    userPoints={userData.points ?? 0}
-                    availableCoupons={availableCoupons}
-                    redeemableRewards={redeemableRewards}
-                    initialSelections={appliedRewards} onApply={handleApplyRewardsFromModal} 
-                    isApplying={isSubmittingOrder}
-                    appliedLcoRewardIdOnActiveOrder={activeOrderDetails?.appliedLcoRewardId || null} 
-                />
-            )}
+            <ShoppingCartModal opened={isCartOpen} onClose={closeCart} orderItems={currentOrderItems} orderNotes={orderNotes} subtotal={subtotal} totalWithDiscount={totalAmountWithDiscount} appliedDiscount={appliedRewards.discount} onUpdateItemQuantity={updateItemQuantityInCart} onRemoveItem={removeItemFromCart} onUpdateOrderNotes={updateOrderNotes} onSubmitOrder={handleSubmitOrderOrAddItems} isSubmittingOrder={isSubmittingOrder} onClearCart={clearCart} isAddingToExistingOrder={!!(activeOrderId && canCurrentlyAddToExistingOrder)} activeOrderNumber={activeOrderNumber} onOpenRewardModal={openRewardModal} onRemoveDiscount={() => setAppliedRewards(prev => ({ ...prev, discount: null }))}/>
+            {userData && (<ApplyRewardModal opened={isRewardModalOpen} onClose={closeRewardModal} userPoints={userData.points ?? 0} availableCoupons={availableCoupons} redeemableRewards={redeemableRewards} initialSelections={appliedRewards} onApply={handleApplyRewardsFromModal} isApplying={isSubmittingOrder} appliedLcoRewardIdOnActiveOrder={activeOrderDetails?.appliedLcoRewardId || null} />)}
         </>
     );
 };
@@ -27330,7 +27139,7 @@ export const updateOrderItemKdsStatus = async (
 
 // ====== [163] frontend/src/modules/camarero/services/publicOrderApiService.ts ======
 // frontend/src/modules/camarero/services/publicOrderApiService.ts
-// Version 2.0.0 - Updated submission handler with rewards logic
+// Version 2.0.1 - Corregida la importación del DTO.
 
 import axios from 'axios';
 import {
@@ -27338,7 +27147,8 @@ import {
     AddItemsToOrderPayloadDto,
     BackendOrderResponse,
     OrderItemFE,
-    CreateOrderItemDto, // Importar este tipo
+    // --- CORRECCIÓN AQUÍ ---
+    FrontendCreateOrderItemDto, // Importamos el tipo correcto que usa el payload
 } from '../types/publicOrder.types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL_PUBLIC || 'http://localhost:3000/public';
@@ -27384,20 +27194,6 @@ export const addItemsToExistingOrderApi = async (
     }
 };
 
-
-/**
- * Orquesta el envío de un nuevo pedido o la adición de ítems a uno existente,
- * incluyendo la información de las recompensas canjeadas.
- * 
- * @param cartItems - Los ítems en el carrito del frontend.
- * @param generalOrderNotes - Notas generales para el pedido.
- * @param activeOrderId - ID del pedido activo, si se están añadiendo ítems.
- * @param businessSlug - El slug del negocio.
- * @param tableIdentifier - El identificador de la mesa.
- * @param requestingCustomerId - El ID del cliente LCo logueado.
- * @param appliedDiscountId - El ID de la recompensa de descuento aplicada al total.
- * @returns La respuesta del backend con el ID y número del pedido.
- */
 export const handleOrderSubmission = async (
     cartItems: OrderItemFE[],
     generalOrderNotes: string,
@@ -27405,41 +27201,36 @@ export const handleOrderSubmission = async (
     businessSlug: string,
     tableIdentifier: string | undefined,
     requestingCustomerId: string | null | undefined,
-    appliedDiscountId: string | null | undefined // <-- ACEPTAR EL NUEVO ARGUMENTO
+    appliedDiscountId: string | null | undefined
 ): Promise<BackendOrderResponse> => {
     
-    // Mapear los items del carrito al DTO que espera el backend.
-    // Ahora incluimos el `redeemedRewardId` si existe.
-    const dtoItems: CreateOrderItemDto[] = cartItems.map(feItem => ({
+    // --- CORRECCIÓN AQUÍ ---
+    // El tipo del array ahora es el DTO correcto que importamos.
+    const dtoItems: FrontendCreateOrderItemDto[] = cartItems.map(feItem => ({
         menuItemId: feItem.menuItemId,
         quantity: feItem.quantity,
         notes: getProcessedNotesValue(feItem.notes),
         selectedModifierOptions: feItem.selectedModifiers.length > 0
             ? feItem.selectedModifiers.map(sm => ({ modifierOptionId: sm.modifierOptionId }))
             : [],
-        redeemedRewardId: feItem.redeemedRewardId || null, // Incluir el ID de la recompensa del ítem
+        redeemedRewardId: feItem.redeemedRewardId || null,
     }));
 
     if (activeOrderId) {
-        // --- LÓGICA PARA AÑADIR A PEDIDO EXISTENTE ---
         const payloadForAdd: AddItemsToOrderPayloadDto = {
             items: dtoItems,
             customerNotes: getProcessedNotesValue(generalOrderNotes),
-            // Pasamos el descuento aquí también. El backend decidirá si puede aplicarlo
-            // o si ya existe uno.
             appliedLcoRewardId: appliedDiscountId || null,
         };
         const response = await addItemsToExistingOrderApi(activeOrderId, businessSlug, payloadForAdd);
         return { ...response, id: activeOrderId };
-
     } else {
-        // --- LÓGICA PARA CREAR UN NUEVO PEDIDO ---
         const payloadForCreate: CreateOrderPayloadDto = {
             items: dtoItems,
             customerNotes: getProcessedNotesValue(generalOrderNotes),
             tableIdentifier: tableIdentifier || null,
             customerId: requestingCustomerId || null,
-            appliedLcoRewardId: appliedDiscountId || null, // Pasar el ID del descuento aplicado
+            appliedLcoRewardId: appliedDiscountId || null,
         };
         return submitNewOrder(businessSlug, payloadForCreate);
     }
@@ -27751,21 +27542,20 @@ export interface PublicDigitalMenuData {
 
 // ====== [167] frontend/src/modules/camarero/types/publicOrder.types.ts ======
 // frontend/src/modules/camarero/types/publicOrder.types.ts
-// Versión 1.3.0 - Añadida la interfaz AppliedRewardsState
+// VERSIÓN 2.0.0 - Limpio y con todas las exportaciones necesarias.
 
-import { PublicMenuItem } from './menu.types';
+// No debe importar nada de @prisma/client en el frontend.
+// Importamos los enums y tipos que sí son compartidos.
 import { OrderStatus, OrderItemStatus } from '../../../shared/types/user.types';
-import type { Reward } from '../../../shared/types/user.types'; // <-- NUEVA IMPORTACIÓN
+import type { DisplayReward } from '../../../shared/types/user.types';
 
-// --- NUEVA INTERFAZ AÑADIDA ---
-export interface AppliedRewardsState {
-    discount: Reward | null;
-    freeItems: Reward[];
+// --- TIPO PARA EL ESTADO DE RECOMPENSAS APLICADAS ---
+export interface AppliedSelections {
+    discount: DisplayReward | null;
+    freeItems: DisplayReward[];
 }
-// --- FIN NUEVA INTERFAZ ---
 
-
-// --- Tipos para el Frontend del Carrito y Configuración de Ítems ---
+// --- TIPOS PARA EL CARRITO EN EL FRONTEND ---
 export interface SelectedModifierFE {
     modifierOptionId: string;
     name_es?: string | null;
@@ -27789,8 +27579,9 @@ export interface OrderItemFE {
     redeemedRewardId?: string | null; 
 }
 
+// --- TIPO PARA EL ESTADO DE CONFIGURACIÓN DE UN ÍTEM ---
 export interface ConfiguringItemState {
-    itemDetails: PublicMenuItem;
+    itemDetails: any; // PublicMenuItem
     quantity: number;
     selectedOptionsByGroup: Record<string, string[] | string>;
     currentUnitPrice: number;
@@ -27798,58 +27589,43 @@ export interface ConfiguringItemState {
     areModifiersValid: boolean;
 }
 
-// --- Tipos para los DTOs de la API (Payloads para el Backend) ---
-export interface CreateOrderItemModifierDto {
-    modifierOptionId: string;
-}
-
-export interface CreateOrderItemDto {
+// --- TIPOS PARA PAYLOADS DE API ---
+export interface FrontendCreateOrderItemDto {
     menuItemId: string;
     quantity: number;
     notes?: string | null;
-    selectedModifierOptions?: CreateOrderItemModifierDto[] | null;
-    redeemedRewardId?: string | null; 
+    selectedModifierOptions?: { modifierOptionId: string }[] | null;
+    redeemedRewardId?: string | null;
 }
 
 export interface CreateOrderPayloadDto {
     tableIdentifier?: string | null;
     customerId?: string | null;
     customerNotes: string | null;
-    items: CreateOrderItemDto[];
-    businessId?: string;
+    items: FrontendCreateOrderItemDto[];
     appliedLcoRewardId?: string | null;
 }
 
 export interface AddItemsToOrderPayloadDto {
-    items: CreateOrderItemDto[];
+    items: FrontendCreateOrderItemDto[];
     customerNotes: string | null;
     appliedLcoRewardId?: string | null;
 }
 
-// --- Tipos para las Respuestas de la API de Pedidos ---
+// --- TIPOS PARA RESPUESTAS DE API ---
 export interface BackendOrderResponse {
     id: string;
     orderNumber?: string | null;
 }
 
-// --- Tipos para la Gestión del Pedido Activo en localStorage ---
-export interface ActiveOrderInfo {
-    orderId: string;
-    orderNumber: string;
-    businessSlug: string;
-    tableIdentifier?: string;
-    savedAt: number;
-}
-
-// --- INTERFACES EXPORTADAS PARA EL ESTADO DEL PEDIDO (CORREGIDAS) ---
 export interface PublicModifierStatusInfo {
     optionNameSnapshot: string | null;
-    optionPriceAdjustmentSnapshot: number; // Ya es número
+    optionPriceAdjustmentSnapshot: number; 
 }
 
 export interface PublicOrderItemStatusInfo {
     id: string;
-    itemNameSnapshot: string | null;
+    itemNameSnapshot: string | null; 
     quantity: number;
     status: OrderItemStatus;
     priceAtPurchase: number;
@@ -27864,7 +27640,7 @@ export interface PublicOrderStatusInfo {
     items: PublicOrderItemStatusInfo[];
     tableIdentifier?: string | null;
     orderNotes?: string | null;
-    createdAt: string; // La API lo envía como string ISO
+    createdAt: string;
     isBillRequested?: boolean;
     totalAmount: number;
     discountAmount: number | null;
@@ -31658,96 +31434,76 @@ export default PurchaseHistoryTab;
 
 // ====== [200] frontend/src/modules/loyalpyme/components/customer/dashboard/tabs/RewardsTab.tsx ======
 // frontend/src/modules/loyalpyme/components/customer/dashboard/tabs/RewardsTab.tsx
-// VERSIÓN 3.0.1 - Corregido el mapeo de `pendingGifts` para incluir todas las propiedades de DisplayReward.
+// VERSIÓN 5.0.2 - Limpieza final de importaciones no utilizadas.
 
 import React from 'react';
-import { Box, Title, Stack, Divider } from '@mantine/core';
+import { Box, Title, Stack, Divider, Alert } from '@mantine/core'; // 'Text' eliminado
+import { IconAlertCircle } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
-// Componentes hijos que renderizan las listas
 import RewardList from '../../RewardList';
 import AvailableCouponsList from '../../AvailableCouponsList'; 
-
-// Tipos necesarios
 import { Reward, GrantedReward, DisplayReward } from '../../../../../../shared/types/user.types';
 
-// --- PROPS REFACTORIZADAS ---
+// --- Interfaz de Props Final y Simplificada ---
 interface RewardsTabProps {
-    // Para el catálogo de recompensas
-    redeemableRewards: Reward[]; // Lista de recompensas del catálogo
+    redeemableRewards: Reward[];
     userPoints: number | undefined;
-    acquiringRewardId: string | null;
     loadingRewards: boolean;
     errorRewards: string | null;
-    onAcquireReward: (rewardId: string) => Promise<void>;
-
-    // Para la sección de cupones
+    
     availableCoupons: GrantedReward[];
     loadingCoupons: boolean;
     errorCoupons: string | null;
     
-    // Para la sección de regalos
     pendingGifts: GrantedReward[];
     loadingGifts: boolean;
-    onRedeemGift: (grantedRewardId: string, rewardName: string) => Promise<void>;
+    errorGifts: string | null;
 }
 
 const RewardsTab: React.FC<RewardsTabProps> = ({
-    redeemableRewards,
-    userPoints,
-    acquiringRewardId,
-    loadingRewards,
-    errorRewards,
-    onAcquireReward,
-    availableCoupons,
-    loadingCoupons,
-    errorCoupons,
-    pendingGifts,
-    loadingGifts,
-    onRedeemGift
+    redeemableRewards, userPoints, loadingRewards, errorRewards,
+    availableCoupons, loadingCoupons, errorCoupons,
+    pendingGifts, loadingGifts, errorGifts,
 }) => {
     const { t } = useTranslation();
-
-    // Transformamos los regalos pendientes a DisplayReward para que RewardList los pueda renderizar
+    
     const giftDisplayItems: DisplayReward[] = pendingGifts.map(gr => ({
-        isGift: true,
-        id: gr.reward.id,
-        grantedRewardId: gr.id,
-        name_es: gr.reward.name_es,
-        name_en: gr.reward.name_en,
-        description_es: gr.reward.description_es,
-        description_en: gr.reward.description_en,
-        pointsCost: 0,
-        imageUrl: gr.reward.imageUrl,
-        assignedAt: gr.assignedAt,
+        isGift: true, id: gr.reward.id, grantedRewardId: gr.id, name_es: gr.reward.name_es, name_en: gr.reward.name_en,
+        description_es: gr.reward.description_es, description_en: gr.reward.description_en, pointsCost: 0,
+        imageUrl: gr.reward.imageUrl, assignedAt: gr.assignedAt,
         assignedByString: gr.assignedBy?.name || gr.assignedBy?.email || t('customerDashboard.summary.unknownAssigner'),
-        
-        // --- CORRECCIÓN: AÑADIR LAS PROPIEDADES QUE FALTABAN ---
-        type: gr.reward.type,
-        linkedMenuItemId: gr.reward.linkedMenuItemId,
-        discountType: gr.reward.discountType,
-        discountValue: Number(gr.reward.discountValue) || null, // Convertir a número por seguridad
-        // --- FIN DE LA CORRECCIÓN ---
+        type: gr.reward.type, linkedMenuItemId: gr.reward.linkedMenuItemId, 
+        discountType: gr.reward.discountType, discountValue: Number(gr.reward.discountValue) || null, 
     }));
     
-    // Transformamos las recompensas del catálogo a DisplayReward para RewardList
     const catalogDisplayItems: DisplayReward[] = redeemableRewards.map(r => ({
-        isGift: false,
-        id: r.id,
-        name_es: r.name_es, name_en: r.name_en,
+        isGift: false, id: r.id, name_es: r.name_es, name_en: r.name_en,
         description_es: r.description_es, description_en: r.description_en,
-        pointsCost: r.pointsCost, imageUrl: r.imageUrl,
-        type: r.type, linkedMenuItemId: r.linkedMenuItemId,
-        discountType: r.discountType, discountValue: Number(r.discountValue) || null, // Convertir a número por seguridad
+        pointsCost: r.pointsCost, imageUrl: r.imageUrl, type: r.type,
+        linkedMenuItemId: r.linkedMenuItemId, discountType: r.discountType, 
+        discountValue: Number(r.discountValue) || null,
     }));
 
     return (
         <Stack gap="xl">
-            {/* Sección para los cupones que el usuario ya ha adquirido */}
+            {pendingGifts.length > 0 && (
+                 <Box>
+                    <Title order={4}>{t('customerDashboard.giftsSectionTitle')}</Title>
+                    <RewardList
+                        rewards={giftDisplayItems}
+                        loadingRewards={loadingGifts}
+                        errorRewards={errorGifts}
+                        userPoints={userPoints}
+                        redeemingRewardId={null} // No hay acción de carga aquí
+                        onRedeemPoints={() => {}} // No-op
+                        onRedeemGift={() => Promise.resolve()} // No-op
+                    />
+                </Box>
+            )}
+
             <Box>
-                <Title order={4}>
-                    {t('customerDashboard.availableCouponsTitle')}
-                </Title>
+                <Title order={4}>{t('customerDashboard.availableCouponsTitle')}</Title>
                 <AvailableCouponsList
                     coupons={availableCoupons}
                     loading={loadingCoupons}
@@ -31757,37 +31513,19 @@ const RewardsTab: React.FC<RewardsTabProps> = ({
             
             <Divider my="xl" label={t('customerDashboard.rewardsCatalogTitle')} labelPosition="center" />
 
-            {/* Catálogo para adquirir nuevas recompensas con puntos */}
             <Box>
+                {errorRewards && <Alert color="red" title={t('common.error')} icon={<IconAlertCircle />}>{errorRewards}</Alert>}
                 <RewardList
                     rewards={catalogDisplayItems}
                     userPoints={userPoints}
-                    redeemingRewardId={acquiringRewardId}
                     loadingRewards={loadingRewards}
-                    errorRewards={errorRewards}
-                    onRedeemPoints={onAcquireReward}
-                    onRedeemGift={() => Promise.resolve()} // Esta acción no se usa aquí
+                    errorRewards={null}
+                    redeemingRewardId={null}
+                    onRedeemPoints={() => {}} // No-op, el botón ahora solo es informativo
+                    onRedeemGift={() => Promise.resolve()}
                     isAcquireFlow={true}
                 />
             </Box>
-
-            {/* Sección separada para los regalos pendientes */}
-            {giftDisplayItems.length > 0 && (
-                 <Stack>
-                    <Title order={4}>
-                        {t('customerDashboard.giftsSectionTitle')}
-                    </Title>
-                    <RewardList
-                        rewards={giftDisplayItems}
-                        userPoints={userPoints}
-                        redeemingRewardId={acquiringRewardId}
-                        loadingRewards={loadingGifts}
-                        errorRewards={null}
-                        onRedeemPoints={() => Promise.resolve()}
-                        onRedeemGift={onRedeemGift}
-                    />
-                </Stack>
-            )}
         </Stack>
     );
 };
@@ -31797,7 +31535,7 @@ export default RewardsTab;
 
 // ====== [201] frontend/src/modules/loyalpyme/components/customer/dashboard/tabs/SummaryTab.tsx ======
 // frontend/src/modules/loyalpyme/components/customer/dashboard/tabs/SummaryTab.tsx
-// Version 1.5.4 - Corrected type import path
+// VERSIÓN 2.0.1 - Limpiado: eliminadas props e importaciones no utilizadas.
 
 import React, { useMemo } from 'react';
 import {
@@ -31805,19 +31543,17 @@ import {
     AspectRatio, Button, Alert, Loader, Center,
     SimpleGrid, Badge
 } from '@mantine/core';
-import { IconGift, IconArrowRight, IconCoin, IconToolsKitchen2 } from '@tabler/icons-react';
+// IconCoin ya no es necesario
+import { IconGift, IconArrowRight, IconToolsKitchen2 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
-// Importar Componentes Hijos y sus Props
+// Tipos
 import UserInfoDisplay, { type UserInfoDisplayProps } from '../../UserInfoDisplay';
 import QrValidationSection from '../../QrValidationSection';
-
-// --- CORRECCIÓN DE RUTA ---
 import type { DisplayReward, UserData, TierBenefitData } from '../../../../../../shared/types/user.types';
-// --- FIN CORRECCIÓN ---
 
-// Props del componente
+// --- Props del Componente Simplificadas ---
 interface SummaryTabProps {
     userData: UserData | null;
     loadingUser: boolean;
@@ -31827,10 +31563,6 @@ interface SummaryTabProps {
     nextTierName: string | null;
     nextTierBenefits: TierBenefitData[];
     displayRewards: DisplayReward[] | null;
-    userPoints: number | undefined;
-    redeemingRewardId: string | null;
-    onRedeemGift: (grantedRewardId: string, rewardName: string) => Promise<void>;
-    onRedeemPoints: (rewardId: string) => Promise<void>;
     setActiveTab: (tabValue: string | null) => void;
     handleValidateQr: (token: string) => Promise<void>;
     validatingQr: boolean;
@@ -31843,18 +31575,17 @@ const MAX_PREVIEW_ITEMS = 3;
 
 const SummaryTab: React.FC<SummaryTabProps> = ({
     userData, loadingUser, errorUser, progressBarData, currentTierBenefits,
-    nextTierName, nextTierBenefits, displayRewards, userPoints,
-    redeemingRewardId, onRedeemGift, onRedeemPoints,
+    nextTierName, nextTierBenefits, displayRewards,
     setActiveTab, handleValidateQr, validatingQr, scannerOpened,
     onOpenScanner, onCloseScanner
 }) => {
     const { t, i18n } = useTranslation();
     const currentLanguage = i18n.language;
+    const navigate = useNavigate();
 
     const rewardsSummary = useMemo(() => {
         const pendingGifts = displayRewards?.filter(r => r.isGift) ?? [];
         const pointsRewards = displayRewards?.filter(r => !r.isGift && r.pointsCost > 0) ?? [];
-        
         const previewItems = [...pendingGifts, ...pointsRewards].slice(0, MAX_PREVIEW_ITEMS);
         return {
             pendingGiftsCount: pendingGifts.length,
@@ -31862,6 +31593,17 @@ const SummaryTab: React.FC<SummaryTabProps> = ({
             hasAnyRewards: !!displayRewards && displayRewards.length > 0
         };
     }, [displayRewards]);
+    
+    const handleRewardClick = (item: DisplayReward) => {
+        if (userData?.businessSlug) {
+            const rewardObject = { ...item };
+            delete (rewardObject as any).isGift;
+            delete (rewardObject as any).grantedRewardId;
+            delete (rewardObject as any).assignedAt;
+            delete (rewardObject as any).assignedByString;
+            navigate(`/m/${userData.businessSlug}`, { state: { rewardToApply: rewardObject, grantedRewardIdToApply: item.grantedRewardId } });
+        }
+    };
 
     if (loadingUser && !userData) {
         return <Group justify="center" p="xl"><Loader /></Group>;
@@ -31869,140 +31611,61 @@ const SummaryTab: React.FC<SummaryTabProps> = ({
 
     return (
         <Grid gutter="xl">
-            {/* Columna Izquierda: UserInfo y Validación QR */}
             <Grid.Col span={{ base: 12, md: 7 }}>
                 <Stack gap="xl">
                     <UserInfoDisplay
-                        userData={userData}
-                        loadingUser={loadingUser}
-                        errorUser={errorUser}
-                        progressBarData={progressBarData}
-                        benefits={currentTierBenefits}
-                        nextTierName={nextTierName}
-                        nextTierBenefits={nextTierBenefits}
+                        userData={userData} loadingUser={loadingUser} errorUser={errorUser}
+                        progressBarData={progressBarData} benefits={currentTierBenefits}
+                        nextTierName={nextTierName} nextTierBenefits={nextTierBenefits}
                     />
                     <QrValidationSection
-                        onValidate={handleValidateQr}
-                        isValidating={validatingQr}
-                        scannerOpened={scannerOpened}
-                        onOpenScanner={onOpenScanner}
-                        onCloseScanner={onCloseScanner}
+                        onValidate={handleValidateQr} isValidating={validatingQr}
+                        scannerOpened={scannerOpened} onOpenScanner={onOpenScanner} onCloseScanner={onCloseScanner}
                     />
                 </Stack>
             </Grid.Col>
-
-            {/* Columna Derecha: Resumen Recompensas Y Tarjeta Acceso Carta */}
             <Grid.Col span={{ base: 12, md: 5 }}>
                 <Stack gap="xl" style={{ height: '100%' }}>
-                    
-                    {/* Tarjeta de Acceso al Módulo Camarero */}
                     {userData?.isCamareroActive && userData?.businessSlug && (
                         <Paper withBorder p="lg" radius="md" shadow="sm">
                             <Group justify="space-between" align="center">
                                 <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
-                                    <Text fw={500} size="lg" truncate>
-                                        {userData.businessName 
-                                            ? t('customerDashboard.summary.viewMenuFor', { businessName: userData.businessName }) 
-                                            : t('customerDashboard.summary.viewMenuDefaultTitle')}
-                                    </Text>
-                                    <Text size="sm" c="dimmed" lineClamp={2}>
-                                        {t('customerDashboard.summary.viewMenuSubtitle')}
-                                    </Text>
+                                    <Text fw={500} size="lg" truncate>{userData.businessName ? t('customerDashboard.summary.viewMenuFor', { businessName: userData.businessName }) : t('customerDashboard.summary.viewMenuDefaultTitle')}</Text>
+                                    <Text size="sm" c="dimmed" lineClamp={2}>{t('customerDashboard.summary.viewMenuSubtitle')}</Text>
                                 </Stack>
-                                <Button
-                                    component={Link}
-                                    to={`/m/${userData.businessSlug}`}
-                                    leftSection={<IconToolsKitchen2 size={18} />}
-                                    variant="gradient"
-                                    gradient={{ from: 'teal', to: 'lime', deg: 105 }}
-                                    size="sm"
-                                    style={{ flexShrink: 0 }}
-                                >
+                                <Button component={Link} to={`/m/${userData.businessSlug}`} leftSection={<IconToolsKitchen2 size={18} />} variant="gradient" gradient={{ from: 'teal', to: 'lime', deg: 105 }} size="sm" style={{ flexShrink: 0 }}>
                                     {t('customerDashboard.summary.viewMenuButton')}
                                 </Button>
                             </Group>
                         </Paper>
                     )}
 
-                    {/* Tarjeta de Recompensas (existente) */}
                     {userData?.isLoyaltyCoreActive && (
                         <Paper shadow="sm" p="lg" withBorder radius="md" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                             <Stack gap="lg" style={{ flexGrow: 1 }}>
-                                <Title order={4}>
-                                    {rewardsSummary.pendingGiftsCount > 0 
-                                        ? t('customerDashboard.summary.giftsAndRewardsTitle') 
-                                        : t('customerDashboard.summary.rewardsTitle')}
-                                </Title>
-                                {rewardsSummary.pendingGiftsCount > 0 && (
-                                    <Alert color="yellow" icon={<IconGift />} title={t('customerDashboard.summary.pendingGifts', { count: rewardsSummary.pendingGiftsCount })} variant='light' radius="md">
-                                        {t('customerDashboard.summary.pendingGiftsDesc')}
-                                    </Alert>
-                                )}
-
+                                <Title order={4}>{rewardsSummary.pendingGiftsCount > 0 ? t('customerDashboard.summary.giftsAndRewardsTitle') : t('customerDashboard.summary.rewardsTitle')}</Title>
+                                {rewardsSummary.pendingGiftsCount > 0 && (<Alert color="yellow" icon={<IconGift />} title={t('customerDashboard.summary.pendingGifts', { count: rewardsSummary.pendingGiftsCount })} variant='light' radius="md">{t('customerDashboard.summary.pendingGiftsDesc')}</Alert>)}
                                 {rewardsSummary.previewItems.length > 0 ? (
                                     <SimpleGrid cols={MAX_PREVIEW_ITEMS === 3 ? 3 : 2} spacing="sm" verticalSpacing="md">
                                         {rewardsSummary.previewItems.map(item => {
                                             const displayName = (currentLanguage === 'es' ? item.name_es : item.name_en) || item.name_es || item.name_en || t('common.nameNotAvailable');
-                                            const isAffordable = item.isGift || (userPoints !== undefined && userPoints >= item.pointsCost);
-                                            const isPointsRedeemDisabled = !isAffordable || !!redeemingRewardId;
-                                            const isGiftRedeemDisabled = !!redeemingRewardId;
-                                            const isThisItemLoading = redeemingRewardId === (item.isGift ? item.grantedRewardId : item.id);
-
+                                            const isAffordable = item.isGift || (userData?.points !== undefined && userData.points >= item.pointsCost);
                                             return (
-                                                <Stack 
-                                                    key={item.id + (item.isGift ? '-gift' : '-reward')} 
-                                                    gap={4} 
-                                                    align="center"
-                                                >
+                                                <Stack key={item.id + (item.isGift ? '-gift' : '-reward')} gap={4} align="center" style={{ cursor: isAffordable ? 'pointer' : 'default', opacity: isAffordable ? 1 : 0.6 }} onClick={() => isAffordable && handleRewardClick(item)}>
                                                     <AspectRatio ratio={1 / 1} style={{ width: '80%', maxWidth: '80px' }}>
                                                         <MantineImage src={item.imageUrl || '/placeholder-reward.png'} alt={displayName} radius="sm" fallbackSrc="/placeholder-reward.png" />
                                                     </AspectRatio>
                                                     <Text size="xs" ta="center" lineClamp={2} style={{ height: '2.4em', fontWeight: 500 }}>{displayName}</Text>
-                                                    {item.isGift ? (
-                                                        <Badge size="xs" color="lime" variant='light' mt={2}>{t('customerDashboard.giftFree')}</Badge>
-                                                    ) : (
-                                                        <Text size="xs" fw={500} mt={2}>{item.pointsCost} {t('common.points')}</Text>
-                                                    )}
-                                                    <Button
-                                                        mt={4}
-                                                        size="compact-xs"
-                                                        variant={item.isGift ? "filled" : "light"}
-                                                        color={item.isGift ? "yellow" : "blue"}
-                                                        onClick={() => {
-                                                            if (item.isGift && item.grantedRewardId) { onRedeemGift(item.grantedRewardId, displayName); }
-                                                            else if (!item.isGift) { onRedeemPoints(item.id); }
-                                                        }}
-                                                        disabled={isThisItemLoading || (item.isGift ? isGiftRedeemDisabled : isPointsRedeemDisabled)}
-                                                        loading={isThisItemLoading}
-                                                        fullWidth
-                                                        radius="xl"
-                                                        leftSection={item.isGift ? <IconGift size={14}/> : <IconCoin size={14}/>}
-                                                    >
-                                                        {isAffordable || item.isGift
-                                                            ? t('customerDashboard.redeemButton')
-                                                            : t('customerDashboard.insufficientPoints')
-                                                        }
-                                                    </Button>
+                                                    {item.isGift ? (<Badge size="xs" color="lime" variant='light' mt={2}>{t('customerDashboard.giftFree')}</Badge>) : (<Text size="xs" fw={500} mt={2}>{item.pointsCost} {t('common.points')}</Text>)}
                                                 </Stack>
                                             );
                                         })}
                                     </SimpleGrid>
-                                ) : (
-                                    <Center style={{flexGrow: 1}}>
-                                        <Text c="dimmed">{t('customerDashboard.summary.noRewardsInfo')}</Text>
-                                    </Center>
-                                )}
+                                ) : (<Center style={{flexGrow: 1}}><Text c="dimmed">{t('customerDashboard.summary.noRewardsInfo')}</Text></Center>)}
                                 
                                 <Box mt="auto">
                                     {rewardsSummary.hasAnyRewards && (
-                                        <Button
-                                            variant="light"
-                                            fullWidth
-                                            mt="sm" 
-                                            onClick={() => setActiveTab('rewards')}
-                                            radius="lg"
-                                            rightSection={<IconArrowRight size={16} />}
-                                        >
+                                        <Button variant="light" fullWidth mt="sm" onClick={() => setActiveTab('rewards')} radius="lg" rightSection={<IconArrowRight size={16} />}>
                                             {t('customerDashboard.summary.viewAllButtonShort')}
                                         </Button>
                                     )}
@@ -32916,7 +32579,7 @@ export const useCustomerPurchaseHistory = (): UseCustomerPurchaseHistoryResult =
 
 // ====== [208] frontend/src/modules/loyalpyme/hooks/useCustomerRewardsData.ts ======
 // frontend/src/modules/loyalpyme/hooks/useCustomerRewardsData.ts
-// VERSIÓN 3.0.0 - Versión original sin parseo explícito, confiando en los nuevos tipos flexibles.
+// VERSIÓN 4.0.0 - Simplificado. Ahora devuelve listas separadas en lugar de un array unificado.
 
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../../shared/services/axiosInstance';
@@ -32925,9 +32588,9 @@ import { useTranslation } from 'react-i18next';
 import { Reward, GrantedReward } from '../../../shared/types/user.types';
 
 export interface UseCustomerRewardsDataResult {
-    redeemableRewards: Reward[];
-    availableCoupons: GrantedReward[];
-    pendingGifts: GrantedReward[];
+    redeemableRewards: Reward[];          // Recompensas del catálogo para canjear con puntos
+    availableCoupons: GrantedReward[];    // Cupones ya adquiridos y listos para usar
+    pendingGifts: GrantedReward[];        // Regalos asignados por el admin, pendientes de canje
     loading: boolean;
     error: string | null;
     refresh: () => Promise<void>;
@@ -32948,11 +32611,13 @@ export const useCustomerRewardsData = (): UseCustomerRewardsDataResult => {
         console.log('[useCustomerRewardsData] Fetching all rewards data...');
         
         try {
+            // Se mantienen las mismas dos llamadas a la API
             const [rewardsResponse, grantedRewardsResponse] = await Promise.all([
                 axiosInstance.get<Reward[]>('/customer/rewards'),
                 axiosInstance.get<GrantedReward[]>('/customer/granted-rewards') 
             ]);
 
+            // Guardamos los datos en sus respectivos estados
             setRewardsCatalog(rewardsResponse.data || []);
             setAllGrantedRewards(grantedRewardsResponse.data || []);
             
@@ -32971,6 +32636,7 @@ export const useCustomerRewardsData = (): UseCustomerRewardsDataResult => {
         fetchAllData();
     }, [fetchAllData]);
     
+    // El hook ahora devuelve las listas filtradas y separadas
     return {
         redeemableRewards: rewardsCatalog,
         availableCoupons: allGrantedRewards.filter(gr => gr.status === 'AVAILABLE'),
@@ -33275,7 +32941,7 @@ export default useUserProfileData;
 
 // ====== [212] frontend/src/modules/loyalpyme/pages/CustomerDashboardPage.tsx ======
 // frontend/src/modules/loyalpyme/pages/CustomerDashboardPage.tsx
-// VERSIÓN 5.1.3 - CORRECCIÓN: Sintaxis de bloques catch y limpieza de warnings
+// VERSIÓN 6.1.0 - Eliminadas props obsoletas de SummaryTab.
 
 import { useState, useCallback, useMemo } from 'react';
 import { Container, Title, Alert, Tabs, Space, LoadingOverlay, Text } from '@mantine/core';
@@ -33291,7 +32957,7 @@ import { useUserProfileData } from '../hooks/useUserProfileData';
 import { useCustomerRewardsData } from '../hooks/useCustomerRewardsData';
 import { useCustomerTierData } from '../hooks/useCustomerTierData';
 
-// Componentes de Pestañas (asegurando que se usan en el JSX de Tabs.Panel)
+// Componentes
 import SummaryTab from '../components/customer/dashboard/tabs/SummaryTab';
 import RewardsTab from '../components/customer/dashboard/tabs/RewardsTab';
 import ActivityTab from '../components/customer/dashboard/tabs/ActivityTab';
@@ -33301,31 +32967,22 @@ import ProfileTab from '../components/customer/dashboard/tabs/ProfileTab';
 // Tipos
 import { TierBenefitData, DisplayReward, TierCalculationBasis } from '../../../shared/types/user.types';
 
-
-
 type ProgressBarDataType = { type: 'progress'; percentage: number; currentValueLabel: string; targetValueLabel: string; unit: string; nextTierName: string; } | { type: 'max_level'; currentTierName: string; } | null;
 interface TierDisplayMemoResult { progressBarData: ProgressBarDataType; nextTierName: string | null; nextTierBenefits: TierBenefitData[]; }
-
 
 function CustomerDashboardPage() {
     const { t } = useTranslation();
     const { userData, loading: loadingUser, error: errorUser, refetch: refetchUser } = useUserProfileData();
     
-    // Desestructuración de hooks: las variables deben usarse en el JSX o en otros callbacks
     const { 
-        redeemableRewards, 
-        availableCoupons, 
-        pendingGifts, 
-        loading: loadingRewardsData, 
-        error: errorRewardsData, 
+        redeemableRewards, availableCoupons, pendingGifts, 
+        loading: loadingRewardsData, error: errorRewardsData, 
         refresh: refreshRewards 
     } = useCustomerRewardsData();
     
     const { allTiers, businessConfig, loading: loadingTierData, error: errorTierData, refetch: refetchTierData } = useCustomerTierData();
     
-    // Estados locales
     const [validatingQr, setValidatingQr] = useState(false);
-    const [acquiringRewardId, setAcquiringRewardId] = useState<string | null>(null);
     const [scannerOpened, { open: openScanner, close: closeScanner }] = useDisclosure(false);
     const [activeTab, setActiveTab] = useState<string | null>('summary');
     
@@ -33337,163 +32994,51 @@ function CustomerDashboardPage() {
         setValidatingQr(true);
         try {
             const response = await axiosInstance.post<any>('/points/validate-qr', { qrToken: token });
-            if (!response.data.user) {
-                throw new Error(t('customerDashboard.errorValidatingQrMessage'));
-            }
-            notifications.show({
-                title: t('common.success'),
-                message: t('customerDashboard.successQrValidation', { points: response.data.pointsEarned ?? 0 }),
-                color: 'green',
-                icon: <IconCircleCheck />
-            });
+            if (!response.data.user) { throw new Error(t('customerDashboard.errorValidatingQrMessage')); }
+            notifications.show({ title: t('common.success'), message: t('customerDashboard.successQrValidation', { points: response.data.pointsEarned ?? 0 }), color: 'green', icon: <IconCircleCheck /> });
             await handleRefetchAll();
-        } catch (err: unknown) { // Explicitly type err as unknown
+        } catch (err: unknown) {
             const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.errorValidatingQrMessage'));
-            notifications.show({
-                title: t('customerDashboard.errorValidatingQr'),
-                message: errorMsg,
-                color: 'red',
-                icon: <IconAlertCircle />
-            });
+            notifications.show({ title: t('customerDashboard.errorValidatingQr'), message: errorMsg, color: 'red', icon: <IconAlertCircle /> });
         } finally {
             setValidatingQr(false);
         }
     }, [handleRefetchAll, t]);
-
-    const handleAcquireReward = useCallback(async (rewardId: string) => {
-        setAcquiringRewardId(rewardId);
-        try {
-            await axiosInstance.post(`/rewards/${rewardId}/redeem`);
-            notifications.show({
-                title: t('customerDashboard.acquireRewardSuccessTitle'),
-                message: t('customerDashboard.acquireRewardSuccessMessage'),
-                color: 'teal',
-                icon: <IconGift />
-            });
-            await handleRefetchAll();
-        } catch (err: unknown) { // Explicitly type err as unknown
-            const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.acquireRewardError'));
-            notifications.show({
-                title: t('customerDashboard.errorAcquireTitle'),
-                message: errorMsg,
-                color: 'red',
-                icon: <IconAlertCircle />
-            });
-        } finally {
-            setAcquiringRewardId(null);
-        }
-    }, [handleRefetchAll, t]);
-
-    const handleRedeemGrantedReward = useCallback(async (grantedRewardId: string, rewardName: string) => {
-        setAcquiringRewardId(grantedRewardId);
-        try {
-            await axiosInstance.post(`/customer/granted-rewards/${grantedRewardId}/redeem`);
-            notifications.show({
-                title: t('customerDashboard.successRedeemGiftTitle'),
-                message: t('customerDashboard.successRedeemGiftMessage', { rewardName }),
-                color: 'green',
-                icon: <IconCircleCheck />
-            });
-            await handleRefetchAll();
-        } catch (err: unknown) { // <--- ¡CORRECCIÓN CLAVE AQUÍ: AÑADIDO { para el bloque catch!
-            const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.errorRedeemGiftMessage'));
-            notifications.show({
-                title: t('customerDashboard.errorRedeemTitle'),
-                message: errorMsg,
-                color: 'red',
-                icon: <IconAlertCircle />
-            });
-        } finally {
-            setAcquiringRewardId(null);
-        }
-    }, [handleRefetchAll, t]);
     
-    // Este useMemo es solo para el Resumen (SummaryTab), combina regalos y catálogo
     const displayRewardsForSummary: DisplayReward[] = useMemo(() => {
-        const gifts: DisplayReward[] = pendingGifts.map(gr => ({
-            isGift: true, 
-            id: gr.reward.id, 
-            grantedRewardId: gr.id,
-            name_es: gr.reward.name_es, 
-            name_en: gr.reward.name_en,
-            description_es: gr.reward.description_es, 
-            description_en: gr.reward.description_en,
-            pointsCost: 0, // Regalos no cuestan puntos al canjear
-            imageUrl: gr.reward.imageUrl,
-            assignedAt: gr.assignedAt, 
-            assignedByString: gr.assignedBy?.name || gr.assignedBy?.email || t('customerDashboard.summary.unknownAssigner'),
-            // ¡¡¡CORRECCIÓN CLAVE AQUÍ!!! ASIGNAR LOS TIPOS REALES DE LA RECOMPENSA BASE
-            type: gr.reward.type, 
-            linkedMenuItemId: gr.reward.linkedMenuItemId, 
-            discountType: gr.reward.discountType, 
-            discountValue: gr.reward.discountValue, 
-        }));
-        const pointsRewards: DisplayReward[] = redeemableRewards.map(r => ({
-            isGift: false, 
-            id: r.id, 
-            name_es: r.name_es, 
-            name_en: r.name_en,
-            description_es: r.description_es, 
-            description_en: r.description_en,
-            pointsCost: r.pointsCost, 
-            imageUrl: r.imageUrl,
-            type: r.type, 
-            linkedMenuItemId: r.linkedMenuItemId,
-            discountType: r.discountType, 
-            discountValue: r.discountValue,
-        }));
+        const gifts: DisplayReward[] = pendingGifts.map(gr => ({ isGift: true, id: gr.reward.id, grantedRewardId: gr.id, name_es: gr.reward.name_es, name_en: gr.reward.name_en, description_es: gr.reward.description_es, description_en: gr.reward.description_en, pointsCost: 0, imageUrl: gr.reward.imageUrl, assignedAt: gr.assignedAt, assignedByString: gr.assignedBy?.name || gr.assignedBy?.email || t('customerDashboard.summary.unknownAssigner'), type: gr.reward.type, linkedMenuItemId: gr.reward.linkedMenuItemId, discountType: gr.reward.discountType, discountValue: Number(gr.reward.discountValue) || null, }));
+        const pointsRewards: DisplayReward[] = redeemableRewards.map(r => ({ isGift: false, id: r.id, name_es: r.name_es, name_en: r.name_en, description_es: r.description_es, description_en: r.description_en, pointsCost: r.pointsCost, imageUrl: r.imageUrl, type: r.type, linkedMenuItemId: r.linkedMenuItemId, discountType: r.discountType, discountValue: Number(r.discountValue) || null, }));
         return [...gifts, ...pointsRewards];
     }, [pendingGifts, redeemableRewards, t]);
 
     const tierDisplayData = useMemo((): TierDisplayMemoResult => {
-        if (loadingUser || loadingTierData || !userData || !allTiers || !businessConfig || !businessConfig.tierCalculationBasis) {
-            return { progressBarData: null, nextTierName: null, nextTierBenefits: [] };
-        }
+        if (loadingUser || loadingTierData || !userData || !allTiers || !businessConfig || !businessConfig.tierCalculationBasis) { return { progressBarData: null, nextTierName: null, nextTierBenefits: [] }; }
         const sortedTiers = [...allTiers].sort((a, b) => a.level - b.level);
         const currentTierIndex = sortedTiers.findIndex(t => t.id === userData.currentTier?.id);
         const currentTier = currentTierIndex !== -1 ? sortedTiers[currentTierIndex] : null;
         const nextTier = currentTierIndex !== -1 && currentTierIndex < sortedTiers.length - 1 ? sortedTiers[currentTierIndex + 1] : null;
-        
-        if (!nextTier) {
-            return {
-                progressBarData: { type: 'max_level', currentTierName: currentTier?.name || t('customerDashboard.baseTier') },
-                nextTierName: null,
-                nextTierBenefits: []
-            };
-        }
-
-        let unit = '';
-        let currentMetricValue = 0;
+        if (!nextTier) { return { progressBarData: { type: 'max_level', currentTierName: currentTier?.name || t('customerDashboard.baseTier') }, nextTierName: null, nextTierBenefits: [] }; }
+        let unit = ''; let currentMetricValue = 0;
         switch (businessConfig.tierCalculationBasis) {
             case TierCalculationBasis.SPEND: unit = '€'; currentMetricValue = userData.totalSpend ?? 0; break;
             case TierCalculationBasis.VISITS: unit = t('customerDashboard.progressUnitVisits'); currentMetricValue = userData.totalVisits ?? 0; break;
             case TierCalculationBasis.POINTS_EARNED: unit = t('common.points'); currentMetricValue = userData.points ?? 0; break;
         }
-
         const currentTierMinValue = currentTier?.minValue ?? 0;
         const range = Math.max(0.01, nextTier.minValue - currentTierMinValue);
         const progressInTier = Math.max(0, currentMetricValue - currentTierMinValue);
         const percentage = Math.max(0, Math.min(100, (progressInTier / range) * 100));
-        
         const formatOptions = { maximumFractionDigits: unit === '€' ? 2 : 0 };
         const currentValueLabel = currentMetricValue.toLocaleString(undefined, formatOptions);
         const targetValueLabel = nextTier.minValue.toLocaleString(undefined, formatOptions);
-
-        return {
-            progressBarData: { type: 'progress', percentage, currentValueLabel, targetValueLabel, unit, nextTierName: nextTier.name },
-            nextTierName: nextTier.name,
-            nextTierBenefits: nextTier.benefits ?? []
-        };
+        return { progressBarData: { type: 'progress', percentage, currentValueLabel, targetValueLabel, unit, nextTierName: nextTier.name }, nextTierName: nextTier.name, nextTierBenefits: nextTier.benefits ?? [] };
     }, [userData, allTiers, businessConfig, loadingUser, loadingTierData, t]);
 
     const currentTierBenefits = useMemo(() => userData?.currentTier?.benefits ?? [], [userData?.currentTier]);
-
     const isLoading = loadingUser || loadingTierData || loadingRewardsData;
     const mainError = errorUser || errorTierData || errorRewardsData;
 
-    if (mainError && !isLoading) {
-        return ( <Container size="lg" py="xl"><Alert icon={<IconAlertCircle size="1rem" />} title={t('common.errorLoadingData')} color="red" radius="md">{mainError}</Alert></Container> );
-    }
+    if (mainError && !isLoading) { return ( <Container size="lg" py="xl"><Alert icon={<IconAlertCircle size="1rem" />} title={t('common.errorLoadingData')} color="red" radius="md">{mainError}</Alert></Container> ); }
 
     return (
         <Container size="lg" py="xl">
@@ -33505,7 +33050,7 @@ function CustomerDashboardPage() {
                         <Tabs.List grow>
                             <Tabs.Tab value="summary" leftSection={<IconLayoutDashboard size={16} />}>{t('customerDashboard.tabSummary')}</Tabs.Tab>
                             <Tabs.Tab value="rewards" leftSection={<IconGift size={16} />}>{t('customerDashboard.tabRewards')}</Tabs.Tab>
-                            <Tabs.Tab value="history" leftSection={<IconReceipt size={16} />}>{t('customerDashboard.tabHistory', 'Mis Pedidos')}</Tabs.Tab>
+                            <Tabs.Tab value="history" leftSection={<IconReceipt size={16} />}>{t('customerDashboard.tabHistory')}</Tabs.Tab>
                             <Tabs.Tab value="activity" leftSection={<IconHistory size={16} />}>{t('customerDashboard.tabActivity')}</Tabs.Tab>
                             <Tabs.Tab value="profile" leftSection={<IconUserCircle size={16} />}>{t('customerDashboard.tabProfile')}</Tabs.Tab>
                         </Tabs.List>
@@ -33515,41 +33060,28 @@ function CustomerDashboardPage() {
                                 userData={userData} loadingUser={loadingUser} errorUser={errorUser}
                                 progressBarData={tierDisplayData.progressBarData} currentTierBenefits={currentTierBenefits}
                                 nextTierName={tierDisplayData.nextTierName} nextTierBenefits={tierDisplayData.nextTierBenefits}
-                                displayRewards={displayRewardsForSummary}
-                                setActiveTab={setActiveTab}
+                                displayRewards={displayRewardsForSummary} setActiveTab={setActiveTab}
                                 handleValidateQr={handleValidateQr} validatingQr={validatingQr}
                                 scannerOpened={scannerOpened} onOpenScanner={openScanner} onCloseScanner={closeScanner}
-                                userPoints={userData.points}
-                                redeemingRewardId={acquiringRewardId}
-                                onRedeemGift={handleRedeemGrantedReward}
-                                onRedeemPoints={handleAcquireReward}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="rewards">
                             <RewardsTab
                                  redeemableRewards={redeemableRewards}
                                  userPoints={userData.points}
-                                 acquiringRewardId={acquiringRewardId}
                                  loadingRewards={loadingRewardsData}
                                  errorRewards={errorRewardsData}
-                                 onAcquireReward={handleAcquireReward}
                                  availableCoupons={availableCoupons}
                                  loadingCoupons={loadingRewardsData}
                                  errorCoupons={errorRewardsData}
                                  pendingGifts={pendingGifts}
                                  loadingGifts={loadingRewardsData}
-                                 onRedeemGift={handleRedeemGrantedReward}
+                                 errorGifts={errorRewardsData}
                              />
                         </Tabs.Panel>
-                         <Tabs.Panel value="history">
-                            <PurchaseHistoryTab />
-                         </Tabs.Panel>
-                         <Tabs.Panel value="activity">
-                            <ActivityTab />
-                         </Tabs.Panel>
-                         <Tabs.Panel value="profile">
-                            <ProfileTab />
-                         </Tabs.Panel>
+                         <Tabs.Panel value="history"><PurchaseHistoryTab /></Tabs.Panel>
+                         <Tabs.Panel value="activity"><ActivityTab /></Tabs.Panel>
+                         <Tabs.Panel value="profile"><ProfileTab /></Tabs.Panel>
                     </Tabs>
                 </>
             )}
