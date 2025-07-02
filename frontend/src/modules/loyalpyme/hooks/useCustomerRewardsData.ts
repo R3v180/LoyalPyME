@@ -1,5 +1,5 @@
 // frontend/src/modules/loyalpyme/hooks/useCustomerRewardsData.ts
-// VERSIÓN 3.0.0 - Versión original sin parseo explícito, confiando en los nuevos tipos flexibles.
+// VERSIÓN 4.0.0 - Simplificado. Ahora devuelve listas separadas en lugar de un array unificado.
 
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../../shared/services/axiosInstance';
@@ -8,9 +8,9 @@ import { useTranslation } from 'react-i18next';
 import { Reward, GrantedReward } from '../../../shared/types/user.types';
 
 export interface UseCustomerRewardsDataResult {
-    redeemableRewards: Reward[];
-    availableCoupons: GrantedReward[];
-    pendingGifts: GrantedReward[];
+    redeemableRewards: Reward[];          // Recompensas del catálogo para canjear con puntos
+    availableCoupons: GrantedReward[];    // Cupones ya adquiridos y listos para usar
+    pendingGifts: GrantedReward[];        // Regalos asignados por el admin, pendientes de canje
     loading: boolean;
     error: string | null;
     refresh: () => Promise<void>;
@@ -31,11 +31,13 @@ export const useCustomerRewardsData = (): UseCustomerRewardsDataResult => {
         console.log('[useCustomerRewardsData] Fetching all rewards data...');
         
         try {
+            // Se mantienen las mismas dos llamadas a la API
             const [rewardsResponse, grantedRewardsResponse] = await Promise.all([
                 axiosInstance.get<Reward[]>('/customer/rewards'),
                 axiosInstance.get<GrantedReward[]>('/customer/granted-rewards') 
             ]);
 
+            // Guardamos los datos en sus respectivos estados
             setRewardsCatalog(rewardsResponse.data || []);
             setAllGrantedRewards(grantedRewardsResponse.data || []);
             
@@ -54,6 +56,7 @@ export const useCustomerRewardsData = (): UseCustomerRewardsDataResult => {
         fetchAllData();
     }, [fetchAllData]);
     
+    // El hook ahora devuelve las listas filtradas y separadas
     return {
         redeemableRewards: rewardsCatalog,
         availableCoupons: allGrantedRewards.filter(gr => gr.status === 'AVAILABLE'),

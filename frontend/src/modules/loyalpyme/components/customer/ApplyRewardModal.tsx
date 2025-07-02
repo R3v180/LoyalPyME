@@ -1,11 +1,10 @@
 // frontend/src/modules/loyalpyme/components/customer/ApplyRewardModal.tsx
-// VERSIÓN 4.0.2 - Completo, unificado y sin variables no utilizadas.
+// VERSIÓN 4.1.0 - Corrección final y definitiva de la lógica de fusión de recompensas.
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, Button, Group, Stack, Text, Divider, Badge, Box, Checkbox, Paper, ScrollArea } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { notifications } from '@mantine/notifications';
-//import { IconTicket, IconGift } from '@tabler/icons-react';
 
 import { Reward, GrantedReward, DisplayReward } from '../../../../shared/types/user.types';
 import { RewardType } from '../../../../shared/types/enums';
@@ -43,6 +42,7 @@ const ApplyRewardModal: React.FC<ApplyRewardModalProps> = ({
     const unifiedRewards: DisplayReward[] = useMemo(() => {
         const rewardMap = new Map<string, DisplayReward>();
 
+        // 1. Añadir cupones (GrantedReward). Tienen prioridad.
         (availableCoupons || []).forEach(gr => {
             const rewardData = gr.reward;
             rewardMap.set(rewardData.id, {
@@ -56,12 +56,16 @@ const ApplyRewardModal: React.FC<ApplyRewardModalProps> = ({
                 type: rewardData.type,
                 linkedMenuItemId: rewardData.linkedMenuItemId,
                 discountType: rewardData.discountType,
+                // --- ¡¡¡LA CORRECCIÓN MÁS IMPORTANTE ESTÁ AQUÍ!!! ---
+                // Leemos el valor del objeto anidado 'reward' y lo asignamos al nivel superior.
+                // Nos aseguramos de que se convierta a número.
                 discountValue: rewardData.discountValue ? Number(rewardData.discountValue) : null,
                 assignedAt: gr.assignedAt,
                 assignedByString: ''
             });
         });
 
+        // 2. Añadir recompensas del catálogo si no existe ya un cupón.
         (redeemableRewards || []).forEach(r => {
             if (!rewardMap.has(r.id)) {
                 rewardMap.set(r.id, {
@@ -94,11 +98,8 @@ const ApplyRewardModal: React.FC<ApplyRewardModalProps> = ({
                 newSelections.discount = prevDiscountId === uniqueItemId ? null : item;
             } else {
                 const existingIndex = prev.freeItems.findIndex(fi => (fi.isGift ? fi.grantedRewardId : fi.id) === uniqueItemId);
-                if (existingIndex > -1) {
-                    newSelections.freeItems = prev.freeItems.filter(fi => (fi.isGift ? fi.grantedRewardId : fi.id) !== uniqueItemId);
-                } else {
-                    newSelections.freeItems = [...prev.freeItems, item];
-                }
+                if (existingIndex > -1) newSelections.freeItems = prev.freeItems.filter(fi => (fi.isGift ? fi.grantedRewardId : fi.id) !== uniqueItemId);
+                else newSelections.freeItems = [...prev.freeItems, item];
             }
             return newSelections;
         });
@@ -106,9 +107,7 @@ const ApplyRewardModal: React.FC<ApplyRewardModalProps> = ({
 
     const pointsToSpend = useMemo(() => {
         let totalCost = localSelections.freeItems.reduce((sum, item) => sum + (item.isGift ? 0 : item.pointsCost), 0);
-        if (localSelections.discount && !localSelections.discount.isGift) {
-            totalCost += localSelections.discount.pointsCost;
-        }
+        if (localSelections.discount && !localSelections.discount.isGift) totalCost += localSelections.discount.pointsCost;
         return totalCost;
     }, [localSelections]);
     
@@ -126,8 +125,7 @@ const ApplyRewardModal: React.FC<ApplyRewardModalProps> = ({
             notifications.show({ title: t('common.error'), message: t('applyRewardModal.notEnoughPoints'), color: 'red' });
             return;
         }
-        onApply(localSelections);
-        onClose();
+        onApply(localSelections); onClose();
     };
     
     return (
@@ -164,9 +162,7 @@ const ApplyRewardModal: React.FC<ApplyRewardModalProps> = ({
                                             }
                                         />
                                         {isDisabled && item.id === appliedLcoRewardIdOnActiveOrder && (
-                                            <Text size="xs" c="orange" mt={4}>
-                                                {t('applyRewardModal.alreadyApplied')}
-                                            </Text>
+                                            <Text size="xs" c="orange" mt={4}>{t('applyRewardModal.alreadyApplied')}</Text>
                                         )}
                                     </Paper>
                                 );
@@ -181,26 +177,15 @@ const ApplyRewardModal: React.FC<ApplyRewardModalProps> = ({
 
                 <Box p="xs" bg={!canAffordSelection ? 'red.1' : undefined} style={{ borderRadius: 'var(--mantine-radius-sm)' }}>
                     <Group justify="space-between">
-                        <Stack gap={0}>
-                            <Text fw={500}>{t('applyRewardModal.summary.totalCost')}</Text>
-                            <Text size="sm" c={!canAffordSelection ? 'red' : 'dimmed'}>
-                                {t('applyRewardModal.summary.availablePoints', { points: userPoints })}
-                            </Text>
-                        </Stack>
-                        <Badge size="xl" color={!canAffordSelection ? 'red' : 'blue'}>
-                            {t('applyRewardModal.summary.pointsBadge', { points: pointsToSpend })}
-                        </Badge>
+                        <Stack gap={0}><Text fw={500}>{t('applyRewardModal.summary.totalCost')}</Text><Text size="sm" c={!canAffordSelection ? 'red' : 'dimmed'}>{t('applyRewardModal.summary.availablePoints', { points: userPoints })}</Text></Stack>
+                        <Badge size="xl" color={!canAffordSelection ? 'red' : 'blue'}>{t('applyRewardModal.summary.pointsBadge', { points: pointsToSpend })}</Badge>
                     </Group>
                     {!canAffordSelection && (<Text c="red" size="xs" mt={4}>{t('applyRewardModal.notEnoughPoints')}</Text>)}
                 </Box>
                 
                 <Group justify="flex-end" mt="md">
-                    <Button variant="default" onClick={onClose} disabled={isApplying}>
-                        {t('common.cancel')}
-                    </Button>
-                    <Button onClick={handleConfirm} disabled={isApplying || !canAffordSelection} loading={isApplying}>
-                        {t('applyRewardModal.applyButton')}
-                    </Button>
+                    <Button variant="default" onClick={onClose} disabled={isApplying}>{t('common.cancel')}</Button>
+                    <Button onClick={handleConfirm} disabled={isApplying || !canAffordSelection} loading={isApplying}>{t('applyRewardModal.applyButton')}</Button>
                 </Group>
             </Stack>
         </Modal>

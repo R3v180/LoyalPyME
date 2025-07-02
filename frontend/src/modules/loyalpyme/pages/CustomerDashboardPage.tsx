@@ -1,5 +1,5 @@
 // frontend/src/modules/loyalpyme/pages/CustomerDashboardPage.tsx
-// VERSIÓN 5.1.3 - CORRECCIÓN: Sintaxis de bloques catch y limpieza de warnings
+// VERSIÓN 5.1.5 - CORRECCIÓN: Proporcionar una función async vacía para onRedeemPoints en SummaryTab.
 
 import { useState, useCallback, useMemo } from 'react';
 import { Container, Title, Alert, Tabs, Space, LoadingOverlay, Text } from '@mantine/core';
@@ -15,7 +15,7 @@ import { useUserProfileData } from '../hooks/useUserProfileData';
 import { useCustomerRewardsData } from '../hooks/useCustomerRewardsData';
 import { useCustomerTierData } from '../hooks/useCustomerTierData';
 
-// Componentes de Pestañas (asegurando que se usan en el JSX de Tabs.Panel)
+// Componentes de Pestañas
 import SummaryTab from '../components/customer/dashboard/tabs/SummaryTab';
 import RewardsTab from '../components/customer/dashboard/tabs/RewardsTab';
 import ActivityTab from '../components/customer/dashboard/tabs/ActivityTab';
@@ -26,7 +26,6 @@ import ProfileTab from '../components/customer/dashboard/tabs/ProfileTab';
 import { TierBenefitData, DisplayReward, TierCalculationBasis } from '../../../shared/types/user.types';
 
 
-
 type ProgressBarDataType = { type: 'progress'; percentage: number; currentValueLabel: string; targetValueLabel: string; unit: string; nextTierName: string; } | { type: 'max_level'; currentTierName: string; } | null;
 interface TierDisplayMemoResult { progressBarData: ProgressBarDataType; nextTierName: string | null; nextTierBenefits: TierBenefitData[]; }
 
@@ -35,7 +34,6 @@ function CustomerDashboardPage() {
     const { t } = useTranslation();
     const { userData, loading: loadingUser, error: errorUser, refetch: refetchUser } = useUserProfileData();
     
-    // Desestructuración de hooks: las variables deben usarse en el JSX o en otros callbacks
     const { 
         redeemableRewards, 
         availableCoupons, 
@@ -47,7 +45,6 @@ function CustomerDashboardPage() {
     
     const { allTiers, businessConfig, loading: loadingTierData, error: errorTierData, refetch: refetchTierData } = useCustomerTierData();
     
-    // Estados locales
     const [validatingQr, setValidatingQr] = useState(false);
     const [acquiringRewardId, setAcquiringRewardId] = useState<string | null>(null);
     const [scannerOpened, { open: openScanner, close: closeScanner }] = useDisclosure(false);
@@ -71,7 +68,7 @@ function CustomerDashboardPage() {
                 icon: <IconCircleCheck />
             });
             await handleRefetchAll();
-        } catch (err: unknown) { // Explicitly type err as unknown
+        } catch (err: unknown) {
             const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.errorValidatingQrMessage'));
             notifications.show({
                 title: t('customerDashboard.errorValidatingQr'),
@@ -81,30 +78,6 @@ function CustomerDashboardPage() {
             });
         } finally {
             setValidatingQr(false);
-        }
-    }, [handleRefetchAll, t]);
-
-    const handleAcquireReward = useCallback(async (rewardId: string) => {
-        setAcquiringRewardId(rewardId);
-        try {
-            await axiosInstance.post(`/rewards/${rewardId}/redeem`);
-            notifications.show({
-                title: t('customerDashboard.acquireRewardSuccessTitle'),
-                message: t('customerDashboard.acquireRewardSuccessMessage'),
-                color: 'teal',
-                icon: <IconGift />
-            });
-            await handleRefetchAll();
-        } catch (err: unknown) { // Explicitly type err as unknown
-            const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.acquireRewardError'));
-            notifications.show({
-                title: t('customerDashboard.errorAcquireTitle'),
-                message: errorMsg,
-                color: 'red',
-                icon: <IconAlertCircle />
-            });
-        } finally {
-            setAcquiringRewardId(null);
         }
     }, [handleRefetchAll, t]);
 
@@ -119,7 +92,7 @@ function CustomerDashboardPage() {
                 icon: <IconCircleCheck />
             });
             await handleRefetchAll();
-        } catch (err: unknown) { // <--- ¡CORRECCIÓN CLAVE AQUÍ: AÑADIDO { para el bloque catch!
+        } catch (err: unknown) {
             const errorMsg = (err instanceof AxiosError && err.response?.data?.message) ? err.response.data.message : (err instanceof Error ? err.message : t('customerDashboard.errorRedeemGiftMessage'));
             notifications.show({
                 title: t('customerDashboard.errorRedeemTitle'),
@@ -132,39 +105,21 @@ function CustomerDashboardPage() {
         }
     }, [handleRefetchAll, t]);
     
-    // Este useMemo es solo para el Resumen (SummaryTab), combina regalos y catálogo
     const displayRewardsForSummary: DisplayReward[] = useMemo(() => {
         const gifts: DisplayReward[] = pendingGifts.map(gr => ({
-            isGift: true, 
-            id: gr.reward.id, 
-            grantedRewardId: gr.id,
-            name_es: gr.reward.name_es, 
-            name_en: gr.reward.name_en,
-            description_es: gr.reward.description_es, 
-            description_en: gr.reward.description_en,
-            pointsCost: 0, // Regalos no cuestan puntos al canjear
-            imageUrl: gr.reward.imageUrl,
-            assignedAt: gr.assignedAt, 
+            isGift: true, id: gr.reward.id, grantedRewardId: gr.id, name_es: gr.reward.name_es, name_en: gr.reward.name_en,
+            description_es: gr.reward.description_es, description_en: gr.reward.description_en, pointsCost: 0,
+            imageUrl: gr.reward.imageUrl, assignedAt: gr.assignedAt,
             assignedByString: gr.assignedBy?.name || gr.assignedBy?.email || t('customerDashboard.summary.unknownAssigner'),
-            // ¡¡¡CORRECCIÓN CLAVE AQUÍ!!! ASIGNAR LOS TIPOS REALES DE LA RECOMPENSA BASE
-            type: gr.reward.type, 
-            linkedMenuItemId: gr.reward.linkedMenuItemId, 
-            discountType: gr.reward.discountType, 
-            discountValue: gr.reward.discountValue, 
+            type: gr.reward.type, linkedMenuItemId: gr.reward.linkedMenuItemId, 
+            discountType: gr.reward.discountType, discountValue: Number(gr.reward.discountValue) || null, 
         }));
         const pointsRewards: DisplayReward[] = redeemableRewards.map(r => ({
-            isGift: false, 
-            id: r.id, 
-            name_es: r.name_es, 
-            name_en: r.name_en,
-            description_es: r.description_es, 
-            description_en: r.description_en,
-            pointsCost: r.pointsCost, 
-            imageUrl: r.imageUrl,
-            type: r.type, 
-            linkedMenuItemId: r.linkedMenuItemId,
-            discountType: r.discountType, 
-            discountValue: r.discountValue,
+            isGift: false, id: r.id, name_es: r.name_es, name_en: r.name_en,
+            description_es: r.description_es, description_en: r.description_en,
+            pointsCost: r.pointsCost, imageUrl: r.imageUrl, type: r.type,
+            linkedMenuItemId: r.linkedMenuItemId, discountType: r.discountType, 
+            discountValue: Number(r.discountValue) || null,
         }));
         return [...gifts, ...pointsRewards];
     }, [pendingGifts, redeemableRewards, t]);
@@ -246,7 +201,9 @@ function CustomerDashboardPage() {
                                 userPoints={userData.points}
                                 redeemingRewardId={acquiringRewardId}
                                 onRedeemGift={handleRedeemGrantedReward}
-                                onRedeemPoints={handleAcquireReward}
+                                // --- CORRECCIÓN AQUÍ ---
+                                // Pasamos una función async vacía que cumple con el tipo `(id: string) => Promise<void>`
+                                onRedeemPoints={async () => {}}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="rewards">
@@ -256,7 +213,6 @@ function CustomerDashboardPage() {
                                  acquiringRewardId={acquiringRewardId}
                                  loadingRewards={loadingRewardsData}
                                  errorRewards={errorRewardsData}
-                                 onAcquireReward={handleAcquireReward}
                                  availableCoupons={availableCoupons}
                                  loadingCoupons={loadingRewardsData}
                                  errorCoupons={errorRewardsData}

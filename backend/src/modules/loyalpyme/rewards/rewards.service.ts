@@ -1,11 +1,12 @@
 // backend/src/modules/loyalpyme/rewards/rewards.service.ts
-// VERSIÓN 2.2.0 - CORRECCIÓN DEL ESTADO AL CANJEAR Y LIMPIEZA
+// VERSIÓN 3.0.0 - Eliminados los servicios de canje obsoletos (redeemRewardForLater, getAvailableRewardsForUser)
 
-import { PrismaClient, Reward, Prisma, GrantedReward, GrantedRewardStatus, ActivityType, RewardType, DiscountType } from '@prisma/client';
+import { PrismaClient, Reward, Prisma, RewardType, DiscountType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// --- INTERFACES Y TIPOS (SIN CAMBIOS) ---
+// --- TIPOS DE DATOS ---
+// Estos tipos se mantienen para el CRUD de recompensas desde el panel de admin.
 interface CreateRewardData {
     name_es: string;
     name_en: string;
@@ -20,9 +21,10 @@ interface CreateRewardData {
     linkedMenuItemId?: string | null;
     kdsDestination?: string | null;
 }
+
 type UpdateRewardData = Partial<CreateRewardData & { isActive?: boolean }>;
 
-// --- SERVICIOS CRUD (SIN CAMBIOS) ---
+// --- SERVICIOS CRUD (SE MANTIENEN PARA EL PANEL DE ADMIN) ---
 
 export const createReward = async (rewardData: CreateRewardData): Promise<Reward> => {
     console.log(`[Rewards SVC] Creating reward for business ${rewardData.businessId}: ${rewardData.name_es}`);
@@ -30,6 +32,7 @@ export const createReward = async (rewardData: CreateRewardData): Promise<Reward
         const newReward = await prisma.reward.create({
             data: {
                 ...rewardData,
+                // Prisma espera Decimal, por lo que convertimos el valor del descuento
                 discountValue: rewardData.discountValue ? new Prisma.Decimal(rewardData.discountValue.toString()) : undefined,
             },
         });
@@ -96,10 +99,17 @@ export const deleteReward = async (id: string, businessId: string): Promise<Rewa
     if (!existingReward) {
         throw new Error(`Recompensa no encontrada.`);
     }
+    // Verificar si está en uso en GrantedRewards
     const relatedGrantsCount = await prisma.grantedReward.count({ where: { rewardId: id } });
     if (relatedGrantsCount > 0) {
-        throw new Error(`No se puede eliminar la recompensa "${existingReward.name_es}" porque está siendo utilizada.`);
+        throw new Error(`No se puede eliminar la recompensa "${existingReward.name_es}" porque está siendo utilizada en regalos o cupones ya asignados.`);
     }
+    // Verificar si está en uso en Orders
+    const relatedOrdersCount = await prisma.order.count({ where: { appliedLcoRewardId: id }});
+    if (relatedOrdersCount > 0) {
+        throw new Error(`No se puede eliminar la recompensa "${existingReward.name_es}" porque está siendo utilizada en pedidos históricos.`);
+    }
+
     try {
         return await prisma.reward.delete({ where: { id } });
     } catch (error) {
@@ -108,88 +118,6 @@ export const deleteReward = async (id: string, businessId: string): Promise<Rewa
     }
 };
 
-// --- SERVICIOS DE FLUJO DE CANJE (CON CORRECCIÓN) ---
-
-/**
- * Permite a un usuario gastar sus puntos para "comprar" una recompensa,
- * que se guardará en su cuenta como un cupón disponible para usar más tarde.
- */
-export const redeemRewardForLater = async (userId: string, rewardId: string): Promise<GrantedReward> => {
-    console.log(`[Rewards SVC] User ${userId} is attempting to acquire reward ${rewardId} for later use.`);
-
-    return prisma.$transaction(async (tx) => {
-        // 1. Obtener datos del usuario y de la recompensa
-        const user = await tx.user.findUnique({ where: { id: userId } });
-        const reward = await tx.reward.findUnique({ where: { id: rewardId } });
-
-        // 2. Validaciones
-        if (!user) throw new Error("Usuario no encontrado.");
-        if (!reward) throw new Error("Recompensa no encontrada.");
-        if (!reward.isActive) throw new Error("Esta recompensa no está activa actualmente.");
-        if (user.points < reward.pointsCost) {
-            throw new Error(`No tienes suficientes puntos. Necesitas ${reward.pointsCost} y tienes ${user.points}.`);
-        }
-
-        // 3. Debitar los puntos del usuario
-        const updatedUser = await tx.user.update({
-            where: { id: userId },
-            data: { points: { decrement: reward.pointsCost } }
-        });
-        console.log(`[Rewards SVC] Debited ${reward.pointsCost} points from user ${userId}. New balance: ${updatedUser.points}`);
-
-        // 4. Crear el "cupón" (GrantedReward) con el estado correcto
-        const newGrantedReward = await tx.grantedReward.create({
-            data: {
-                userId: user.id,
-                rewardId: reward.id,
-                businessId: reward.businessId,
-                // --- CORRECCIÓN CLAVE ---
-                status: GrantedRewardStatus.AVAILABLE, // El cupón debe estar LISTO para usar
-                // redeemedAt se establecerá cuando se APLIQUE al pedido, no ahora.
-                redeemedAt: null,
-                // assignedAt registra cuándo se adquirió el cupón.
-                assignedAt: new Date(), 
-            }
-        });
-        console.log(`[Rewards SVC] Created 'AVAILABLE' GrantedReward ${newGrantedReward.id} for user ${userId}`);
-
-        // 5. Registrar la transacción en el historial
-        await tx.activityLog.create({
-            data: {
-                userId: user.id,
-                businessId: reward.businessId,
-                type: ActivityType.REWARD_ACQUIRED,
-                pointsChanged: -reward.pointsCost,
-                description: `Has obtenido la recompensa: "${reward.name_es}"`,
-                relatedRewardId: reward.id,
-                relatedGrantedRewardId: newGrantedReward.id,
-            }
-        });
-        
-        return newGrantedReward;
-    });
-};
-
-/**
- * Obtiene todos los cupones que un usuario puede usar (estado AVAILABLE).
- */
-export const getAvailableRewardsForUser = async (userId: string): Promise<GrantedReward[]> => {
-    console.log(`[Rewards SVC] Fetching 'AVAILABLE' granted rewards for user ${userId}`);
-    try {
-        return await prisma.grantedReward.findMany({
-            where: {
-                userId,
-                status: GrantedRewardStatus.AVAILABLE,
-            },
-            include: {
-                reward: true 
-            },
-            orderBy: {
-                assignedAt: 'desc'
-            }
-        });
-    } catch (error) {
-        console.error(`[Rewards SVC] Error fetching available rewards for user ${userId}:`, error);
-        throw new Error('Error al obtener tus recompensas disponibles.');
-    }
-};
+// --- SERVICIOS DE CANJE OBSOLETOS (ELIMINADOS) ---
+// La función `redeemRewardForLater` ha sido eliminada.
+// La función `getAvailableRewardsForUser` ha sido eliminada.

@@ -1,8 +1,17 @@
 // frontend/src/modules/camarero/types/publicOrder.types.ts
-// Versión 1.2.1 - CORRECCIÓN: Añadir appliedLcoRewardId a PublicOrderStatusInfo
+// Versión 1.3.0 - Añadida la interfaz AppliedRewardsState
 
 import { PublicMenuItem } from './menu.types';
-import { OrderStatus, OrderItemStatus } from '../../../shared/types/user.types'; // Importar enums
+import { OrderStatus, OrderItemStatus } from '../../../shared/types/user.types';
+import type { Reward } from '../../../shared/types/user.types'; // <-- NUEVA IMPORTACIÓN
+
+// --- NUEVA INTERFAZ AÑADIDA ---
+export interface AppliedRewardsState {
+    discount: Reward | null;
+    freeItems: Reward[];
+}
+// --- FIN NUEVA INTERFAZ ---
+
 
 // --- Tipos para el Frontend del Carrito y Configuración de Ítems ---
 export interface SelectedModifierFE {
@@ -108,5 +117,5 @@ export interface PublicOrderStatusInfo {
     totalAmount: number;
     discountAmount: number | null;
     finalAmount: number;
-    appliedLcoRewardId: string | null; // <--- ¡AÑADIDA ESTA PROPIEDAD!
+    appliedLcoRewardId: string | null;
 }

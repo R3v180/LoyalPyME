@@ -946,7 +946,8 @@
       "redeemedItemBadge": "Reward",
       "rewardsSectionTitle": "My Rewards",
       "applyRewardButton": "View and Apply Rewards",
-      "discountApplied": "Discount:"
+      "discountApplied": "Discount:",
+      "subtotal": "Subtotal"
     },
     "unnamedModifier": "Unnamed Modifier",
     "activeOrder": {
